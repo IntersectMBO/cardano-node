@@ -1,0 +1,1144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679118936"><span id="local-6989586621679118937"><span id="local-6989586621679118938"></span></span></span><span class="hs-pragma">{-# LANGUAGE DataKinds                  #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric              #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia                #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs                      #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns             #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes                 #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables        #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving         #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies               #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | Types used by the multiplexer.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.Types</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolInfo"><span class="hs-identifier">MiniProtocolInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier">MiniProtocolNum</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier">MiniProtocolDirection</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolLimits"><span class="hs-identifier">MiniProtocolLimits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier">Mode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#HasInitiator"><span class="hs-identifier">HasInitiator</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#HasResponder"><span class="hs-identifier">HasResponder</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Status"><span class="hs-identifier">Status</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#IngressQueue"><span class="hs-identifier">IngressQueue</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolIx"><span class="hs-identifier">MiniProtocolIx</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier">MiniProtocolDir</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#protocolDirEnum"><span class="hs-identifier">protocolDirEnum</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolState"><span class="hs-identifier">MiniProtocolState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolStatus"><span class="hs-identifier">MiniProtocolStatus</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier">Bearer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#bearerAsChannel"><span class="hs-identifier">bearerAsChannel</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier">SDU</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDUHeader"><span class="hs-identifier">SDUHeader</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier">SDUSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#msTimestamp"><span class="hs-identifier">msTimestamp</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#setTimestamp"><span class="hs-identifier">setTimestamp</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#msNum"><span class="hs-identifier">msNum</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#msDir"><span class="hs-identifier">msDir</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#msLength"><span class="hs-identifier">msLength</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier">RemoteClockModel</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#remoteClockPrecision"><span class="hs-identifier">remoteClockPrecision</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#RuntimeError"><span class="hs-identifier">RuntimeError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Text.Read.html#read"><span class="hs-identifier">read</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier">Exception</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier">SomeException</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html"><span class="hs-identifier">Data.Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Ix.html"><span class="hs-identifier">Data.Ix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Ix.html#Ix"><span class="hs-identifier">Ix</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Quiet</span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">StrictTVar</span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTime.SI</span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Mux.Channel.html"><span class="hs-identifier">Network.Mux.Channel</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Channel.html#ByteChannel"><span class="hs-identifier">ByteChannel</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Channel.html#Channel"><span class="hs-identifier">Channel</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html"><span class="hs-identifier">Network.Mux.Timeout</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier">TimeoutFn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">newtype</span><span> </span><span id="RemoteClockModel"><span class="annot"><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-var">RemoteClockModel</span></a></span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="RemoteClockModel"><span class="annot"><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-var">RemoteClockModel</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unRemoteClockModel"><span class="annot"><span class="annottext">RemoteClockModel -&gt; Word32
+</span><a href="Network.Mux.Types.html#unRemoteClockModel"><span class="hs-identifier hs-var hs-var">unRemoteClockModel</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679118956"><span id="local-6989586621679118961"><span class="annot"><span class="annottext">RemoteClockModel -&gt; RemoteClockModel -&gt; Bool
+(RemoteClockModel -&gt; RemoteClockModel -&gt; Bool)
+-&gt; (RemoteClockModel -&gt; RemoteClockModel -&gt; Bool)
+-&gt; Eq RemoteClockModel
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: RemoteClockModel -&gt; RemoteClockModel -&gt; Bool
+== :: RemoteClockModel -&gt; RemoteClockModel -&gt; Bool
+$c/= :: RemoteClockModel -&gt; RemoteClockModel -&gt; Bool
+/= :: RemoteClockModel -&gt; RemoteClockModel -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679118967"><span id="local-6989586621679118972"><span class="annot"><span class="annottext">RemoteClockModel
+RemoteClockModel -&gt; RemoteClockModel -&gt; Bounded RemoteClockModel
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: RemoteClockModel
+minBound :: RemoteClockModel
+$cmaxBound :: RemoteClockModel
+maxBound :: RemoteClockModel
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><span class="hs-comment">-- | The `DiffTime` represented by a tick in the `RemoteClockModel`</span></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Network.Mux.Types.html#remoteClockPrecision"><span class="hs-identifier hs-type">remoteClockPrecision</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-68"></span><span id="remoteClockPrecision"><span class="annot"><span class="annottext">remoteClockPrecision :: DiffTime
+</span><a href="Network.Mux.Types.html#remoteClockPrecision"><span class="hs-identifier hs-var hs-var">remoteClockPrecision</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">1e-6</span></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- Mini-protocol numbers</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | The wire format includes the protocol numbers, and it's vital that these</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- are stable. They are not necessarily dense however, as new ones are added</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- and some old ones retired. So we use a dedicated class for this rather than</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- reusing 'Enum'. This also covers unrecognised protocol numbers on the</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- decoding side.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-keyword">newtype</span><span> </span><span id="MiniProtocolNum"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-var">MiniProtocolNum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MiniProtocolNum"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-var">MiniProtocolNum</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679118979"><span id="local-6989586621679118984"><span class="annot"><span class="annottext">MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+(MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool)
+-&gt; Eq MiniProtocolNum
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+== :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+$c/= :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+/= :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679118991"><span id="local-6989586621679118996"><span id="local-6989586621679119000"><span id="local-6989586621679119004"><span id="local-6989586621679119008"><span id="local-6989586621679119012"><span id="local-6989586621679119016"><span class="annot"><span class="annottext">Eq MiniProtocolNum
+Eq MiniProtocolNum =&gt;
+(MiniProtocolNum -&gt; MiniProtocolNum -&gt; Ordering)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; MiniProtocolNum)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; MiniProtocolNum)
+-&gt; Ord MiniProtocolNum
+MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+MiniProtocolNum -&gt; MiniProtocolNum -&gt; Ordering
+MiniProtocolNum -&gt; MiniProtocolNum -&gt; MiniProtocolNum
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Ordering
+compare :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Ordering
+$c&lt; :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+&lt; :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+$c&lt;= :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+&lt;= :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+$c&gt; :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+&gt; :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+$c&gt;= :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+&gt;= :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; Bool
+$cmax :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; MiniProtocolNum
+max :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; MiniProtocolNum
+$cmin :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; MiniProtocolNum
+min :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; MiniProtocolNum
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119022"><span id="local-6989586621679119027"><span id="local-6989586621679119031"><span id="local-6989586621679119035"><span id="local-6989586621679119039"><span id="local-6989586621679119043"><span id="local-6989586621679119047"><span id="local-6989586621679119051"><span class="annot"><span class="annottext">Int -&gt; MiniProtocolNum
+MiniProtocolNum -&gt; Int
+MiniProtocolNum -&gt; [MiniProtocolNum]
+MiniProtocolNum -&gt; MiniProtocolNum
+MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+MiniProtocolNum
+-&gt; MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+(MiniProtocolNum -&gt; MiniProtocolNum)
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum)
+-&gt; (Int -&gt; MiniProtocolNum)
+-&gt; (MiniProtocolNum -&gt; Int)
+-&gt; (MiniProtocolNum -&gt; [MiniProtocolNum])
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum])
+-&gt; (MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum])
+-&gt; (MiniProtocolNum
+    -&gt; MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum])
+-&gt; Enum MiniProtocolNum
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: MiniProtocolNum -&gt; MiniProtocolNum
+succ :: MiniProtocolNum -&gt; MiniProtocolNum
+$cpred :: MiniProtocolNum -&gt; MiniProtocolNum
+pred :: MiniProtocolNum -&gt; MiniProtocolNum
+$ctoEnum :: Int -&gt; MiniProtocolNum
+toEnum :: Int -&gt; MiniProtocolNum
+$cfromEnum :: MiniProtocolNum -&gt; Int
+fromEnum :: MiniProtocolNum -&gt; Int
+$cenumFrom :: MiniProtocolNum -&gt; [MiniProtocolNum]
+enumFrom :: MiniProtocolNum -&gt; [MiniProtocolNum]
+$cenumFromThen :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+enumFromThen :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+$cenumFromTo :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+enumFromTo :: MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+$cenumFromThenTo :: MiniProtocolNum
+-&gt; MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+enumFromThenTo :: MiniProtocolNum
+-&gt; MiniProtocolNum -&gt; MiniProtocolNum -&gt; [MiniProtocolNum]
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119059"><span id="local-6989586621679119064"><span id="local-6989586621679119068"><span id="local-6989586621679119072"><span id="local-6989586621679119076"><span id="local-6989586621679119080"><span class="annot"><span class="annottext">Ord MiniProtocolNum
+Ord MiniProtocolNum =&gt;
+((MiniProtocolNum, MiniProtocolNum) -&gt; [MiniProtocolNum])
+-&gt; ((MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Int)
+-&gt; ((MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Int)
+-&gt; ((MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Bool)
+-&gt; ((MiniProtocolNum, MiniProtocolNum) -&gt; Int)
+-&gt; ((MiniProtocolNum, MiniProtocolNum) -&gt; Int)
+-&gt; Ix MiniProtocolNum
+(MiniProtocolNum, MiniProtocolNum) -&gt; Int
+(MiniProtocolNum, MiniProtocolNum) -&gt; [MiniProtocolNum]
+(MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Bool
+(MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Int
+forall a.
+Ord a =&gt;
+((a, a) -&gt; [a])
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Bool)
+-&gt; ((a, a) -&gt; Int)
+-&gt; ((a, a) -&gt; Int)
+-&gt; Ix a
+$crange :: (MiniProtocolNum, MiniProtocolNum) -&gt; [MiniProtocolNum]
+range :: (MiniProtocolNum, MiniProtocolNum) -&gt; [MiniProtocolNum]
+$cindex :: (MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Int
+index :: (MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Int
+$cunsafeIndex :: (MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Int
+unsafeIndex :: (MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Int
+$cinRange :: (MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Bool
+inRange :: (MiniProtocolNum, MiniProtocolNum) -&gt; MiniProtocolNum -&gt; Bool
+$crangeSize :: (MiniProtocolNum, MiniProtocolNum) -&gt; Int
+rangeSize :: (MiniProtocolNum, MiniProtocolNum) -&gt; Int
+$cunsafeRangeSize :: (MiniProtocolNum, MiniProtocolNum) -&gt; Int
+unsafeRangeSize :: (MiniProtocolNum, MiniProtocolNum) -&gt; Int
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Ix.html#Ix"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ix</span></a></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119086"><span id="local-6989586621679119092"><span id="local-6989586621679119096"><span class="annot"><span class="annottext">Int -&gt; MiniProtocolNum -&gt; ShowS
+[MiniProtocolNum] -&gt; ShowS
+MiniProtocolNum -&gt; String
+(Int -&gt; MiniProtocolNum -&gt; ShowS)
+-&gt; (MiniProtocolNum -&gt; String)
+-&gt; ([MiniProtocolNum] -&gt; ShowS)
+-&gt; Show MiniProtocolNum
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; MiniProtocolNum -&gt; ShowS
+showsPrec :: Int -&gt; MiniProtocolNum -&gt; ShowS
+$cshow :: MiniProtocolNum -&gt; String
+show :: MiniProtocolNum -&gt; String
+$cshowList :: [MiniProtocolNum] -&gt; ShowS
+showList :: [MiniProtocolNum] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">-- | Per Miniprotocol limits</span></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">newtype</span><span> </span><span id="MiniProtocolLimits"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolLimits"><span class="hs-identifier hs-var">MiniProtocolLimits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>     </span><span id="MiniProtocolLimits"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolLimits"><span class="hs-identifier hs-var">MiniProtocolLimits</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-86"></span><span>       </span><span class="hs-comment">-- | Limit on the maximum number of bytes that can be queued in the</span><span>
+</span><span id="line-87"></span><span>       </span><span class="hs-comment">-- miniprotocol's ingress queue.</span><span>
+</span><span id="line-88"></span><span>       </span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span>       </span><span id="maximumIngressQueue"><span class="annot"><span class="annottext">MiniProtocolLimits -&gt; Int
+</span><a href="Network.Mux.Types.html#maximumIngressQueue"><span class="hs-identifier hs-var hs-var">maximumIngressQueue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-90"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- $interface</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- To run a node you will also need a bearer and a way to run a server, see</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- * @'Ouroboros.Network.Socket'@ module provides a socket based bearer and</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--   a server that accepts connections and allows to connect to remote peers.</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- * @'Ouroboros.Network.Pipe'@ module provides a pipe based bearer with</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--   a function that runs the mux layer on it.</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--</span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- | Statically configured multiplexer mode.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span class="hs-keyword">data</span><span> </span><span id="Mode"><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-var">Mode</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- | Only execute initiator protocols.  In this mode the multiplexer will</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- only run its egress side.</span><span>
+</span><span id="line-108"></span><span>    </span><span id="InitiatorMode"><span class="annot"><a href="Network.Mux.Types.html#InitiatorMode"><span class="hs-identifier hs-var">InitiatorMode</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- | Only execute responder protocols.  It this mode the multiplexer will</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- only run its ingress side.</span><span>
+</span><span id="line-111"></span><span>    </span><span id="ResponderMode"><span class="annot"><a href="Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-var">ResponderMode</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- | Execute initiator and responder protocols.  In this mode the</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">-- multiplexer will run both ingress and egress sides.</span><span>
+</span><span id="line-114"></span><span>    </span><span id="InitiatorResponderMode"><span class="annot"><a href="Network.Mux.Types.html#InitiatorResponderMode"><span class="hs-identifier hs-var">InitiatorResponderMode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="HasInitiator"><span class="annot"><a href="Network.Mux.Types.html#HasInitiator"><span class="hs-identifier hs-var">HasInitiator</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119101"><span class="annot"><a href="#local-6989586621679119101"><span class="hs-identifier hs-type">mode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-117"></span><span>    </span><span id="HasInitiator"><span class="annot"><a href="Network.Mux.Types.html#HasInitiator"><span class="hs-identifier hs-var">HasInitiator</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#InitiatorMode"><span class="hs-identifier hs-type">InitiatorMode</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-type">True</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span id="HasInitiator"><span class="annot"><a href="Network.Mux.Types.html#HasInitiator"><span class="hs-identifier hs-var">HasInitiator</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">ResponderMode</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-type">False</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span id="HasInitiator"><span class="annot"><a href="Network.Mux.Types.html#HasInitiator"><span class="hs-identifier hs-var">HasInitiator</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#InitiatorResponderMode"><span class="hs-identifier hs-type">InitiatorResponderMode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-type">True</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="HasResponder"><span class="annot"><a href="Network.Mux.Types.html#HasResponder"><span class="hs-identifier hs-var">HasResponder</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119102"><span class="annot"><a href="#local-6989586621679119102"><span class="hs-identifier hs-type">mode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>    </span><span id="HasResponder"><span class="annot"><a href="Network.Mux.Types.html#HasResponder"><span class="hs-identifier hs-var">HasResponder</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#InitiatorMode"><span class="hs-identifier hs-type">InitiatorMode</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-type">False</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span id="HasResponder"><span class="annot"><a href="Network.Mux.Types.html#HasResponder"><span class="hs-identifier hs-var">HasResponder</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">ResponderMode</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-type">True</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span id="HasResponder"><span class="annot"><a href="Network.Mux.Types.html#HasResponder"><span class="hs-identifier hs-var">HasResponder</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#InitiatorResponderMode"><span class="hs-identifier hs-type">InitiatorResponderMode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-type">True</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | A static description of a mini-protocol.</span><span>
+</span><span id="line-127"></span><span class="hs-comment">--</span><span>
+</span><span id="line-128"></span><span class="hs-keyword">data</span><span> </span><span id="MiniProtocolInfo"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolInfo"><span class="hs-identifier hs-var">MiniProtocolInfo</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679118844"><span class="annot"><a href="#local-6989586621679118844"><span class="hs-identifier hs-type">mode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-129"></span><span>     </span><span id="MiniProtocolInfo"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolInfo"><span class="hs-identifier hs-var">MiniProtocolInfo</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-130"></span><span>       </span><span id="miniProtocolNum"><span class="annot"><span class="annottext">forall (mode :: Mode). MiniProtocolInfo mode -&gt; MiniProtocolNum
+</span><a href="Network.Mux.Types.html#miniProtocolNum"><span class="hs-identifier hs-var hs-var">miniProtocolNum</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-131"></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Unique mini-protocol number.</span></span><span>
+</span><span id="line-132"></span><span>       </span><span id="miniProtocolDir"><span class="annot"><span class="annottext">forall (mode :: Mode).
+MiniProtocolInfo mode -&gt; MiniProtocolDirection mode
+</span><a href="Network.Mux.Types.html#miniProtocolDir"><span class="hs-identifier hs-var hs-var">miniProtocolDir</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118844"><span class="hs-identifier hs-type">mode</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-133"></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Mini-protocol direction.</span></span><span>
+</span><span id="line-134"></span><span>       </span><span id="miniProtocolLimits"><span class="annot"><span class="annottext">forall (mode :: Mode). MiniProtocolInfo mode -&gt; MiniProtocolLimits
+</span><a href="Network.Mux.Types.html#miniProtocolLimits"><span class="hs-identifier hs-var hs-var">miniProtocolLimits</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolLimits"><span class="hs-identifier hs-type">MiniProtocolLimits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-135"></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ ingress queue limits for the protocol</span></span><span>
+</span><span id="line-136"></span><span>       </span><span id="miniProtocolCapability"><span class="annot"><span class="annottext">forall (mode :: Mode). MiniProtocolInfo mode -&gt; Maybe Int
+</span><a href="Network.Mux.Types.html#miniProtocolCapability"><span class="hs-identifier hs-var hs-var">miniProtocolCapability</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ capability on which the mini-protocol should run</span></span><span>
+</span><span id="line-138"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-keyword">data</span><span> </span><span id="MiniProtocolDirection"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-var">MiniProtocolDirection</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119108"><span class="annot"><a href="#local-6989586621679119108"><span class="hs-identifier hs-type">mode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-141"></span><span>    </span><span id="InitiatorDirectionOnly"><span class="annot"><a href="Network.Mux.Types.html#InitiatorDirectionOnly"><span class="hs-identifier hs-var">InitiatorDirectionOnly</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#InitiatorMode"><span class="hs-identifier hs-type">InitiatorMode</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span id="ResponderDirectionOnly"><span class="annot"><a href="Network.Mux.Types.html#ResponderDirectionOnly"><span class="hs-identifier hs-var">ResponderDirectionOnly</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">ResponderMode</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span id="InitiatorDirection"><span class="annot"><a href="Network.Mux.Types.html#InitiatorDirection"><span class="hs-identifier hs-var">InitiatorDirection</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#InitiatorResponderMode"><span class="hs-identifier hs-type">InitiatorResponderMode</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span id="ResponderDirection"><span class="annot"><a href="Network.Mux.Types.html#ResponderDirection"><span class="hs-identifier hs-var">ResponderDirection</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#InitiatorResponderMode"><span class="hs-identifier hs-type">InitiatorResponderMode</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span id="local-6989586621679118852"><span id="local-6989586621679119114"><span id="local-6989586621679119116"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679118852"><span class="hs-identifier hs-type">mode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-147"></span><span id="local-6989586621679118854"><span id="local-6989586621679119122"><span id="local-6989586621679119124"><span id="local-6989586621679119126"><span id="local-6989586621679119130"><span id="local-6989586621679119133"><span id="local-6989586621679119136"><span id="local-6989586621679119139"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679118854"><span class="hs-identifier hs-type">mode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-comment">--</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- Mux status</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--</span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-keyword">data</span><span> </span><span id="Status"><span class="annot"><a href="Network.Mux.Types.html#Status"><span class="hs-identifier hs-var">Status</span></a></span></span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-comment">-- | Initial mux state, mux is ready to accept requests.  It does not</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-comment">-- indicate weather mux thread was started or not.</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="Ready"><span class="annot"><a href="Network.Mux.Types.html#Ready"><span class="hs-identifier hs-var">Ready</span></a></span></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Mux failed with 'SomeException'</span></span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Failed"><span class="annot"><a href="Network.Mux.Types.html#Failed"><span class="hs-identifier hs-var">Failed</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-comment">-- | Mux is being stopped; mux will not accept any new mini-protocols to</span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-comment">-- start.</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Stopping"><span class="annot"><a href="Network.Mux.Types.html#Stopping"><span class="hs-identifier hs-var">Stopping</span></a></span></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span>     </span><span class="annot"><span class="hs-comment">-- | Mux stopped.</span></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Stopped"><span class="annot"><a href="Network.Mux.Types.html#Stopped"><span class="hs-identifier hs-var">Stopped</span></a></span></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679119146"><span id="local-6989586621679119151"><span id="local-6989586621679119155"><span class="annot"><span class="annottext">Int -&gt; Status -&gt; ShowS
+[Status] -&gt; ShowS
+Status -&gt; String
+(Int -&gt; Status -&gt; ShowS)
+-&gt; (Status -&gt; String) -&gt; ([Status] -&gt; ShowS) -&gt; Show Status
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Status -&gt; ShowS
+showsPrec :: Int -&gt; Status -&gt; ShowS
+$cshow :: Status -&gt; String
+show :: Status -&gt; String
+$cshowList :: [Status] -&gt; ShowS
+showList :: [Status] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-comment">--</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- Mux internal types</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-keyword">type</span><span> </span><span id="IngressQueue"><span class="annot"><a href="Network.Mux.Types.html#IngressQueue"><span class="hs-identifier hs-var">IngressQueue</span></a></span></span><span> </span><span id="local-6989586621679119157"><span class="annot"><a href="#local-6989586621679119157"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StrictTVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679119157"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="annot"><span class="hs-comment">-- | The index of a protocol in a MuxApplication, used for array indices</span></span><span>
+</span><span id="line-176"></span><span class="hs-keyword">newtype</span><span> </span><span id="MiniProtocolIx"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolIx"><span class="hs-identifier hs-var">MiniProtocolIx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MiniProtocolIx"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolIx"><span class="hs-identifier hs-var">MiniProtocolIx</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119160"><span id="local-6989586621679119165"><span class="annot"><span class="annottext">MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+(MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool) -&gt; Eq MiniProtocolIx
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+== :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+$c/= :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+/= :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119172"><span id="local-6989586621679119176"><span id="local-6989586621679119180"><span id="local-6989586621679119184"><span id="local-6989586621679119188"><span id="local-6989586621679119192"><span id="local-6989586621679119196"><span class="annot"><span class="annottext">Eq MiniProtocolIx
+Eq MiniProtocolIx =&gt;
+(MiniProtocolIx -&gt; MiniProtocolIx -&gt; Ordering)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; Ord MiniProtocolIx
+MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+MiniProtocolIx -&gt; MiniProtocolIx -&gt; Ordering
+MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Ordering
+compare :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Ordering
+$c&lt; :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+&lt; :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+$c&lt;= :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+&lt;= :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+$c&gt; :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+&gt; :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+$c&gt;= :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+&gt;= :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; Bool
+$cmax :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+max :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+$cmin :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+min :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119201"><span id="local-6989586621679119206"><span id="local-6989586621679119210"><span id="local-6989586621679119214"><span id="local-6989586621679119218"><span id="local-6989586621679119222"><span id="local-6989586621679119226"><span class="annot"><span class="annottext">Integer -&gt; MiniProtocolIx
+MiniProtocolIx -&gt; MiniProtocolIx
+MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+(MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (Integer -&gt; MiniProtocolIx)
+-&gt; Num MiniProtocolIx
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
++ :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+$c- :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+- :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+$c* :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+* :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; MiniProtocolIx
+$cnegate :: MiniProtocolIx -&gt; MiniProtocolIx
+negate :: MiniProtocolIx -&gt; MiniProtocolIx
+$cabs :: MiniProtocolIx -&gt; MiniProtocolIx
+abs :: MiniProtocolIx -&gt; MiniProtocolIx
+$csignum :: MiniProtocolIx -&gt; MiniProtocolIx
+signum :: MiniProtocolIx -&gt; MiniProtocolIx
+$cfromInteger :: Integer -&gt; MiniProtocolIx
+fromInteger :: Integer -&gt; MiniProtocolIx
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119232"><span id="local-6989586621679119237"><span id="local-6989586621679119241"><span id="local-6989586621679119245"><span id="local-6989586621679119249"><span id="local-6989586621679119253"><span id="local-6989586621679119257"><span id="local-6989586621679119261"><span class="annot"><span class="annottext">Int -&gt; MiniProtocolIx
+MiniProtocolIx -&gt; Int
+MiniProtocolIx -&gt; [MiniProtocolIx]
+MiniProtocolIx -&gt; MiniProtocolIx
+MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+MiniProtocolIx
+-&gt; MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+(MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx)
+-&gt; (Int -&gt; MiniProtocolIx)
+-&gt; (MiniProtocolIx -&gt; Int)
+-&gt; (MiniProtocolIx -&gt; [MiniProtocolIx])
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx])
+-&gt; (MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx])
+-&gt; (MiniProtocolIx
+    -&gt; MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx])
+-&gt; Enum MiniProtocolIx
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: MiniProtocolIx -&gt; MiniProtocolIx
+succ :: MiniProtocolIx -&gt; MiniProtocolIx
+$cpred :: MiniProtocolIx -&gt; MiniProtocolIx
+pred :: MiniProtocolIx -&gt; MiniProtocolIx
+$ctoEnum :: Int -&gt; MiniProtocolIx
+toEnum :: Int -&gt; MiniProtocolIx
+$cfromEnum :: MiniProtocolIx -&gt; Int
+fromEnum :: MiniProtocolIx -&gt; Int
+$cenumFrom :: MiniProtocolIx -&gt; [MiniProtocolIx]
+enumFrom :: MiniProtocolIx -&gt; [MiniProtocolIx]
+$cenumFromThen :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+enumFromThen :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+$cenumFromTo :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+enumFromTo :: MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+$cenumFromThenTo :: MiniProtocolIx
+-&gt; MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+enumFromThenTo :: MiniProtocolIx
+-&gt; MiniProtocolIx -&gt; MiniProtocolIx -&gt; [MiniProtocolIx]
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119268"><span id="local-6989586621679119273"><span id="local-6989586621679119277"><span id="local-6989586621679119281"><span id="local-6989586621679119285"><span id="local-6989586621679119289"><span class="annot"><span class="annottext">Ord MiniProtocolIx
+Ord MiniProtocolIx =&gt;
+((MiniProtocolIx, MiniProtocolIx) -&gt; [MiniProtocolIx])
+-&gt; ((MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Int)
+-&gt; ((MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Int)
+-&gt; ((MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Bool)
+-&gt; ((MiniProtocolIx, MiniProtocolIx) -&gt; Int)
+-&gt; ((MiniProtocolIx, MiniProtocolIx) -&gt; Int)
+-&gt; Ix MiniProtocolIx
+(MiniProtocolIx, MiniProtocolIx) -&gt; Int
+(MiniProtocolIx, MiniProtocolIx) -&gt; [MiniProtocolIx]
+(MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Bool
+(MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Int
+forall a.
+Ord a =&gt;
+((a, a) -&gt; [a])
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Bool)
+-&gt; ((a, a) -&gt; Int)
+-&gt; ((a, a) -&gt; Int)
+-&gt; Ix a
+$crange :: (MiniProtocolIx, MiniProtocolIx) -&gt; [MiniProtocolIx]
+range :: (MiniProtocolIx, MiniProtocolIx) -&gt; [MiniProtocolIx]
+$cindex :: (MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Int
+index :: (MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Int
+$cunsafeIndex :: (MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Int
+unsafeIndex :: (MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Int
+$cinRange :: (MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Bool
+inRange :: (MiniProtocolIx, MiniProtocolIx) -&gt; MiniProtocolIx -&gt; Bool
+$crangeSize :: (MiniProtocolIx, MiniProtocolIx) -&gt; Int
+rangeSize :: (MiniProtocolIx, MiniProtocolIx) -&gt; Int
+$cunsafeRangeSize :: (MiniProtocolIx, MiniProtocolIx) -&gt; Int
+unsafeRangeSize :: (MiniProtocolIx, MiniProtocolIx) -&gt; Int
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Ix.html#Ix"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ix</span></a></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119294"><span id="local-6989586621679119299"><span id="local-6989586621679119303"><span class="annot"><span class="annottext">Int -&gt; MiniProtocolIx -&gt; ShowS
+[MiniProtocolIx] -&gt; ShowS
+MiniProtocolIx -&gt; String
+(Int -&gt; MiniProtocolIx -&gt; ShowS)
+-&gt; (MiniProtocolIx -&gt; String)
+-&gt; ([MiniProtocolIx] -&gt; ShowS)
+-&gt; Show MiniProtocolIx
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; MiniProtocolIx -&gt; ShowS
+showsPrec :: Int -&gt; MiniProtocolIx -&gt; ShowS
+$cshow :: MiniProtocolIx -&gt; String
+show :: MiniProtocolIx -&gt; String
+$cshowList :: [MiniProtocolIx] -&gt; ShowS
+showList :: [MiniProtocolIx] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-keyword">data</span><span> </span><span id="MiniProtocolDir"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-var">MiniProtocolDir</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InitiatorDir"><span class="annot"><a href="Network.Mux.Types.html#InitiatorDir"><span class="hs-identifier hs-var">InitiatorDir</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="ResponderDir"><span class="annot"><a href="Network.Mux.Types.html#ResponderDir"><span class="hs-identifier hs-var">ResponderDir</span></a></span></span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119308"><span id="local-6989586621679119310"><span class="annot"><span class="annottext">MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+(MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool)
+-&gt; Eq MiniProtocolDir
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+== :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+$c/= :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+/= :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119316"><span id="local-6989586621679119318"><span id="local-6989586621679119320"><span id="local-6989586621679119324"><span id="local-6989586621679119327"><span id="local-6989586621679119330"><span id="local-6989586621679119333"><span class="annot"><span class="annottext">Eq MiniProtocolDir
+Eq MiniProtocolDir =&gt;
+(MiniProtocolDir -&gt; MiniProtocolDir -&gt; Ordering)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; MiniProtocolDir)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; MiniProtocolDir)
+-&gt; Ord MiniProtocolDir
+MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+MiniProtocolDir -&gt; MiniProtocolDir -&gt; Ordering
+MiniProtocolDir -&gt; MiniProtocolDir -&gt; MiniProtocolDir
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Ordering
+compare :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Ordering
+$c&lt; :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+&lt; :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+$c&lt;= :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+&lt;= :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+$c&gt; :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+&gt; :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+$c&gt;= :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+&gt;= :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bool
+$cmax :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; MiniProtocolDir
+max :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; MiniProtocolDir
+$cmin :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; MiniProtocolDir
+min :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; MiniProtocolDir
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119338"><span id="local-6989586621679119341"><span id="local-6989586621679119345"><span id="local-6989586621679119347"><span id="local-6989586621679119349"><span id="local-6989586621679119352"><span class="annot"><span class="annottext">Ord MiniProtocolDir
+Ord MiniProtocolDir =&gt;
+((MiniProtocolDir, MiniProtocolDir) -&gt; [MiniProtocolDir])
+-&gt; ((MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Int)
+-&gt; ((MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Int)
+-&gt; ((MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Bool)
+-&gt; ((MiniProtocolDir, MiniProtocolDir) -&gt; Int)
+-&gt; ((MiniProtocolDir, MiniProtocolDir) -&gt; Int)
+-&gt; Ix MiniProtocolDir
+(MiniProtocolDir, MiniProtocolDir) -&gt; Int
+(MiniProtocolDir, MiniProtocolDir) -&gt; [MiniProtocolDir]
+(MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Bool
+(MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Int
+forall a.
+Ord a =&gt;
+((a, a) -&gt; [a])
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Bool)
+-&gt; ((a, a) -&gt; Int)
+-&gt; ((a, a) -&gt; Int)
+-&gt; Ix a
+$crange :: (MiniProtocolDir, MiniProtocolDir) -&gt; [MiniProtocolDir]
+range :: (MiniProtocolDir, MiniProtocolDir) -&gt; [MiniProtocolDir]
+$cindex :: (MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Int
+index :: (MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Int
+$cunsafeIndex :: (MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Int
+unsafeIndex :: (MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Int
+$cinRange :: (MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Bool
+inRange :: (MiniProtocolDir, MiniProtocolDir) -&gt; MiniProtocolDir -&gt; Bool
+$crangeSize :: (MiniProtocolDir, MiniProtocolDir) -&gt; Int
+rangeSize :: (MiniProtocolDir, MiniProtocolDir) -&gt; Int
+$cunsafeRangeSize :: (MiniProtocolDir, MiniProtocolDir) -&gt; Int
+unsafeRangeSize :: (MiniProtocolDir, MiniProtocolDir) -&gt; Int
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Ix.html#Ix"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ix</span></a></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119355"><span id="local-6989586621679119361"><span id="local-6989586621679119367"><span id="local-6989586621679119375"><span id="local-6989586621679119377"><span id="local-6989586621679119380"><span id="local-6989586621679119384"><span id="local-6989586621679119388"><span class="annot"><span class="annottext">Int -&gt; MiniProtocolDir
+MiniProtocolDir -&gt; Int
+MiniProtocolDir -&gt; [MiniProtocolDir]
+MiniProtocolDir -&gt; MiniProtocolDir
+MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+MiniProtocolDir
+-&gt; MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+(MiniProtocolDir -&gt; MiniProtocolDir)
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir)
+-&gt; (Int -&gt; MiniProtocolDir)
+-&gt; (MiniProtocolDir -&gt; Int)
+-&gt; (MiniProtocolDir -&gt; [MiniProtocolDir])
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir])
+-&gt; (MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir])
+-&gt; (MiniProtocolDir
+    -&gt; MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir])
+-&gt; Enum MiniProtocolDir
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: MiniProtocolDir -&gt; MiniProtocolDir
+succ :: MiniProtocolDir -&gt; MiniProtocolDir
+$cpred :: MiniProtocolDir -&gt; MiniProtocolDir
+pred :: MiniProtocolDir -&gt; MiniProtocolDir
+$ctoEnum :: Int -&gt; MiniProtocolDir
+toEnum :: Int -&gt; MiniProtocolDir
+$cfromEnum :: MiniProtocolDir -&gt; Int
+fromEnum :: MiniProtocolDir -&gt; Int
+$cenumFrom :: MiniProtocolDir -&gt; [MiniProtocolDir]
+enumFrom :: MiniProtocolDir -&gt; [MiniProtocolDir]
+$cenumFromThen :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+enumFromThen :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+$cenumFromTo :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+enumFromTo :: MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+$cenumFromThenTo :: MiniProtocolDir
+-&gt; MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+enumFromThenTo :: MiniProtocolDir
+-&gt; MiniProtocolDir -&gt; MiniProtocolDir -&gt; [MiniProtocolDir]
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119391"><span id="local-6989586621679119393"><span class="annot"><span class="annottext">MiniProtocolDir
+MiniProtocolDir -&gt; MiniProtocolDir -&gt; Bounded MiniProtocolDir
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: MiniProtocolDir
+minBound :: MiniProtocolDir
+$cmaxBound :: MiniProtocolDir
+maxBound :: MiniProtocolDir
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119396"><span id="local-6989586621679119398"><span id="local-6989586621679119402"><span class="annot"><span class="annottext">Int -&gt; MiniProtocolDir -&gt; ShowS
+[MiniProtocolDir] -&gt; ShowS
+MiniProtocolDir -&gt; String
+(Int -&gt; MiniProtocolDir -&gt; ShowS)
+-&gt; (MiniProtocolDir -&gt; String)
+-&gt; ([MiniProtocolDir] -&gt; ShowS)
+-&gt; Show MiniProtocolDir
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; MiniProtocolDir -&gt; ShowS
+showsPrec :: Int -&gt; MiniProtocolDir -&gt; ShowS
+$cshow :: MiniProtocolDir -&gt; String
+show :: MiniProtocolDir -&gt; String
+$cshowList :: [MiniProtocolDir] -&gt; ShowS
+showList :: [MiniProtocolDir] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span id="local-6989586621679118860"><span class="annot"><a href="Network.Mux.Types.html#protocolDirEnum"><span class="hs-identifier hs-type">protocolDirEnum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDirection"><span class="hs-identifier hs-type">MiniProtocolDirection</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118860"><span class="hs-identifier hs-type">mode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span></span><span>
+</span><span id="line-183"></span><span id="protocolDirEnum"><span class="annot"><span class="annottext">protocolDirEnum :: forall (mode :: Mode).
+MiniProtocolDirection mode -&gt; MiniProtocolDir
+</span><a href="Network.Mux.Types.html#protocolDirEnum"><span class="hs-identifier hs-var hs-var">protocolDirEnum</span></a></span></span><span> </span><span class="annot"><span class="annottext">MiniProtocolDirection mode
+</span><a href="Network.Mux.Types.html#InitiatorDirectionOnly"><span class="hs-identifier hs-var">InitiatorDirectionOnly</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#InitiatorDir"><span class="hs-identifier hs-var">InitiatorDir</span></a></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Network.Mux.Types.html#protocolDirEnum"><span class="hs-identifier hs-var">protocolDirEnum</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolDirection mode
+</span><a href="Network.Mux.Types.html#ResponderDirectionOnly"><span class="hs-identifier hs-var">ResponderDirectionOnly</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#ResponderDir"><span class="hs-identifier hs-var">ResponderDir</span></a></span><span>
+</span><span id="line-185"></span><span class="annot"><a href="Network.Mux.Types.html#protocolDirEnum"><span class="hs-identifier hs-var">protocolDirEnum</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolDirection mode
+</span><a href="Network.Mux.Types.html#InitiatorDirection"><span class="hs-identifier hs-var">InitiatorDirection</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#InitiatorDir"><span class="hs-identifier hs-var">InitiatorDir</span></a></span><span>
+</span><span id="line-186"></span><span class="annot"><a href="Network.Mux.Types.html#protocolDirEnum"><span class="hs-identifier hs-var">protocolDirEnum</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolDirection mode
+</span><a href="Network.Mux.Types.html#ResponderDirection"><span class="hs-identifier hs-var">ResponderDirection</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#ResponderDir"><span class="hs-identifier hs-var">ResponderDir</span></a></span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-keyword">data</span><span> </span><span id="MiniProtocolState"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolState"><span class="hs-identifier hs-var">MiniProtocolState</span></a></span></span><span> </span><span id="local-6989586621679118865"><span class="annot"><a href="#local-6989586621679118865"><span class="hs-identifier hs-type">mode</span></a></span></span><span> </span><span id="local-6989586621679118866"><span class="annot"><a href="#local-6989586621679118866"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MiniProtocolState"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolState"><span class="hs-identifier hs-var">MiniProtocolState</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-189"></span><span>       </span><span id="miniProtocolInfo"><span class="annot"><span class="annottext">forall (mode :: Mode) (m :: * -&gt; *).
+MiniProtocolState mode m -&gt; MiniProtocolInfo mode
+</span><a href="Network.Mux.Types.html#miniProtocolInfo"><span class="hs-identifier hs-var hs-var">miniProtocolInfo</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolInfo"><span class="hs-identifier hs-type">MiniProtocolInfo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118865"><span class="hs-identifier hs-type">mode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-190"></span><span>       </span><span id="miniProtocolIngressQueue"><span class="annot"><span class="annottext">forall (mode :: Mode) (m :: * -&gt; *).
+MiniProtocolState mode m -&gt; IngressQueue m
+</span><a href="Network.Mux.Types.html#miniProtocolIngressQueue"><span class="hs-identifier hs-var hs-var">miniProtocolIngressQueue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#IngressQueue"><span class="hs-identifier hs-type">IngressQueue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118866"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-191"></span><span>       </span><span id="miniProtocolStatusVar"><span class="annot"><span class="annottext">forall (mode :: Mode) (m :: * -&gt; *).
+MiniProtocolState mode m -&gt; StrictTVar m MiniProtocolStatus
+</span><a href="Network.Mux.Types.html#miniProtocolStatusVar"><span class="hs-identifier hs-var hs-var">miniProtocolStatusVar</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StrictTVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679118866"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolStatus"><span class="hs-identifier hs-type">MiniProtocolStatus</span></a></span><span>
+</span><span id="line-192"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span class="hs-keyword">data</span><span> </span><span id="MiniProtocolStatus"><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolStatus"><span class="hs-identifier hs-var">MiniProtocolStatus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="StatusIdle"><span class="annot"><a href="Network.Mux.Types.html#StatusIdle"><span class="hs-identifier hs-var">StatusIdle</span></a></span></span><span>
+</span><span id="line-195"></span><span>                        </span><span class="hs-glyph">|</span><span> </span><span id="StatusStartOnDemand"><span class="annot"><a href="Network.Mux.Types.html#StatusStartOnDemand"><span class="hs-identifier hs-var">StatusStartOnDemand</span></a></span></span><span>
+</span><span id="line-196"></span><span>                        </span><span class="hs-glyph">|</span><span> </span><span id="StatusRunning"><span class="annot"><a href="Network.Mux.Types.html#StatusRunning"><span class="hs-identifier hs-var">StatusRunning</span></a></span></span><span>
+</span><span id="line-197"></span><span>                        </span><span class="hs-glyph">|</span><span> </span><span id="StatusStartOnDemandAny"><span class="annot"><a href="Network.Mux.Types.html#StatusStartOnDemandAny"><span class="hs-identifier hs-var">StatusStartOnDemandAny</span></a></span></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119417"><span id="local-6989586621679119419"><span class="annot"><span class="annottext">MiniProtocolStatus -&gt; MiniProtocolStatus -&gt; Bool
+(MiniProtocolStatus -&gt; MiniProtocolStatus -&gt; Bool)
+-&gt; (MiniProtocolStatus -&gt; MiniProtocolStatus -&gt; Bool)
+-&gt; Eq MiniProtocolStatus
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: MiniProtocolStatus -&gt; MiniProtocolStatus -&gt; Bool
+== :: MiniProtocolStatus -&gt; MiniProtocolStatus -&gt; Bool
+$c/= :: MiniProtocolStatus -&gt; MiniProtocolStatus -&gt; Bool
+/= :: MiniProtocolStatus -&gt; MiniProtocolStatus -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119423"><span id="local-6989586621679119425"><span id="local-6989586621679119429"><span class="annot"><span class="annottext">Int -&gt; MiniProtocolStatus -&gt; ShowS
+[MiniProtocolStatus] -&gt; ShowS
+MiniProtocolStatus -&gt; String
+(Int -&gt; MiniProtocolStatus -&gt; ShowS)
+-&gt; (MiniProtocolStatus -&gt; String)
+-&gt; ([MiniProtocolStatus] -&gt; ShowS)
+-&gt; Show MiniProtocolStatus
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; MiniProtocolStatus -&gt; ShowS
+showsPrec :: Int -&gt; MiniProtocolStatus -&gt; ShowS
+$cshow :: MiniProtocolStatus -&gt; String
+show :: MiniProtocolStatus -&gt; String
+$cshowList :: [MiniProtocolStatus] -&gt; ShowS
+showList :: [MiniProtocolStatus] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="hs-keyword">data</span><span> </span><span id="SDUHeader"><span class="annot"><a href="Network.Mux.Types.html#SDUHeader"><span class="hs-identifier hs-var">SDUHeader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SDUHeader"><span class="annot"><a href="Network.Mux.Types.html#SDUHeader"><span class="hs-identifier hs-var">SDUHeader</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-201"></span><span>      </span><span id="mhTimestamp"><span class="annot"><span class="annottext">SDUHeader -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#mhTimestamp"><span class="hs-identifier hs-var hs-var">mhTimestamp</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-type">RemoteClockModel</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="mhNum"><span class="annot"><span class="annottext">SDUHeader -&gt; MiniProtocolNum
+</span><a href="Network.Mux.Types.html#mhNum"><span class="hs-identifier hs-var hs-var">mhNum</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span>
+</span><span id="line-203"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="mhDir"><span class="annot"><span class="annottext">SDUHeader -&gt; MiniProtocolDir
+</span><a href="Network.Mux.Types.html#mhDir"><span class="hs-identifier hs-var hs-var">mhDir</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span>
+</span><span id="line-204"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="mhLength"><span class="annot"><span class="annottext">SDUHeader -&gt; Word16
+</span><a href="Network.Mux.Types.html#mhLength"><span class="hs-identifier hs-var hs-var">mhLength</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span class="hs-keyword">data</span><span> </span><span id="SDU"><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-var">SDU</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SDU"><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-var">SDU</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-209"></span><span>      </span><span id="msHeader"><span class="annot"><span class="annottext">SDU -&gt; SDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var hs-var">msHeader</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#SDUHeader"><span class="hs-identifier hs-type">SDUHeader</span></a></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="msBlob"><span class="annot"><span class="annottext">SDU -&gt; ByteString
+</span><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var hs-var">msBlob</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>
+</span><span id="line-211"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span class="annot"><a href="Network.Mux.Types.html#msTimestamp"><span class="hs-identifier hs-type">msTimestamp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-type">RemoteClockModel</span></a></span><span>
+</span><span id="line-214"></span><span id="msTimestamp"><span class="annot"><span class="annottext">msTimestamp :: SDU -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#msTimestamp"><span class="hs-identifier hs-var hs-var">msTimestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SDUHeader -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#mhTimestamp"><span class="hs-identifier hs-var">mhTimestamp</span></a></span><span> </span><span class="annot"><span class="annottext">(SDUHeader -&gt; RemoteClockModel)
+-&gt; (SDU -&gt; SDUHeader) -&gt; SDU -&gt; RemoteClockModel
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SDU -&gt; SDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span class="annot"><a href="Network.Mux.Types.html#setTimestamp"><span class="hs-identifier hs-type">setTimestamp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-type">RemoteClockModel</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span>
+</span><span id="line-217"></span><span id="setTimestamp"><span class="annot"><span class="annottext">setTimestamp :: SDU -&gt; RemoteClockModel -&gt; SDU
+</span><a href="Network.Mux.Types.html#setTimestamp"><span class="hs-identifier hs-var hs-var">setTimestamp</span></a></span></span><span> </span><span id="local-6989586621679119440"><span class="annot"><span class="annottext">sdu :: SDU
+</span><a href="#local-6989586621679119440"><span class="hs-identifier hs-var">sdu</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679119441"><span class="annot"><span class="annottext">SDUHeader
+msHeader :: SDU -&gt; SDUHeader
+msHeader :: SDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var hs-var">msHeader</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621679119442"><span class="annot"><span class="annottext">RemoteClockModel
+</span><a href="#local-6989586621679119442"><span class="hs-identifier hs-var">mhTimestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-218"></span><span>    </span><span class="annot"><span class="annottext">SDU
+</span><a href="#local-6989586621679119440"><span class="hs-identifier hs-var">sdu</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679119441"><span class="hs-identifier hs-type">msHeader</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#mhTimestamp"><span class="hs-identifier hs-var hs-type">mhTimestamp</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-219"></span><span>
+</span><span id="line-220"></span><span class="annot"><a href="Network.Mux.Types.html#msNum"><span class="hs-identifier hs-type">msNum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span>
+</span><span id="line-221"></span><span id="msNum"><span class="annot"><span class="annottext">msNum :: SDU -&gt; MiniProtocolNum
+</span><a href="Network.Mux.Types.html#msNum"><span class="hs-identifier hs-var hs-var">msNum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SDUHeader -&gt; MiniProtocolNum
+</span><a href="Network.Mux.Types.html#mhNum"><span class="hs-identifier hs-var">mhNum</span></a></span><span> </span><span class="annot"><span class="annottext">(SDUHeader -&gt; MiniProtocolNum)
+-&gt; (SDU -&gt; SDUHeader) -&gt; SDU -&gt; MiniProtocolNum
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SDU -&gt; SDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span class="annot"><a href="Network.Mux.Types.html#msDir"><span class="hs-identifier hs-type">msDir</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span>
+</span><span id="line-224"></span><span id="msDir"><span class="annot"><span class="annottext">msDir :: SDU -&gt; MiniProtocolDir
+</span><a href="Network.Mux.Types.html#msDir"><span class="hs-identifier hs-var hs-var">msDir</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SDUHeader -&gt; MiniProtocolDir
+</span><a href="Network.Mux.Types.html#mhDir"><span class="hs-identifier hs-var">mhDir</span></a></span><span> </span><span class="annot"><span class="annottext">(SDUHeader -&gt; MiniProtocolDir)
+-&gt; (SDU -&gt; SDUHeader) -&gt; SDU -&gt; MiniProtocolDir
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SDU -&gt; SDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span class="annot"><a href="Network.Mux.Types.html#msLength"><span class="hs-identifier hs-type">msLength</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-227"></span><span id="msLength"><span class="annot"><span class="annottext">msLength :: SDU -&gt; Word16
+</span><a href="Network.Mux.Types.html#msLength"><span class="hs-identifier hs-var hs-var">msLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SDUHeader -&gt; Word16
+</span><a href="Network.Mux.Types.html#mhLength"><span class="hs-identifier hs-var">mhLength</span></a></span><span> </span><span class="annot"><span class="annottext">(SDUHeader -&gt; Word16) -&gt; (SDU -&gt; SDUHeader) -&gt; SDU -&gt; Word16
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SDU -&gt; SDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- | Low level access to underlying socket or pipe.  There are three smart</span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- constructors:</span><span>
+</span><span id="line-232"></span><span class="hs-comment">--</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- * 'Network.Socket.socketAsBearer'</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- * 'Network.Pipe.pipeAsBearer'</span><span>
+</span><span id="line-235"></span><span class="hs-comment">-- * @Test.Mux.queuesAsBearer@</span><span>
+</span><span id="line-236"></span><span class="hs-comment">--</span><span>
+</span><span id="line-237"></span><span class="hs-keyword">data</span><span> </span><span id="Bearer"><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier hs-var">Bearer</span></a></span></span><span> </span><span id="local-6989586621679118883"><span class="annot"><a href="#local-6989586621679118883"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Bearer"><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier hs-var">Bearer</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-238"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Timestamp and send SDU.</span></span><span>
+</span><span id="line-239"></span><span>      </span><span id="write"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Bearer m -&gt; TimeoutFn m -&gt; SDU -&gt; m Time
+</span><a href="Network.Mux.Types.html#write"><span class="hs-identifier hs-var hs-var">write</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">TimeoutFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118883"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679118883"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span>
+</span><span id="line-240"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Read a SDU</span></span><span>
+</span><span id="line-241"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="read"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Bearer m -&gt; TimeoutFn m -&gt; m (SDU, Time)
+</span><a href="Network.Mux.Types.html#read"><span class="hs-identifier hs-var hs-var">read</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">TimeoutFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118883"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679118883"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Return a suitable SDU payload size.</span></span><span>
+</span><span id="line-243"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="sduSize"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Bearer m -&gt; SDUSize
+</span><a href="Network.Mux.Types.html#sduSize"><span class="hs-identifier hs-var hs-var">sduSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-type">SDUSize</span></a></span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Name of the bearer</span></span><span>
+</span><span id="line-245"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="name"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Bearer m -&gt; String
+</span><a href="Network.Mux.Types.html#name"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-246"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-keyword">newtype</span><span> </span><span id="SDUSize"><span class="annot"><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-var">SDUSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SDUSize"><span class="annot"><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-var">SDUSize</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getSDUSize"><span class="annot"><span class="annottext">SDUSize -&gt; Word16
+</span><a href="Network.Mux.Types.html#getSDUSize"><span class="hs-identifier hs-var hs-var">getSDUSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679119451"><span id="local-6989586621679119453"><span class="annot"><span class="annottext">(forall x. SDUSize -&gt; Rep SDUSize x)
+-&gt; (forall x. Rep SDUSize x -&gt; SDUSize) -&gt; Generic SDUSize
+forall x. Rep SDUSize x -&gt; SDUSize
+forall x. SDUSize -&gt; Rep SDUSize x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. SDUSize -&gt; Rep SDUSize x
+from :: forall x. SDUSize -&gt; Rep SDUSize x
+$cto :: forall x. Rep SDUSize x -&gt; SDUSize
+to :: forall x. Rep SDUSize x -&gt; SDUSize
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span>
+</span><span id="line-250"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679119457"><span id="local-6989586621679119464"><span id="local-6989586621679119470"><span class="annot"><span class="annottext">Int -&gt; SDUSize -&gt; ShowS
+[SDUSize] -&gt; ShowS
+SDUSize -&gt; String
+(Int -&gt; SDUSize -&gt; ShowS)
+-&gt; (SDUSize -&gt; String) -&gt; ([SDUSize] -&gt; ShowS) -&gt; Show SDUSize
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SDUSize -&gt; ShowS
+showsPrec :: Int -&gt; SDUSize -&gt; ShowS
+$cshow :: SDUSize -&gt; String
+show :: SDUSize -&gt; String
+$cshowList :: [SDUSize] -&gt; ShowS
+showList :: [SDUSize] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Quiet</span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-type">SDUSize</span></a></span><span>
+</span><span id="line-251"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119511"><span id="local-6989586621679119515"><span class="annot"><span class="annottext">SDUSize -&gt; SDUSize -&gt; Bool
+(SDUSize -&gt; SDUSize -&gt; Bool)
+-&gt; (SDUSize -&gt; SDUSize -&gt; Bool) -&gt; Eq SDUSize
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SDUSize -&gt; SDUSize -&gt; Bool
+== :: SDUSize -&gt; SDUSize -&gt; Bool
+$c/= :: SDUSize -&gt; SDUSize -&gt; Bool
+/= :: SDUSize -&gt; SDUSize -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119522"><span id="local-6989586621679119526"><span id="local-6989586621679119530"><span id="local-6989586621679119534"><span id="local-6989586621679119538"><span id="local-6989586621679119542"><span id="local-6989586621679119546"><span class="annot"><span class="annottext">Eq SDUSize
+Eq SDUSize =&gt;
+(SDUSize -&gt; SDUSize -&gt; Ordering)
+-&gt; (SDUSize -&gt; SDUSize -&gt; Bool)
+-&gt; (SDUSize -&gt; SDUSize -&gt; Bool)
+-&gt; (SDUSize -&gt; SDUSize -&gt; Bool)
+-&gt; (SDUSize -&gt; SDUSize -&gt; Bool)
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; Ord SDUSize
+SDUSize -&gt; SDUSize -&gt; Bool
+SDUSize -&gt; SDUSize -&gt; Ordering
+SDUSize -&gt; SDUSize -&gt; SDUSize
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: SDUSize -&gt; SDUSize -&gt; Ordering
+compare :: SDUSize -&gt; SDUSize -&gt; Ordering
+$c&lt; :: SDUSize -&gt; SDUSize -&gt; Bool
+&lt; :: SDUSize -&gt; SDUSize -&gt; Bool
+$c&lt;= :: SDUSize -&gt; SDUSize -&gt; Bool
+&lt;= :: SDUSize -&gt; SDUSize -&gt; Bool
+$c&gt; :: SDUSize -&gt; SDUSize -&gt; Bool
+&gt; :: SDUSize -&gt; SDUSize -&gt; Bool
+$c&gt;= :: SDUSize -&gt; SDUSize -&gt; Bool
+&gt;= :: SDUSize -&gt; SDUSize -&gt; Bool
+$cmax :: SDUSize -&gt; SDUSize -&gt; SDUSize
+max :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$cmin :: SDUSize -&gt; SDUSize -&gt; SDUSize
+min :: SDUSize -&gt; SDUSize -&gt; SDUSize
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119551"><span id="local-6989586621679119555"><span id="local-6989586621679119559"><span id="local-6989586621679119563"><span id="local-6989586621679119567"><span id="local-6989586621679119571"><span id="local-6989586621679119575"><span id="local-6989586621679119579"><span class="annot"><span class="annottext">Int -&gt; SDUSize
+SDUSize -&gt; Int
+SDUSize -&gt; [SDUSize]
+SDUSize -&gt; SDUSize
+SDUSize -&gt; SDUSize -&gt; [SDUSize]
+SDUSize -&gt; SDUSize -&gt; SDUSize -&gt; [SDUSize]
+(SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize)
+-&gt; (Int -&gt; SDUSize)
+-&gt; (SDUSize -&gt; Int)
+-&gt; (SDUSize -&gt; [SDUSize])
+-&gt; (SDUSize -&gt; SDUSize -&gt; [SDUSize])
+-&gt; (SDUSize -&gt; SDUSize -&gt; [SDUSize])
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize -&gt; [SDUSize])
+-&gt; Enum SDUSize
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: SDUSize -&gt; SDUSize
+succ :: SDUSize -&gt; SDUSize
+$cpred :: SDUSize -&gt; SDUSize
+pred :: SDUSize -&gt; SDUSize
+$ctoEnum :: Int -&gt; SDUSize
+toEnum :: Int -&gt; SDUSize
+$cfromEnum :: SDUSize -&gt; Int
+fromEnum :: SDUSize -&gt; Int
+$cenumFrom :: SDUSize -&gt; [SDUSize]
+enumFrom :: SDUSize -&gt; [SDUSize]
+$cenumFromThen :: SDUSize -&gt; SDUSize -&gt; [SDUSize]
+enumFromThen :: SDUSize -&gt; SDUSize -&gt; [SDUSize]
+$cenumFromTo :: SDUSize -&gt; SDUSize -&gt; [SDUSize]
+enumFromTo :: SDUSize -&gt; SDUSize -&gt; [SDUSize]
+$cenumFromThenTo :: SDUSize -&gt; SDUSize -&gt; SDUSize -&gt; [SDUSize]
+enumFromThenTo :: SDUSize -&gt; SDUSize -&gt; SDUSize -&gt; [SDUSize]
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-252"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119584"><span id="local-6989586621679119589"><span id="local-6989586621679119593"><span id="local-6989586621679119597"><span id="local-6989586621679119601"><span id="local-6989586621679119605"><span id="local-6989586621679119609"><span class="annot"><span class="annottext">Integer -&gt; SDUSize
+SDUSize -&gt; SDUSize
+SDUSize -&gt; SDUSize -&gt; SDUSize
+(SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize)
+-&gt; (Integer -&gt; SDUSize)
+-&gt; Num SDUSize
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: SDUSize -&gt; SDUSize -&gt; SDUSize
++ :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$c- :: SDUSize -&gt; SDUSize -&gt; SDUSize
+- :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$c* :: SDUSize -&gt; SDUSize -&gt; SDUSize
+* :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$cnegate :: SDUSize -&gt; SDUSize
+negate :: SDUSize -&gt; SDUSize
+$cabs :: SDUSize -&gt; SDUSize
+abs :: SDUSize -&gt; SDUSize
+$csignum :: SDUSize -&gt; SDUSize
+signum :: SDUSize -&gt; SDUSize
+$cfromInteger :: Integer -&gt; SDUSize
+fromInteger :: Integer -&gt; SDUSize
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119618"><span class="annot"><span class="annottext">Num SDUSize
+Ord SDUSize
+(Num SDUSize, Ord SDUSize) =&gt; (SDUSize -&gt; Rational) -&gt; Real SDUSize
+SDUSize -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: SDUSize -&gt; Rational
+toRational :: SDUSize -&gt; Rational
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119629"><span id="local-6989586621679119634"><span id="local-6989586621679119638"><span id="local-6989586621679119642"><span id="local-6989586621679119646"><span id="local-6989586621679119650"><span id="local-6989586621679119654"><span class="annot"><span class="annottext">Enum SDUSize
+Real SDUSize
+(Real SDUSize, Enum SDUSize) =&gt;
+(SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize -&gt; SDUSize)
+-&gt; (SDUSize -&gt; SDUSize -&gt; (SDUSize, SDUSize))
+-&gt; (SDUSize -&gt; SDUSize -&gt; (SDUSize, SDUSize))
+-&gt; (SDUSize -&gt; Integer)
+-&gt; Integral SDUSize
+SDUSize -&gt; Integer
+SDUSize -&gt; SDUSize -&gt; (SDUSize, SDUSize)
+SDUSize -&gt; SDUSize -&gt; SDUSize
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: SDUSize -&gt; SDUSize -&gt; SDUSize
+quot :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$crem :: SDUSize -&gt; SDUSize -&gt; SDUSize
+rem :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$cdiv :: SDUSize -&gt; SDUSize -&gt; SDUSize
+div :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$cmod :: SDUSize -&gt; SDUSize -&gt; SDUSize
+mod :: SDUSize -&gt; SDUSize -&gt; SDUSize
+$cquotRem :: SDUSize -&gt; SDUSize -&gt; (SDUSize, SDUSize)
+quotRem :: SDUSize -&gt; SDUSize -&gt; (SDUSize, SDUSize)
+$cdivMod :: SDUSize -&gt; SDUSize -&gt; (SDUSize, SDUSize)
+divMod :: SDUSize -&gt; SDUSize -&gt; (SDUSize, SDUSize)
+$ctoInteger :: SDUSize -&gt; Integer
+toInteger :: SDUSize -&gt; Integer
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-253"></span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- | A channel which wraps each message as an 'SDU' using giving</span><span>
+</span><span id="line-255"></span><span class="hs-comment">-- 'MiniProtocolNum' and 'MiniProtocolDir'.</span><span>
+</span><span id="line-256"></span><span class="hs-comment">--</span><span>
+</span><span id="line-257"></span><span class="annot"><a href="Network.Mux.Types.html#bearerAsChannel"><span class="hs-identifier hs-type">bearerAsChannel</span></a></span><span>
+</span><span id="line-258"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679118914"><span class="annot"><a href="#local-6989586621679118914"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118914"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-259"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier hs-type">Bearer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118914"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span>
+</span><span id="line-261"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span>
+</span><span id="line-262"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Channel.html#ByteChannel"><span class="hs-identifier hs-type">ByteChannel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118914"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-263"></span><span id="bearerAsChannel"><span class="annot"><span class="annottext">bearerAsChannel :: forall (m :: * -&gt; *).
+Functor m =&gt;
+Bearer m -&gt; MiniProtocolNum -&gt; MiniProtocolDir -&gt; ByteChannel m
+</span><a href="Network.Mux.Types.html#bearerAsChannel"><span class="hs-identifier hs-var hs-var">bearerAsChannel</span></a></span></span><span> </span><span id="local-6989586621679119667"><span class="annot"><span class="annottext">Bearer m
+</span><a href="#local-6989586621679119667"><span class="hs-identifier hs-var">bearer</span></a></span></span><span> </span><span id="local-6989586621679119668"><span class="annot"><span class="annottext">MiniProtocolNum
+</span><a href="#local-6989586621679119668"><span class="hs-identifier hs-var">ptclNum</span></a></span></span><span> </span><span id="local-6989586621679119669"><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="#local-6989586621679119669"><span class="hs-identifier hs-var">ptclDir</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-264"></span><span>      </span><span class="annot"><a href="Network.Mux.Channel.html#Channel"><span class="hs-identifier hs-type">Channel</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-265"></span><span>        </span><span class="annot"><span class="annottext">send :: ByteString -&gt; m ()
+</span><a href="Network.Mux.Channel.html#send"><span class="hs-identifier hs-var">send</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679119672"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679119672"><span class="hs-identifier hs-var">blob</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m Time -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m Time -&gt; m ()) -&gt; m Time -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bearer m -&gt; TimeoutFn m -&gt; SDU -&gt; m Time
+forall (m :: * -&gt; *). Bearer m -&gt; TimeoutFn m -&gt; SDU -&gt; m Time
+</span><a href="Network.Mux.Types.html#write"><span class="hs-identifier hs-var">write</span></a></span><span> </span><span class="annot"><span class="annottext">Bearer m
+</span><a href="#local-6989586621679119667"><span class="hs-identifier hs-var">bearer</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m a -&gt; m (Maybe a)
+TimeoutFn m
+</span><a href="#local-6989586621679119673"><span class="hs-identifier hs-var">noTimeout</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; SDU
+</span><a href="#local-6989586621679119674"><span class="hs-identifier hs-var">wrap</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679119672"><span class="hs-identifier hs-var">blob</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-266"></span><span>        </span><span class="annot"><span class="annottext">recv :: m (Maybe ByteString)
+</span><a href="Network.Mux.Channel.html#recv"><span class="hs-identifier hs-var">recv</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe ByteString)
+-&gt; ((SDU, Time) -&gt; ByteString) -&gt; (SDU, Time) -&gt; Maybe ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SDU -&gt; ByteString
+</span><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var">msBlob</span></a></span><span> </span><span class="annot"><span class="annottext">(SDU -&gt; ByteString)
+-&gt; ((SDU, Time) -&gt; SDU) -&gt; (SDU, Time) -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(SDU, Time) -&gt; SDU
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((SDU, Time) -&gt; Maybe ByteString)
+-&gt; m (SDU, Time) -&gt; m (Maybe ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bearer m -&gt; TimeoutFn m -&gt; m (SDU, Time)
+forall (m :: * -&gt; *). Bearer m -&gt; TimeoutFn m -&gt; m (SDU, Time)
+</span><a href="Network.Mux.Types.html#read"><span class="hs-identifier hs-var">read</span></a></span><span> </span><span class="annot"><span class="annottext">Bearer m
+</span><a href="#local-6989586621679119667"><span class="hs-identifier hs-var">bearer</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m a -&gt; m (Maybe a)
+TimeoutFn m
+</span><a href="#local-6989586621679119673"><span class="hs-identifier hs-var">noTimeout</span></a></span><span>
+</span><span id="line-267"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-268"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-269"></span><span>      </span><span class="hs-comment">-- wrap a 'ByteString' as 'SDU'</span><span>
+</span><span id="line-270"></span><span>      </span><span class="annot"><a href="#local-6989586621679119674"><span class="hs-identifier hs-type">wrap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span>
+</span><span id="line-271"></span><span>      </span><span id="local-6989586621679119674"><span class="annot"><span class="annottext">wrap :: ByteString -&gt; SDU
+</span><a href="#local-6989586621679119674"><span class="hs-identifier hs-var hs-var">wrap</span></a></span></span><span> </span><span id="local-6989586621679119678"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679119678"><span class="hs-identifier hs-var">blob</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDU"><span class="hs-identifier hs-type">SDU</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-272"></span><span>            </span><span class="hs-comment">-- it will be filled when the 'SDU' is send by the 'bearer'</span><span>
+</span><span id="line-273"></span><span>            </span><span class="annot"><span class="annottext">msHeader :: SDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDUHeader"><span class="hs-identifier hs-type">SDUHeader</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-274"></span><span>                </span><span class="annot"><span class="annottext">mhTimestamp :: RemoteClockModel
+</span><a href="Network.Mux.Types.html#mhTimestamp"><span class="hs-identifier hs-var">mhTimestamp</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-var">RemoteClockModel</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span>
+</span><span id="line-275"></span><span>                </span><span class="annot"><span class="annottext">mhNum :: MiniProtocolNum
+</span><a href="Network.Mux.Types.html#mhNum"><span class="hs-identifier hs-var">mhNum</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolNum
+</span><a href="#local-6989586621679119668"><span class="hs-identifier hs-var">ptclNum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-276"></span><span>                </span><span class="annot"><span class="annottext">mhDir :: MiniProtocolDir
+</span><a href="Network.Mux.Types.html#mhDir"><span class="hs-identifier hs-var">mhDir</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="#local-6989586621679119669"><span class="hs-identifier hs-var">ptclDir</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-277"></span><span>                </span><span class="annot"><span class="annottext">mhLength :: Word16
+</span><a href="Network.Mux.Types.html#mhLength"><span class="hs-identifier hs-var">mhLength</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int64 -&gt; Word16) -&gt; Int64 -&gt; Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#length"><span class="hs-identifier hs-var">BL.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679119678"><span class="hs-identifier hs-var">blob</span></a></span><span>
+</span><span id="line-278"></span><span>              </span><span class="hs-special">}</span><span class="hs-special">,</span><span>
+</span><span id="line-279"></span><span>            </span><span class="annot"><span class="annottext">msBlob :: ByteString
+</span><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var">msBlob</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679119678"><span class="hs-identifier hs-var">blob</span></a></span><span>
+</span><span id="line-280"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-281"></span><span>
+</span><span id="line-282"></span><span>      </span><span class="annot"><a href="#local-6989586621679119673"><span class="hs-identifier hs-type">noTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">TimeoutFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679118914"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-283"></span><span>      </span><span id="local-6989586621679119673"><span class="annot"><span class="annottext">noTimeout :: TimeoutFn m
+</span><a href="#local-6989586621679119673"><span class="hs-identifier hs-var hs-var">noTimeout</span></a></span></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679119681"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679119681"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe a) -&gt; m a -&gt; m (Maybe a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679119681"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-284"></span><span>
+</span><span id="line-285"></span><span class="hs-comment">--</span><span>
+</span><span id="line-286"></span><span class="hs-comment">-- Errors</span><span>
+</span><span id="line-287"></span><span class="hs-comment">--</span><span>
+</span><span id="line-288"></span><span>
+</span><span id="line-289"></span><span class="hs-keyword">data</span><span> </span><span id="RuntimeError"><span class="annot"><a href="Network.Mux.Types.html#RuntimeError"><span class="hs-identifier hs-var">RuntimeError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-290"></span><span>    </span><span id="ProtocolAlreadyRunning"><span class="annot"><a href="Network.Mux.Types.html#ProtocolAlreadyRunning"><span class="hs-identifier hs-var">ProtocolAlreadyRunning</span></a></span></span><span>       </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolStatus"><span class="hs-identifier hs-type">MiniProtocolStatus</span></a></span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="UnknownProtocolInternalError"><span class="annot"><a href="Network.Mux.Types.html#UnknownProtocolInternalError"><span class="hs-identifier hs-var">UnknownProtocolInternalError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span>
+</span><span id="line-292"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BlockedOnCompletionVar"><span class="annot"><a href="Network.Mux.Types.html#BlockedOnCompletionVar"><span class="hs-identifier hs-var">BlockedOnCompletionVar</span></a></span></span><span>       </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span>
+</span><span id="line-293"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679119686"><span id="local-6989586621679119697"><span id="local-6989586621679119701"><span class="annot"><span class="annottext">Int -&gt; RuntimeError -&gt; ShowS
+[RuntimeError] -&gt; ShowS
+RuntimeError -&gt; String
+(Int -&gt; RuntimeError -&gt; ShowS)
+-&gt; (RuntimeError -&gt; String)
+-&gt; ([RuntimeError] -&gt; ShowS)
+-&gt; Show RuntimeError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RuntimeError -&gt; ShowS
+showsPrec :: Int -&gt; RuntimeError -&gt; ShowS
+$cshow :: RuntimeError -&gt; String
+show :: RuntimeError -&gt; String
+$cshowList :: [RuntimeError] -&gt; ShowS
+showList :: [RuntimeError] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-294"></span><span>
+</span><span id="line-295"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679119708"><span id="local-6989586621679119712"><span id="local-6989586621679119715"><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#RuntimeError"><span class="hs-identifier hs-type">RuntimeError</span></a></span></span></span></span><span>
+</span><span id="line-296"></span></pre></body></html>
