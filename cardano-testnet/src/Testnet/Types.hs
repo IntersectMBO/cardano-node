@@ -21,6 +21,7 @@ module Testnet.Types
   , testnetSprockets
   , TestnetNode(..)
   , nodeSocketPath
+  , nodeConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
   , Delegator(..)
@@ -62,18 +63,20 @@ import           Data.List (intercalate)
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
 import           Data.Text (Text)
-import           Data.Time.Clock (UTCTime)
 import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
+import           Lens.Micro (ix, (^?))
 import           Network.Socket (HostAddress, PortNumber, hostAddressToTuple, tupleToHostAddress)
 import           System.FilePath
 import qualified System.Process as IO
 
 import           Testnet.Start.Types
 
+import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
@@ -115,7 +118,7 @@ data SKey k
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
-  , testnetMagic :: !Int
+  , testnetMagic :: !Int -- TODO change to Word32
   , testnetNodes :: ![TestnetNode]
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
@@ -147,6 +150,23 @@ isTestnetNodeSpo = isJust . poolKeys
 
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
+
+-- | Connection data for a node in the testnet
+nodeConnectionInfo :: MonadTest m
+                   => TestnetRuntime
+                   -> Int -- ^ node index, starting from 0
+                   -> m LocalNodeConnectInfo -- ^ fails when there's no node with requested index
+nodeConnectionInfo TestnetRuntime{testnetMagic, testnetNodes} index =
+  case testnetNodes ^? ix index of
+    Nothing -> do
+      H.note_ $ "There is no node in the testnet with index: " <> show index <> ". Number of nodes: " <> show (length testnetNodes)
+      H.failure
+    Just node ->
+        pure LocalNodeConnectInfo
+              { localNodeSocketPath= nodeSocketPath node
+              , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
+              , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
+
 
 data SpoNodeKeys = SpoNodeKeys
   { poolNodeKeysCold :: KeyPair StakePoolKey
@@ -187,14 +207,14 @@ getStartTime
   => HasCallStack
   => FilePath
   -> TestnetRuntime
-  -> m UTCTime
+  -> m SystemStart
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
     decodeNodeConfiguration configurationFile >>= \case
       NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ _ ->
         pure $ unGenesisFile npcByronGenesisFile
   let byronGenesisFilePath = tempRootPath </> byronGenesisFile
-  G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
+  SystemStart . G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
   where
     decodeNodeConfiguration :: File NodeConfig In -> ExceptT String IO NodeProtocolConfiguration
     decodeNodeConfiguration (File file) = do
