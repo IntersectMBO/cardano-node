@@ -160,6 +160,8 @@ data NodeConfiguration
          --
        , ncTimeWaitTimeout       :: DiffTime
 
+       , ncEgressPollInterval    :: DiffTime
+
          -- | Timeout override for ChainSync, see
          -- 'Ouroboros.Network.Protocol.ChainSync.Codec.ChainSyncTimeout'
        , ncChainSyncIdleTimeout :: TimeoutOverride
@@ -254,6 +256,7 @@ data PartialNodeConfiguration
          -- Network timeouts
        , pncProtocolIdleTimeout   :: !(Last DiffTime)
        , pncTimeWaitTimeout       :: !(Last DiffTime)
+       , pncEgressPollInterval    :: !(Last DiffTime)
 
        , pncChainSyncIdleTimeout      :: !(Last DiffTime)
 
@@ -357,6 +360,7 @@ instance FromJSON PartialNodeConfiguration where
       -- Network timeouts
       pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
       pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
+      pncEgressPollInterval    <- Last <$> v .:? "EgressPollInterval"
 
 
       -- AcceptedConnectionsLimit
@@ -423,6 +427,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
            , pncChainSyncIdleTimeout
+           , pncEgressPollInterval
            , pncAcceptedConnectionsLimit
            , pncDeadlineTargetOfRootPeers
            , pncDeadlineTargetOfKnownPeers
@@ -651,6 +656,7 @@ defaultPartialNodeConfiguration =
             noDeprecatedOptions
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
+    , pncEgressPollInterval    = Last (Just 0)
     , pncAcceptedConnectionsLimit =
         Last
       $ Just
@@ -661,7 +667,7 @@ defaultPartialNodeConfiguration =
         }
     , pncDeadlineTargetOfRootPeers        = Last (Just deadlineRoots)
     , pncDeadlineTargetOfKnownPeers       = Last (Just deadlineKnown)
-    , pncDeadlineTargetOfEstablishedPeers = Last (Just deadlineEstablished)
+    , pncDeadlineTargetOfEstablishedPeers = Last (Just 30) -- ^ TODO reset to deadlineEstablished for next o-n-release
     , pncDeadlineTargetOfActivePeers      = Last (Just deadlineActive)
     , pncChainSyncIdleTimeout           = mempty
     , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just deadlineBigKnown)
@@ -669,7 +675,7 @@ defaultPartialNodeConfiguration =
     , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just deadlineBigAct)
     , pncSyncTargetOfActivePeers        = Last (Just syncActive)
     , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
-    , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
+    , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just 40) -- ^ TODO reset to syncBigEst for next o-n-release
     , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
     , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
@@ -682,7 +688,7 @@ defaultPartialNodeConfiguration =
     PeerSelectionTargets {
       targetNumberOfRootPeers = deadlineRoots,
       targetNumberOfKnownPeers = deadlineKnown,
-      targetNumberOfEstablishedPeers = deadlineEstablished,
+      targetNumberOfEstablishedPeers = _deadlineEstablished,
       targetNumberOfActivePeers = deadlineActive,
       targetNumberOfKnownBigLedgerPeers = deadlineBigKnown,
       targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
@@ -690,7 +696,7 @@ defaultPartialNodeConfiguration =
     PeerSelectionTargets {
       targetNumberOfActivePeers = syncActive,
       targetNumberOfKnownBigLedgerPeers = syncBigKnown,
-      targetNumberOfEstablishedBigLedgerPeers = syncBigEst,
+      targetNumberOfEstablishedBigLedgerPeers = _syncBigEst,
       targetNumberOfActiveBigLedgerPeers = syncBigAct } = Cardano.defaultSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
@@ -759,6 +765,9 @@ makeNodeConfiguration pnc = do
   ncTimeWaitTimeout <-
     lastToEither "Missing TimeWaitTimeout"
     $ pncTimeWaitTimeout pnc
+  ncEgressPollInterval <-
+    lastToEither "Missing EgressPollInterval"
+    $ pncEgressPollInterval pnc
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
@@ -845,6 +854,7 @@ makeNodeConfiguration pnc = do
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
              , ncChainSyncIdleTimeout
+             , ncEgressPollInterval
              , ncAcceptedConnectionsLimit
              , ncDeadlineTargetOfRootPeers
              , ncDeadlineTargetOfKnownPeers

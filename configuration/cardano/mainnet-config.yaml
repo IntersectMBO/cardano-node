@@ -42,7 +42,6 @@ TargetNumberOfEstablishedPeers: 30
 TargetNumberOfKnownPeers: 150
 TargetNumberOfRootPeers: 60
 
-
 ##### Consensus Configuration #####
 
 ConsensusMode: PraosMode
