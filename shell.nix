@@ -1,3 +1,14 @@
+
+let
+  # Pull from known-working nixpkgs where glut.h exists
+  upstreamNixpkgs = import (fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/ba74ad456d0e1e06fa3626d9a0541f939cc36085.tar.gz";
+    sha256 = "0wkk3bh6m0c4gdbv1fn0b31pd3bqgm02i9g2vg64wdnp7rmzp9ki";
+  }) {};
+
+  goodFreeglut = upstreamNixpkgs.freeglut;
+in
+
 let defaultCustomConfig = import ./nix/custom-config.nix defaultCustomConfig;
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
@@ -116,6 +127,11 @@ let
       workbench-runner.workbench-interactive-start
       workbench-runner.workbench-interactive-stop
       workbench-runner.workbench-interactive-restart
+        # OpenGL dependencies (from pkgs, not cardanoNodePackages)
+      pkgs.mesa
+      pkgs.libGL
+      goodFreeglut
+      goodFreeglut.dev
     ];
 
     # Disable build tools for all of hsPkgs (would include duplicates for cardano-cli, cardano-node, etc.)
@@ -129,6 +145,10 @@ let
       ${devopsShell.shellHook}
 
       ${setLocale}
+
+      export CPATH=${goodFreeglut.dev}/include:$CPATH
+      export LD_LIBRARY_PATH=${goodFreeglut}/lib:$LD_LIBRARY_PATH
+      echo "✅ Using good freeglut with headers"
 
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
