@@ -1,0 +1,34 @@
+name:                MazeGenerator
+version:             0.1.0.0
+synopsis:            A 2D maze generator/solver with OpenGL display
+license:             PublicDomain
+license-file:        LICENSE
+author:              M. G. Meier
+maintainer:          mgoremeier@gmail.com
+
+category:            Graphics
+build-type:          Simple
+cabal-version:       2.0
+
+executable MazeGenerator
+  main-is:              Main.hs
+
+  other-modules:        GL
+                        MazeGenerator
+                        RandomGeneration
+                        Types
+
+  ghc-options:          -Wall
+                        -O2 -threaded "-with-rtsopts=-N2"
+
+  default-extensions:   LambdaCase
+                        MultiWayIf
+
+  build-depends:          base
+                        , random
+                        , containers
+                        , OpenGL                  >=3.0.3
+                        , GLUT                    >=2.7.0.16
+                        , trace-dispatcher
+
+  default-language:     Haskell2010
