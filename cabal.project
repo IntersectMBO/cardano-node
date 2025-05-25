@@ -16,6 +16,7 @@ index-state:
   , hackage.haskell.org 2025-04-16T18:30:40Z
   , cardano-haskell-packages 2025-05-15T08:36:14Z
 
+
 packages:
   cardano-node
   cardano-node-capi
@@ -31,7 +32,8 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-  MazeGenerator
+  ./MazeGenerator
+  ./GLUT
 
 extra-packages: Cabal
 
