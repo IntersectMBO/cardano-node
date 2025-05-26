@@ -1050,7 +1050,7 @@ mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
       Cardano.Churn.ExtraArguments {
         Cardano.Churn.modeVar            = churnModeVar
       , Cardano.Churn.readFetchMode      = getFetchMode
-      , Cardano.Churn.genesisPeerTargets = peerSelectionTargets
+      , Cardano.Churn.genesisPeerTargets = genesisSelectionTargets
       , Cardano.Churn.readUseBootstrap   = daReadUseBootstrapPeers
       , Cardano.Churn.consensusMode      = ncConsensusMode
       }
