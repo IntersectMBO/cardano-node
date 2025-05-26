@@ -33,7 +33,6 @@ packages:
   trace-resources
   trace-forward
   ./MazeGenerator
-  ./GLUT
 
 extra-packages: Cabal
 

@@ -130,8 +130,10 @@ let
         # OpenGL dependencies (from pkgs, not cardanoNodePackages)
       pkgs.mesa
       pkgs.libGL
-      goodFreeglut
-      goodFreeglut.dev
+      # pkgs.freeglut
+      # pkgs.freeglut.dev
+      pkgs.libblst
+
     ];
 
     # Disable build tools for all of hsPkgs (would include duplicates for cardano-cli, cardano-node, etc.)
@@ -146,9 +148,8 @@ let
 
       ${setLocale}
 
-      export CPATH=${goodFreeglut.dev}/include:$CPATH
-      export LD_LIBRARY_PATH=${goodFreeglut}/lib:$LD_LIBRARY_PATH
-      echo "✅ Using good freeglut with headers"
+      export CPATH=${pkgs.freeglut.dev}/include:$CPATH
+      export LD_LIBRARY_PATH=${pkgs.freeglut}/lib:$LD_LIBRARY_PATH
 
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''

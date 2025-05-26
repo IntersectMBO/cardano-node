@@ -122,6 +122,7 @@
       self.overlay
     ];
 
+
     collectExes = project: let
       set-git-rev = import ./nix/set-git-rev.nix {inherit (project) pkgs;};
     in
@@ -474,6 +475,11 @@
           .appendModule [
             customConfig.haskellNix
           ];
+        # Inject MazeGenerator as a local package
+        packages.MazeGenerator.src = ./MazeGenerator;
+        packages.GLUT.src = ./GLUT;
+
+
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
         inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
       };
