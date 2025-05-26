@@ -166,6 +166,7 @@ testPartialYamlConfig =
     , pncGenesisConfigFlags = mempty
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
+    , pncEgressPollInterval = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -213,6 +214,7 @@ testPartialCliConfig =
     , pncGenesisConfigFlags = mempty
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
+    , pncEgressPollInterval = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -232,6 +234,7 @@ eExpectedConfig = do
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncExperimentalProtocolsEnabled = True
+    , ncEgressPollInterval = 0
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
     , ncLoggingSwitch = True
@@ -250,14 +253,14 @@ eExpectedConfig = do
           }
     , ncDeadlineTargetOfRootPeers = 60
     , ncDeadlineTargetOfKnownPeers = 85
-    , ncDeadlineTargetOfEstablishedPeers = 40
+    , ncDeadlineTargetOfEstablishedPeers = 30
     , ncDeadlineTargetOfActivePeers = 15
     , ncDeadlineTargetOfKnownBigLedgerPeers = 15
     , ncDeadlineTargetOfEstablishedBigLedgerPeers = 10
     , ncDeadlineTargetOfActiveBigLedgerPeers = 5
     , ncSyncTargetOfActivePeers = 0
     , ncSyncTargetOfKnownBigLedgerPeers = 100
-    , ncSyncTargetOfEstablishedBigLedgerPeers = 50
+    , ncSyncTargetOfEstablishedBigLedgerPeers = 40
     , ncSyncTargetOfActiveBigLedgerPeers = 30
     , ncMinBigLedgerPeersForTrustedState = defaultNumberOfBigLedgerPeers
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode

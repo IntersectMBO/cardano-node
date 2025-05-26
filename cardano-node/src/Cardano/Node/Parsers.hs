@@ -109,6 +109,7 @@ nodeRunParser = do
            , pncLedgerDbConfig = mempty
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
+           , pncEgressPollInterval = mempty
            , pncChainSyncIdleTimeout = mempty
            , pncAcceptedConnectionsLimit = mempty
            , pncDeadlineTargetOfRootPeers = mempty

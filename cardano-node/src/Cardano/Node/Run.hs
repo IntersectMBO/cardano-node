@@ -59,7 +59,7 @@ import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
-import           Cardano.Prelude (FatalError (..), bool, (:~:) (..), stderr, )
+import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (..))
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
 
@@ -218,7 +218,7 @@ installSigTermHandler = do
     Signals.sigTERM
     (Signals.CatchOnce $ do
       runThreadIdMay <- deRefWeak runThreadIdWk
-      forM_ runThreadIdMay $ \runThreadId -> killThread runThreadId
+      forM_ runThreadIdMay $ \runThreadId -> Exception.throwTo runThreadId ExitSuccess
     )
     Nothing
 #endif
@@ -450,6 +450,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
           , Diffusion.daAcceptedConnectionsLimit = ncAcceptedConnectionsLimit nc
           , Diffusion.daMode                     = ncDiffusionMode nc
           , Diffusion.daPublicPeerSelectionVar   = publicPeerSelectionVar
+          , Diffusion.daEgressPollInterval       = ncEgressPollInterval nc
           }
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
@@ -1049,7 +1050,7 @@ mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
       Cardano.Churn.ExtraArguments {
         Cardano.Churn.modeVar            = churnModeVar
       , Cardano.Churn.readFetchMode      = getFetchMode
-      , Cardano.Churn.genesisPeerTargets = peerSelectionTargets
+      , Cardano.Churn.genesisPeerTargets = genesisSelectionTargets
       , Cardano.Churn.readUseBootstrap   = daReadUseBootstrapPeers
       , Cardano.Churn.consensusMode      = ncConsensusMode
       }
