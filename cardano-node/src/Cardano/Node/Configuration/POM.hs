@@ -177,7 +177,10 @@ data NodeConfiguration
        , ncDeadlineTargetOfKnownBigLedgerPeers       :: !Int
        , ncDeadlineTargetOfEstablishedBigLedgerPeers :: !Int
        , ncDeadlineTargetOfActiveBigLedgerPeers      :: !Int
-       , ncSyncTargetOfActivePeers        :: !Int
+       , ncSyncTargetOfRootPeers        :: !Int
+       , ncSyncTargetOfKnownPeers       :: !Int
+       , ncSyncTargetOfEstablishedPeers :: !Int
+       , ncSyncTargetOfActivePeers      :: !Int
        , ncSyncTargetOfKnownBigLedgerPeers       :: !Int
        , ncSyncTargetOfEstablishedBigLedgerPeers :: !Int
        , ncSyncTargetOfActiveBigLedgerPeers      :: !Int
@@ -270,9 +273,12 @@ data PartialNodeConfiguration
        , pncDeadlineTargetOfKnownPeers       :: !(Last Int)
        , pncDeadlineTargetOfEstablishedPeers :: !(Last Int)
        , pncDeadlineTargetOfActivePeers      :: !(Last Int)
-       , pncDeadlineTargetOfKnownBigLedgerPeers              :: !(Last Int)
-       , pncDeadlineTargetOfEstablishedBigLedgerPeers        :: !(Last Int)
-       , pncDeadlineTargetOfActiveBigLedgerPeers             :: !(Last Int)
+       , pncDeadlineTargetOfKnownBigLedgerPeers       :: !(Last Int)
+       , pncDeadlineTargetOfEstablishedBigLedgerPeers :: !(Last Int)
+       , pncDeadlineTargetOfActiveBigLedgerPeers      :: !(Last Int)
+       , pncSyncTargetOfRootPeers                 :: !(Last Int)
+       , pncSyncTargetOfKnownPeers                :: !(Last Int)
+       , pncSyncTargetOfEstablishedPeers          :: !(Last Int)
        , pncSyncTargetOfActivePeers               :: !(Last Int)
        , pncSyncTargetOfKnownBigLedgerPeers       :: !(Last Int)
        , pncSyncTargetOfEstablishedBigLedgerPeers :: !(Last Int)
@@ -377,7 +383,10 @@ instance FromJSON PartialNodeConfiguration where
       pncDeadlineTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
       pncDeadlineTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
       pncDeadlineTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
-      pncSyncTargetOfActivePeers        <- Last <$> v .:? "SyncTargetNumberOfActivePeers"
+      pncSyncTargetOfRootPeers        <- Last <$> v .:? "SyncTargetNumberOfRootPeers"
+      pncSyncTargetOfKnownPeers       <- Last <$> v .:? "SyncTargetNumberOfKnownPeers"
+      pncSyncTargetOfEstablishedPeers <- Last <$> v .:? "SyncTargetNumberOfEstablishedPeers"
+      pncSyncTargetOfActivePeers      <- Last <$> v .:? "SyncTargetNumberOfActivePeers"
       pncSyncTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "SyncTargetNumberOfKnownBigLedgerPeers"
       pncSyncTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "SyncTargetNumberOfEstablishedBigLedgerPeers"
       pncSyncTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "SyncTargetNumberOfActiveBigLedgerPeers"
@@ -441,6 +450,9 @@ instance FromJSON PartialNodeConfiguration where
            , pncDeadlineTargetOfKnownBigLedgerPeers
            , pncDeadlineTargetOfEstablishedBigLedgerPeers
            , pncDeadlineTargetOfActiveBigLedgerPeers
+           , pncSyncTargetOfRootPeers
+           , pncSyncTargetOfKnownPeers
+           , pncSyncTargetOfEstablishedPeers
            , pncSyncTargetOfActivePeers
            , pncSyncTargetOfKnownBigLedgerPeers
            , pncSyncTargetOfEstablishedBigLedgerPeers
@@ -670,14 +682,17 @@ defaultPartialNodeConfiguration =
         , acceptedConnectionsSoftLimit = 384
         , acceptedConnectionsDelay     = 5
         }
+    , pncChainSyncIdleTimeout           = mempty
     , pncDeadlineTargetOfRootPeers        = Last (Just deadlineRoots)
     , pncDeadlineTargetOfKnownPeers       = Last (Just deadlineKnown)
     , pncDeadlineTargetOfEstablishedPeers = Last (Just 30) -- ^ TODO reset to deadlineEstablished for next o-n-release
     , pncDeadlineTargetOfActivePeers      = Last (Just deadlineActive)
-    , pncChainSyncIdleTimeout           = mempty
     , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just deadlineBigKnown)
     , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just deadlineBigEst)
     , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just deadlineBigAct)
+    , pncSyncTargetOfRootPeers          = Last (Just syncRoots)
+    , pncSyncTargetOfKnownPeers         = Last (Just syncKnown)
+    , pncSyncTargetOfEstablishedPeers   = Last (Just syncEstablished)
     , pncSyncTargetOfActivePeers        = Last (Just syncActive)
     , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
     , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just 40) -- ^ TODO reset to syncBigEst for next o-n-release
@@ -699,6 +714,9 @@ defaultPartialNodeConfiguration =
       targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
       targetNumberOfActiveBigLedgerPeers = deadlineBigAct } = Ouroboros.defaultDeadlineTargets
     PeerSelectionTargets {
+      targetNumberOfRootPeers        = syncRoots,
+      targetNumberOfKnownPeers       = syncKnown,
+      targetNumberOfEstablishedPeers = syncEstablished,
       targetNumberOfActivePeers = syncActive,
       targetNumberOfKnownBigLedgerPeers = syncBigKnown,
       targetNumberOfEstablishedBigLedgerPeers = _syncBigEst,
@@ -743,6 +761,15 @@ makeNodeConfiguration pnc = do
   ncDeadlineTargetOfActiveBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
     $ pncDeadlineTargetOfActiveBigLedgerPeers pnc
+  ncSyncTargetOfRootPeers <-
+    lastToEither "Missing SyncTargetNumberOfRootPeers"
+    $ pncSyncTargetOfRootPeers pnc
+  ncSyncTargetOfKnownPeers <-
+    lastToEither "Missing SyncTargetNumberOfKnownPeers"
+    $ pncSyncTargetOfKnownPeers pnc
+  ncSyncTargetOfEstablishedPeers <-
+    lastToEither "Missing SyncTargetNumberOfEstablishedPeers"
+    $ pncSyncTargetOfEstablishedPeers pnc
   ncSyncTargetOfActivePeers <-
     lastToEither "Missing SyncTargetNumberOfActivePeers"
     $ pncSyncTargetOfActivePeers pnc
@@ -808,7 +835,10 @@ makeNodeConfiguration pnc = do
           targetNumberOfKnownBigLedgerPeers = ncDeadlineTargetOfKnownBigLedgerPeers,
           targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers,
           targetNumberOfActiveBigLedgerPeers = ncDeadlineTargetOfActiveBigLedgerPeers }
-      syncTargets = deadlineTargets {
+      syncTargets = PeerSelectionTargets {
+        targetNumberOfRootPeers  = ncSyncTargetOfRootPeers,
+        targetNumberOfKnownPeers = ncSyncTargetOfKnownPeers,
+        targetNumberOfEstablishedPeers = ncSyncTargetOfEstablishedPeers,
         targetNumberOfActivePeers = ncSyncTargetOfActivePeers,
         targetNumberOfKnownBigLedgerPeers = ncSyncTargetOfKnownBigLedgerPeers,
         targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
@@ -818,12 +848,8 @@ makeNodeConfiguration pnc = do
           && PeerSelection.sanePeerSelectionTargets syncTargets) $
     Left $ "Invalid peer selection targets. Ensure that targets satisfy the "
            <> "inequalities of known >= established >= active >= 0"
-           <> "for both deadline and sync target groups. The deadline groups start with "
+           <> "for both deadline and sync target groups. The deadline group target names start with "
            <> "TargetNumber... while the sync group starts with SyncTarget... "
-           <> "Additionally, TargetNumberOfEstablishedPeers >= SyncTargetNumberOfActivePeers. "
-           <> "Within each group, the category of big ledger peers is treated independently, "
-           <> "but it too must satisfy the same inequality. Refer to cardano-node wiki page "
-           <> "'understanding config files' for details."
 
   -- TODO: This is not mandatory
   experimentalProtocols <-
@@ -868,6 +894,9 @@ makeNodeConfiguration pnc = do
              , ncDeadlineTargetOfKnownBigLedgerPeers
              , ncDeadlineTargetOfEstablishedBigLedgerPeers
              , ncDeadlineTargetOfActiveBigLedgerPeers
+             , ncSyncTargetOfRootPeers
+             , ncSyncTargetOfKnownPeers
+             , ncSyncTargetOfEstablishedPeers
              , ncSyncTargetOfActivePeers
              , ncSyncTargetOfKnownBigLedgerPeers
              , ncSyncTargetOfEstablishedBigLedgerPeers
