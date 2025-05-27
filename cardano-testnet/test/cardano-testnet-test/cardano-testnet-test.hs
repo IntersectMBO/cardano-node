@@ -25,6 +25,7 @@ import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
+import qualified Cardano.Testnet.Test.RunTestnet
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
 
@@ -106,6 +107,9 @@ tests = do
           , ignoreOnMacAndWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
           ]
         ]
+        , T.testGroup "Cardano-testnet"
+          [ ignoreOnWindows "Testnet produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
+          ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
         ]
