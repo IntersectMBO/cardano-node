@@ -96,7 +96,7 @@ import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as CPSV
 import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRoots
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionActions as Cardano.PeerSelection
 import           Ouroboros.Network.PeerSelection.Governor.Types (PeerSelectionState,
-                   PublicPeerSelectionState, makePublicPeerSelectionStateVar, BootstrapPeersCriticalTimeoutError)
+                   PeerSelectionTargets (..), PublicPeerSelectionState, makePublicPeerSelectionStateVar, BootstrapPeersCriticalTimeoutError)
 import qualified Ouroboros.Cardano.Network.LedgerPeerConsensusInterface as Cardano
 import qualified Ouroboros.Cardano.PeerSelection.PeerSelectionActions as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Churn.ExtraArguments as Cardano.Churn
@@ -112,6 +112,9 @@ import           Ouroboros.Network.Mux (noBindForkPolicy, responderForkPolicy, F
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
                    PeerSelectionTargets (..), RemoteAddress)
+import           Ouroboros.Network.PeerSelection.Governor.Types (BootstrapPeersCriticalTimeoutError,
+                   PeerSelectionState, PeerSelectionTargets (..), PublicPeerSelectionState,
+                   makePublicPeerSelectionStateVar)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
                    UseLedgerPeers (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
@@ -978,6 +981,9 @@ mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
                  ncDeadlineTargetOfKnownBigLedgerPeers,
                  ncDeadlineTargetOfEstablishedBigLedgerPeers,
                  ncDeadlineTargetOfActiveBigLedgerPeers,
+                 ncSyncTargetOfRootPeers,
+                 ncSyncTargetOfKnownPeers,
+                 ncSyncTargetOfEstablishedPeers,
                  ncSyncTargetOfActivePeers,
                  ncSyncTargetOfKnownBigLedgerPeers,
                  ncSyncTargetOfEstablishedBigLedgerPeers,
@@ -1030,7 +1036,7 @@ mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
       , P2P.daLocalMuxForkPolicy = cForkPolicy
       }
   where
-    peerSelectionTargets = Configuration.defaultDeadlineTargets {
+    peerSelectionTargets = PeerSelectionTargets {
       targetNumberOfRootPeers        = ncDeadlineTargetOfRootPeers,
       targetNumberOfKnownPeers       = ncDeadlineTargetOfKnownPeers,
       targetNumberOfEstablishedPeers = ncDeadlineTargetOfEstablishedPeers,
@@ -1040,7 +1046,10 @@ mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
       targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers
     }
 
-    genesisSelectionTargets = Configuration.defaultSyncTargets {
+    genesisSelectionTargets = PeerSelectionTargets {
+      targetNumberOfRootPeers        = ncSyncTargetOfRootPeers,
+      targetNumberOfKnownPeers       = ncSyncTargetOfKnownPeers,
+      targetNumberOfEstablishedPeers = ncSyncTargetOfEstablishedPeers,
       targetNumberOfActivePeers               = ncSyncTargetOfActivePeers,
       targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers,
       targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
