@@ -465,22 +465,29 @@ let
       //
       # If it needs host volumes add the constraints (can't be "null" or "[]".)
       ### - https://developer.hashicorp.com/nomad/tutorials/stateful-workloads/stateful-workloads-host-volumes
-      (lib.optionalAttrs ((profile.cluster or null) != null && profile.cluster.nomad.host_volumes != null) {
-        volume = lib.listToAttrs (lib.lists.imap0
-          (i: v: {
-            # Internal name, reference to mount in this group's tasks below.
-            name = "volume-${taskName}-${toString i}";
-            value = {
-              type = "host"; # We only support type "host".
-              read_only = v.read_only;
-              # How it is named in the Nomad Client's config.
-              # https://developer.hashicorp.com/nomad/docs/configuration/client#host_volume-block
-              source = v.source;
-            };
-          })
-          profile.cluster.nomad.host_volumes
-        );
-      })
+      (
+        let
+          # JSON Object like `{"explorer": null, "producers": [...]}`.
+          nodeType = if nodeSpec.name == "explorer" then "explorer" else "producer";
+          volumesList = profile.cluster.nomad.host_volumes.${nodeType} or null;
+        in
+          (lib.attrsets.optionalAttrs (volumesList != null)
+            { volume = lib.listToAttrs (lib.lists.imap0
+              (i: v: {
+                # Internal name, reference to mount in this group's tasks below.
+                name = "volume-${taskName}-${toString i}";
+                value = {
+                  type = "host"; # We only support type "host".
+                  read_only = v.read_only;
+                  # How it is named in the Nomad Client's config.
+                  # https://developer.hashicorp.com/nomad/docs/configuration/client#host_volume-block
+                  source = v.source;
+                };
+              })
+              volumesList
+            );}
+          )
+      )
       //
       {
         # The task stanza creates an individual unit of work, such as a Docker
@@ -591,17 +598,23 @@ let
           };
 
           # If it needs host volumes mount them (defined above if any).
-          volume_mount = if (profile.cluster or null) != null && profile.cluster.nomad.host_volumes != null
-            then lib.lists.imap0
-              (i: v: {
-                # Internal name, defined above in the group's specification.
-                volume = "volume-${taskName}-${toString i}";
-                # Where it is going to be mounted inside the Task.
-                destination = v.destination;
-                read_only = v.read_only;
-              })
-              profile.cluster.nomad.host_volumes
-            else null
+          volume_mount =
+            let
+              # JSON Object like `{"explorer": null, "producers": [...]}`.
+              nodeType = if nodeSpec.name == "explorer" then "explorer" else "producer";
+              volumesList = profile.cluster.nomad.host_volumes.${nodeType} or null;
+            in
+              if volumesList != null
+              then lib.lists.imap0
+                (i: v: {
+                  # Internal name, defined above in the group's specification.
+                  volume = "volume-${taskName}-${toString i}";
+                  # Where it is going to be mounted inside the Task.
+                  destination = v.destination;
+                  read_only = v.read_only;
+                })
+                volumesList
+              else null
           ;
 
           # Specifies the set of templates to render for the task. Templates can
