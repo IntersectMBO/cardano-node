@@ -10,7 +10,6 @@ module Cardano.Testnet.Test.Cli.Transaction
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Type.Common
 import           Cardano.Crypto.Hash.Class (hashToStringAsHex)

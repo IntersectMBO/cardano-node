@@ -23,8 +23,8 @@ module Testnet.Components.Configuration
   , eraToString
   ) where
 
+import           Cardano.Api hiding (Value, cardanoEra)
 import           Cardano.Api.Ledger (AlonzoGenesis, ConwayGenesis)
-import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto

@@ -13,7 +13,6 @@ module Cardano.Testnet.Test.Gov.DRepActivity
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
 import           Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
@@ -217,7 +216,7 @@ activityChangeProposalTest
                          -- the proposal.
   -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
                    -- become expected value.
-  -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
+  -> m (TxId, Word16) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView ceo work prefix
                            stakeKeys wallet votes change minWait mExpected maxWait = do
   let sbe = convert ceo
@@ -261,7 +260,7 @@ voteChangeProposal
   -> ShelleyBasedEra era -- ^ The 'ShelleyBasedEra' witness for current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> String -- ^ The transaction id of the governance action to vote.
+  -> TxId -- ^ The transaction id of the governance action to vote.
   -> Word16 -- ^ The index of the governance action to vote.
   -> [([Char], Int)] -- ^ Votes to be casted for the proposal. Each tuple contains the index
                      -- of the default DRep that will make the vote and the type of the vote

@@ -16,7 +16,7 @@ module Testnet.Property.Assert
   ) where
 
 
-import           Cardano.Api.Shelley hiding (Value)
+import           Cardano.Api hiding (Value)
 
 import           Prelude hiding (lines)
 
@@ -25,7 +25,7 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.Resource (ResourceT)
-import           Data.Aeson (FromJSON (..), Value, (.:))
+import           Data.Aeson (Value, (.:))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Lazy as LBS

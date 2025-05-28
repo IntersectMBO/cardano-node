@@ -122,6 +122,7 @@ execCliStdoutToJson :: ()
   -> m a
 execCliStdoutToJson execConfig cmd = GHC.withFrozenCallStack $ do
   result <- execCli' execConfig cmd
+  H.note_ result
   H.leftFail . Aeson.eitherDecode $ fromString result
 
 -- | Create a 'CreateProcess' describing how to start the cardano-cli process

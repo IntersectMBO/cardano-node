@@ -13,9 +13,8 @@ module Cardano.Testnet.Test.Gov.TreasuryWithdrawal
   ( hprop_ledger_events_treasury_withdrawal
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Ledger (Coin, Credential, EpochInterval (EpochInterval),
-                   KeyRole (Staking))
+import           Cardano.Api hiding (txId)
+import           Cardano.Api.Ledger (Credential, EpochInterval (EpochInterval), KeyRole (Staking))
 
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
@@ -196,7 +195,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     ]
 -- }}}
 
-  txIdString <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
+  txId <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
 
   currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
@@ -211,7 +210,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     execCli' execConfig
       [ eraName, "governance", "vote", "create"
       , "--yes"
-      , "--governance-action-tx-id", txIdString
+      , "--governance-action-tx-id", prettyShow txId
       , "--governance-action-index", show governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n

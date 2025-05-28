@@ -12,7 +12,6 @@
 module Cardano.Chairman (chairmanTest) where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.BaseTypes (unNonZero)
 import           Ouroboros.Consensus.Block.Abstract
@@ -33,7 +32,6 @@ import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
-import           Data.Proxy (Proxy (..))
 import           Data.Word (Word64)
 
 -- | The chairman checks for consensus and progress.

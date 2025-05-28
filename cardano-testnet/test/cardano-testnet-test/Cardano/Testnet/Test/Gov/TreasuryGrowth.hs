@@ -7,7 +7,6 @@ module Cardano.Testnet.Test.Gov.TreasuryGrowth where
 
 import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Ledger (Coin (..))
 
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet as TN

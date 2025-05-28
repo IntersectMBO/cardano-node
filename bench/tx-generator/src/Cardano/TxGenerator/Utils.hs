@@ -12,11 +12,14 @@ module  Cardano.TxGenerator.Utils
         where
 
 import           Cardano.Api as Api
+import qualified Cardano.Api.Parser.Text as P
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Types
 
 import           Data.Maybe (fromJust)
+import           Data.Text (Text)
+import           GHC.Stack
 
 
 -- | `liftAnyEra` applies a function to the value in `InAnyCardanoEra`
@@ -79,3 +82,8 @@ mkTxValidityUpperBound slotNo =
 -- because its type enforces it being a Shelley-based era.
 mkTxInModeCardano :: IsShelleyBasedEra era => Tx era -> TxInMode
 mkTxInModeCardano = TxInMode shelleyBasedEra
+
+-- | Convert text representation of a txin "hash#txid" to a TxIn e.g. "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
+-- Partial. Useful in tests.
+mkTxIn :: HasCallStack => Text -> TxIn
+mkTxIn = either error id . P.runParser parseTxIn

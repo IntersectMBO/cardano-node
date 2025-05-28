@@ -10,7 +10,6 @@ module Cardano.Testnet.Test.Gov.Transaction.HashMismatch
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Coin (unCoin))
 
 import           Cardano.Testnet
 

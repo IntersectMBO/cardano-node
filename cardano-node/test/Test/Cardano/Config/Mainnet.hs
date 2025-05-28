@@ -7,7 +7,7 @@ module Test.Cardano.Config.Mainnet
   ) where
 
 import           Cardano.Api (File (..), initialLedgerState)
-import           Cardano.Api.Internal.Error (displayError)
+import           Cardano.Api.Error (displayError)
 
 import           Control.Monad.Trans.Except
 import qualified Data.Aeson as J

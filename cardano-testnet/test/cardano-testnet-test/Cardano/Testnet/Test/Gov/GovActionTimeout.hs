@@ -19,7 +19,6 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
-import           Data.String (fromString)
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
@@ -28,7 +27,7 @@ import           Testnet.Process.Cli.DRep (makeActivityChangeProposal)
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -40,7 +39,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Gov Action Timeout/"'@
 hprop_check_gov_action_timeout :: Property
-hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \tempAbsBasePath' ->
+hprop_check_gov_action_timeout = integrationRetryWorkspace 2 "gov-action-timeout" $ \tempAbsBasePath' ->
                                  H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -138,7 +137,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
 
   -- Check proposal expired
   mGovernanceActionTxIx <- watchEpochStateUpdate epochStateView (EpochInterval 2) $ \(anyNewEpochState, _, _) ->
-      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      return $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
 
   mGovernanceActionTxIx H.=== Nothing
 
