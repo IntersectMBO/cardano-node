@@ -10,12 +10,11 @@ module Cardano.Testnet.Test.Api.TxReferenceInputDatum
   )
 where
 
-import           Cardano.Api
+import           Cardano.Api hiding (txId)
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Network as Net
 import qualified Cardano.Api.Network as Net.Tx
-import           Cardano.Api.Shelley
-import qualified Cardano.Api.Tx.UTxO as Utxo
+import qualified Cardano.Api.UTxO as Utxo
 
 import           Cardano.Testnet
 
@@ -26,7 +25,6 @@ import           Data.Default.Class
 import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
-import           Data.Proxy
 import           Data.Set (Set)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack

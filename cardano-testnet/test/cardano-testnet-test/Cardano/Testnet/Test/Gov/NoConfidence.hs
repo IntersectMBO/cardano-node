@@ -8,10 +8,9 @@ module Cardano.Testnet.Test.Gov.NoConfidence
   ( hprop_gov_no_confidence
   ) where
 
-import           Cardano.Api as Api
+import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger
-import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Conway.Genesis as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -26,7 +25,6 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Default.Class
 import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
-import           Data.String
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (toList))
 import           Lens.Micro
@@ -193,7 +191,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   governanceActionIndex <-
     H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
 
   let spoVotes :: [(String, Int)]
       spoVotes =  [("yes", 1), ("yes", 2), ("no", 3)]

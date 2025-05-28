@@ -10,9 +10,6 @@ module Cardano.TxSubmit.Config
   , ToggleMetrics(..)
   ) where
 
-
-import           Cardano.Api
-
 import qualified Cardano.BM.Configuration as Logging
 import qualified Cardano.BM.Configuration.Model as Logging
 import qualified Cardano.BM.Data.Configuration as Logging

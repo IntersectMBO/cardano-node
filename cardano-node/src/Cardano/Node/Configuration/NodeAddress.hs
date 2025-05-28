@@ -34,7 +34,7 @@ import           Cardano.Api
 
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..))
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import           Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import           Data.IP (IP (..), IPv4, IPv6)
 import qualified Data.IP as IP
 import           Data.Text (Text)

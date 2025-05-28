@@ -18,12 +18,10 @@ module Cardano.TxGenerator.Genesis
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyPaymentCredential,
-                   fromShelleyStakeReference)
+import           Cardano.Api hiding (ShelleyGenesis)
 
 import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
+import           Cardano.Ledger.Shelley.API (Addr (..))
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils

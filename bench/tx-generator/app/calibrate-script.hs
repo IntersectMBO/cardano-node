@@ -6,25 +6,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (unCoin)
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ReferenceScript (..))
 
 import           Cardano.Benchmarking.Compiler (keyBenchmarkInputs)
+import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (listPlutusScripts)
 #endif
-import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.TxGenerator.Calibrate.Utils
 import           Cardano.TxGenerator.PlutusContext
-import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters (..), LedgerProtocolParameters, convertToLedgerProtocolParameters, toLedgerPParams)
+import           Cardano.TxGenerator.ProtocolParameters ( ProtocolParameters (..), convertToLedgerProtocolParameters, 
+                   toLedgerPParams)
 import           Cardano.TxGenerator.Setup.Plutus
 import           Cardano.TxGenerator.Tx (txSizeInBytes)
 import           Cardano.TxGenerator.Types
-import           Cardano.TxGenerator.Utils (keyAddress)
+import           Cardano.TxGenerator.Utils (keyAddress, mkTxIn)
 
 import           Control.Exception
 import           Data.Aeson (decodeFileStrict')
@@ -550,5 +550,6 @@ approximateTxProperties script protocolParameters (summary, redeemer) = do
     dummyMetadata = either error id $ mkMetadata 100
 
     -- just placeholders
-    dummyTxIn   = TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" . TxIx
-    dummyTxOut  = TxOut (keyAddress (Testnet (NetworkMagic 42)) keyBenchmarkInputs) (lovelaceToTxOutValue era 1_000_000) TxOutDatumNone ReferenceScriptNone
+    dummyTxIn ix = mkTxIn $ "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#" <> textShow @Int ix
+    dummyTxOut   = TxOut (keyAddress (Testnet (NetworkMagic 42)) keyBenchmarkInputs) (lovelaceToTxOutValue era 1_000_000) TxOutDatumNone ReferenceScriptNone
+
