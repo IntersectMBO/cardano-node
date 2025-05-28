@@ -156,9 +156,9 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
       [ eraName
       , "transaction", "build"
       , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-      , "--tx-in", txIdLock <> "#" <> show txIxLock
+      , "--tx-in", show txIdLock <> "#" <> show txIxLock
       , "--spending-reference-tx-in-inline-datum-present"
-      , "--spending-tx-in-reference", txIdPublishRefScript <> "#" <> show txIxPublishRefScript
+      , "--spending-tx-in-reference", show txIdPublishRefScript <> "#" <> show txIxPublishRefScript
       , "--spending-plutus-script-v3"
       , "--spending-reference-tx-in-redeemer-value", "42"
       , "--tx-in-collateral", Text.unpack $ renderTxIn largestUTxO
@@ -281,7 +281,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
       [ eraName
       , "transaction", "build"
       , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-      , "--tx-in", txIdIncludedScriptLock <> "#" <> show txIxIncludedScriptLock
+      , "--tx-in", show txIdIncludedScriptLock <> "#" <> show txIxIncludedScriptLock
       , "--tx-in-script-file", unFile plutusV3Script
       , "--tx-in-redeemer-value", "42"
       , "--tx-in-collateral", Text.unpack $ renderTxIn newLargestUTxO
@@ -396,7 +396,7 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
       [ eraName
       , "transaction", "build"
       , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-      , "--tx-in", txIdSimpleScriptLock <> "#" <> show txIxSimpleScriptLock
+      , "--tx-in", show txIdSimpleScriptLock <> "#" <> show txIxSimpleScriptLock
       , "--tx-in-script-file", unFile simpleScript
       , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show (unCoin (lockedAmount - enoughAmountForFees))
       , "--witness-override", "2"
