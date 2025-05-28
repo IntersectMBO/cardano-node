@@ -685,7 +685,7 @@ defaultPartialNodeConfiguration =
     , pncChainSyncIdleTimeout           = mempty
     , pncDeadlineTargetOfRootPeers        = Last (Just deadlineRoots)
     , pncDeadlineTargetOfKnownPeers       = Last (Just deadlineKnown)
-    , pncDeadlineTargetOfEstablishedPeers = Last (Just 30) -- ^ TODO reset to deadlineEstablished for next o-n-release
+    , pncDeadlineTargetOfEstablishedPeers = Last (Just deadlineEstablished)
     , pncDeadlineTargetOfActivePeers      = Last (Just deadlineActive)
     , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just deadlineBigKnown)
     , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just deadlineBigEst)
@@ -695,7 +695,7 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfEstablishedPeers   = Last (Just syncEstablished)
     , pncSyncTargetOfActivePeers        = Last (Just syncActive)
     , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
-    , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just 40) -- ^ TODO reset to syncBigEst for next o-n-release
+    , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
     , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
     , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
@@ -706,21 +706,23 @@ defaultPartialNodeConfiguration =
     }
   where
     PeerSelectionTargets {
-      targetNumberOfRootPeers = deadlineRoots,
-      targetNumberOfKnownPeers = deadlineKnown,
-      targetNumberOfEstablishedPeers = _deadlineEstablished,
-      targetNumberOfActivePeers = deadlineActive,
-      targetNumberOfKnownBigLedgerPeers = deadlineBigKnown,
+      targetNumberOfRootPeers        = deadlineRoots,
+      targetNumberOfKnownPeers       = deadlineKnown,
+      targetNumberOfEstablishedPeers = deadlineEstablished,
+      targetNumberOfActivePeers      = deadlineActive,
+      targetNumberOfKnownBigLedgerPeers       = deadlineBigKnown,
       targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
-      targetNumberOfActiveBigLedgerPeers = deadlineBigAct } = Ouroboros.defaultDeadlineTargets
+      targetNumberOfActiveBigLedgerPeers      = deadlineBigAct
+    } = Ouroboros.defaultDeadlineTargets
     PeerSelectionTargets {
       targetNumberOfRootPeers        = syncRoots,
       targetNumberOfKnownPeers       = syncKnown,
       targetNumberOfEstablishedPeers = syncEstablished,
-      targetNumberOfActivePeers = syncActive,
-      targetNumberOfKnownBigLedgerPeers = syncBigKnown,
-      targetNumberOfEstablishedBigLedgerPeers = _syncBigEst,
-      targetNumberOfActiveBigLedgerPeers = syncBigAct } = Cardano.defaultSyncTargets
+      targetNumberOfActivePeers      = syncActive,
+      targetNumberOfKnownBigLedgerPeers       = syncBigKnown,
+      targetNumberOfEstablishedBigLedgerPeers = syncBigEst,
+      targetNumberOfActiveBigLedgerPeers      = syncBigAct
+    } = Cardano.defaultSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional
