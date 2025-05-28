@@ -113,7 +113,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
 ) where
 
-import           Prelude hiding (id)
+import           Prelude
 import           Data.Maybe (isJust)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
@@ -877,13 +877,8 @@ nomadClass nc = nomad (\n -> n {Types.nomad_class = nc})
 nomadResources :: Types.ByNodeType Types.Resources -> Types.Profile -> Types.Profile
 nomadResources r = nomad (\n -> n {Types.resources = r})
 
-nomadHostVolume :: Types.HostVolume -> Types.Profile -> Types.Profile
-nomadHostVolume hv = nomad (\n ->
-    let mhvs = case Types.host_volumes n of
-                 Nothing -> Just [hv]
-                 (Just hvs) -> Just $ hvs ++ [hv]
-    in n {Types.host_volumes = mhvs}
-  )
+nomadHostVolume :: Types.ByNodeType [Types.HostVolume] -> Types.Profile -> Types.Profile
+nomadHostVolume h = nomad (\n -> n {Types.host_volumes = Just h})
 
 nomadSSHLogsOn :: Types.Profile -> Types.Profile
 nomadSSHLogsOn = nomad (\n -> n {Types.fetch_logs_ssh = True})

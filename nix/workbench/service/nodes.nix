@@ -73,8 +73,9 @@ let
       topology       = "topology.json";
       nodeConfigFile = "config.json";
 
-      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory
-      withUtxoHdLmdb   = profile.node.utxo_lmdb;
+      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory;
+      # non-block producers (like the explorer node) keep using the in-memory backend
+      withUtxoHdLmdb   = profile.node.utxo_lmdb && isProducer;
       lmdbDatabasePath = liveTablesPath i;
 
       ## Combine:
@@ -118,7 +119,7 @@ let
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
-                } // optionalAttrs profile.node.utxo_lmdb
+                } // optionalAttrs (profile.node.utxo_lmdb && isProducer)
                 {
                   LedgerDB = {
                     Backend = "V1LMDB";
