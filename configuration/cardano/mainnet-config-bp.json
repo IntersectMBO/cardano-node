@@ -15,7 +15,7 @@
   "LedgerDB": {
     "Backend": "V2InMemory",
     "NumOfDiskSnapshots": 2,
-    "QueryBatchSize": 100,
+    "QueryBatchSize": 100000,
     "SnapshotInterval": 4320
   },
   "MaxKnownMajorProtocolVersion": 2,
