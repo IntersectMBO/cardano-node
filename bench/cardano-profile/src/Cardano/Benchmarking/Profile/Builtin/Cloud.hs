@@ -302,7 +302,7 @@ nomadPerf =
   P.clusterKeepRunningOn
   .
   P.awsInstanceTypes (Types.ByNodeType {
-    Types.producer = "c5.2xlarge"
+    Types.producer = "c5d.2xlarge"
   , Types.explorer = Just "m5.4xlarge"
   })
   .

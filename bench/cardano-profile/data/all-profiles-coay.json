@@ -10539,7 +10539,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -10960,7 +10960,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -11765,7 +11765,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -19297,7 +19297,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -19718,7 +19718,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -20523,7 +20523,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -22496,7 +22496,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -22918,7 +22918,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -26439,7 +26439,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -27049,7 +27049,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -45653,7 +45653,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -50837,7 +50837,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -51259,7 +51259,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -52259,7 +52259,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -52875,7 +52875,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -53491,7 +53491,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -54107,7 +54107,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -54723,7 +54723,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -55930,7 +55930,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -57153,7 +57153,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -57783,7 +57783,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -58667,7 +58667,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -59551,7 +59551,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -60419,7 +60419,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -61290,7 +61290,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -62244,7 +62244,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -63197,7 +63197,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -64151,7 +64151,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -72795,7 +72795,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -73732,7 +73732,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -74670,7 +74670,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -75608,7 +75608,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -76532,7 +76532,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -77457,7 +77457,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -82942,7 +82942,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -83555,7 +83555,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -84168,7 +84168,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -84781,7 +84781,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -85394,7 +85394,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -86625,7 +86625,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -87238,7 +87238,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -87849,7 +87849,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -88714,7 +88714,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -89582,7 +89582,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -90533,7 +90533,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
@@ -91483,7 +91483,7 @@
       "aws": {
         "instance_type": {
           "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
+          "producer": "c5d.2xlarge"
         },
         "use_public_routing": true
       },
