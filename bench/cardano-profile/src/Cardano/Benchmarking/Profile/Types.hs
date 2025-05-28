@@ -627,7 +627,7 @@ data ClusterNomad = ClusterNomad
   { namespace :: String
   , nomad_class :: String
   , resources :: ByNodeType Resources
-  , host_volumes :: Maybe [HostVolume]
+  , host_volumes :: Maybe (ByNodeType [HostVolume])
   , fetch_logs_ssh :: Bool
   }
   deriving (Eq, Show, Generic)
@@ -652,19 +652,6 @@ instance Aeson.FromJSON ClusterNomad where
         <*> o Aeson..: "host_volumes"
         <*> o Aeson..: "fetch_logs_ssh"
 
-data HostVolume = HostVolume
-  { destination :: String
-  , read_only :: Bool
-  , source :: String
-  }
-  deriving (Eq, Show, Generic)
-
-instance Aeson.ToJSON HostVolume
-
-instance Aeson.FromJSON HostVolume where
-  parseJSON = Aeson.genericParseJSON
-    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
-
 data ClusterAWS = ClusterAWS
   { instance_type :: ByNodeType String
   , use_public_routing :: Bool
@@ -687,6 +674,7 @@ instance Aeson.ToJSON a => Aeson.ToJSON (ByNodeType a)
 
 instance Aeson.FromJSON a => Aeson.FromJSON (ByNodeType a)
 
+-- These matches Nomad "resources" inside each Job Task.
 data Resources = Resources
   { cores :: Integer
   , memory :: Integer
@@ -697,6 +685,27 @@ data Resources = Resources
 instance Aeson.ToJSON Resources
 
 instance Aeson.FromJSON Resources where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
+
+-- The is used in the Nomad Job to define "volume" at the Group level and
+-- "volume_mount" at the Task level.
+data HostVolume = HostVolume
+  { -- Used at the Task level to create the "volume_mount" property.
+    -- The destination is where it'll appear inside the Task's isolated chroot.
+    destination :: String
+    -- How it should be mounted inside the Task's isolated chroot.
+    -- Independent of how it's defined in the Nomad Client config.
+  , read_only :: Bool
+  -- Used at the Group level to create the "volume" property.
+  -- This name matches the Nomad Client config (client.host_volume.NAME).
+  , source :: String
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON HostVolume
+
+instance Aeson.FromJSON HostVolume where
   parseJSON = Aeson.genericParseJSON
     (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 

@@ -100,9 +100,16 @@ clusterNomadSsdNoRegions =
   , Types.explorer = Just $ Types.Resources 16 120000 124000
   })
   .
-  P.nomadHostVolume (Types.HostVolume "/ssd2" False "ssd2")
-  .
-  P.nomadHostVolume (Types.HostVolume "/ssd1" False "ssd1")
+  P.nomadHostVolume (
+    let hostVolumes =
+          [ Types.HostVolume "/ssd1" False "ssd1"
+          , Types.HostVolume "/ssd2" False "ssd2"
+          ]
+    in  Types.ByNodeType {
+          Types.producer = hostVolumes
+        , Types.explorer = Just hostVolumes
+        }
+  )
   .
   P.nomadSSHLogsOn
   .
