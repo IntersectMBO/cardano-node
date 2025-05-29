@@ -176,7 +176,7 @@ cardanoTestnet :: ()
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnet
-  testnetOptions genesisOptions
+  testnetOptions' genesisOptions
   mShelleyGenesis mAlonzoGenesis mConwayGenesis
   Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
   let CardanoTestnetOptions
@@ -187,6 +187,8 @@ cardanoTestnet
         } = testnetOptions
       testnetMagic = fromIntegral $ genesisTestnetMagic genesisOptions
       nPools = cardanoNumPools testnetOptions
+      -- FIXME temporary fix until default era is Conway in cardano-cli
+      testnetOptions = testnetOptions'{cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraConway}
   AnyShelleyBasedEra sbe <- pure asbe
 
   -- TODO check consistency of the paths to genesis files in the node configuration file (if any)
