@@ -1040,7 +1040,7 @@ mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
       targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers
     }
 
-    genesisSelectionTargets = Configuration.defaultSyncTargets {
+    genesisSelectionTargets = defaultSyncTargets' peerSelectionTargets {
       targetNumberOfActivePeers               = ncSyncTargetOfActivePeers,
       targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers,
       targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
@@ -1060,6 +1060,16 @@ mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
         Cardano.PeerSelection.genesisPeerTargets = genesisSelectionTargets,
         Cardano.PeerSelection.readUseBootstrapPeers = daReadUseBootstrapPeers
       }
+
+-- TODO remove and use defaultSyncTargets for next o-n-release.
+defaultSyncTargets' :: PeerSelectionTargets -> PeerSelectionTargets
+defaultSyncTargets' deadlineTargets =
+  deadlineTargets {
+    targetNumberOfActivePeers               = 0,
+    targetNumberOfKnownBigLedgerPeers       = 100,
+    targetNumberOfEstablishedBigLedgerPeers = 50,
+    targetNumberOfActiveBigLedgerPeers      = 30 }
+
 
 mkNonP2PArguments
   :: IPSubscriptionTarget
