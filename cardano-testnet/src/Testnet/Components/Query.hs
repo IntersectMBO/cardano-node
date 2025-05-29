@@ -36,6 +36,7 @@ module Testnet.Components.Query
   , checkDRepsNumber
   , checkDRepState
   , assertNewEpochState
+  , getProtocolParams
   , getGovActionLifetime
   , getKeyDeposit
   , getDelegationState
@@ -44,8 +45,9 @@ module Testnet.Components.Query
 
 import           Cardano.Api as Api
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 import qualified Cardano.Api.Ledger as L
+import           Cardano.Api.Shelley (LedgerProtocolParameters (..), ShelleyLedgerEra)
+import qualified Cardano.Api.Tx.UTxO as Utxo
 
 import           Cardano.Crypto.Hash (hashToStringAsHex)
 import           Cardano.Ledger.Api (ConwayGovState)
@@ -65,7 +67,6 @@ import           Data.IORef
 import           Data.List (sortOn)
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Ord (Down (..))
 import           Data.Text (Text)
@@ -301,11 +302,11 @@ findAllUtxos
   => MonadTest m
   => EpochStateView
   -> ShelleyBasedEra era
-  -> m (Map TxIn (TxOut CtxUTxO era))
+  -> m (UTxO era)
 findAllUtxos epochStateView sbe = withFrozenCallStack $ do
   AnyNewEpochState sbe' _ tbs <- getEpochState epochStateView
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
-  pure $ getLedgerTablesUTxOValues sbe' tbs
+  pure . UTxO $ getLedgerTablesUTxOValues sbe' tbs
 
 -- | Retrieve utxos from the epoch state view for an address.
 findUtxosWithAddress
@@ -316,7 +317,7 @@ findUtxosWithAddress
   => EpochStateView
   -> ShelleyBasedEra era
   -> Text -- ^ Address
-  -> m (Map TxIn (TxOut CtxUTxO era))
+  -> m (UTxO era)
 findUtxosWithAddress epochStateView sbe address = withFrozenCallStack $ do
   utxos <- findAllUtxos epochStateView sbe
   H.note_ $ "Finding UTxOs for " <> T.unpack address
@@ -327,7 +328,7 @@ findUtxosWithAddress epochStateView sbe address = withFrozenCallStack $ do
       maybeToEither ("Could not deserialize address: " <> T.unpack address)
         (deserialiseAddress AsAddressAny address)
 
-  let utxos' = M.filter (\(TxOut txAddr _ _ _)  -> txAddr == address') utxos
+  let utxos' = Utxo.filter (\(TxOut txAddr _ _ _)  -> txAddr == address') utxos
   H.note_ $ unlines (map show $ toList utxos')
   pure utxos'
   where
@@ -344,7 +345,7 @@ findLargestUtxoWithAddress
   -> Text -- ^ Address
   -> m (Maybe (TxIn, TxOut CtxUTxO era))
 findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
-  utxos <- M.assocs <$> findUtxosWithAddress epochStateView sbe address
+  utxos <- toList <$> findUtxosWithAddress epochStateView sbe address
   pure
     . listToMaybe
     $ sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
@@ -557,6 +558,15 @@ assertNewEpochState epochStateView sbe maxWait lens expected = withFrozenCallSta
       \(AnyNewEpochState actualEra newEpochState _, _, _) -> do
         Refl <- H.leftFail $ assertErasEqual sbe actualEra
         pure $ newEpochState ^. lens
+
+-- | Return current protocol parameters from the governance state
+getProtocolParams :: (H.MonadAssertion m, MonadTest m, MonadIO m)
+  => EpochStateView
+  -> ConwayEraOnwards era
+  -> m (LedgerProtocolParameters era)
+getProtocolParams epochStateView ceo = conwayEraOnwardsConstraints ceo $ do
+   govState :: ConwayGovState era <- getGovState epochStateView ceo
+   pure . LedgerProtocolParameters $ govState ^. L.cgsCurPParamsL
 
 
 -- | Obtains the @govActionLifetime@ from the protocol parameters.
