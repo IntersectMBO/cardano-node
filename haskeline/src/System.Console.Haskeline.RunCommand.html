@@ -1,0 +1,556 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Console.Haskeline.RunCommand</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#runCommandLoop"><span class="hs-identifier">runCommandLoop</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html"><span class="hs-identifier">System.Console.Haskeline.Command</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html"><span class="hs-identifier">System.Console.Haskeline.Term</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html"><span class="hs-identifier">System.Console.Haskeline.LineState</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Monads.html"><span class="hs-identifier">System.Console.Haskeline.Monads</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Prefs.html"><span class="hs-identifier">System.Console.Haskeline.Prefs</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Key.html"><span class="hs-identifier">System.Console.Haskeline.Key</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Control.Exception.html#/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Exception.Type.html#SomeException/GHC.Exception.Type.html#SomeException"><span class="hs-identifier">SomeException</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Control.Monad.html#/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../exceptions-0.10.7/src/Control.Monad.Catch.html#/Control.Monad.Catch.html"><span class="hs-identifier">Control.Monad.Catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../exceptions-0.10.7/src/Control.Monad.Catch.html#handle/Control.Monad.Catch.html#handle"><span class="hs-identifier">handle</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../exceptions-0.10.7/src/Control.Monad.Catch.html#throwM/Control.Monad.Catch.html#throwM"><span class="hs-identifier">throwM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span id="local-6989586621679101167"><span id="local-6989586621679101171"><span id="local-6989586621679101175"><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#runCommandLoop"><span class="hs-identifier hs-type">runCommandLoop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Term.html#CommandMonad"><span class="hs-identifier hs-type">CommandMonad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101167"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Monads.html#MonadState"><span class="hs-identifier hs-type">MonadState</span></a></span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#Layout"><span class="hs-identifier hs-type">Layout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101167"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineState"><span class="hs-identifier hs-type">LineState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101171"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#TermOps"><span class="hs-identifier hs-type">TermOps</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#Prefix"><span class="hs-identifier hs-type">Prefix</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#KeyCommand"><span class="hs-identifier hs-type">KeyCommand</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101167"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101171"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101175"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101171"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101167"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101175"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-16"></span><span id="runCommandLoop"><span class="annot"><span class="annottext">runCommandLoop :: forall (m :: * -&gt; *) s a.
+(CommandMonad m, MonadState Layout m, LineState s) =&gt;
+TermOps -&gt; Prefix -&gt; KeyCommand m s a -&gt; s -&gt; m a
+</span><a href="System.Console.Haskeline.RunCommand.html#runCommandLoop"><span class="hs-identifier hs-var hs-var">runCommandLoop</span></a></span></span><span> </span><span id="local-6989586621679101299"><span class="annot"><span class="annottext">tops :: TermOps
+</span><a href="#local-6989586621679101299"><span class="hs-identifier hs-var">tops</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="System.Console.Haskeline.Term.html#TermOps"><span class="hs-identifier hs-type">TermOps</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">evalTerm :: TermOps -&gt; forall (m :: * -&gt; *). CommandMonad m =&gt; EvalTerm m
+</span><a href="System.Console.Haskeline.Term.html#evalTerm"><span class="hs-identifier hs-var">evalTerm</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679101302"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). CommandMonad m =&gt; EvalTerm m
+</span><a href="#local-6989586621679101302"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679101303"><span class="annot"><span class="annottext">Prefix
+</span><a href="#local-6989586621679101303"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679101304"><span class="annot"><span class="annottext">KeyCommand m s a
+</span><a href="#local-6989586621679101304"><span class="hs-identifier hs-var">cmds</span></a></span></span><span> </span><span id="local-6989586621679101305"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679101305"><span class="hs-identifier hs-var">initState</span></a></span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">EvalTerm m
+forall (m :: * -&gt; *). CommandMonad m =&gt; EvalTerm m
+</span><a href="#local-6989586621679101302"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-comment">-- NB: Need to separate this case out from the above pattern</span><span>
+</span><span id="line-18"></span><span>                </span><span class="hs-comment">-- in order to build on ghc-6.12.3</span><span>
+</span><span id="line-19"></span><span>        </span><span class="annot"><a href="System.Console.Haskeline.Term.html#EvalTerm"><span class="hs-identifier hs-type">EvalTerm</span></a></span><span> </span><span id="local-6989586621679101314"><span class="annot"><span class="annottext">forall a. n a -&gt; m a
+</span><a href="#local-6989586621679101314"><span class="hs-identifier hs-var">eval</span></a></span></span><span> </span><span id="local-6989586621679101315"><span class="annot"><span class="annottext">forall a. m a -&gt; n a
+</span><a href="#local-6989586621679101315"><span class="hs-identifier hs-var">liftE</span></a></span></span><span>
+</span><span id="line-20"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">n a -&gt; m a
+forall a. n a -&gt; m a
+</span><a href="#local-6989586621679101314"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">(n a -&gt; m a) -&gt; n a -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TermOps
+-&gt; forall (m :: * -&gt; *) a.
+   CommandMonad m =&gt;
+   (m Event -&gt; m a) -&gt; m a
+</span><a href="System.Console.Haskeline.Term.html#withGetEvent"><span class="hs-identifier hs-var">withGetEvent</span></a></span><span> </span><span class="annot"><span class="annottext">TermOps
+</span><a href="#local-6989586621679101299"><span class="hs-identifier hs-var">tops</span></a></span><span>
+</span><span id="line-21"></span><span>                </span><span class="annot"><span class="annottext">((n Event -&gt; n a) -&gt; n a) -&gt; (n Event -&gt; n a) -&gt; n a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(forall a. m a -&gt; n a)
+-&gt; TermOps -&gt; Prefix -&gt; s -&gt; KeyCommand m s a -&gt; n Event -&gt; n a
+forall (m :: * -&gt; *) (n :: * -&gt; *) s a.
+(Term n, CommandMonad n, MonadState Layout m, LineState s) =&gt;
+(forall b. m b -&gt; n b)
+-&gt; TermOps -&gt; Prefix -&gt; s -&gt; KeyCommand m s a -&gt; n Event -&gt; n a
+</span><a href="System.Console.Haskeline.RunCommand.html#runCommandLoop%27"><span class="hs-identifier hs-var">runCommandLoop'</span></a></span><span> </span><span class="annot"><span class="annottext">m b -&gt; n b
+forall a. m a -&gt; n a
+</span><a href="#local-6989586621679101315"><span class="hs-identifier hs-var">liftE</span></a></span><span> </span><span class="annot"><span class="annottext">TermOps
+</span><a href="#local-6989586621679101299"><span class="hs-identifier hs-var">tops</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix
+</span><a href="#local-6989586621679101303"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679101305"><span class="hs-identifier hs-var">initState</span></a></span><span>
+</span><span id="line-22"></span><span>                    </span><span class="annot"><span class="annottext">KeyCommand m s a
+</span><a href="#local-6989586621679101304"><span class="hs-identifier hs-var">cmds</span></a></span><span> </span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#runCommandLoop%27"><span class="hs-identifier hs-type">runCommandLoop'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679101193"><span class="annot"><a href="#local-6989586621679101193"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679101192"><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span id="local-6989586621679101194"><span class="annot"><a href="#local-6989586621679101194"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621679101196"><span class="annot"><a href="#local-6989586621679101196"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#CommandMonad"><span class="hs-identifier hs-type">CommandMonad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>        </span><span class="annot"><a href="System.Console.Haskeline.Monads.html#MonadState"><span class="hs-identifier hs-type">MonadState</span></a></span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#Layout"><span class="hs-identifier hs-type">Layout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101193"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineState"><span class="hs-identifier hs-type">LineState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101194"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>        </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679101195"><span class="annot"><a href="#local-6989586621679101195"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621679101193"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101195"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101195"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#TermOps"><span class="hs-identifier hs-type">TermOps</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#Prefix"><span class="hs-identifier hs-type">Prefix</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101194"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#KeyCommand"><span class="hs-identifier hs-type">KeyCommand</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101193"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101194"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101196"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span>
+</span><span id="line-27"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101196"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-28"></span><span id="runCommandLoop%27"><span class="annot"><span class="annottext">runCommandLoop' :: forall (m :: * -&gt; *) (n :: * -&gt; *) s a.
+(Term n, CommandMonad n, MonadState Layout m, LineState s) =&gt;
+(forall b. m b -&gt; n b)
+-&gt; TermOps -&gt; Prefix -&gt; s -&gt; KeyCommand m s a -&gt; n Event -&gt; n a
+</span><a href="System.Console.Haskeline.RunCommand.html#runCommandLoop%27"><span class="hs-identifier hs-var hs-var">runCommandLoop'</span></a></span></span><span> </span><span id="local-6989586621679101384"><span class="annot"><span class="annottext">forall b. m b -&gt; n b
+</span><a href="#local-6989586621679101384"><span class="hs-identifier hs-var">liftE</span></a></span></span><span> </span><span id="local-6989586621679101385"><span class="annot"><span class="annottext">TermOps
+</span><a href="#local-6989586621679101385"><span class="hs-identifier hs-var">tops</span></a></span></span><span> </span><span id="local-6989586621679101386"><span class="annot"><span class="annottext">Prefix
+</span><a href="#local-6989586621679101386"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679101387"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679101387"><span class="hs-identifier hs-var">initState</span></a></span></span><span> </span><span id="local-6989586621679101388"><span class="annot"><span class="annottext">KeyCommand m s a
+</span><a href="#local-6989586621679101388"><span class="hs-identifier hs-var">cmds</span></a></span></span><span> </span><span id="local-6989586621679101389"><span class="annot"><span class="annottext">n Event
+</span><a href="#local-6989586621679101389"><span class="hs-identifier hs-var">getEvent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101391"><span class="annot"><span class="annottext">s :: LineChars
+</span><a href="#local-6989586621679101391"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prefix -&gt; s -&gt; LineChars
+forall s. LineState s =&gt; Prefix -&gt; s -&gt; LineChars
+</span><a href="System.Console.Haskeline.LineState.html#lineChars"><span class="hs-identifier hs-var">lineChars</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix
+</span><a href="#local-6989586621679101386"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679101387"><span class="hs-identifier hs-var">initState</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; n ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#drawLine"><span class="hs-identifier hs-var">drawLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101391"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; KeyMap (CmdM m (a, [Key])) -&gt; n a
+</span><a href="#local-6989586621679101394"><span class="hs-identifier hs-var">readMoreKeys</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101391"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((s -&gt; CmdM m a) -&gt; CmdM m (a, [Key]))
+-&gt; KeyCommand m s a -&gt; KeyMap (CmdM m (a, [Key]))
+forall a b. (a -&gt; b) -&gt; KeyMap a -&gt; KeyMap b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; (a, [Key])) -&gt; CmdM m a -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a1 r. Monad m =&gt; (a1 -&gt; r) -&gt; m a1 -&gt; m r
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#liftM/GHC.Base.html#liftM"><span class="hs-identifier hs-var">liftM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679101396"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101396"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101396"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(CmdM m a -&gt; CmdM m (a, [Key]))
+-&gt; ((s -&gt; CmdM m a) -&gt; CmdM m a)
+-&gt; (s -&gt; CmdM m a)
+-&gt; CmdM m (a, [Key])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(s -&gt; CmdM m a) -&gt; s -&gt; CmdM m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679101387"><span class="hs-identifier hs-var">initState</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">KeyCommand m s a
+</span><a href="#local-6989586621679101388"><span class="hs-identifier hs-var">cmds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="#local-6989586621679101394"><span class="hs-identifier hs-type">readMoreKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineChars"><span class="hs-identifier hs-type">LineChars</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#KeyMap"><span class="hs-identifier hs-type">KeyMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101193"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679101196"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101196"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621679101394"><span class="annot"><span class="annottext">readMoreKeys :: LineChars -&gt; KeyMap (CmdM m (a, [Key])) -&gt; n a
+</span><a href="#local-6989586621679101394"><span class="hs-identifier hs-var hs-var">readMoreKeys</span></a></span></span><span> </span><span id="local-6989586621679101398"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679101399"><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101399"><span class="hs-identifier hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-35"></span><span>        </span><span id="local-6989586621679101400"><span class="annot"><span class="annottext">Event
+</span><a href="#local-6989586621679101400"><span class="hs-identifier hs-var">event</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; n Event) -&gt; n Event -&gt; n Event
+forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadCatch m, Exception e) =&gt;
+(e -&gt; m a) -&gt; m a -&gt; m a
+</span><a href="../../exceptions-0.10.7/src/Control.Monad.Catch.html#handle/Control.Monad.Catch.html#handle"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679101401"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679101401"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-glyph">::</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Exception.Type.html#SomeException/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; n ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#moveToNextLine"><span class="hs-identifier hs-var">moveToNextLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">n () -&gt; n Event -&gt; n Event
+forall a b. n a -&gt; n b -&gt; n b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; n Event
+forall e a. (HasCallStack, Exception e) =&gt; e -&gt; n a
+forall (m :: * -&gt; *) e a.
+(MonadThrow m, HasCallStack, Exception e) =&gt;
+e -&gt; m a
+</span><a href="../../exceptions-0.10.7/src/Control.Monad.Catch.html#throwM/Control.Monad.Catch.html#throwM"><span class="hs-identifier hs-var">throwM</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679101401"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>                    </span><span class="annot"><span class="annottext">n Event
+</span><a href="#local-6989586621679101389"><span class="hs-identifier hs-var">getEvent</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Event
+</span><a href="#local-6989586621679101400"><span class="hs-identifier hs-var">event</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-38"></span><span>                    </span><span class="annot"><a href="System.Console.Haskeline.Term.html#ErrorEvent"><span class="hs-identifier hs-type">ErrorEvent</span></a></span><span> </span><span id="local-6989586621679101404"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679101404"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; n ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#moveToNextLine"><span class="hs-identifier hs-var">moveToNextLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">n () -&gt; n a -&gt; n a
+forall a b. n a -&gt; n b -&gt; n b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; n a
+forall e a. (HasCallStack, Exception e) =&gt; e -&gt; n a
+forall (m :: * -&gt; *) e a.
+(MonadThrow m, HasCallStack, Exception e) =&gt;
+e -&gt; m a
+</span><a href="../../exceptions-0.10.7/src/Control.Monad.Catch.html#throwM/Control.Monad.Catch.html#throwM"><span class="hs-identifier hs-var">throwM</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679101404"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-39"></span><span>                    </span><span class="annot"><span class="annottext">Event
+</span><a href="System.Console.Haskeline.Term.html#WindowResize"><span class="hs-identifier hs-var">WindowResize</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>                        </span><span class="annot"><span class="annottext">(forall b. m b -&gt; n b) -&gt; TermOps -&gt; LineChars -&gt; n ()
+forall (n :: * -&gt; *) (m :: * -&gt; *).
+(Term n, MonadState Layout m) =&gt;
+(forall a. m a -&gt; n a) -&gt; TermOps -&gt; LineChars -&gt; n ()
+</span><a href="System.Console.Haskeline.RunCommand.html#drawReposition"><span class="hs-identifier hs-var">drawReposition</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; n a
+forall b. m b -&gt; n b
+</span><a href="#local-6989586621679101384"><span class="hs-identifier hs-var">liftE</span></a></span><span> </span><span class="annot"><span class="annottext">TermOps
+</span><a href="#local-6989586621679101385"><span class="hs-identifier hs-var">tops</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-41"></span><span>                        </span><span class="annot"><span class="annottext">LineChars -&gt; KeyMap (CmdM m (a, [Key])) -&gt; n a
+</span><a href="#local-6989586621679101394"><span class="hs-identifier hs-var">readMoreKeys</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101399"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-42"></span><span>                    </span><span class="annot"><a href="System.Console.Haskeline.Term.html#KeyInput"><span class="hs-identifier hs-type">KeyInput</span></a></span><span> </span><span id="local-6989586621679101408"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101408"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>                        </span><span id="local-6989586621679101409"><span class="annot"><span class="annottext">[[Key]]
+</span><a href="#local-6989586621679101409"><span class="hs-identifier hs-var">bound_ks</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Key -&gt; n [Key]) -&gt; [Key] -&gt; n [[Key]]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#mapM/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Prefs -&gt; [Key]) -&gt; n [Key]
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><a href="System.Console.Haskeline.Monads.html#asks"><span class="hs-identifier hs-var">asks</span></a></span><span> </span><span class="annot"><span class="annottext">((Prefs -&gt; [Key]) -&gt; n [Key])
+-&gt; (Key -&gt; Prefs -&gt; [Key]) -&gt; Key -&gt; n [Key]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Prefs -&gt; [Key]
+</span><a href="System.Console.Haskeline.Prefs.html#lookupKeyBinding"><span class="hs-identifier hs-var">lookupKeyBinding</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101408"><span class="hs-identifier hs-var">ks</span></a></span><span>
+</span><span id="line-44"></span><span>                        </span><span class="annot"><span class="annottext">LineChars -&gt; CmdM m (a, [Key]) -&gt; n a
+</span><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">(CmdM m (a, [Key]) -&gt; n a) -&gt; CmdM m (a, [Key]) -&gt; n a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Key] -&gt; KeyMap (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; KeyMap (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToMap"><span class="hs-identifier hs-var">applyKeysToMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[Key]] -&gt; [Key]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#concat/Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span> </span><span class="annot"><span class="annottext">[[Key]]
+</span><a href="#local-6989586621679101409"><span class="hs-identifier hs-var">bound_ks</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101399"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-45"></span><span>                    </span><span class="annot"><a href="System.Console.Haskeline.Term.html#ExternalPrint"><span class="hs-identifier hs-type">ExternalPrint</span></a></span><span> </span><span id="local-6989586621679101417"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679101417"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>                        </span><span class="annot"><span class="annottext">LineChars -&gt; String -&gt; n ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; String -&gt; m ()
+</span><a href="System.Console.Haskeline.RunCommand.html#printPreservingLineChars"><span class="hs-identifier hs-var">printPreservingLineChars</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679101417"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-47"></span><span>                        </span><span class="annot"><span class="annottext">LineChars -&gt; KeyMap (CmdM m (a, [Key])) -&gt; n a
+</span><a href="#local-6989586621679101394"><span class="hs-identifier hs-var">readMoreKeys</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101398"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101399"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><a href="#local-6989586621679101413"><span class="hs-identifier hs-type">loopCmd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineChars"><span class="hs-identifier hs-type">LineChars</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101193"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679101196"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101192"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101196"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621679101413"><span class="annot"><span class="annottext">loopCmd :: LineChars -&gt; CmdM m (a, [Key]) -&gt; n a
+</span><a href="#local-6989586621679101413"><span class="hs-identifier hs-var hs-var">loopCmd</span></a></span></span><span> </span><span id="local-6989586621679101419"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101419"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#GetKey"><span class="hs-identifier hs-type">GetKey</span></a></span><span> </span><span id="local-6989586621679101421"><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101421"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; KeyMap (CmdM m (a, [Key])) -&gt; n a
+</span><a href="#local-6989586621679101394"><span class="hs-identifier hs-var">readMoreKeys</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101419"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101421"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">-- If there are multiple consecutive LineChanges, only render the diff</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-comment">-- to the last one, and skip the rest. This greatly improves speed when</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-comment">-- a large amount of text is pasted in at once.</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span id="local-6989586621679101422"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101422"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#DoEffect"><span class="hs-identifier hs-type">DoEffect</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#LineChange"><span class="hs-identifier hs-type">LineChange</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix -&gt; LineChars
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>                </span><span id="local-6989586621679101425"><span class="annot"><span class="annottext">e :: CmdM m (a, [Key])
+</span><a href="#local-6989586621679101425"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#DoEffect"><span class="hs-identifier hs-type">DoEffect</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#LineChange"><span class="hs-identifier hs-type">LineChange</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix -&gt; LineChars
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; CmdM m (a, [Key]) -&gt; n a
+</span><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101422"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101425"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span id="local-6989586621679101426"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101426"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#DoEffect"><span class="hs-identifier hs-type">DoEffect</span></a></span><span> </span><span id="local-6989586621679101427"><span class="annot"><span class="annottext">Effect
+</span><a href="#local-6989586621679101427"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621679101428"><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101428"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>                                    </span><span id="local-6989586621679101429"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101429"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Prefix -&gt; LineChars -&gt; Effect -&gt; n LineChars
+forall (m :: * -&gt; *).
+(Term m, MonadReader Prefs m) =&gt;
+Prefix -&gt; LineChars -&gt; Effect -&gt; m LineChars
+</span><a href="System.Console.Haskeline.RunCommand.html#drawEffect"><span class="hs-identifier hs-var">drawEffect</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix
+</span><a href="#local-6989586621679101386"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101426"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Effect
+</span><a href="#local-6989586621679101427"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-58"></span><span>                                    </span><span class="annot"><span class="annottext">LineChars -&gt; CmdM m (a, [Key]) -&gt; n a
+</span><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101429"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101428"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span id="local-6989586621679101431"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101431"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span id="local-6989586621679101433"><span class="annot"><span class="annottext">m (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101433"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (CmdM m (a, [Key])) -&gt; n (CmdM m (a, [Key]))
+forall b. m b -&gt; n b
+</span><a href="#local-6989586621679101384"><span class="hs-identifier hs-var">liftE</span></a></span><span> </span><span class="annot"><span class="annottext">m (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101433"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">n (CmdM m (a, [Key])) -&gt; (CmdM m (a, [Key]) -&gt; n a) -&gt; n a
+forall a b. n a -&gt; (a -&gt; n b) -&gt; n b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; CmdM m (a, [Key]) -&gt; n a
+</span><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101431"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><a href="#local-6989586621679101413"><span class="hs-identifier hs-var">loopCmd</span></a></span><span> </span><span id="local-6989586621679101434"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101434"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679101436"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101436"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679101437"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101437"><span class="hs-identifier hs-var">ks</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>                                    </span><span class="annot"><span class="annottext">IO () -&gt; n ()
+forall a. IO a -&gt; n a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/Control.Monad.IO.Class.html#liftIO/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TermOps -&gt; [Key] -&gt; IO ()
+</span><a href="System.Console.Haskeline.Term.html#saveUnusedKeys"><span class="hs-identifier hs-var">saveUnusedKeys</span></a></span><span> </span><span class="annot"><span class="annottext">TermOps
+</span><a href="#local-6989586621679101385"><span class="hs-identifier hs-var">tops</span></a></span><span> </span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101437"><span class="hs-identifier hs-var">ks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>                                    </span><span class="annot"><span class="annottext">LineChars -&gt; n ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#moveToNextLine"><span class="hs-identifier hs-var">moveToNextLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101434"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-63"></span><span>                                    </span><span class="annot"><span class="annottext">a -&gt; n a
+forall a. a -&gt; n a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101436"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span id="local-6989586621679101260"><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#printPreservingLineChars"><span class="hs-identifier hs-type">printPreservingLineChars</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101260"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineChars"><span class="hs-identifier hs-type">LineChars</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101260"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-66"></span><span id="printPreservingLineChars"><span class="annot"><span class="annottext">printPreservingLineChars :: forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; String -&gt; m ()
+</span><a href="System.Console.Haskeline.RunCommand.html#printPreservingLineChars"><span class="hs-identifier hs-var hs-var">printPreservingLineChars</span></a></span></span><span> </span><span id="local-6989586621679101448"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101448"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679101449"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679101449"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="hs-keyword">do</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#clearLine"><span class="hs-identifier hs-var">clearLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101448"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; [String] -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#printLines"><span class="hs-identifier hs-var">printLines</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; m ()) -&gt; (String -&gt; [String]) -&gt; String -&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String]
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#lines/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; String -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679101449"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#drawLine"><span class="hs-identifier hs-var">drawLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101448"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span id="local-6989586621679101245"><span id="local-6989586621679101246"><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#drawReposition"><span class="hs-identifier hs-type">drawReposition</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101245"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Monads.html#MonadState"><span class="hs-identifier hs-type">MonadState</span></a></span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#Layout"><span class="hs-identifier hs-type">Layout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101246"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679101247"><span class="annot"><a href="#local-6989586621679101247"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621679101246"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101247"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101245"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101247"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Term.html#TermOps"><span class="hs-identifier hs-type">TermOps</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineChars"><span class="hs-identifier hs-type">LineChars</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101245"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-73"></span><span id="drawReposition"><span class="annot"><span class="annottext">drawReposition :: forall (n :: * -&gt; *) (m :: * -&gt; *).
+(Term n, MonadState Layout m) =&gt;
+(forall a. m a -&gt; n a) -&gt; TermOps -&gt; LineChars -&gt; n ()
+</span><a href="System.Console.Haskeline.RunCommand.html#drawReposition"><span class="hs-identifier hs-var hs-var">drawReposition</span></a></span></span><span> </span><span id="local-6989586621679101470"><span class="annot"><span class="annottext">forall a. m a -&gt; n a
+</span><a href="#local-6989586621679101470"><span class="hs-identifier hs-var">liftE</span></a></span></span><span> </span><span id="local-6989586621679101471"><span class="annot"><span class="annottext">TermOps
+</span><a href="#local-6989586621679101471"><span class="hs-identifier hs-var">tops</span></a></span></span><span> </span><span id="local-6989586621679101472"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101472"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679101473"><span class="annot"><span class="annottext">Layout
+</span><a href="#local-6989586621679101473"><span class="hs-identifier hs-var">oldLayout</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Layout -&gt; n Layout
+forall a. m a -&gt; n a
+</span><a href="#local-6989586621679101470"><span class="hs-identifier hs-var">liftE</span></a></span><span> </span><span class="annot"><span class="annottext">m Layout
+forall s (m :: * -&gt; *). MonadState s m =&gt; m s
+</span><a href="System.Console.Haskeline.Monads.html#get"><span class="hs-identifier hs-var">get</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679101475"><span class="annot"><span class="annottext">Layout
+</span><a href="#local-6989586621679101475"><span class="hs-identifier hs-var">newLayout</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Layout -&gt; n Layout
+forall a. IO a -&gt; n a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/Control.Monad.IO.Class.html#liftIO/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TermOps -&gt; IO Layout
+</span><a href="System.Console.Haskeline.Term.html#getLayout"><span class="hs-identifier hs-var">getLayout</span></a></span><span> </span><span class="annot"><span class="annottext">TermOps
+</span><a href="#local-6989586621679101471"><span class="hs-identifier hs-var">tops</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">m () -&gt; n ()
+forall a. m a -&gt; n a
+</span><a href="#local-6989586621679101470"><span class="hs-identifier hs-var">liftE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Layout -&gt; m ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; s -&gt; m ()
+</span><a href="System.Console.Haskeline.Monads.html#put"><span class="hs-identifier hs-var">put</span></a></span><span> </span><span class="annot"><span class="annottext">Layout
+</span><a href="#local-6989586621679101475"><span class="hs-identifier hs-var">newLayout</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; n () -&gt; n ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#when/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Layout
+</span><a href="#local-6989586621679101473"><span class="hs-identifier hs-var">oldLayout</span></a></span><span> </span><span class="annot"><span class="annottext">Layout -&gt; Layout -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">Layout
+</span><a href="#local-6989586621679101475"><span class="hs-identifier hs-var">newLayout</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(n () -&gt; n ()) -&gt; n () -&gt; n ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Layout -&gt; LineChars -&gt; n ()
+forall (m :: * -&gt; *). Term m =&gt; Layout -&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#reposition"><span class="hs-identifier hs-var">reposition</span></a></span><span> </span><span class="annot"><span class="annottext">Layout
+</span><a href="#local-6989586621679101473"><span class="hs-identifier hs-var">oldLayout</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101472"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span id="local-6989586621679101262"><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#drawEffect"><span class="hs-identifier hs-type">drawEffect</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101262"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Monads.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="System.Console.Haskeline.Prefs.html#Prefs"><span class="hs-identifier hs-type">Prefs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101262"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#Prefix"><span class="hs-identifier hs-type">Prefix</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineChars"><span class="hs-identifier hs-type">LineChars</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#Effect"><span class="hs-identifier hs-type">Effect</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101262"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="System.Console.Haskeline.LineState.html#LineChars"><span class="hs-identifier hs-type">LineChars</span></a></span></span><span>
+</span><span id="line-81"></span><span id="drawEffect"><span class="annot"><span class="annottext">drawEffect :: forall (m :: * -&gt; *).
+(Term m, MonadReader Prefs m) =&gt;
+Prefix -&gt; LineChars -&gt; Effect -&gt; m LineChars
+</span><a href="System.Console.Haskeline.RunCommand.html#drawEffect"><span class="hs-identifier hs-var hs-var">drawEffect</span></a></span></span><span> </span><span id="local-6989586621679101512"><span class="annot"><span class="annottext">Prefix
+</span><a href="#local-6989586621679101512"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679101513"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101513"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#LineChange"><span class="hs-identifier hs-type">LineChange</span></a></span><span> </span><span id="local-6989586621679101514"><span class="annot"><span class="annottext">Prefix -&gt; LineChars
+</span><a href="#local-6989586621679101514"><span class="hs-identifier hs-var">ch</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101515"><span class="annot"><span class="annottext">t :: LineChars
+</span><a href="#local-6989586621679101515"><span class="hs-identifier hs-var hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prefix -&gt; LineChars
+</span><a href="#local-6989586621679101514"><span class="hs-identifier hs-var">ch</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix
+</span><a href="#local-6989586621679101512"><span class="hs-identifier hs-var">prefix</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; LineChars -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#drawLineDiff"><span class="hs-identifier hs-var">drawLineDiff</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101513"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101515"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; m LineChars
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101515"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#drawEffect"><span class="hs-identifier hs-var">drawEffect</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679101517"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101517"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="annot"><span class="annottext">Effect
+</span><a href="System.Console.Haskeline.Command.html#ClearScreen"><span class="hs-identifier hs-var">ClearScreen</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). Term m =&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#clearLayout"><span class="hs-identifier hs-var">clearLayout</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#drawLine"><span class="hs-identifier hs-var">drawLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101517"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; m LineChars
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101517"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#drawEffect"><span class="hs-identifier hs-var">drawEffect</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679101520"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101520"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#PrintLines"><span class="hs-identifier hs-type">PrintLines</span></a></span><span> </span><span id="local-6989586621679101522"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679101522"><span class="hs-identifier hs-var">ls</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#when/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101520"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; LineChars -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#moveToNextLine"><span class="hs-identifier hs-var">moveToNextLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101520"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; [String] -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#printLines"><span class="hs-identifier hs-var">printLines</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679101522"><span class="hs-identifier hs-var">ls</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; LineChars -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#drawLine"><span class="hs-identifier hs-var">drawLine</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101520"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">LineChars -&gt; m LineChars
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101520"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-94"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#drawEffect"><span class="hs-identifier hs-var">drawEffect</span></a></span><span> </span><span class="annot"><span class="annottext">Prefix
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679101523"><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101523"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="annot"><span class="annottext">Effect
+</span><a href="System.Console.Haskeline.Command.html#RingBell"><span class="hs-identifier hs-var">RingBell</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). (Term m, MonadReader Prefs m) =&gt; m ()
+</span><a href="System.Console.Haskeline.RunCommand.html#actBell"><span class="hs-identifier hs-var">actBell</span></a></span><span> </span><span class="annot"><span class="annottext">m () -&gt; m LineChars -&gt; m LineChars
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars -&gt; m LineChars
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">LineChars
+</span><a href="#local-6989586621679101523"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span id="local-6989586621679101278"><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#actBell"><span class="hs-identifier hs-type">actBell</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101278"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Monads.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="System.Console.Haskeline.Prefs.html#Prefs"><span class="hs-identifier hs-type">Prefs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101278"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101278"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-97"></span><span id="actBell"><span class="annot"><span class="annottext">actBell :: forall (m :: * -&gt; *). (Term m, MonadReader Prefs m) =&gt; m ()
+</span><a href="System.Console.Haskeline.RunCommand.html#actBell"><span class="hs-identifier hs-var hs-var">actBell</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679101534"><span class="annot"><span class="annottext">BellStyle
+</span><a href="#local-6989586621679101534"><span class="hs-identifier hs-var">style</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Prefs -&gt; BellStyle) -&gt; m BellStyle
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><a href="System.Console.Haskeline.Monads.html#asks"><span class="hs-identifier hs-var">asks</span></a></span><span> </span><span class="annot"><span class="annottext">Prefs -&gt; BellStyle
+</span><a href="System.Console.Haskeline.Prefs.html#bellStyle"><span class="hs-identifier hs-var">bellStyle</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">BellStyle
+</span><a href="#local-6989586621679101534"><span class="hs-identifier hs-var">style</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">BellStyle
+</span><a href="System.Console.Haskeline.Prefs.html#NoBell"><span class="hs-identifier hs-var">NoBell</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">BellStyle
+</span><a href="System.Console.Haskeline.Prefs.html#VisualBell"><span class="hs-identifier hs-var">VisualBell</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; Bool -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#ringBell"><span class="hs-identifier hs-var">ringBell</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">BellStyle
+</span><a href="System.Console.Haskeline.Prefs.html#AudibleBell"><span class="hs-identifier hs-var">AudibleBell</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; m ()
+forall (m :: * -&gt; *). Term m =&gt; Bool -&gt; m ()
+</span><a href="System.Console.Haskeline.Term.html#ringBell"><span class="hs-identifier hs-var">ringBell</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-comment">---------------</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- Traverse through the tree of keybindings, using the given keys.</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- Remove as many GetKeys as possible.</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- Returns any unused keys (so that they can be applied at the next getInputLine).</span><span>
+</span><span id="line-109"></span><span id="local-6989586621679101256"><span id="local-6989586621679101257"><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#applyKeysToMap"><span class="hs-identifier hs-type">applyKeysToMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monad/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101256"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#KeyMap"><span class="hs-identifier hs-type">KeyMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101256"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679101257"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>                                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101256"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679101257"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-111"></span><span id="applyKeysToMap"><span class="annot"><span class="annottext">applyKeysToMap :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; KeyMap (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToMap"><span class="hs-identifier hs-var hs-var">applyKeysToMap</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679101543"><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101543"><span class="hs-identifier hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a. KeyMap (CmdM m a) -&gt; CmdM m a
+</span><a href="System.Console.Haskeline.Command.html#GetKey"><span class="hs-identifier hs-var">GetKey</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101543"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-112"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#applyKeysToMap"><span class="hs-identifier hs-var">applyKeysToMap</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679101544"><span class="annot"><span class="annottext">Key
+</span><a href="#local-6989586621679101544"><span class="hs-identifier hs-var">k</span></a></span></span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span id="local-6989586621679101545"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101545"><span class="hs-identifier hs-var">ks</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101546"><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101546"><span class="hs-identifier hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+-&gt; Key -&gt; Maybe (KeyConsumed (CmdM m (a, [Key])))
+forall a. KeyMap a -&gt; Key -&gt; Maybe (KeyConsumed a)
+</span><a href="System.Console.Haskeline.Command.html#lookupKM"><span class="hs-identifier hs-var">lookupKM</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101546"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><a href="#local-6989586621679101544"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">Maybe (KeyConsumed (CmdM m (a, [Key])))
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Effect -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a. Effect -&gt; CmdM m a -&gt; CmdM m a
+</span><a href="System.Console.Haskeline.Command.html#DoEffect"><span class="hs-identifier hs-var">DoEffect</span></a></span><span> </span><span class="annot"><span class="annottext">Effect
+</span><a href="System.Console.Haskeline.Command.html#RingBell"><span class="hs-identifier hs-var">RingBell</span></a></span><span> </span><span class="annot"><span class="annottext">(CmdM m (a, [Key]) -&gt; CmdM m (a, [Key]))
+-&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a. KeyMap (CmdM m a) -&gt; CmdM m a
+</span><a href="System.Console.Haskeline.Command.html#GetKey"><span class="hs-identifier hs-var">GetKey</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101546"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#Consumed"><span class="hs-identifier hs-type">Consumed</span></a></span><span> </span><span id="local-6989586621679101549"><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101549"><span class="hs-identifier hs-var">cmd</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var">applyKeysToCmd</span></a></span><span> </span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101545"><span class="hs-identifier hs-var">ks</span></a></span><span> </span><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101549"><span class="hs-identifier hs-var">cmd</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#NotConsumed"><span class="hs-identifier hs-type">NotConsumed</span></a></span><span> </span><span id="local-6989586621679101552"><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101552"><span class="hs-identifier hs-var">cmd</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var">applyKeysToCmd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key
+</span><a href="#local-6989586621679101544"><span class="hs-identifier hs-var">k</span></a></span><span class="annot"><span class="annottext">Key -&gt; [Key] -&gt; [Key]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101545"><span class="hs-identifier hs-var">ks</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101552"><span class="hs-identifier hs-var">cmd</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span id="local-6989586621679101287"><span id="local-6989586621679101288"><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-type">applyKeysToCmd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monad/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101287"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101287"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679101288"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>                                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101287"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679101288"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="hs-special">[</span><span class="annot"><a href="System.Console.Haskeline.Key.html#Key"><span class="hs-identifier hs-type">Key</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-119"></span><span id="applyKeysToCmd"><span class="annot"><span class="annottext">applyKeysToCmd :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var hs-var">applyKeysToCmd</span></a></span></span><span> </span><span id="local-6989586621679101558"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101558"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#GetKey"><span class="hs-identifier hs-type">GetKey</span></a></span><span> </span><span id="local-6989586621679101559"><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101559"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Key] -&gt; KeyMap (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; KeyMap (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToMap"><span class="hs-identifier hs-var">applyKeysToMap</span></a></span><span> </span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101558"><span class="hs-identifier hs-var">ks</span></a></span><span> </span><span class="annot"><span class="annottext">KeyMap (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101559"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var">applyKeysToCmd</span></a></span><span> </span><span id="local-6989586621679101560"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101560"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#DoEffect"><span class="hs-identifier hs-type">DoEffect</span></a></span><span> </span><span id="local-6989586621679101561"><span class="annot"><span class="annottext">Effect
+</span><a href="#local-6989586621679101561"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621679101562"><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101562"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Effect -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a. Effect -&gt; CmdM m a -&gt; CmdM m a
+</span><a href="System.Console.Haskeline.Command.html#DoEffect"><span class="hs-identifier hs-var">DoEffect</span></a></span><span> </span><span class="annot"><span class="annottext">Effect
+</span><a href="#local-6989586621679101561"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var">applyKeysToCmd</span></a></span><span> </span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101560"><span class="hs-identifier hs-var">ks</span></a></span><span> </span><span class="annot"><span class="annottext">CmdM m (a, [Key])
+</span><a href="#local-6989586621679101562"><span class="hs-identifier hs-var">next</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var">applyKeysToCmd</span></a></span><span> </span><span id="local-6989586621679101563"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101563"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-type">CmdM</span></a></span><span> </span><span id="local-6989586621679101564"><span class="annot"><span class="annottext">m (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101564"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a. m (CmdM m a) -&gt; CmdM m a
+</span><a href="System.Console.Haskeline.Command.html#CmdM"><span class="hs-identifier hs-var">CmdM</span></a></span><span> </span><span class="annot"><span class="annottext">(m (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key]))
+-&gt; m (CmdM m (a, [Key])) -&gt; CmdM m (a, [Key])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(CmdM m (a, [Key]) -&gt; CmdM m (a, [Key]))
+-&gt; m (CmdM m (a, [Key])) -&gt; m (CmdM m (a, [Key]))
+forall (m :: * -&gt; *) a1 r. Monad m =&gt; (a1 -&gt; r) -&gt; m a1 -&gt; m r
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#liftM/GHC.Base.html#liftM"><span class="hs-identifier hs-var">liftM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+[Key] -&gt; CmdM m (a, [Key]) -&gt; CmdM m (a, [Key])
+</span><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var">applyKeysToCmd</span></a></span><span> </span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101563"><span class="hs-identifier hs-var">ks</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m (CmdM m (a, [Key]))
+</span><a href="#local-6989586621679101564"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-122"></span><span class="annot"><a href="System.Console.Haskeline.RunCommand.html#applyKeysToCmd"><span class="hs-identifier hs-var">applyKeysToCmd</span></a></span><span> </span><span id="local-6989586621679101565"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101565"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Console.Haskeline.Command.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679101566"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101566"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679101567"><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101567"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, [Key]) -&gt; CmdM m (a, [Key])
+forall (m :: * -&gt; *) a. a -&gt; CmdM m a
+</span><a href="System.Console.Haskeline.Command.html#Result"><span class="hs-identifier hs-var">Result</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101566"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101567"><span class="hs-identifier hs-var">ys</span></a></span><span class="annot"><span class="annottext">[Key] -&gt; [Key] -&gt; [Key]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="annot"><span class="annottext">[Key]
+</span><a href="#local-6989586621679101565"><span class="hs-identifier hs-var">ks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- use in the next input line</span><span>
+</span><span id="line-123"></span></pre></body></html>
