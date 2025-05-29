@@ -433,7 +433,7 @@ generateVoteFiles :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m)
               -- stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' to store
             -- the output voting files.
-  -> String -- ^ Transaction ID string of the governance action.
+  -> TxId -- ^ Transaction ID string of the governance action.
   -> Word16 -- ^ Index of the governance action.
   -> [(SpoNodeKeys, [Char])] -- ^ List of tuples where each tuple contains a 'SpoNodeKeys'
                               -- representing the SPO keys and a 'String' representing the
@@ -446,7 +446,7 @@ generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActi
     void $ execCli' execConfig
       [ eraToString $ toCardanoEra ceo , "governance", "vote", "create"
       , "--" ++ vote
-      , "--governance-action-tx-id", governanceActionTxId
+      , "--governance-action-tx-id", show governanceActionTxId
       , "--governance-action-index", show @Word16 governanceActionIndex
       , "--cold-verification-key-file", verificationKeyFp $ poolNodeKeysCold spoKeys
       , "--out-file", unFile path
