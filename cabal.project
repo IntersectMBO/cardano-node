@@ -98,3 +98,11 @@ if impl (ghc >= 9.12)
     , ouroboros-network-api:base
     , ouroboros-network-framework:base
     , ouroboros-network-protocols:base
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 03d18d8e9d3734238cff71dcda66a20c5e4262bb
+  --sha256: sha256-NJt5uyUjNXhU81ypCrYCreAboTxTa8cWfXACIR6qYeE=
+  subdir:
+    ouroboros-network
