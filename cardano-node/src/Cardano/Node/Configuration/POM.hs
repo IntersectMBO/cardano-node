@@ -290,7 +290,7 @@ data PartialNodeConfiguration
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
 
-         -- Enable experimental P2P mode
+         -- Network P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
 
          -- Peer Sharing
@@ -671,17 +671,11 @@ defaultPartialNodeConfiguration =
             DefaultQueryBatchSize
             V2InMemory
             noDeprecatedOptions
-    , pncProtocolIdleTimeout   = Last (Just 5)
-    , pncTimeWaitTimeout       = Last (Just 60)
-    , pncEgressPollInterval    = Last (Just 0)
+    , pncProtocolIdleTimeout   = Last (Just Ouroboros.defaultProtocolIdleTimeout)
+    , pncTimeWaitTimeout       = Last (Just Ouroboros.defaultTimeWaitTimeout)
+    , pncEgressPollInterval    = Last (Just Ouroboros.defaultEgressPollInterval)
     , pncAcceptedConnectionsLimit =
-        Last
-      $ Just
-      $ AcceptedConnectionsLimit
-        { acceptedConnectionsHardLimit = 512
-        , acceptedConnectionsSoftLimit = 384
-        , acceptedConnectionsDelay     = 5
-        }
+        Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
     , pncChainSyncIdleTimeout           = mempty
     , pncDeadlineTargetOfRootPeers        = Last (Just deadlineRoots)
     , pncDeadlineTargetOfKnownPeers       = Last (Just deadlineKnown)
