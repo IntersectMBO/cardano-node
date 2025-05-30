@@ -75,7 +75,7 @@ backend_nomadcloud() {
     wait-pools-stopped )
       # It passes the sleep time (in seconds) required argument.
       # This time is different between local and cloud backends to avoid
-      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # unnecessary Nomad specific traffic (~99% happens waiting for node-0, the
       # first one it waits to stop inside a loop) and at the same time be less
       # sensitive to network failures.
       backend_nomad wait-pools-stopped     60 "$@"
@@ -84,7 +84,7 @@ backend_nomadcloud() {
     wait-workloads-stopped )
       # It passes the sleep time (in seconds) required argument.
       # This time is different between local and cloud backends to avoid
-      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # unnecessary Nomad specific traffic (~99% happens waiting for node-0, the
       # first one it waits to stop inside a loop) and at the same time be less
       # sensitive to network failures.
       backend_nomad wait-workloads-stopped 60 "$@"
@@ -752,7 +752,6 @@ allocate-run-nomadcloud() {
           | with_entries(
               .value |= {
                   "constraint": .constraint
-                , "affinity":   .affinity
                 , "tasks":      (
                     .task | with_entries(
                       .value |= {
