@@ -698,6 +698,35 @@ allocate-run-nomadcloud() {
           read -p "Hit enter to continue ..."
         fi
       fi
+      # Clean, only on producers, the "host_volumes" if being used for LMDB.
+      # We do this for each producer instead of for all producer at once because
+      # even if modules have the same name from a Nomad perspective, in each
+      # client the real path is defined in Nomad's config file and may differ!
+      if    test "${node_name}" != "explorer"                                  \
+         && jqtest '.node.utxo_lmdb' "${dir}"/profile.json                     \
+         && jqtest '(.cluster.nomad.host_volumes.producer | length) > 0' "${dir}"/profile.json
+      then
+        # Index on the "host_volumes" array.
+        for host_volume_key in $(jq_tolist '.cluster.nomad.host_volumes.producer | keys' "${dir}"/profile.json)
+        do
+          # Compare the SSD directory the node will use and volume destination.
+          local ssd_directory host_volume_destination
+          ssd_directory="$(jq -r . '.node.ssd_directory' "${dir}"/profile.json)"
+          host_volume_destination="$(jq -r ".cluster.nomad.host_volumes.producer[${host_volume_key}].destination" "${dir}"/profile.json)"
+          if test "${ssd_directory}" = "${host_volume_destination}"
+          then
+            # Use volume source to fetch the path defined in the client machine.
+            local host_volume_source host_volume_path
+            host_volume_source="$(jq -r ".cluster.nomad.host_volumes.producer[${host_volume_key}].source" "${dir}"/profile.json)"
+            host_volume_path="$(wb nomad clients ssh "${client_name}" "jq -r .client.host_volume[\"${host_volume_source}\"].path /etc/nomad.json")"
+            local rm_command
+            rm_command="rm -rf \"${host_volume_path}/\""
+            msg "$(yellow "About to: ${rm_command}")"
+            read -p "Hit enter to continue ..."
+            wb nomad clients ssh producers "${client_name}" "${rm_command}"
+          fi
+        done
+      fi
       # Store this group's reproducibility constraints for debugging purposes.
         jq \
           ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${node_name}\"][\"constraint\"]" \
