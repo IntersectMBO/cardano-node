@@ -36,7 +36,7 @@ library
                       , ansi-terminal
                       , bytestring
                       , cardano-api ^>= 10.16
-                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.9
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.11
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2

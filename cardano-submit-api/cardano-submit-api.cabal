@@ -41,7 +41,7 @@ library
                       , bytestring
                       , cardano-api ^>= 10.16
                       , cardano-binary
-                      , cardano-cli ^>= 10.9
+                      , cardano-cli ^>= 10.11
                       , cardano-crypto-class ^>= 2.2
                       , http-media
                       , iohk-monitoring
