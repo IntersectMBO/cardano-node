@@ -1,7 +1,14 @@
 # Server in 10.0.0.100
+
+[nix-shell:~/]$ wb nomad server configure srv01 10.0.101.200 4646 4647 4648
+[nix-shell:~/]$ wb nomad server start srv01
+workbench:  Starting Nomad server "srv01" ...
+workbench:  Nomad server "srv01" started with PID 957859
+workbench:  Waiting for the listening HTTP server (25s) ...
+
 # Client in 10.0.0.101
 
 [nix-shell:~/]$ NOMAD_ADDR="http://10.0.0.100:4646" wb nomad client configure cli01 10.0.0.101 4646 4647 4648 eu-central-01
-
-[nix-shell:~/]$ NOMAD_ADDR="http://10.0.101.200:4646" wb nomad client start cli01 sudo
-
+[nix-shell:~/]$ NOMAD_ADDR="http://10.0.0.100:4646" wb nomad client start cli01 sudo
+...
+...
