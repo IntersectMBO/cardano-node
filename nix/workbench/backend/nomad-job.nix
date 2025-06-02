@@ -237,11 +237,15 @@ let
     };
 
     # Specifies a key-value map that annotates with user-defined metadata.
+    # These pairs are passed through to the job as NOMAD_META_<key>=<value>
+    # environment variables. Any character in a key other than [A-Za-z0-9_.]
+    # will be converted to _.
     meta = {
+      # Available inside the entrypoint as bash variables "$NOMAD_META_#".
       # Only top level "KEY=STRING" are allowed, no child objects/attributes!
-      WORKBENCH_STATEDIR = stateDir;
-      SUPERVISORD_LOGLEVEL = task_supervisord_loglevel;
-      ONE_TRACER_PER_NODE = oneTracerPerNode;
+      WORKBENCH_STATEDIR = stateDir;                    # NOMAD_META_WORKBENCH_STATEDIR
+      SUPERVISORD_LOGLEVEL = task_supervisord_loglevel; # NOMAD_META_SUPERVISORD_LOGLEVEL
+      ONE_TRACER_PER_NODE = oneTracerPerNode;           # NOMAD_META_ONE_TRACER_PER_NODE
     };
 
     # A group defines a series of tasks that should be co-located on the same
@@ -568,6 +572,9 @@ let
               # VPC/firewall.
               if (profile.cluster or null) != null && profile.cluster.aws.use_public_routing
               then "\${attr.unique.platform.aws.public-ipv4}"
+              # Will need something like ${attr.meta.my_ip} / ${attr.meta.my_ip}
+              # defined in the client config `meta { my_ip = "X.X.X.X" }` for
+              # something specific or when creating clusters for testing.
               else "" # Local runs just use 127.0.0.1.
             ;
             # Specifies the port to advertise for this service. The value of
