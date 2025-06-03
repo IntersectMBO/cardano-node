@@ -404,7 +404,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryDRepStakeDistributionCmd -> do
       -- drep-stake-distribution
       -- to stdout
-      drepStakeDistribution :: [(L.DRep, L.Coin)] <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
+      drepStakeDistribution :: Map L.DRep L.Coin <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
 
       -- TODO: we could check that the Coin amount below is the one reported
       -- by query stake-address-info
@@ -412,7 +412,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       H.assertWith drepStakeDistribution $ \dreps ->
         length dreps == 3 -- Because, by default, 3 DReps are created
 
-      forM_ drepStakeDistribution $ \(_drep, Coin coin) -> do
+      forM_ (Map.toList drepStakeDistribution) $ \(_drep, Coin coin) -> do
         let expected = 15_000_003_000_000
             -- FIXME: For some reason the stake distribution fluctuates here.
             -- Where those stake fluctuations come from?
