@@ -23,6 +23,14 @@ ab0d4ba7  default    eu-central-1  workbench-nomad-client-cli01  <none>  false  
 
 # Client in 10.0.0.101, in a different machine than the same server
 
+[nix-shell:~/]$ wb nomad client configure cli01 10.0.0.101 4646 4647 4648 eu-central-1
+[nix-shell:~/]$ NOMAD_ADDR="http://10.0.0.100:4646" wb nomad client start cli01 sudo
+workbench:  Starting Nomad client "cli01" ...
+[sudo] password for user: 
+workbench:  Nomad client "cli01" started with PID 74439
+workbench:  Waiting for the listening HTTP server (25s) ...
+workbench:  Waiting until the Nomad server sees the client (25s) ...
+
 # Stop
 ######
 
