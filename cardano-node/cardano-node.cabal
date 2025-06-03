@@ -189,7 +189,7 @@ library
                       , lobemo-backend-trace-forwarder
                       , mtl
                       , network
-                      , network-mux >= 0.5
+                      , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus ^>= 0.27
