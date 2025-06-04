@@ -19,7 +19,6 @@
     "SnapshotInterval": 4320
   },
   "MaxKnownMajorProtocolVersion": 2,
-  "MinBigLedgerPeersForTrustedState": 5,
   "MinNodeVersion": "10.4.0",
   "PeerSharing": true,
   "Protocol": "Cardano",
