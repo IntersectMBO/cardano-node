@@ -16,6 +16,8 @@ index-state:
   , hackage.haskell.org 2025-04-16T18:30:40Z
   , cardano-haskell-packages 2025-05-28T12:02:33Z
 
+constraints: terminfo source
+
 packages:
   cardano-node
   cardano-node-capi
@@ -31,8 +33,6 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-
-extra-packages: Cabal
 
 program-options
   ghc-options: -Werror
