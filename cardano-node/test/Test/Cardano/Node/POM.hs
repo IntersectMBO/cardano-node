@@ -252,13 +252,13 @@ eExpectedConfig = do
           , acceptedConnectionsDelay     = 5
           }
     , ncDeadlineTargetOfRootPeers = 60
-    , ncDeadlineTargetOfKnownPeers = 85
+    , ncDeadlineTargetOfKnownPeers = 150
     , ncDeadlineTargetOfEstablishedPeers = 30
-    , ncDeadlineTargetOfActivePeers = 15
+    , ncDeadlineTargetOfActivePeers = 20
     , ncDeadlineTargetOfKnownBigLedgerPeers = 15
     , ncDeadlineTargetOfEstablishedBigLedgerPeers = 10
     , ncDeadlineTargetOfActiveBigLedgerPeers = 5
-    , ncSyncTargetOfActivePeers = 0
+    , ncSyncTargetOfActivePeers = 5
     , ncSyncTargetOfKnownBigLedgerPeers = 100
     , ncSyncTargetOfEstablishedBigLedgerPeers = 40
     , ncSyncTargetOfActiveBigLedgerPeers = 30
