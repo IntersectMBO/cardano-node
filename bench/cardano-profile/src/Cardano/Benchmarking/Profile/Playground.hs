@@ -82,7 +82,6 @@ profilesNoEraPlayground =
         . M.benchDuration
         . P.traceForwardingOn . P.newTracing
         . P.p2pOn
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . V.genesisVariantVoltaire
         -- Cloud Plutus workload
         . V.plutusTypeLoop . V.plutusBase . P.tps 0.85
@@ -99,7 +98,6 @@ profilesNoEraPlayground =
         . compressedFor3Epochs
         . V.plutusDoublePlusSaturation . P.txFee 1000000
         . P.analysisStandard
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
   -- Budget profiles.
     ciBenchLike & P.name "calibrate-volt"

@@ -122,7 +122,7 @@ let
     ############################################################################
     lib.attrsets.optionalAttrs (subBackendName == "cloud") {
       openssh_hacks = rec {
-        commit = "5d8c5913c70723318acf47496e2abf7d2c99384f"; # OpenSSH version 9.8 (Branch "9.8");
+        commit = "74ab7169b3f374e45a1186527da3a225f471bf25"; # OpenSSH version 10.0p2 (Branch "10.0p2");
         # Not used locally. Needed to create the SSH "start.sh" script.
         nix-store-path  = (__getFlake "github:fmaste/openssh-portable-hacks/${commit}").packages.x86_64-linux.openssh_hacks;
         flake-reference = "github:fmaste/openssh-portable-hacks";
