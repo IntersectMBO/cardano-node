@@ -62,8 +62,7 @@ noDeprecatedOptions = DeprecatedOptions []
 
 data LedgerDbConfiguration =
     LedgerDbConfiguration
-      NumOfDiskSnapshots
-      SnapshotInterval
+      SnapshotPolicyArgs
       QueryBatchSize
       LedgerDbSelectorFlag
       DeprecatedOptions
