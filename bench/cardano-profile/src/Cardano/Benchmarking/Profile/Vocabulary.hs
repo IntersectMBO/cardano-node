@@ -21,8 +21,6 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 
 , plutusTypeLoop, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
 , plutusTypeBLST, plutusTypeRIPEMD
-
-, clusterDefault
 ) where
 
 --------------------------------------------------------------------------------
@@ -250,37 +248,3 @@ plutusTypeRIPEMD =
     , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2f")]
     ]
   . P.txFee 940000
-
--- Definition vocabulary: cluster.
-----------------------------------
-
--- TODO: Should not exists, should be null instead!
-clusterDefault :: Types.Profile -> Types.Profile
-clusterDefault p =
-  p {Types.cluster =
-    Types.Cluster {
-      Types.nomad = Types.ClusterNomad {
-        Types.namespace = "default"
-      , Types.nomad_class = ""
-      , Types.resources = Types.ByNodeType {
-          Types.producer = Types.Resources 2 15000 16000
-        , Types.explorer = Just $ Types.Resources 2 15000 16000
-        }
-      , Types.host_volumes = Nothing
-      , Types.fetch_logs_ssh = False
-      }
-    , Types.aws = Types.ClusterAWS {
-        Types.instance_type = Types.ByNodeType {
-          Types.producer = "c5.2xlarge"
-        , Types.explorer = Just "m5.4xlarge"
-        }
-      , Types.use_public_routing = False
-      }
-    , Types.minimun_storage = Just $ Types.ByNodeType {
-        Types.producer = 12582912
-      , Types.explorer = Just 14155776
-      }
-    , Types.ssd_directory = Nothing
-    , Types.keep_running = False
-    }
-  }
