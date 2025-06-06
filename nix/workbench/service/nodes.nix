@@ -109,9 +109,10 @@ let
 
                   ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
                   ## NB. the following inequality must hold: known >= established >= active >= 0
-                  SyncTargetNumberOfActivePeers   = max 15 valency;     # set to same value as TargetNumberOfActivePeers
-                  TargetNumberOfActivePeers       = max 15 valency;
-                  TargetNumberOfEstablishedPeers  = max 40 valency;
+                  SyncTargetNumberOfActivePeers      = max 15 valency;     # set to same value as TargetNumberOfActivePeers
+                  SyncTargetNumberOfEstablishedPeers = max 40 valency;
+                  TargetNumberOfActivePeers          = max 15 valency;
+                  TargetNumberOfEstablishedPeers     = max 40 valency;
 
                   ByronGenesisFile             = "../genesis/byron/genesis.json";
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";

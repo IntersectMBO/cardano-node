@@ -133,7 +133,7 @@ data StartupTrace blk =
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
-  | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
+  | LedgerPeerSnapshotLoaded (Either (UseLedgerPeers, WithOrigin SlotNo) (WithOrigin SlotNo))
   | MovedTopLevelOption String
 
 data EnabledBlockForging
