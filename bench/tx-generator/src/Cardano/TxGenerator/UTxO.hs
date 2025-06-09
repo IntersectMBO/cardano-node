@@ -7,7 +7,7 @@ module  Cardano.TxGenerator.UTxO
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..))
+import           Cardano.Api (ReferenceScript (..))
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))

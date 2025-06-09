@@ -15,8 +15,8 @@ module Testnet.Process.Cli.SPO
   , generateVoteFiles
   ) where
 
+import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley hiding (cardanoEra)
 
 import qualified Cardano.Ledger.Api.State.Query as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L

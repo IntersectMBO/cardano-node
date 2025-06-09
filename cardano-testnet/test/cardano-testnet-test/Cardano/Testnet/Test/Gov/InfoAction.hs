@@ -11,10 +11,10 @@ module Cardano.Testnet.Test.Gov.InfoAction
   ( hprop_ledger_events_info_action
   ) where
 
+import           Cardano.Api
 import           Cardano.Api as Api
-import           Cardano.Api.Internal.Error
+import           Cardano.Api.Error
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
-import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
 import qualified Cardano.Ledger.Conway.Governance as L

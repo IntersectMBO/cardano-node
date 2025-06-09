@@ -9,7 +9,6 @@ module Cardano.Node.Protocol.Alonzo
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import           Cardano.Node.Orphans ()

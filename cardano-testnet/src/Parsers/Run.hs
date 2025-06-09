@@ -9,7 +9,7 @@ module Parsers.Run
   , opts
   ) where
 
-import           Cardano.Api.Shelley (ShelleyGenesis)
+import           Cardano.Api (ShelleyGenesis)
 
 import           Cardano.CLI.Environment
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)

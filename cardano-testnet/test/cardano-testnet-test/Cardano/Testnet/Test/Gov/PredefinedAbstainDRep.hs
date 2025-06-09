@@ -9,10 +9,10 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
   ( hprop_check_predefined_abstain_drep
   ) where
 
+import           Cardano.Api (ShelleyLedgerEra)
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Cardano.Ledger.Conway.Core (ppNOptL)
 import           Cardano.Ledger.Conway.Governance (ConwayGovState, cgsCurPParamsL)

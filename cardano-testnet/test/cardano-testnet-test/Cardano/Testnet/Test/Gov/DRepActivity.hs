@@ -10,10 +10,10 @@ module Cardano.Testnet.Test.Gov.DRepActivity
   ( hprop_check_drep_activity
   ) where
 
+import           Cardano.Api (ShelleyLedgerEra)
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
 import           Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)

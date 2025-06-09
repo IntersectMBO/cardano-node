@@ -14,12 +14,12 @@ module Cardano.Testnet.Test.Cli.Query (
     hprop_cli_queries
 ) where
 
+import           Cardano.Api (StakeCredential (StakeCredentialByKey))
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Internal.Genesis as Api
+import           Cardano.Api.Genesis as Api
 import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), unboundRational)
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
 
 import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
