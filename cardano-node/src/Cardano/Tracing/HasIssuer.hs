@@ -11,9 +11,9 @@ module Cardano.Tracing.HasIssuer
   , HasIssuer (..)
   ) where
 
-import           Cardano.Api (serialiseToRawBytes, verificationKeyHash)
+import           Cardano.Api (VerificationKey (StakePoolVerificationKey), serialiseToRawBytes,
+                   verificationKeyHash)
 import           Cardano.Api.Byron (VerificationKey (ByronVerificationKey))
-import           Cardano.Api.Shelley (VerificationKey (StakePoolVerificationKey))
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Ledger.Shelley.API as Shelley

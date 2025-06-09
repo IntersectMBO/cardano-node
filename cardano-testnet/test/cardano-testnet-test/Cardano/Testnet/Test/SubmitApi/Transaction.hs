@@ -11,9 +11,8 @@ module Cardano.Testnet.Test.SubmitApi.Transaction
   ( hprop_transaction
   ) where
 
-import           Cardano.Api
+import           Cardano.Api as A
 import qualified Cardano.Api.Ledger as L
-import qualified Cardano.Api.Ledger.Lens as A
 
 import           Cardano.Testnet
 

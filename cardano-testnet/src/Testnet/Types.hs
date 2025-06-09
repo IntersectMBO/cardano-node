@@ -45,8 +45,8 @@ module Testnet.Types
   ) where
 
 import           Cardano.Api
+import           Cardano.Api (KesKey, StakePoolKey, VrfKey)
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))

@@ -6,16 +6,18 @@
 
 module Cardano.Benchmarking.PlutusScripts.LoopV3 (script) where
 
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
+import           Cardano.Api (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
+                   Script (..), toScriptInAnyLang)
+
+import           Cardano.Benchmarking.ScriptAPI
+import qualified PlutusLedgerApi.V3 as PlutusV3
+
 import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
-                   Script (..), toScriptInAnyLang)
-import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 
-import qualified PlutusLedgerApi.V3 as PlutusV3
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Syntax
 import           PlutusTx
 import           PlutusTx.Builtins (unsafeDataAsI)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,

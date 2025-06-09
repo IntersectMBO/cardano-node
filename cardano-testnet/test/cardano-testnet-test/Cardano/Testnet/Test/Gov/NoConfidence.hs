@@ -8,10 +8,10 @@ module Cardano.Testnet.Test.Gov.NoConfidence
   ( hprop_gov_no_confidence
   ) where
 
+import           Cardano.Api
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger
-import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Conway.Genesis as L
 import qualified Cardano.Ledger.Conway.Governance as L
