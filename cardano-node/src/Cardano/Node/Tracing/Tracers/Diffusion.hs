@@ -18,6 +18,9 @@ module Cardano.Node.Tracing.Tracers.Diffusion
 import           Cardano.Logging
 import           Cardano.Node.Configuration.TopologyP2P ()
 
+#ifdef linux_HOST_OS
+import           Network.Mux.TCPInfo (StructTCPInfo (..))
+#endif
 import qualified Ouroboros.Network.Diffusion.Common as Common
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
@@ -234,21 +237,21 @@ instance LogFormatting Mux.Trace where
       [ "kind" .= String "Mux.TraceStopped"
       , "msg"  .= String "Mux stoppped"
       ]
-#ifdef os_HOST_linux
+#ifdef linux_HOST_OS
     forMachine _dtal (Mux.TraceTCPInfo StructTCPInfo
             { tcpi_snd_mss, tcpi_rcv_mss, tcpi_lost, tcpi_retrans
             , tcpi_rtt, tcpi_rttvar, tcpi_snd_cwnd }
-            len) =
+            len) = mconcat
       [ "kind" .= String "Mux.TraceTCPInfo"
       , "msg"  .= String "TCPInfo"
-      , "rtt"  .= String (show (fromIntegral tcpi_rtt :: Word))
-      , "rttvar" .= String (show (fromIntegral tcpi_rttvar :: Word))
-      , "snd_cwnd" .= String (show (fromIntegral tcpi_snd_cwnd :: Word))
-      , "snd_mss" .= String (show (fromIntegral tcpi_snd_mss :: Word))
-      , "rcv_mss" .= String (show (fromIntegral tcpi_rcv_mss :: Word))
-      , "lost" .= String (show (fromIntegral tcpi_lost :: Word))
-      , "retrans" .= String (show (fromIntegral tcpi_retrans :: Word))
-      , "length" .= String (showT len)
+      , "rtt"  .= (fromIntegral tcpi_rtt :: Word)
+      , "rttvar" .= (fromIntegral tcpi_rttvar :: Word)
+      , "snd_cwnd" .= (fromIntegral tcpi_snd_cwnd :: Word)
+      , "snd_mss" .= (fromIntegral tcpi_snd_mss :: Word)
+      , "rcv_mss" .= (fromIntegral tcpi_rcv_mss :: Word)
+      , "lost" .= (fromIntegral tcpi_lost :: Word)
+      , "retrans" .= (fromIntegral tcpi_retrans :: Word)
+      , "length" .= len
       ]
 #else
     forMachine _dtal (Mux.TraceTCPInfo _ len) = mconcat
@@ -326,17 +329,20 @@ instance LogFormatting Mux.Trace where
       sformat ("Terminating (" % shown % ") in " % shown) mid dir
     forHuman Mux.TraceStopping = "Mux stopping"
     forHuman Mux.TraceStopped  = "Mux stoppped"
-#ifdef os_HOST_linux
+#ifdef linux_HOST_OS
     forHuman (Mux.TraceTCPInfo StructTCPInfo
             { tcpi_snd_mss, tcpi_rcv_mss, tcpi_lost, tcpi_retrans
             , tcpi_rtt, tcpi_rttvar, tcpi_snd_cwnd }
             len) =
-      sformat ("TCPInfo rtt % int % " rttvar " % ínt % " cwnd " % int %
-               " smss " % int % " rmss " % int % " lost " % int %
-               " retrans " % int % " len " %int)
-              (fromIntegral tcpi_rtt :: Word) (fromIntegral tcpi_rttvar :: Word)
-              (fromIntegral tcpi_snd_cwnd :: Word) (fromIntegral tcpi_snd_mss :: Word)
-              (fromIntegral tcpi_rcv_mss :: Word) (fromIntegral tcpi_lost :: Word)
+      sformat ("TCPInfo rtt " % int % " rttvar " % int % " snd_cwnd " % int %
+               " snd_mss " % int % " rcv_mss " % int % " lost " % int %
+               " retrans " % int % " len " % int)
+              (fromIntegral tcpi_rtt :: Word)
+              (fromIntegral tcpi_rttvar :: Word)
+              (fromIntegral tcpi_snd_cwnd :: Word)
+              (fromIntegral tcpi_snd_mss :: Word)
+              (fromIntegral tcpi_rcv_mss :: Word)
+              (fromIntegral tcpi_lost :: Word)
               (fromIntegral tcpi_retrans :: Word)
               len
 #else
