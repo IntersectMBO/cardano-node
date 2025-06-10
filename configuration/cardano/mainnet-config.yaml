@@ -37,15 +37,28 @@ MaxKnownMajorProtocolVersion: 2
 ##### Network Configuration #####
 
 PeerSharing: True
-TargetNumberOfActivePeers: 20
-TargetNumberOfEstablishedPeers: 30
-TargetNumberOfKnownPeers: 150
-TargetNumberOfRootPeers: 60
-SyncTargetNumberOfActivePeers: 0
-SyncTargetNumberOfActiveBigLedgerPeers: 30
-SyncTargetNumberOfEstablishedBigLedgerPeers: 40
-SyncTargetNumberOfKnownBigLedgerPeers: 100
-MinBigLedgerPeersForTrustedState: 5
+
+# The following control the number of outbound connections to strictly our upstream peers
+# cf. https://developers.cardano.org/docs/get-started/cardano-node/p2p
+# defaults are provided by ouroboros-network, but can be overriden by uncommenting below
+#TargetNumberOfRootPeers: 60
+#TargetNumberOfKnownPeers: 150
+#TargetNumberOfEstablishedPeers: 30
+#TargetNumberOfActivePeers: 20
+#TargetNumberOfKnownBigLedgerPeers: 15
+#TargetNumberOfEstablishedBigLedgerPeers: 10
+#TargetNumberOfActiveBigLedgerPeers: 5
+#SyncTargetNumberOfRootPeers: 0
+#SyncTargetNumberOfKnownPeers: 150
+#SyncTargetNumberOfEstablishedPeers: 10
+#SyncTargetNumberOfActivePeers: 5
+#SyncTargetNumberOfKnownBigLedgerPeers: 100
+#SyncTargetNumberOfEstablishedBigLedgerPeers: 40
+#SyncTargetNumberOfActiveBigLedgerPeers: 30
+
+# When syncing in Genesis mode, this is the minimum number of active connections
+# to big ledger peers needed to continue
+#MinBigLedgerPeersForTrustedState: 5
 
 ##### Consensus Configuration #####
 
