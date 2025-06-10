@@ -33,6 +33,8 @@ import           System.Time.Extra (sleep)
 
 import           Trace.Forward.Utils.DataPoint
 
+-- import           Ouroboros.Network.NodeToClient (LocalSocket (..))
+
 data AcceptorsMode = Initiator | Responder
 
 launchAcceptorsSimple

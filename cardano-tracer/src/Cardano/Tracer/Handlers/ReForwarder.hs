@@ -48,13 +48,25 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
       Just x  -> case x of
         (ConnectTo{}, _, _) ->
           error "initReForwarder:  unsupported mode of operation:  ConnectTo.  Use AcceptAt."
-        (AcceptAt (LocalSocket socket), mFwdNames, forwConf) -> do
-          (fwdsink, dpStore :: DataPointStore) <- withIOManager $ \iomgr -> do
+        (AcceptAt (LocalPipe socket), mFwdNames, forwConf) -> do
+          (fwdsink, dpStore :: DataPointStore) <- withIOManager \iomgr -> do
             traceWith teTracer TracerStartedReforwarder
             initForwarding iomgr forwConf
                                  (NetworkMagic networkMagic)
                                  Nothing
-                                 (Just (socket, Log.Responder))
+                                 (Just (Left socket, Log.Responder))
+          pure $ Just ( filteredWriteToSink
+                          (traceObjectHasPrefixIn mFwdNames)
+                          fwdsink
+                      , dataPointTracer @IO dpStore
+                      )
+        (AcceptAt (RemoteSocket host port), mFwdNames, forwConf) -> do
+          (fwdsink, dpStore :: DataPointStore) <- withIOManager \iomgr -> do
+            traceWith teTracer TracerStartedReforwarder
+            initForwarding iomgr forwConf
+                                 (NetworkMagic networkMagic)
+                                 Nothing
+                                 (Just (Right (host, port), Log.Responder))
           pure $ Just ( filteredWriteToSink
                           (traceObjectHasPrefixIn mFwdNames)
                           fwdsink
@@ -87,4 +99,3 @@ filteredWriteToSink :: (Log.TraceObject -> Bool)
                     -> Log.TraceObject -> IO ()
 filteredWriteToSink p fwdsink logObj =
   when (p logObj) $ writeToSink fwdsink logObj
-

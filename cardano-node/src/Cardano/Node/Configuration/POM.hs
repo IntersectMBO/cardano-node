@@ -31,7 +31,7 @@ import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
-import           Cardano.Node.Configuration.NodeAddress (SocketPath)
+-- import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
@@ -65,6 +65,7 @@ import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
+import           Data.Word (Word16)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
 import           Options.Applicative
@@ -144,7 +145,7 @@ data NodeConfiguration
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
-       , ncTraceForwardSocket :: !(Maybe (SocketPath, ForwarderMode))
+       , ncTraceForwardSocket :: !(Maybe (Either String (Text, Word16), ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
 
@@ -247,7 +248,7 @@ data PartialNodeConfiguration
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
        , pncTraceConfig    :: !(Last PartialTraceOptions)
-       , pncTraceForwardSocket :: !(Last (SocketPath, ForwarderMode))
+       , pncTraceForwardSocket :: !(Last (Either String (Text, Word16), ForwarderMode))
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
