@@ -1233,7 +1233,7 @@ instance (Show ntnAddr, Show ntcAddr) => ToObject (Diffusion.DiffusionTracer ntn
     ]
   toObject _verb (Diffusion.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
-    , "path" .= String (pack (show exception))
+    , "error" .= String (pack (show exception))
     ]
   toObject _verb (Diffusion.SystemdSocketConfiguration config) = mconcat
     [ "kand" .= String "SystemdSocketConfiguration"
