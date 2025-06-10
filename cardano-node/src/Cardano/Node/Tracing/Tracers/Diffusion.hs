@@ -672,7 +672,7 @@ instance (Show ntnAddr, Show ntcAddr) =>
     ]
   forMachine _dtal (Common.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
-    , "path" .= String (pack (show exception))
+    , "error" .= String (pack (show exception))
     ]
   forMachine _dtal (Common.SystemdSocketConfiguration config) = mconcat
     [ "kind" .= String "SystemdSocketConfiguration"
