@@ -263,9 +263,9 @@ let
       valency =
         let
           topo = topology.value;
-          val  = if hasAttr "localRoots" topo
+          val  = if hasAttr "localRoots" topo && __length topo.localRoots > 0
                   then let lr = head topo.localRoots; in lr.valency
-                  else length topo.Producers;
+                  else length (topo.Producers or []);
         in val;
 
     in {
