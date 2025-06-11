@@ -3,10 +3,10 @@
 module Cardano.Node.Rpc.Proto.Api.NodeMetadata (
   ) where
 
-import Network.GRPC.Common
-import Network.GRPC.Common.Protobuf
+import           Network.GRPC.Common
+import           Network.GRPC.Common.Protobuf
 
-import Cardano.Node.Rpc.Proto.Api.Node
+import           Proto.Node
 
 type instance RequestMetadata          (Protobuf Node meth) = NoMetadata
 type instance ResponseInitialMetadata  (Protobuf Node meth) = NoMetadata
