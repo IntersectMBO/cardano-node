@@ -6,44 +6,46 @@ module Cardano.Node.Rpc.Server
   , rungrpcServer
   , methods
   )
-  where 
+  where
 
 
-import Network.GRPC.Server.Run
-import Network.GRPC.Spec
-import Cardano.Api
-import Proto.Google.Protobuf.Empty
-import Data.ProtoLens (defMessage)
-import Cardano.Node.Rpc.Proto.Api.Node 
-import Lens.Micro
-import Network.GRPC.Common 
-import Data.ProtoLens.Field (field)
-import Network.GRPC.Server.Protobuf
-import Network.GRPC.Server.StreamType
-import Data.Monoid
-import Cardano.Node.Rpc.Proto.Api.NodeMetadata ()
-import Cardano.Node.Configuration.POM
-import Network.GRPC.Client 
-import Network.GRPC.Client.StreamType.IO
+import           Cardano.Api
 
--- Individual handlers 
+import           Cardano.Node.Configuration.POM
+import           Cardano.Node.Rpc.Proto.Api.NodeMetadata ()
+
+import           Data.Monoid
+import           Data.ProtoLens (defMessage)
+import           Data.ProtoLens.Field (field)
+import           Lens.Micro
+import           Network.GRPC.Client
+import           Network.GRPC.Client.StreamType.IO
+import           Network.GRPC.Common
+import           Network.GRPC.Server.Protobuf
+import           Network.GRPC.Server.Run
+import           Network.GRPC.Server.StreamType
+import           Network.GRPC.Spec
+
+import           Proto.Google.Protobuf.Empty
+import           Proto.Node
+
+-- Individual handlers
 
 getEraMethod :: LocalNodeConnectInfo -> Proto Empty -> IO (Proto CurrentEra)
-getEraMethod connInfo _ = 
-   case connInfo of 
-    _ -> return mockNodeResponse 
+getEraMethod connInfo _ =
+  pure return mockNodeResponse
 
--- Server top level 
+-- Server top level
 methods :: LocalNodeConnectInfo -> Methods IO (ProtobufMethodsOf Node)
 methods node =  Method (mkNonStreaming $ getEraMethod node)  NoMoreMethods
 
 -- Mock node response
-mockNodeResponse :: Proto CurrentEra 
+mockNodeResponse :: Proto CurrentEra
 mockNodeResponse = Proto $ defMessage & field @"era" .~ Conway
 
 
 rungrpcServer :: PartialNodeConfiguration -> IO ()
-rungrpcServer cmdPc = do 
+rungrpcServer cmdPc = do
 
     configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
 
@@ -51,7 +53,7 @@ rungrpcServer cmdPc = do
             Left err -> error $ "Error in creating the NodeConfiguration: " <> err
             Right nc' -> return nc'
 
-    let _nodeSocketConfig = ncSocketConfig nc 
+    let _nodeSocketConfig = ncSocketConfig nc
         localNodeConnInfo = LocalNodeConnectInfo (CardanoModeParams (EpochSlots 21600)) Mainnet (File "dummy-socket-path")
         config = ServerConfig {
           serverInsecure = Just (InsecureConfig Nothing defaultInsecurePort)
@@ -61,15 +63,15 @@ rungrpcServer cmdPc = do
 
 
 rungrpcExampleClient :: IO ()
-rungrpcExampleClient = 
+rungrpcExampleClient =
   withConnection def server $ \conn -> do
-    getEraRequest conn 
- where 
-   server :: Server 
+    getEraRequest conn
+ where
+   server :: Server
    server = ServerInsecure $ Address "127.0.0.1" defaultInsecurePort Nothing
 
 getEraRequest :: Connection -> IO ()
-getEraRequest conn = do 
+getEraRequest conn = do
   let req = defMessage :: Proto Empty
   response <- nonStreaming conn (rpc @(Protobuf Node "getEra")) req
   print response

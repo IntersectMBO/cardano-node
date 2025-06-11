@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package utxorpc.v1alpha.bitcoin;
+
+// Represents an input in a Bitcoin transaction.
+message TxInput {
+    optional bytes txid = 1; // Hash of the previous transaction output, corresponds to txid
+    optional bytes scriptSig = 2; // Unlocking script for spending the UTXO
+    uint32 sequence = 3; // Used for relative timelocks
+    optional bytes coinbase = 4; // Coinbase transactions have this instead of txid and scriptSig
+    repeated bytes txinwitness = 5; // Witness data for SegWit transactions
+}
+
+// Represents an output in a Bitcoin transaction.
+message TxOutput {
+    uint64 value = 1; // Amount of Bitcoin in Satoshis
+    ScriptPubKey scriptPubKey = 2; // Locking script defining spendability
+}
+
+// Represents a script pub key in the output.
+message ScriptPubKey {
+    bytes asm = 1; // Script in human-readable format
+    bytes hex = 2; // Script in hexadecimal format
+    bytes type = 3;  
+    optional bytes address = 4; // Some outputs have addresses
+}
+
+// Represents a transaction in the Bitcoin network.
+message Transaction {
+    uint32 version = 1; // Transaction version number. Currently 1
+    repeated TxInput vin = 2; // List of transaction inputs
+    repeated TxOutput vout = 3; // List of transaction outputs
+    uint32 locktime = 4; // Block height or timestamp when transaction is final
+    bytes hash = 5; // Hash of the transaction
+    optional bytes blockhash = 6; // Transactions reference their block
+    optional uint32 time = 7; // Timestamp of the transaction
+}
+
+// Represents a block in the Bitcoin blockchain.
+message Block {
+    uint32 version = 1; // Block version number
+    optional bytes previousblockhash = 2; // Hash of the previous block
+    bytes merkleroot = 3; // Root hash of the Merkle tree
+    uint32 time = 4; // Time when the block was created
+    uint32 bits = 5; // Target difficulty value
+    uint32 nonce = 6; // Value used for Proof-of-Work
+    repeated Transaction tx = 7; // List of transactions included in the block
+}

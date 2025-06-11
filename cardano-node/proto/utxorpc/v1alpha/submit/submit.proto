@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package utxorpc.v1alpha.submit;
+
+import "google/protobuf/field_mask.proto";
+import "utxorpc/v1alpha/cardano/cardano.proto";
+
+// Represents a transaction from any supported blockchain.
+message AnyChainTx {
+  oneof type {
+    bytes raw = 1; // Raw transaction data.
+  }
+}
+
+// Request to evaluate transactions without submitting.
+message EvalTxRequest {
+  repeated AnyChainTx tx = 1; // List of transactions to evaluate.
+}
+
+// Report containing the result of evaluating a particular transaction
+message AnyChainEval {
+  oneof chain {
+    utxorpc.v1alpha.cardano.TxEval cardano = 1; // A Cardano tx evaluation report.
+  }
+}
+
+// Response containing the reports form the transaction evaluation.
+message EvalTxResponse {
+  repeated AnyChainEval report = 1;
+}
+
+// Request to submit transactions to the blockchain.
+message SubmitTxRequest {
+  repeated AnyChainTx tx = 1; // List of transactions to submit.
+}
+
+// Response containing references to the submitted transactions.
+message SubmitTxResponse {
+  repeated bytes ref = 1; // List of transaction references.
+}
+
+// Enum representing the various stages of a transaction's lifecycle.
+enum Stage {
+  STAGE_UNSPECIFIED = 0; // Unspecified stage.
+  STAGE_ACKNOWLEDGED = 1; // Transaction has been acknowledged by the node.
+  STAGE_MEMPOOL = 2; // Transaction is in the mempool.
+  STAGE_NETWORK = 3; // Transaction has been propagated across the network.
+  STAGE_CONFIRMED = 4; // Transaction has been confirmed on the blockchain.
+}
+
+message TxInMempool {
+  bytes ref = 1; // The transaction reference.
+  bytes native_bytes = 2; // Original bytes as defined by the chain
+  Stage stage = 3; // The current stage of the tx
+  oneof parsed_state {
+    utxorpc.v1alpha.cardano.Tx cardano = 4; // A Cardano transaction.
+  }
+}
+
+// Request to check the status of submitted transactions.
+message ReadMempoolRequest {}
+
+// Response containing the stage of the submitted transactions.
+message ReadMempoolResponse {
+  repeated TxInMempool items = 1; // List of transaction currently on the mempool.
+}
+
+// Request to wait for transactions to reach a certain stage.
+message WaitForTxRequest {
+  repeated bytes ref = 1; // List of transaction references to wait for.
+}
+
+// Response containing the transaction reference and stage once it has been reached.
+message WaitForTxResponse {
+  bytes ref = 1; // Transaction reference.
+  Stage stage = 2; // Stage reached by the transaction.
+}
+
+// Represents a tx pattern from any supported blockchain.
+message AnyChainTxPattern {
+  oneof chain {
+    utxorpc.v1alpha.cardano.TxPattern cardano = 1; // A Cardano tx pattern.
+  }
+}
+
+// Represents a simple tx predicate that can composed to create more complex ones
+message TxPredicate {
+  AnyChainTxPattern match = 1; // Predicate is true if tx exhibits pattern.
+  repeated TxPredicate not = 2; // Predicate is true if tx doesn't exhibit pattern.
+  repeated TxPredicate all_of = 3; // Predicate is true if tx exhibits all of the patterns.
+  repeated TxPredicate any_of = 4; // Predicate is true if tx exhibits any of the patterns.
+}
+
+// Request to watch changes of specific mempool txs.
+message WatchMempoolRequest {
+  TxPredicate predicate = 1; // A predicate to filter transactions by.
+  google.protobuf.FieldMask field_mask = 2; // Field mask to selectively return fields.
+}
+
+// Response that represents a change in a mempool tx.
+message WatchMempoolResponse {
+  TxInMempool tx = 1; // The content and stage of the tx that has changed
+}
+
+// Service definition for submitting transactions and checking their status.
+service SubmitService {
+  rpc EvalTx(EvalTxRequest) returns (EvalTxResponse); // Evaluates a transaction without submitting it.
+  rpc SubmitTx(SubmitTxRequest) returns (SubmitTxResponse); // Submit transactions to the blockchain.
+  rpc WaitForTx(WaitForTxRequest) returns (stream WaitForTxResponse); // Wait for transactions to reach a certain stage and stream the updates.
+  rpc ReadMempool(ReadMempoolRequest) returns (ReadMempoolResponse); // Returns a point-in-time snapshot of the mempool.
+  rpc WatchMempool(WatchMempoolRequest) returns (stream WatchMempoolResponse); // Stream transactions from the mempool matching the specified predicates.
+}
