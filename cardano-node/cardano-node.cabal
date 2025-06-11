@@ -74,6 +74,8 @@ library
 
   hs-source-dirs:       src
 
+  build-tool-depends:   proto-lens-protoc:proto-lens-protoc
+
   exposed-modules:      Cardano.Node.Configuration.Logging
                         Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
@@ -96,7 +98,7 @@ library
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
                         Cardano.Node.Rpc.Client
-                        Cardano.Node.Rpc.Proto.Api.Node
+                        Proto.Node
                         Cardano.Node.Rpc.Proto.Api.NodeMetadata
                         Cardano.Node.Rpc.Server
                         Cardano.Node.Run
@@ -154,6 +156,7 @@ library
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
+                        Proto.Node
 
   build-depends:        base
                       , aeson >= 2.1.0.0
@@ -244,7 +247,6 @@ library
                       , typed-protocols-stateful >= 0.3
                       , yaml
 
-  build-tool-depends: proto-lens-protoc:proto-lens-protoc
 
 executable cardano-node
   import:               project-config

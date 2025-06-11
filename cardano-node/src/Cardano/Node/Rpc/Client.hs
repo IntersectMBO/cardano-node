@@ -5,11 +5,12 @@ module Cardano.Node.Rpc.Client
   ( exampleCurrentEra
 
   )
-  where 
-import qualified Cardano.Node.Rpc.Proto.Api.Node  as ProtoGen
-import Data.ProtoLens (defMessage)
-import Data.ProtoLens.Field (field)
-import Lens.Micro
+  where
+import           Data.ProtoLens (defMessage)
+import           Data.ProtoLens.Field (field)
+import           Lens.Micro
 
-exampleCurrentEra :: ProtoGen.CurrentEra 
+import qualified Proto.Node as ProtoGen
+
+exampleCurrentEra :: ProtoGen.CurrentEra
 exampleCurrentEra = defMessage  & field @"era" .~ ProtoGen.Byron
