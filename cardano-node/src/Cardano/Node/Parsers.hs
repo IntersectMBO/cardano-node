@@ -137,7 +137,6 @@ nodeRunParser = do
            , pncSyncTargetOfActiveBigLedgerPeers = mempty
            , pncMinBigLedgerPeersForTrustedState = mempty
            , pncConsensusMode = mempty
-           , pncEnableP2P = mempty
            , pncPeerSharing = mempty
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty

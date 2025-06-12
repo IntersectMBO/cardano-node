@@ -26,17 +26,16 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
-import qualified Ouroboros.Network.Server.Simple as OServer
-import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, MakeBearer, Snocket,
-                   localAddressFromPath, localSnocket, makeLocalBearer, makeSocketBearer,
-                   socketSnocket)
-import           Ouroboros.Network.Socket (ConnectToArgs (..), HandshakeCallbacks (..),
-                   SomeResponderApplication (..), connectToNode, nullNetworkConnectTracers)
+import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
+                   makeLocalBearer, LocalAddress, socketSnocket, makeSocketBearer, LocalSocket)
+import           Ouroboros.Network.Socket (ConnectToArgs (..),
+                   HandshakeCallbacks (..), SomeResponderApplication (..),
+                   connectToNode, nullNetworkConnectTracers)
+import qualified Ouroboros.Network.Server.Simple as Server
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async)
 import           Control.Exception (throwIO)
-import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync (wait)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
@@ -296,9 +295,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
       Nothing -> forwardEKGMetricsDummy
 
 doListenToAcceptor
-  :: forall fd addr. ()
-  => Ord addr
-  => NetworkMagic
+  :: NetworkMagic
   -> Snocket IO fd addr
   -> MakeBearer IO fd
   -> (fd -> addr -> IO ())
@@ -312,34 +309,34 @@ doListenToAcceptor
   -> DataPointStore
   -> IO ()
 doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
-                   ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
-  OServer.with
+                   ekgConfig tfConfig dpfConfig sink ekgStore dpStore =
+  void $ Server.with
     snocket
     makeBearer
     configureSocket
     address
     HandshakeArguments {
-      haBearerTracer     = nullTracer,
-      haHandshakeTracer  = nullTracer,
-      haHandshakeCodec   = codecHandshake forwardingVersionCodec,
+      haBearerTracer = nullTracer,
+      haHandshakeTracer = nullTracer,
+      haHandshakeCodec = codecHandshake forwardingVersionCodec,
       haVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
-      haAcceptVersion    = acceptableVersion,
-      haQueryVersion     = queryVersion,
-      haTimeLimits       = timeLimits
+      haAcceptVersion = acceptableVersion,
+      haQueryVersion = queryVersion,
+      haTimeLimits = timeLimits
     }
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
-       responderApp
+       (const $ SomeResponderApplication $
+         forwarderApp [ (forwardEKGMetricsRespRun,                  1)
+                      , (forwardTraceObjectsResp tfConfig  sink,    2)
+                      , (forwardDataPointsResp   dpfConfig dpStore, 3)
+                      ]
+       )
     )
     $ \_ serverAsync ->
-      wait (serverAsync $> ())
+      wait serverAsync -- Block until async exception.
  where
-  responderApp _ = SomeResponderApplication $
-     forwarderApp [ (forwardEKGMetricsRespRun,                  1)
-                  , (forwardTraceObjectsResp tfConfig  sink,    2)
-                  , (forwardDataPointsResp   dpfConfig dpStore, 3)
-                  ]
   forwarderApp
     :: [(RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
     -> OuroborosApplication 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()

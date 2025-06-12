@@ -14,7 +14,6 @@ module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
   , ResponderCoreAffinityPolicy (..)
   , NetworkP2PMode (..)
-  , SomeNetworkP2PMode (..)
   , PartialNodeConfiguration(..)
   , TimeoutOverride (..)
   , defaultPartialNodeConfiguration
@@ -29,6 +28,7 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
+import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
@@ -37,11 +37,9 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
-import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
@@ -75,25 +73,6 @@ import           Generic.Data.Orphans ()
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
-
-data SomeNetworkP2PMode where
-    SomeNetworkP2PMode :: forall p2p.
-                          Consensus.NetworkP2PMode p2p
-                       -> SomeNetworkP2PMode
-
-instance Eq SomeNetworkP2PMode where
-    (==) (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-         (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-       = True
-    (==) (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-         (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-       = True
-    (==) _ _
-       = False
-
-instance Show SomeNetworkP2PMode where
-    show (SomeNetworkP2PMode mode@Consensus.EnabledP2PMode)  = show mode
-    show (SomeNetworkP2PMode mode@Consensus.DisabledP2PMode) = show mode
 
 -- | Isomorphic to a `Maybe DiffTime`, but expresses what `Nothing` means, in
 -- this case that we want to /NOT/ override the default timeout.
@@ -192,9 +171,6 @@ data NodeConfiguration
          -- in Genesis mode
        , ncMinBigLedgerPeersForTrustedState :: NumberOfBigLedgerPeers
 
-         -- Enable experimental P2P mode
-       , ncEnableP2P :: SomeNetworkP2PMode
-
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
 
@@ -289,9 +265,6 @@ data PartialNodeConfiguration
 
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
-
-         -- Network P2P mode
-       , pncEnableP2P :: !(Last NetworkP2PMode)
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
@@ -399,14 +372,6 @@ instance FromJSON PartialNodeConfiguration where
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
-      -- Enable P2P switch
-      p2pSwitch <- v .:? "EnableP2P" .!= Just False
-      let pncEnableP2P =
-            case p2pSwitch of
-              Nothing    -> mempty
-              Just False -> Last $ Just DisabledP2PMode
-              Just True  -> Last $ Just EnabledP2PMode
-
       -- Peer Sharing
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
@@ -459,7 +424,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncSyncTargetOfActiveBigLedgerPeers
            , pncMinBigLedgerPeersForTrustedState
            , pncConsensusMode
-           , pncEnableP2P
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
@@ -704,7 +668,6 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultNumberOfBigLedgerPeers
     , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
-    , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = mempty
       -- the default is defined in `makeNodeConfiguration`
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
@@ -794,9 +757,6 @@ makeNodeConfiguration pnc = do
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
-  enableP2P <-
-    lastToEither "Missing EnableP2P"
-    $ pncEnableP2P pnc
   ncChainSyncIdleTimeout <-
     Right
     $ maybe NoTimeoutOverride TimeoutOverride
@@ -891,9 +851,6 @@ makeNodeConfiguration pnc = do
              , ncSyncTargetOfEstablishedBigLedgerPeers
              , ncSyncTargetOfActiveBigLedgerPeers
              , ncMinBigLedgerPeersForTrustedState
-             , ncEnableP2P = case enableP2P of
-                 EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
-                 DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
              , ncConsensusMode
              , ncGenesisConfig

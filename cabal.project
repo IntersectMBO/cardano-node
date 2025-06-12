@@ -83,33 +83,32 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: a894d0063f403222677c33152b3396bba87450bc
-  --sha256: sha256-Lqg+eGfdYphLbgS3LZ0Qf62mTLkibl6L8i7GOia0hoo=
+  tag: 801b1d7cce99c6d5afbe6af7d7ad1d7a2cde087c
+  --sha256: sha256-s6SvoDHCFXfMC5bNBFoDgxMDZuMhnE1ZZwx1L15yjL0=
   subdir: cardano-cli
 
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 0eeff17265628f2ad055c9e63e0f9698759c2e0b
-  --sha256: sha256-XmuQTZdD/ZdCNlRuD+V5cNslEM05xwTACmMunzuCCJY=
+  tag: 64e62e7d6ac1bd250e4b61346f09ecd697ee2e90
+  --sha256: sha256-RsLNzqPx0nDvXCUpBCVcylE3+kUoWBwUSHAQQERR5Pc=
   subdir:
     cardano-api
-
 
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 15fc8c4fee64473350e1904347bfd5852f9cdbfa
-  --sha256: sha256-Tvw0dLGZkBAflpvcEwl7Acnrux9H5UaniW5YwMvIeIs=
+  tag: 5aac28bec41b7709f75a5c9f20e2431259cf237f
+  --sha256: sha256-PXnD7mAIZgnodqbMU3ImCb/uoat61vLsqnc6dUyTRIw=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
     ouroboros-consensus-diffusion
     ouroboros-consensus-protocol
     sop-extras
-    strict-sop-core
+    strict-sop-core 
 
 source-repository-package
   type: git
@@ -147,6 +146,6 @@ source-repository-package
   location: https://github.com/input-output-hk/ekg-forward/
   -- https://github.com/input-output-hk/ekg-forward/pull/42
   tag: d99a44f96b821770f4611f826e50452c89a9abe6
-  --sha256: sha256-SHnyp+GvNeR82UXoKeDEgsp1AUE2yF5dGL4HIZm0zK8=
+  --sha256: sha256-HYE//uXDRrMBH+z49N7FQqFLVCJal++edANY6ioczJs=
   subdir:
     .
