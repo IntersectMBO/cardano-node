@@ -26,14 +26,14 @@ import           Network.GRPC.Server.Run
 import           Network.GRPC.Server.StreamType
 import           Network.GRPC.Spec
 
+import           Proto.Cardano.Node.Rpc.Node
 import           Proto.Google.Protobuf.Empty
-import           Proto.Node
 
 -- Individual handlers
 
 getEraMethod :: LocalNodeConnectInfo -> Proto Empty -> IO (Proto CurrentEra)
 getEraMethod connInfo _ =
-  pure return mockNodeResponse
+  pure mockNodeResponse
 
 -- Server top level
 methods :: LocalNodeConnectInfo -> Methods IO (ProtobufMethodsOf Node)

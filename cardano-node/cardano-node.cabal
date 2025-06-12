@@ -14,7 +14,7 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Custom
 extra-doc-files:        ChangeLog.md
-extra-source-files:     proto/*.proto
+extra-source-files:     proto/**/*.proto
 
 custom-setup
   setup-depends:
@@ -91,7 +91,6 @@ library
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
                         Cardano.Node.Rpc.Client
-                        Proto.Node
                         Cardano.Node.Rpc.Proto.Api.NodeMetadata
                         Cardano.Node.Rpc.Server
                         Cardano.Node.Run
@@ -146,10 +145,24 @@ library
                         Cardano.Tracing.Shutdown
                         Cardano.Tracing.Startup
                         Cardano.Tracing.Tracers
+                        Proto.Cardano.Node.Rpc.Node
+                        Proto.Utxorpc.V1alpha.Bitcoin.Bitcoin
+                        Proto.Utxorpc.V1alpha.Cardano.Cardano
+                        Proto.Utxorpc.V1alpha.Query.Query
+                        Proto.Utxorpc.V1alpha.Submit.Submit
+                        Proto.Utxorpc.V1alpha.Sync.Sync
+                        Proto.Utxorpc.V1alpha.Watch.Watch
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
-                        Proto.Node
+                        Proto.Cardano.Node.Rpc.Node
+                        Proto.Utxorpc.V1alpha.Bitcoin.Bitcoin
+                        Proto.Utxorpc.V1alpha.Cardano.Cardano
+                        Proto.Utxorpc.V1alpha.Query.Query
+                        Proto.Utxorpc.V1alpha.Submit.Submit
+                        Proto.Utxorpc.V1alpha.Sync.Sync
+                        Proto.Utxorpc.V1alpha.Watch.Watch
+
 
   build-depends:        base
                       , aeson >= 2.1.0.0
