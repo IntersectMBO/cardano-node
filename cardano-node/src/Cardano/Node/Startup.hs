@@ -45,8 +45,6 @@ import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVer
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig, WarmValency)
-import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
-import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
 import           Prelude
 
@@ -172,8 +170,6 @@ data BasicInfoByron = BasicInfoByron {
 data BasicInfoNetwork = BasicInfoNetwork {
     niAddresses     :: [SocketOrSocketInfo]
   , niDiffusionMode :: DiffusionMode
-  , niDnsProducers  :: [DnsSubscriptionTarget]
-  , niIpProducers   :: IPSubscriptionTarget
   }
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.

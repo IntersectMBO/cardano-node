@@ -23,17 +23,14 @@ import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.ConnectionId
-import qualified Ouroboros.Network.Diffusion as Diffusion
-import qualified Ouroboros.Network.Diffusion.Common as Diffusion
-import           Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
+import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 
 import           Prelude (IO)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 
-data Tracers peer localPeer blk p2p extraState extraDebugState extraFlags extraPeers extraCounters m = Tracers
+data Tracers peer localPeer blk m = Tracers
   { -- | Trace the ChainDB
     chainDBTracer         :: !(Tracer IO (ChainDB.TraceEvent blk))
     -- | Consensus-specific tracers.
@@ -44,11 +41,8 @@ data Tracers peer localPeer blk p2p extraState extraDebugState extraFlags extraP
     -- | Tracers for the node-to-client protocols
   , nodeToClientTracers   :: !(NodeToClient.Tracers IO (ConnectionId localPeer) blk DeserialiseFailure)
     -- | Diffusion tracers
-  , diffusionTracers      :: !(Diffusion.Tracers RemoteAddress NodeToNodeVersion
-                                                 LocalAddress  NodeToClientVersion
-                                                 IO)
-  , diffusionTracersExtra :: !(Diffusion.ExtraTracers p2p extraState extraDebugState extraFlags extraPeers extraCounters m)
-
+  , diffusionTracers      :: !(Cardano.Diffusion.CardanoTracers m)
+  , churnModeTracer       :: !(Tracer IO Cardano.Diffusion.TraceChurnMode)
   , startupTracer         :: !(Tracer IO (StartupTrace blk))
   , shutdownTracer        :: !(Tracer IO ShutdownTrace)
   , nodeInfoTracer        :: !(Tracer IO NodeInfo)
