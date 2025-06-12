@@ -23,22 +23,20 @@ import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
-import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                   codecHandshake, noTimeLimitsHandshake, timeLimitsHandshake)
-import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
-                   simpleSingletonVersions)
+                   codecHandshake, noTimeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake (Handshake, HandshakeArguments (..))
+import qualified Ouroboros.Network.Protocol.Handshake as Handshake
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
-                   makeLocalBearer, makeSocketBearer, socketSnocket)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
-                   HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
-                   connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
-                   nullNetworkServerTracers, withServerNode)
+                   makeLocalBearer)
+import           Ouroboros.Network.Socket (ConnectToArgs (..),
+                   HandshakeCallbacks (..), SomeResponderApplication (..),
+                   connectToNode, nullNetworkConnectTracers)
+import qualified Ouroboros.Network.Server.Simple as Server
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
@@ -49,9 +47,7 @@ import           Control.Monad (forever)
 import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTracer)
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Foldable (for_)
-import           Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.Text as Text
+import           Data.Functor (void)
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
@@ -213,7 +209,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       muxBearer
       args
       mempty
-      (simpleSingletonVersions
+      (Handshake.simpleSingletonVersions
          ForwardingV_1
          (ForwardingVersionData $ unI tsNetworkMagic)
          (const $ forwarderApp [ (forwardEKGMetrics ekgConfig store,       1)
@@ -228,14 +224,14 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       Left err -> throwIO err
       Right choice -> case choice of
         Left () -> return ()
-        Right void -> absurd void
+        Right void_ -> absurd void_
  where
   args = ConnectToArgs {
     ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
     ctaHandshakeTimeLimits = timeLimits,
     ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
     ctaConnectTracers = nullNetworkConnectTracers,
-    ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
+    ctaHandshakeCallbacks = HandshakeCallbacks Handshake.acceptableVersion Handshake.queryVersion }
 
   forwarderApp
     :: [(RunMiniProtocol 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
@@ -252,8 +248,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       ]
 
 doListenToAcceptor
-  :: Ord addr
-  => TestSetup Identity
+  :: TestSetup Identity
   -> Snocket IO fd addr
   -> MakeBearer IO fd
   -> addr
@@ -271,33 +266,31 @@ doListenToAcceptor TestSetup{..}
   sink <- initForwardSink tfConfig (\ _ -> pure ())
   dpStore <- initDataPointStore
   writeToStore dpStore "test.data.point" $ DataPoint mkTestDataPoint
-  withAsync (traceObjectsWriter sink) \_ -> do
-    networkState <- newNetworkMutableState
-    race_ (cleanNetworkMutableState networkState)
-          $ withServerNode
-              snocket
-              muxBearer
-              mempty
-              nullNetworkServerTracers
-              networkState
-              (AcceptedConnectionsLimit maxBound maxBound 0)
-              address
-              (codecHandshake forwardingVersionCodec)
-              timeLimits
-              (cborTermVersionDataCodec forwardingCodecCBORTerm)
-              (HandshakeCallbacks acceptableVersion queryVersion)
-              (simpleSingletonVersions
-                 ForwardingV_1
-                 (ForwardingVersionData $ unI tsNetworkMagic)
-                 (const $ SomeResponderApplication $
-                    forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
-                                 , (forwardTraceObjectsResp tfConfig sink,   2)
-                                 , (forwardDataPointsResp dpfConfig dpStore, 3)
-                                 ]
-                 )
-              )
-              nullErrorPolicies
-              $ \_ serverAsync -> wait serverAsync -- Block until async exception.
+  withAsync (traceObjectsWriter sink) $ \_ ->
+    void $ Server.with
+      snocket
+      muxBearer
+      mempty
+      address
+      HandshakeArguments {
+        haHandshakeTracer = nullTracer,
+        haHandshakeCodec = codecHandshake forwardingVersionCodec,
+        haVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+        haAcceptVersion = Handshake.acceptableVersion,
+        haQueryVersion = Handshake.queryVersion,
+        haTimeLimits = timeLimits
+      }
+      (Handshake.simpleSingletonVersions
+         ForwardingV_1
+         (ForwardingVersionData $ unI tsNetworkMagic)
+         (const $ SomeResponderApplication $
+            forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
+                         , (forwardTraceObjectsResp tfConfig sink,   2)
+                         , (forwardDataPointsResp dpfConfig dpStore, 3)
+                         ]
+         )
+      )
+      $ \_ serverAsync -> wait serverAsync -- Block until async exception.
  where
   forwarderApp
     :: [(RunMiniProtocol 'Mux.ResponderMode initCtx respCtx LBS.ByteString IO Void (), Word16)]
