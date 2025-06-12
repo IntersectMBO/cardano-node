@@ -8,6 +8,7 @@ module Test.Cardano.Node.POM
 
 
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
@@ -15,9 +16,7 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
-import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
@@ -163,7 +162,6 @@ testPartialYamlConfig =
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
     , pncMinBigLedgerPeersForTrustedState = mempty
-    , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
@@ -214,7 +212,6 @@ testPartialCliConfig =
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
     , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
-    , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
@@ -272,7 +269,6 @@ eExpectedConfig = do
     , ncSyncTargetOfEstablishedBigLedgerPeers = 40
     , ncSyncTargetOfActiveBigLedgerPeers = 30
     , ncMinBigLedgerPeersForTrustedState = defaultNumberOfBigLedgerPeers
-    , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig

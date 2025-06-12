@@ -98,3 +98,32 @@ if impl (ghc >= 9.12)
     , ouroboros-network-api:base
     , ouroboros-network-framework:base
     , ouroboros-network-protocols:base
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: a20fd8133617c70640dc6ea0ebb2ddb0ffc03d6e
+  --sha256: sha256-P2nVUCOF3/zkf0W74jmRUDwyTb/aunY/nxo4HQxjWeM=
+  subdir: network-mux
+          ouroboros-network
+          ouroboros-network-api
+          ouroboros-network-framework
+          ouroboros-network-mock
+          ouroboros-network-protocols
+          ouroboros-network-testing
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 4c5eaf192e2843ff311c5db58cd0300e8fa37105
+  --sha256: sha256-oYCSX0snAeEWILSZeGzBt9eThFkBhCe6h5nhL48Wu1c=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: f37c203d2d4df01c74c9fd7bf27f9f3b879842de
+  --sha256: sha256-DJtkCzpQHKK0K2D0LGwcadDv66H9itylpVE8inTZ7aI=
+  subdir: ouroboros-consensus
+          ouroboros-consensus-cardano
+          ouroboros-consensus-protocol
+          ouroboros-consensus-diffusion

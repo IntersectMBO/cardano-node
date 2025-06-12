@@ -49,8 +49,7 @@ library
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus-cardano
-                      , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-protocols
+                      , ouroboros-network-protocols ^>= 0.14.0.1
                       , prometheus >= 2.2.4
                       , servant
                       , servant-server
@@ -72,7 +71,6 @@ library
                       , Cardano.TxSubmit.Rest.Parsers
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
-                      , Cardano.TxSubmit.Tracing.ToObjectOrphans
                       , Cardano.TxSubmit.Types
                       , Cardano.TxSubmit.Util
                       , Cardano.TxSubmit.Web

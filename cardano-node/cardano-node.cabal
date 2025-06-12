@@ -119,7 +119,6 @@ library
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
-                        Cardano.Node.Tracing.Tracers.NonP2P
                         Cardano.Node.Tracing.Tracers.P2P
                         Cardano.Node.Tracing.Tracers.Peer
                         Cardano.Node.Tracing.Tracers.Resources
@@ -198,7 +197,7 @@ library
                       , ouroboros-consensus-diffusion ^>= 0.23
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.14
-                      , ouroboros-network ^>= 0.21.2
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.21.2
                       , ouroboros-network-framework ^>= 0.18.0.1
                       , ouroboros-network-protocols ^>= 0.14
                       , prettyprinter
@@ -277,7 +276,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
-                      , ouroboros-network
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion}
                       , ouroboros-network-api
                       , strict-sop-core
                       , text
