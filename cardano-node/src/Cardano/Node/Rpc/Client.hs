@@ -10,7 +10,7 @@ import           Data.ProtoLens (defMessage)
 import           Data.ProtoLens.Field (field)
 import           Lens.Micro
 
-import qualified Proto.Node as ProtoGen
+import qualified Proto.Cardano.Node.Rpc.Node as ProtoGen
 
 exampleCurrentEra :: ProtoGen.CurrentEra
 exampleCurrentEra = defMessage  & field @"era" .~ ProtoGen.Byron
