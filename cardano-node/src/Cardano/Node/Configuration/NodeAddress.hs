@@ -16,7 +16,7 @@ module Cardano.Node.Configuration.NodeAddress
   , NodeDnsAddress
   , nodeIPv4ToIPAddress
   , nodeIPv6ToIPAddress
-  , nodeDnsAddressToDomainAddress
+  , nodeDnsAddressToRelayAccessPoint
   , NodeHostIPAddress (..)
   , nodeHostIPAddressToSockAddr
   , NodeHostIPv4Address (..)
@@ -32,7 +32,7 @@ module Cardano.Node.Configuration.NodeAddress
 
 import           Cardano.Api
 
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import           Data.IP (IP (..), IPv4, IPv6)
@@ -76,9 +76,9 @@ nodeIPv4ToIPAddress = fmap nodeHostIPv4AddressToIPAddress
 nodeIPv6ToIPAddress :: NodeIPv6Address -> NodeIPAddress
 nodeIPv6ToIPAddress = fmap nodeHostIPv6AddressToIPAddress
 
-nodeDnsAddressToDomainAddress :: NodeDnsAddress -> DomainAccessPoint
-nodeDnsAddressToDomainAddress NodeAddress { naHostAddress = NodeHostDnsAddress dns, naPort }
-  = DomainAccessPoint (Text.encodeUtf8 dns) naPort
+nodeDnsAddressToRelayAccessPoint :: NodeDnsAddress -> RelayAccessPoint
+nodeDnsAddressToRelayAccessPoint NodeAddress { naHostAddress = NodeHostDnsAddress dns, naPort }
+  = RelayAccessDomain (Text.encodeUtf8 dns) naPort
 
 nodeAddressToSockAddr :: NodeIPAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =

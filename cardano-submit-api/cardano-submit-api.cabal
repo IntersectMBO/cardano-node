@@ -73,7 +73,6 @@ library
                       , Cardano.TxSubmit.Rest.Parsers
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
-                      , Cardano.TxSubmit.Tracing.ToObjectOrphans
                       , Cardano.TxSubmit.Types
                       , Cardano.TxSubmit.Util
                       , Cardano.TxSubmit.Web

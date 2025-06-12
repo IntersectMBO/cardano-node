@@ -21,7 +21,7 @@ import           Cardano.Node.Configuration.TopologyP2P ()
 #ifdef linux_HOST_OS
 import           Network.Mux.TCPInfo (StructTCPInfo (..))
 #endif
-import qualified Ouroboros.Network.Diffusion.Common as Common
+import qualified Ouroboros.Network.Diffusion.Types as Diff
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
                    TraceLedgerPeers (..))
@@ -615,108 +615,108 @@ instance MetaTrace (AnyMessage (HS.Handshake nt term)) where
 --------------------------------------------------------------------------------
 
 instance (Show ntnAddr, Show ntcAddr) =>
-  LogFormatting (Common.DiffusionTracer ntnAddr ntcAddr) where
-  forMachine _dtal (Common.RunServer sockAddr) = mconcat
+  LogFormatting (Diff.DiffusionTracer ntnAddr ntcAddr) where
+  forMachine _dtal (Diff.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
     ]
 
-  forMachine _dtal (Common.RunLocalServer localAddress) = mconcat
+  forMachine _dtal (Diff.RunLocalServer localAddress) = mconcat
     [ "kind" .= String "RunLocalServer"
     , "localAddress" .= String (pack (show localAddress))
     ]
-  forMachine _dtal (Common.UsingSystemdSocket localAddress) = mconcat
+  forMachine _dtal (Diff.UsingSystemdSocket localAddress) = mconcat
     [ "kind" .= String "UsingSystemdSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
 
-  forMachine _dtal (Common.CreateSystemdSocketForSnocketPath localAddress) = mconcat
+  forMachine _dtal (Diff.CreateSystemdSocketForSnocketPath localAddress) = mconcat
     [ "kind" .= String "CreateSystemdSocketForSnocketPath"
     , "path" .= String (pack . show $ localAddress)
     ]
-  forMachine _dtal (Common.CreatedLocalSocket localAddress) = mconcat
+  forMachine _dtal (Diff.CreatedLocalSocket localAddress) = mconcat
     [ "kind" .= String "CreatedLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
-  forMachine _dtal (Common.ConfiguringLocalSocket localAddress socket) = mconcat
+  forMachine _dtal (Diff.ConfiguringLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ConfiguringLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (Common.ListeningLocalSocket localAddress socket) = mconcat
+  forMachine _dtal (Diff.ListeningLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ListeningLocalSocket"
     , "path" .=  String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (Common.LocalSocketUp localAddress fd) = mconcat
+  forMachine _dtal (Diff.LocalSocketUp localAddress fd) = mconcat
     [ "kind" .= String "LocalSocketUp"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show fd))
     ]
-  forMachine _dtal (Common.CreatingServerSocket socket) = mconcat
+  forMachine _dtal (Diff.CreatingServerSocket socket) = mconcat
     [ "kind" .= String "CreatingServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (Common.ListeningServerSocket socket) = mconcat
+  forMachine _dtal (Diff.ListeningServerSocket socket) = mconcat
     [ "kind" .= String "ListeningServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (Common.ServerSocketUp socket) = mconcat
+  forMachine _dtal (Diff.ServerSocketUp socket) = mconcat
     [ "kind" .= String "ServerSocketUp"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (Common.ConfiguringServerSocket socket) = mconcat
+  forMachine _dtal (Diff.ConfiguringServerSocket socket) = mconcat
     [ "kind" .= String "ConfiguringServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (Common.UnsupportedLocalSystemdSocket path) = mconcat
+  forMachine _dtal (Diff.UnsupportedLocalSystemdSocket path) = mconcat
     [ "kind" .= String "UnsupportedLocalSystemdSocket"
     , "path" .= String (pack (show path))
     ]
-  forMachine _dtal Common.UnsupportedReadySocketCase = mconcat
+  forMachine _dtal Diff.UnsupportedReadySocketCase = mconcat
     [ "kind" .= String "UnsupportedReadySocketCase"
     ]
-  forMachine _dtal (Common.DiffusionErrored exception) = mconcat
+  forMachine _dtal (Diff.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
     , "error" .= String (pack (show exception))
     ]
-  forMachine _dtal (Common.SystemdSocketConfiguration config) = mconcat
+  forMachine _dtal (Diff.SystemdSocketConfiguration config) = mconcat
     [ "kind" .= String "SystemdSocketConfiguration"
     , "path" .= String (pack (show config))
     ]
 
-instance MetaTrace (Common.DiffusionTracer ntnAddr ntcAddr) where
-    namespaceFor Common.RunServer {} =
+instance MetaTrace (Diff.DiffusionTracer ntnAddr ntcAddr) where
+    namespaceFor Diff.RunServer {} =
       Namespace [] ["RunServer"]
-    namespaceFor Common.RunLocalServer {} =
+    namespaceFor Diff.RunLocalServer {} =
       Namespace [] ["RunLocalServer"]
-    namespaceFor Common.UsingSystemdSocket {} =
+    namespaceFor Diff.UsingSystemdSocket {} =
       Namespace [] ["UsingSystemdSocket"]
-    namespaceFor Common.CreateSystemdSocketForSnocketPath {} =
+    namespaceFor Diff.CreateSystemdSocketForSnocketPath {} =
       Namespace [] ["CreateSystemdSocketForSnocketPath"]
-    namespaceFor Common.CreatedLocalSocket {} =
+    namespaceFor Diff.CreatedLocalSocket {} =
       Namespace [] ["CreatedLocalSocket"]
-    namespaceFor Common.ConfiguringLocalSocket {} =
+    namespaceFor Diff.ConfiguringLocalSocket {} =
       Namespace [] ["ConfiguringLocalSocket"]
-    namespaceFor Common.ListeningLocalSocket {} =
+    namespaceFor Diff.ListeningLocalSocket {} =
       Namespace [] ["ListeningLocalSocket"]
-    namespaceFor Common.LocalSocketUp {} =
+    namespaceFor Diff.LocalSocketUp {} =
       Namespace [] ["LocalSocketUp"]
-    namespaceFor Common.CreatingServerSocket {} =
+    namespaceFor Diff.CreatingServerSocket {} =
       Namespace [] ["CreatingServerSocket"]
-    namespaceFor Common.ListeningServerSocket {} =
+    namespaceFor Diff.ListeningServerSocket {} =
       Namespace [] ["ListeningServerSocket"]
-    namespaceFor Common.ServerSocketUp {} =
+    namespaceFor Diff.ServerSocketUp {} =
       Namespace [] ["ServerSocketUp"]
-    namespaceFor Common.ConfiguringServerSocket {} =
+    namespaceFor Diff.ConfiguringServerSocket {} =
       Namespace [] ["ConfiguringServerSocket"]
-    namespaceFor Common.UnsupportedLocalSystemdSocket {} =
+    namespaceFor Diff.UnsupportedLocalSystemdSocket {} =
       Namespace [] ["UnsupportedLocalSystemdSocket"]
-    namespaceFor Common.UnsupportedReadySocketCase {} =
+    namespaceFor Diff.UnsupportedReadySocketCase {} =
       Namespace [] ["UnsupportedReadySocketCase"]
-    namespaceFor Common.DiffusionErrored {} =
+    namespaceFor Diff.DiffusionErrored {} =
       Namespace [] ["DiffusionErrored"]
-    namespaceFor Common.SystemdSocketConfiguration {} =
+    namespaceFor Diff.SystemdSocketConfiguration {} =
       Namespace [] ["SystemdSocketConfiguration"]
 
     severityFor (Namespace _ ["RunServer"]) _ = Just Info
@@ -872,18 +872,6 @@ instance LogFormatting TraceLedgerPeers where
       [ "kind" .= String "TraceLedgerPeersDomains"
       , "domainAccessPoints" .= daps
       ]
-  forMachine _dtal (TraceLedgerPeersResult dap ips) =
-    mconcat
-      [ "kind" .= String "TraceLedgerPeersResult"
-      , "domainAccessPoint" .= show dap
-      , "ips" .= map show ips
-      ]
-  forMachine _dtal (TraceLedgerPeersFailure dap reason) =
-    mconcat
-      [ "kind" .= String "TraceLedgerPeersFailure"
-      , "domainAccessPoint" .= show dap
-      , "error" .= show reason
-      ]
   forMachine _dtal UsingBigLedgerPeerSnapshot =
     mconcat
       [ "kind" .= String "UsingBigLedgerPeerSnapshot"
@@ -918,10 +906,6 @@ instance MetaTrace TraceLedgerPeers where
       Namespace [] ["NotEnoughBigLedgerPeers"]
     namespaceFor TraceLedgerPeersDomains {} =
       Namespace [] ["TraceLedgerPeersDomains"]
-    namespaceFor TraceLedgerPeersResult {} =
-      Namespace [] ["TraceLedgerPeersResult"]
-    namespaceFor TraceLedgerPeersFailure {} =
-      Namespace [] ["TraceLedgerPeersFailure"]
     namespaceFor UsingBigLedgerPeerSnapshot {} =
       Namespace [] ["UsingBigLedgerPeerSnapshot"]
 

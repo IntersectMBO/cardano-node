@@ -37,9 +37,11 @@ import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLo
                    nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                   PartialNodeConfiguration (..), SomeNetworkP2PMode (..), TimeoutOverride (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP, getForkPolicy)
-import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo' (..),
+                   PartialNodeConfiguration (..), TimeoutOverride (..),
+                   defaultPartialNodeConfiguration, makeNodeConfiguration,
+                   parseNodeConfigurationFP, getForkPolicy)
+import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
+                   SocketOrSocketInfo, SocketOrSocketInfo' (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
 import           Cardano.Node.Configuration.TopologyP2P
@@ -66,10 +68,10 @@ import           Cardano.Tracing.Tracers
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..), NetworkP2PMode (..),
+import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
                    NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
-import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
+import           Ouroboros.Consensus.Node (RunNodeArgs (..),
                    SnapshotPolicyArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (NodeDatabasePaths (..), getChainDB, run)
 import           Ouroboros.Consensus.Node.Genesis
@@ -81,49 +83,41 @@ import           Ouroboros.Consensus.Storage.LedgerDB.V2.Args
 import           Ouroboros.Consensus.Util.Args
 import           Ouroboros.Consensus.Util.Orphans ()
 
+import qualified Cardano.Network.Diffusion as Cardano.Diffusion
+import qualified Cardano.Network.Diffusion.Configuration as Configuration
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
+import qualified Cardano.Network.PeerSelection.PeerSelectionActions as Cardano
+import           Cardano.Network.PeerSelection.Churn (ChurnMode (..), peerChurnGovernor)
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionActions as Cardano.PeerSelection
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano.PeerSelection
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as CPST
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as CPSV
+import qualified Cardano.Network.PeerSelection.PublicRootPeers as Cardano.PublicRoots
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionActions as Cardano.PeerSelection
+import qualified Cardano.Network.LedgerPeerConsensusInterface as Cardano
+import qualified Cardano.Network.PeerSelection.PeerSelectionActions as Cardano
+import qualified Cardano.Network.PeerSelection.Churn as Cardano.Churn
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
-import           Cardano.Network.ConsensusMode (ConsensusMode (..))
-import qualified Ouroboros.Cardano.PeerSelection.PeerSelectionActions as Cardano
-import           Ouroboros.Cardano.PeerSelection.Churn (peerChurnGovernor)
-import           Ouroboros.Cardano.Network.Types (ChurnMode (..))
-import           Ouroboros.Cardano.Network.Diffusion.Handlers (sigUSR1Handler)
-import qualified Ouroboros.Cardano.Network.ArgumentsExtra as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionActions as Cardano.PeerSelection
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano.PeerSelection
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as CPST
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as CPSV
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRoots
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionActions as Cardano.PeerSelection
-import qualified Ouroboros.Cardano.Network.LedgerPeerConsensusInterface as Cardano
-import qualified Ouroboros.Cardano.PeerSelection.PeerSelectionActions as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Churn.ExtraArguments as Cardano.Churn
-import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Configuration
 
 import           Ouroboros.Network.BlockFetch (FetchMode)
 import qualified Ouroboros.Network.Diffusion as Diffusion
-import qualified Ouroboros.Network.Diffusion.Common as Diffusion
+import qualified Ouroboros.Network.Diffusion.Types as Diffusion
 import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
-import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
-import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.Mux (noBindForkPolicy, responderForkPolicy, ForkPolicy)
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
                    PeerSelectionTargets (..), RemoteAddress)
-import           Ouroboros.Network.PeerSelection.Governor.Types (BootstrapPeersCriticalTimeoutError,
-                   PeerSelectionState, PeerSelectionTargets (..), PublicPeerSelectionState,
-                   makePublicPeerSelectionStateVar)
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
-                   LedgerPeerSnapshot (..), UseLedgerPeers (..))
+import           Ouroboros.Network.PeerSelection.Governor.Types (PeerSelectionState,
+                   PublicPeerSelectionState, makePublicPeerSelectionStateVar, BootstrapPeersCriticalTimeoutError)
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
+                   UseLedgerPeers (..), AfterSlot (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers (TracePublicRootPeers)
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig (..), WarmValency)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
-import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
-                   IPSubscriptionTarget (..))
 
 import           Control.Applicative (empty)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
@@ -234,98 +228,90 @@ handleNodeWithTracers
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> IO ()
-handleNodeWithTracers cmdPc nc0 p@(SomeConsensusProtocol blockType runP) = do
+handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
   let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
       networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
   let ProtocolInfo { pInfoConfig = cfg } = fst $ Api.protocolInfo @IO runP
-  case ncEnableP2P nc0 of
-    SomeNetworkP2PMode p2pMode -> do
-      let fp = maybe  "No file path found!"
-                      unConfigPath
-                      (getLast (pncConfigFile cmdPc))
-          -- Overwrite configured peer sharing mode if p2p is not enabled
-          nc = case p2pMode of
-            DisabledP2PMode -> nc0 { ncPeerSharing = PeerSharingDisabled }
-            EnabledP2PMode -> nc0
-      case ncTraceConfig nc of
-        TraceDispatcher{} -> do
-          blockForging <- snd (Api.protocolInfo runP)
-          tracers <-
-            initTraceDispatcher
-              nc
-              p
-              networkMagic
-              nodeKernelData
-              p2pMode
-              (null blockForging)
+  let fp = maybe  "No file path found!"
+                  unConfigPath
+                  (getLast (pncConfigFile cmdPc))
+  case ncTraceConfig nc of
+    TraceDispatcher{} -> do
+      blockForging <- snd (Api.protocolInfo runP)
+      tracers <-
+        initTraceDispatcher
+          nc
+          p
+          networkMagic
+          nodeKernelData
+          (null blockForging)
 
-          startupInfo <- getStartupInfo nc p fp
-          mapM_ (traceWith $ startupTracer tracers) startupInfo
-          traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
-          -- sends initial BlockForgingUpdate
-          let isNonProducing = ncStartAsNonProducingNode nc
-          traceWith (startupTracer tracers)
-                    (BlockForgingUpdate (if isNonProducing || null blockForging
-                                          then DisabledBlockForging
-                                          else EnabledBlockForging))
+      startupInfo <- getStartupInfo nc p fp
+      mapM_ (traceWith $ startupTracer tracers) startupInfo
+      traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
+      -- sends initial BlockForgingUpdate
+      let isNonProducing = ncStartAsNonProducingNode nc
+      traceWith (startupTracer tracers)
+                (BlockForgingUpdate (if isNonProducing || null blockForging
+                                      then DisabledBlockForging
+                                      else EnabledBlockForging))
 
-          handleSimpleNode blockType runP p2pMode tracers nc
-            (\nk -> do
-                setNodeKernel nodeKernelData nk
-                traceWith (nodeStateTracer tracers) NodeKernelOnline)
+      handleSimpleNode blockType runP tracers nc
+        (\nk -> do
+            setNodeKernel nodeKernelData nk
+            traceWith (nodeStateTracer tracers) NodeKernelOnline)
 
-        _ -> do
-          eLoggingLayer <- runExceptT $ createLoggingLayer
-            (Text.pack (showVersion version))
-            nc
-            p
+    _ -> do
+      eLoggingLayer <- runExceptT $ createLoggingLayer
+        (Text.pack (showVersion version))
+        nc
+        p
 
-          loggingLayer <- case eLoggingLayer of
-            Left err  -> Exception.throwIO err
-            Right res -> return res
-          !trace <- setupTrace loggingLayer
-          let tracer = contramap pack $ toLogObject trace
-          logTracingVerbosity nc tracer
+      loggingLayer <- case eLoggingLayer of
+        Left err  -> Exception.throwIO err
+        Right res -> return res
+      !trace <- setupTrace loggingLayer
+      let tracer = contramap pack $ toLogObject trace
+      logTracingVerbosity nc tracer
 
-          -- Legacy logging infrastructure must trace 'nodeStartTime' and 'nodeBasicInfo'.
-          startTime <- getCurrentTime
-          traceCounter "nodeStartTime" trace (ceiling $ utcTimeToPOSIXSeconds startTime)
-          nbi <- nodeBasicInfo nc p startTime
-          forM_ nbi $ \(LogObject nm mt content) ->
-            traceNamedObject (appendName nm trace) (mt, content)
+      -- Legacy logging infrastructure must trace 'nodeStartTime' and 'nodeBasicInfo'.
+      startTime <- getCurrentTime
+      traceCounter "nodeStartTime" trace (ceiling $ utcTimeToPOSIXSeconds startTime)
+      nbi <- nodeBasicInfo nc p startTime
+      forM_ nbi $ \(LogObject nm mt content) ->
+        traceNamedObject (appendName nm trace) (mt, content)
 
-          tracers <-
-            mkTracers
-              (Consensus.configBlock cfg)
-              (ncTraceConfig nc)
-              trace
-              nodeKernelData
-              (llEKGDirect loggingLayer)
-              p2pMode
+      tracers <-
+        mkTracers
+          (Consensus.configBlock cfg)
+          (ncTraceConfig nc)
+          trace
+          nodeKernelData
+          (llEKGDirect loggingLayer)
 
-          getStartupInfo nc p fp
-            >>= mapM_ (traceWith $ startupTracer tracers)
+      getStartupInfo nc p fp
+        >>= mapM_ (traceWith $ startupTracer tracers)
 
-          traceWith (nodeVersionTracer tracers) getNodeVersion
-          let isNonProducing = ncStartAsNonProducingNode nc
-          blockForging <- snd (Api.protocolInfo runP)
-          traceWith (startupTracer tracers)
-                    (BlockForgingUpdate (if isNonProducing || null blockForging
-                                          then DisabledBlockForging
-                                          else EnabledBlockForging))
+      traceWith (nodeVersionTracer tracers) getNodeVersion
+      let isNonProducing = ncStartAsNonProducingNode nc
+      blockForging <- snd (Api.protocolInfo runP)
+      traceWith (startupTracer tracers)
+                (BlockForgingUpdate (if isNonProducing || null blockForging
+                                      then DisabledBlockForging
+                                      else EnabledBlockForging))
 
-          -- We ignore peer logging thread if it dies, but it will be killed
-          -- when 'handleSimpleNode' terminates.
-          handleSimpleNode blockType runP p2pMode tracers nc
-            (\nk -> do
-                setNodeKernel nodeKernelData nk
-                traceWith (nodeStateTracer tracers) NodeKernelOnline)
-            `finally` do
-              forM_ eLoggingLayer
-                shutdownLoggingLayer
+      -- We ignore peer logging thread if it dies, but it will be killed
+      -- when 'handleSimpleNode' terminates.
+      handleSimpleNode blockType runP tracers nc
+        (\nk -> do
+            setNodeKernel nodeKernelData nk
+            traceWith (nodeStateTracer tracers) NodeKernelOnline)
+        `finally` do
+          forM_ eLoggingLayer
+            shutdownLoggingLayer
 
 -- | Currently, we trace only 'ShelleyBased'-info which will be asked
 --   by 'cardano-tracer' service as a datapoint. It can be extended in the future.
@@ -385,29 +371,19 @@ handlePeersListSimple tr nodeKern = forever $ do
 -- create a new block.
 
 handleSimpleNode
-  :: forall blk p2p .
+  :: forall blk .
     ( Api.Protocol IO blk
     )
   => Api.BlockType blk
   -> Api.ProtocolInfoArgs blk
-  -> NetworkP2PMode p2p
-  -> Tracers
-       RemoteAddress
-       LocalAddress
-       blk p2p
-       Cardano.PeerSelection.ExtraState
-       Cardano.PeerSelection.DebugPeerSelectionState
-       PeerTrustable
-       (Cardano.PublicRoots.ExtraPeers RemoteAddress)
-       (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress)
-       IO
+  -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
   -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
+handleSimpleNode blockType runP tracers nc onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -432,31 +408,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
 
   dbPath <- canonDbPath nc
 
-  publicPeerSelectionVar <- makePublicPeerSelectionStateVar
-  let diffusionArguments :: Diffusion.Arguments IO Socket   RemoteAddress
-                                                LocalSocket LocalAddress
-      diffusionArguments =
-        Diffusion.Arguments {
-            Diffusion.daIPv4Address  =
-              case publicIPv4SocketOrAddr of
-                Just (ActualSocket socket) -> Just (Left socket)
-                Just (SocketInfo addr)     -> Just (Right addr)
-                Nothing                    -> Nothing
-          , Diffusion.daIPv6Address  =
-              case publicIPv6SocketOrAddr of
-                Just (ActualSocket socket) -> Just (Left socket)
-                Just (SocketInfo addr)     -> Just (Right addr)
-                Nothing                    -> Nothing
-          , Diffusion.daLocalAddress =
-              case localSocketOrPath of  -- TODO allow expressing the Nothing case in the config
-                Just (ActualSocket localSocket) -> Just (Left  localSocket)
-                Just (SocketInfo localAddr)     -> Just (Right localAddr)
-                Nothing                         -> Nothing
-          , Diffusion.daAcceptedConnectionsLimit = ncAcceptedConnectionsLimit nc
-          , Diffusion.daMode                     = ncDiffusionMode nc
-          , Diffusion.daPublicPeerSelectionVar   = publicPeerSelectionVar
-          , Diffusion.daEgressPollInterval       = ncEgressPollInterval nc
-          }
+  (publicPeerSelectionVar :: StrictTVar IO (PublicPeerSelectionState RemoteAddress))
+    <- makePublicPeerSelectionStateVar
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
@@ -474,203 +427,139 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                          ))
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $
-    case p2pMode of
-      EnabledP2PMode -> do
-        traceWith (startupTracer tracers)
-                  (StartupP2PInfo (ncDiffusionMode nc))
-        nt@TopologyP2P.RealNodeTopology
-          { ntUseLedgerPeers
-          , ntUseBootstrapPeers
-          , ntPeerSnapshotPath
-          } <- TopologyP2P.readTopologyFileOrError nc (startupTracer tracers)
-        let (localRoots, publicRoots) = producerAddresses nt
-        traceWith (startupTracer tracers)
-                $ NetworkConfig localRoots
-                                publicRoots
-                                ntUseLedgerPeers
-                                ntPeerSnapshotPath
-        case ncPeerSharing nc of
-          PeerSharingEnabled
-            | hasProtocolFile (ncProtocolFiles nc) ->
-                traceWith (startupTracer tracers) . NetworkConfigUpdateWarning . Text.pack $
-                     "Mainnet block producers may not meet the Praos performance guarantees "
-                  <> "and host IP address will be leaked since peer sharing is enabled."
-          _otherwise -> pure ()
-        localRootsVar   <- newTVarIO localRoots
-        publicRootsVar  <- newTVarIO publicRoots
-        useLedgerVar    <- newTVarIO ntUseLedgerPeers
-        useBootstrapVar <- newTVarIO ntUseBootstrapPeers
-        ledgerPeerSnapshotPathVar <- newTVarIO ntPeerSnapshotPath
-        ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
-                                                (startupTracer tracers)
-                                                nc
-                                                (readTVar ledgerPeerSnapshotPathVar)
-                                                (readTVar useLedgerVar)
-                                                (const . pure $ ())
+    traceWith (startupTracer tracers)
+              (StartupP2PInfo (ncDiffusionMode nc))
+    nt@TopologyP2P.RealNodeTopology
+      { ntUseLedgerPeers
+      , ntUseBootstrapPeers
+      , ntPeerSnapshotPath
+      } <- TopologyP2P.readTopologyFileOrError nc (startupTracer tracers)
+    let (localRoots, publicRoots) = producerAddresses nt
+    traceWith (startupTracer tracers)
+            $ NetworkConfig localRoots
+                            publicRoots
+                            ntUseLedgerPeers
+                            ntPeerSnapshotPath
+    case ncPeerSharing nc of
+      PeerSharingEnabled
+        | hasProtocolFile (ncProtocolFiles nc) ->
+            traceWith (startupTracer tracers) . NetworkConfigUpdateWarning . Text.pack $
+                 "Mainnet block producers may not meet the Praos performance guarantees "
+              <> "and host IP address will be leaked since peer sharing is enabled."
+      _otherwise -> pure ()
+    localRootsVar   <- newTVarIO localRoots
+    publicRootsVar  <- newTVarIO publicRoots
+    useLedgerVar    <- newTVarIO ntUseLedgerPeers
+    useBootstrapVar <- newTVarIO ntUseBootstrapPeers
+    ledgerPeerSnapshotPathVar <- newTVarIO ntPeerSnapshotPath
+    ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
+                                            (startupTracer tracers)
+                                            nc
+                                            (readTVar ledgerPeerSnapshotPathVar)
+                                            (readTVar useLedgerVar)
+                                            (const . pure $ ())
 
-        churnModeVar <- newTVarIO ChurnModeNormal
-        let nodeArgs = RunNodeArgs
-              { rnGenesisConfig  = ncGenesisConfig nc
-              , rnTraceConsensus = consensusTracers tracers
-              , rnTraceNTN       = nodeToNodeTracers tracers
-              , rnTraceNTC       = nodeToClientTracers tracers
-              , rnProtocolInfo   = pInfo
-              , rnNodeKernelHook = \registry nodeKernel -> do
-                  -- set the initial block forging
-                  blockForging <- snd (Api.protocolInfo runP)
+    let nodeArgs = RunNodeArgs
+          { rnGenesisConfig  = ncGenesisConfig nc
+          , rnTraceConsensus = consensusTracers tracers
+          , rnTraceNTN       = nodeToNodeTracers tracers
+          , rnTraceNTC       = nodeToClientTracers tracers
+          , rnProtocolInfo   = pInfo
+          , rnNodeKernelHook = \registry nodeKernel -> do
+              -- set the initial block forging
+              blockForging <- snd (Api.protocolInfo runP)
 
-                  unless (ncStartAsNonProducingNode nc) $
-                    setBlockForging nodeKernel blockForging
+              unless (ncStartAsNonProducingNode nc) $
+                setBlockForging nodeKernel blockForging
 
-                  maybeSpawnOnSlotSyncedShutdownHandler
-                    (ncShutdownConfig nc)
-                    (shutdownTracer tracers)
-                    registry
-                    (Node.getChainDB nodeKernel)
-                  onKernel nodeKernel
-              , rnEnableP2P      = p2pMode
-              , rnPeerSharing    = ncPeerSharing nc
-              , rnGetUseBootstrapPeers = readTVar useBootstrapVar
-              }
+              maybeSpawnOnSlotSyncedShutdownHandler
+                (ncShutdownConfig nc)
+                (shutdownTracer tracers)
+                registry
+                (Node.getChainDB nodeKernel)
+              onKernel nodeKernel
+          , rnPeerSharing    = ncPeerSharing nc
+          , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+          }
 #ifdef UNIX
-        -- initial `SIGHUP` handler, which only rereads the topology file but
-        -- doesn't update block forging.  The latter is only possible once
-        -- consensus initialised (e.g. reapplied all blocks).
-        _ <- Signals.installHandler
-              Signals.sigHUP
-              (Signals.Catch $ do
-                updateTopologyConfiguration
-                  (startupTracer tracers) nc
-                  localRootsVar publicRootsVar useLedgerVar useBootstrapVar
-                  ledgerPeerSnapshotPathVar
-                void $ updateLedgerPeerSnapshot
-                  (startupTracer tracers)
-                  nc
-                  (readTVar ledgerPeerSnapshotPathVar)
-                  (readTVar useLedgerVar)
-                  (writeTVar ledgerPeerSnapshotVar)
-                traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
-              )
-              Nothing
+    -- initial `SIGHUP` handler, which only rereads the topology file but
+    -- doesn't update block forging.  The latter is only possible once
+    -- consensus initialised (e.g. reapplied all blocks).
+    _ <- Signals.installHandler
+          Signals.sigHUP
+          (Signals.Catch $ do
+            updateTopologyConfiguration
+              (startupTracer tracers) nc
+              localRootsVar publicRootsVar useLedgerVar useBootstrapVar
+              ledgerPeerSnapshotPathVar
+            void $ updateLedgerPeerSnapshot
+              (startupTracer tracers)
+              (readTVar ledgerPeerSnapshotPathVar)
+              (readTVar useLedgerVar)
+              (writeTVar ledgerPeerSnapshotVar)
+            traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
+          )
+          Nothing
 #endif
-        nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
-        cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
-        void $
-          let diffusionArgumentsExtra =
-                mkP2PArguments nForkPolicy cForkPolicy nc
-                  (readTVar localRootsVar)
-                  (readTVar publicRootsVar)
-                  (readTVar useLedgerVar)
-                  (readTVar useBootstrapVar)
-                  (readTVar ledgerPeerSnapshotVar)
-                  churnModeVar
-          in
-          Node.run
-            nodeArgs {
-                rnNodeKernelHook = \registry nodeKernel -> do
-                  -- reinstall `SIGHUP` handler
-                  installP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
-                                          localRootsVar publicRootsVar useLedgerVar useBootstrapVar
-                                          ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
-                  rnNodeKernelHook nodeArgs registry nodeKernel
+    nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+    cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+    void $
+      let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
+          diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
+              Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
+              Cardano.Diffusion.genesisPeerTargets =
+                PeerSelectionTargets {
+                  targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
+                  targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
+                  targetNumberOfEstablishedPeers          = ncSyncTargetOfEstablishedPeers nc,
+                  targetNumberOfActivePeers               = ncSyncTargetOfActivePeers nc,
+                  targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers nc,
+                  targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers nc,
+                  targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
+                },
+              Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
+              Cardano.Diffusion.tracerChurnMode         = nullTracer
             }
-            StdRunNodeArgs
-              { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-              , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-              , srnChainDbValidateOverride      = ncValidateDB nc
-              , srnDatabasePath                 = dbPath
-              , srnDiffusionArguments           = diffusionArguments
-              , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
-              , srnDiffusionTracers             = diffusionTracers tracers
-              , srnDiffusionTracersExtra        = diffusionTracersExtra tracers
-              , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
-              , srnTraceChainDB                 = chainDBTracer tracers
-              , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-              , srnChainSyncTimeout             = customizeChainSyncTimeout
-              , srnSigUSR1SignalHandler         = \(Diffusion.P2PTracers p2ptracers) -> sigUSR1Handler p2ptracers
-              , srnSnapshotPolicyArgs           = snapshotPolicyArgs
-              , srnQueryBatchSize               = queryBatchSize
-              , srnLdbFlavorArgs                = selectorToArgs ldbBackend
-              }
-      DisabledP2PMode -> do
-        nt <- TopologyNonP2P.readTopologyFileOrError nc
-        let (ipProducerAddrs, dnsProducerAddrs) = producerAddressesNonP2P nt
-
-            dnsProducers :: [DnsSubscriptionTarget]
-            dnsProducers = [ DnsSubscriptionTarget (Text.encodeUtf8 addr) port v
-                           | (NodeAddress (NodeHostDnsAddress addr) port, v) <- dnsProducerAddrs
-                           ]
-
-            ipProducers :: IPSubscriptionTarget
-            ipProducers = IPSubscriptionTarget
-                           [ toSockAddr (addr, port)
-                           | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
-                           ]
-                           (length ipProducerAddrs)
-
-            nodeArgs = RunNodeArgs
-                { rnGenesisConfig  = ncGenesisConfig nc
-                , rnTraceConsensus = consensusTracers tracers
-                , rnTraceNTN       = nodeToNodeTracers tracers
-                , rnTraceNTC       = nodeToClientTracers tracers
-                , rnProtocolInfo   = pInfo
-                , rnNodeKernelHook = \registry nodeKernel -> do
-                    -- set the initial block forging
-                    blockForging <- snd (Api.protocolInfo runP)
-
-                    unless (ncStartAsNonProducingNode nc) $
-                      setBlockForging nodeKernel blockForging
-
-                    maybeSpawnOnSlotSyncedShutdownHandler
-                      (ncShutdownConfig nc)
-                      (shutdownTracer tracers)
-                      registry
-                      (Node.getChainDB nodeKernel)
-                    onKernel nodeKernel
-                , rnEnableP2P      = p2pMode
-                , rnPeerSharing    = ncPeerSharing nc
-                , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
-                }
-#ifdef UNIX
-        -- initial `SIGHUP` handler; it only warns that neither updating of
-        -- topology is supported nor updating block forging is yet possible.
-        -- It is still useful, without it the node would terminate when
-        -- receiving `SIGHUP`.
-        _ <- Signals.installHandler
-              Signals.sigHUP
-              (Signals.Catch $ do
-                traceWith (startupTracer tracers) NetworkConfigUpdateUnsupported
-                traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective))
-              Nothing
-#endif
-        void $
-          Node.run
-            nodeArgs {
-                rnNodeKernelHook = \registry nodeKernel -> do
-                  -- reinstall `SIGHUP` handler
-                  installNonP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
-                  rnNodeKernelHook nodeArgs registry nodeKernel
-            }
-            StdRunNodeArgs
-              { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-              , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-              , srnChainDbValidateOverride     = ncValidateDB nc
-              , srnDatabasePath                = dbPath
-              , srnDiffusionArguments          = diffusionArguments
-              , srnDiffusionArgumentsExtra     = \_ _ _ -> mkNonP2PArguments ipProducers dnsProducers
-              , srnDiffusionTracers            = diffusionTracers tracers
-              , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
-              , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
-              , srnTraceChainDB                = chainDBTracer tracers
-              , srnChainSyncTimeout            = customizeChainSyncTimeout
-              , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-              , srnSigUSR1SignalHandler         = mempty
-              , srnSnapshotPolicyArgs           = snapshotPolicyArgs
-              , srnQueryBatchSize               = queryBatchSize
-              , srnLdbFlavorArgs                = selectorToArgs ldbBackend
-              }
+          diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
+          diffusionConfiguration =
+            mkDiffusionConfiguration
+              publicIPv4SocketOrAddr
+              publicIPv6SocketOrAddr
+              localSocketOrPath
+              publicPeerSelectionVar
+              nForkPolicy cForkPolicy
+              nc
+              (readTVar localRootsVar)
+              (readTVar publicRootsVar)
+              (readTVar useLedgerVar)
+              (readTVar ledgerPeerSnapshotVar)
+      in
+      Node.run
+        nodeArgs {
+            rnNodeKernelHook = \registry nodeKernel -> do
+              -- reinstall `SIGHUP` handler
+              installSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
+                                   localRootsVar publicRootsVar useLedgerVar useBootstrapVar
+                                   ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+              rnNodeKernelHook nodeArgs registry nodeKernel
+        }
+        StdRunNodeArgs
+          { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+          , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+          , srnChainDbValidateOverride      = ncValidateDB nc
+          , srnDatabasePath                 = dbPath
+          , srnDiffusionConfiguration       = diffusionConfiguration
+          , srnDiffusionArguments           = diffusionNodeArguments
+          , srnDiffusionTracers             = diffusionTracers tracers
+          , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
+          , srnTraceChainDB                 = chainDBTracer tracers
+          , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+          , srnChainSyncTimeout             = customizeChainSyncTimeout
+          , srnSnapshotPolicyArgs           = snapshotPolicyArgs
+          , srnQueryBatchSize               = queryBatchSize
+          , srnLdbFlavorArgs                = selectorToArgs ldbBackend
+          }
  where
-
   customizeChainSyncTimeout :: Maybe (IO ChainSyncTimeout)
   customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
     NoTimeoutOverride -> Nothing
@@ -684,11 +573,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
 
   logStartupWarnings :: IO ()
   logStartupWarnings = do
-    (case p2pMode of
-      EnabledP2PMode  -> return ()
-      DisabledP2PMode -> traceWith (startupTracer tracers) NonP2PWarning
-      ) :: IO () -- annoying, but unavoidable for GADT type inference
-
     let developmentNtnVersions =
           case latestReleasedNodeVersion (Proxy @blk) of
             (Just ntnVersion, _) -> filter (> ntnVersion)
@@ -751,21 +635,21 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
 
 -- | The P2P SIGHUP handler can update block forging & reconfigure network topology.
 --
-installP2PSigHUPHandler :: Tracer IO (StartupTrace blk)
-                        -> Api.BlockType blk
-                        -> NodeConfiguration
-                        -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
-                        -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
-                        -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
-                        -> StrictTVar IO UseLedgerPeers
-                        -> StrictTVar IO UseBootstrapPeers
-                        -> StrictTVar IO (Maybe PeerSnapshotFile)
-                        -> StrictTVar IO (Maybe LedgerPeerSnapshot)
-                        -> IO ()
+installSigHUPHandler :: Tracer IO (StartupTrace blk)
+                     -> Api.BlockType blk
+                     -> NodeConfiguration
+                     -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
+                     -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
+                     -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
+                     -> StrictTVar IO UseLedgerPeers
+                     -> StrictTVar IO UseBootstrapPeers
+                     -> StrictTVar IO (Maybe PeerSnapshotFile)
+                     -> StrictTVar IO (Maybe LedgerPeerSnapshot)
+                     -> IO ()
 #ifndef UNIX
-installP2PSigHUPHandler _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installP2PSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
+installSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
                         useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar =
   void $ Signals.installHandler
     Signals.sigHUP
@@ -779,26 +663,6 @@ installP2PSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publ
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
-    )
-    Nothing
-#endif
-
--- | The NonP2P SIGHUP handler can only update block forging.
---
-installNonP2PSigHUPHandler :: Tracer IO (StartupTrace blk)
-                           -> Api.BlockType blk
-                           -> NodeConfiguration
-                           -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
-                           -> IO ()
-#ifndef UNIX
-installNonP2PSigHUPHandler _ _ _ _ = return ()
-#else
-installNonP2PSigHUPHandler startupTracer blockType nc nodeKernel =
-  void $ Signals.installHandler
-    Signals.sigHUP
-    (Signals.Catch $ do
-      updateBlockForging startupTracer blockType nodeKernel nc
-      traceWith startupTracer NetworkConfigUpdateUnsupported
     )
     Nothing
 #endif
@@ -955,10 +819,10 @@ checkVRFFilePermissions :: Tracer IO String -> File content direction -> ExceptT
 checkVRFFilePermissions tracer (File vrfPrivKey) = do
   fs <- liftIO $ getFileStatus vrfPrivKey
   let fm = fileMode fs
-  -- Check the the VRF private key file does not give read/write/exec permissions to others.
+  -- Check the VRF private key file does not give read/write/exec permissions to others.
   when (hasOtherPermissions fm) $
      left $ OtherPermissionsExist vrfPrivKey
-  -- Check the the VRF private key file does not give read/write/exec permissions to any group.
+  -- Check the VRF private key file does not give read/write/exec permissions to any group.
   when (hasGroupPermissions fm) $
      liftIO $ traceWith tracer $ ("WARNING: " <>) .  displayError $ GroupPermissionsExist vrfPrivKey
  where
@@ -986,178 +850,77 @@ checkVRFFilePermissions _ (File vrfPrivKey) = do
 #endif
 
 
-mkP2PArguments
-  :: Ord ntnAddr
-  => ForkPolicy ntnAddr
-  -> ForkPolicy ntcAddr
+mkDiffusionConfiguration
+  :: Maybe SocketOrSocketInfo -- ^ ipv4
+  -> Maybe SocketOrSocketInfo -- ^ ipv6
+  -> Maybe LocalSocketOrSocketInfo -- ^ unix socket or a named pipe (Windows)
+  -> StrictTVar IO (PublicPeerSelectionState RemoteAddress)
+  -> ForkPolicy RemoteAddress
+  -> ForkPolicy LocalAddress
   -> NodeConfiguration
   -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerPeers
-  -> STM IO UseBootstrapPeers
   -> STM IO (Maybe LedgerPeerSnapshot)
-  -> StrictTVar IO ChurnMode
-  -> Diffusion.P2PDecision 'Diffusion.P2P (Tracer IO TracePublicRootPeers) ()
-  -> Diffusion.P2PDecision 'Diffusion.P2P (STM IO FetchMode) ()
-  -> Diffusion.P2PDecision 'Diffusion.P2P (Cardano.LedgerPeersConsensusInterface IO) ()
-  -> Diffusion.ArgumentsExtra 'Diffusion.P2P
-      (Cardano.ExtraArguments IO)
-      Cardano.PeerSelection.ExtraState
-      extraDebugState
-      PeerTrustable
-      (Cardano.PublicRoots.ExtraPeers ntnAddr)
-      (Cardano.LedgerPeersConsensusInterface IO)
-      (Cardano.Churn.ExtraArguments IO)
-      (Cardano.ExtraPeerSelectionSetsWithSizes ntnAddr)
-      BootstrapPeersCriticalTimeoutError
-      ntnAddr
-      ntcAddr
-      Resolver
-      IOException
-      IO
-mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
-                 ncDeadlineTargetOfRootPeers,
-                 ncDeadlineTargetOfKnownPeers,
-                 ncDeadlineTargetOfEstablishedPeers,
-                 ncDeadlineTargetOfActivePeers,
-                 ncDeadlineTargetOfKnownBigLedgerPeers,
-                 ncDeadlineTargetOfEstablishedBigLedgerPeers,
-                 ncDeadlineTargetOfActiveBigLedgerPeers,
-                 ncSyncTargetOfRootPeers,
-                 ncSyncTargetOfKnownPeers,
-                 ncSyncTargetOfEstablishedPeers,
-                 ncSyncTargetOfActivePeers,
-                 ncSyncTargetOfKnownBigLedgerPeers,
-                 ncSyncTargetOfEstablishedBigLedgerPeers,
-                 ncSyncTargetOfActiveBigLedgerPeers,
-                 ncMinBigLedgerPeersForTrustedState,
-                 ncProtocolIdleTimeout,
-                 ncTimeWaitTimeout,
-                 ncPeerSharing,
-                 ncConsensusMode
-               }
-               daReadLocalRootPeers
-               daReadPublicRootPeers
-               daReadUseLedgerPeers
-               daReadUseBootstrapPeers
-               daReadLedgerPeerSnapshot
-               churnModeVar
-               (Diffusion.P2PDecision tracer)
-               (Diffusion.P2PDecision getFetchMode)
-               (Diffusion.P2PDecision ledgerPeersConsensusInterface) =
-    Diffusion.P2PArguments P2P.ArgumentsExtra
-      { P2P.daReadLocalRootPeers
-      , P2P.daReadPublicRootPeers
-      , P2P.daReadUseLedgerPeers
-      , P2P.daReadLedgerPeerSnapshot
-      , P2P.daPeerSelectionTargets  = peerSelectionTargets
-      , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
-      , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
-      , P2P.daDeadlineChurnInterval = Configuration.defaultDeadlineChurnInterval
-      , P2P.daBulkChurnInterval     = Configuration.defaultBulkChurnInterval
-      , P2P.daEmptyExtraState       = CPST.empty ncConsensusMode ncMinBigLedgerPeersForTrustedState
-      , P2P.daEmptyExtraCounters    = CPSV.empty
-      , P2P.daExtraPeersAPI         = Cardano.PublicRoots.cardanoPublicRootPeersAPI
-      , P2P.daPeerChurnGovernor     = peerChurnGovernor
-      , P2P.daExtraChurnArgs        = cardanoPeerChurnArgs
-      , P2P.daOwnPeerSharing        = ncPeerSharing
-      , P2P.daPeerSelectionStateToExtraCounters = CPSV.cardanoPeerSelectionStatetoCounters
-      , P2P.daPeerSelectionGovernorArgs         = Cardano.cardanoPeerSelectionGovernorArgs extraActions
-      , P2P.daRequestPublicRootPeers            = Just $ Cardano.requestPublicRootPeers
-                                                       tracer
-                                                       daReadUseBootstrapPeers
-                                                       (Cardano.getLedgerStateJudgement
-                                                         ledgerPeersConsensusInterface)
-                                                       daReadPublicRootPeers
-      , P2P.daToExtraPeers =
-          \publicRoots -> Cardano.PublicRoots.ExtraPeers {
-              Cardano.PublicRoots.getPublicConfigPeers = publicRoots,
-              Cardano.PublicRoots.getBootstrapPeers = Set.empty
-            }
-      , P2P.daMuxForkPolicy = nForkPolicy
-      , P2P.daLocalMuxForkPolicy = cForkPolicy
-      }
+  -> Cardano.Diffusion.CardanoConfiguration IO
+mkDiffusionConfiguration
+  publicIPv4SocketOrAddr
+  publicIPv6SocketOrAddr
+  localSocketOrPath
+  publicPeerSelectionVar
+  nForkPolicy cForkPolicy
+  nc
+  dcReadLocalRootPeers
+  dcReadPublicRootPeers
+  dcReadUseLedgerPeers
+  dcReadLedgerPeerSnapshot
+  =
+  Diffusion.Configuration
+    { Diffusion.dcIPv4Address  =
+        case publicIPv4SocketOrAddr of
+          Just (ActualSocket socket) -> Just (Left socket)
+          Just (SocketInfo addr)     -> Just (Right addr)
+          Nothing                    -> Nothing
+    , Diffusion.dcIPv6Address  =
+        case publicIPv6SocketOrAddr of
+          Just (ActualSocket socket) -> Just (Left socket)
+          Just (SocketInfo addr)     -> Just (Right addr)
+          Nothing                    -> Nothing
+    , Diffusion.dcLocalAddress =
+        case localSocketOrPath of  -- TODO allow expressing the Nothing case in the config
+          Just (ActualSocket localSocket) -> Just (Left  localSocket)
+          Just (SocketInfo localAddr)     -> Just (Right localAddr)
+          Nothing                         -> Nothing
+    , Diffusion.dcAcceptedConnectionsLimit = ncAcceptedConnectionsLimit nc
+    , Diffusion.dcMode                     = ncDiffusionMode nc
+    , Diffusion.dcPublicPeerSelectionVar   = publicPeerSelectionVar
+    , Diffusion.dcPeerSelectionTargets     = peerSelectionTargets
+    , Diffusion.dcReadLocalRootPeers
+    , Diffusion.dcReadPublicRootPeers
+    , Diffusion.dcReadLedgerPeerSnapshot
+    , Diffusion.dcReadUseLedgerPeers
+    , Diffusion.dcPeerSharing              = ncPeerSharing nc
+    , Diffusion.dcProtocolIdleTimeout      = ncProtocolIdleTimeout nc
+    , Diffusion.dcTimeWaitTimeout          = ncTimeWaitTimeout nc
+    , Diffusion.dcDeadlineChurnInterval    = Configuration.defaultDeadlineChurnInterval
+    , Diffusion.dcBulkChurnInterval        = Configuration.defaultBulkChurnInterval
+    , Diffusion.dcMuxForkPolicy            = nForkPolicy
+    , Diffusion.dcLocalMuxForkPolicy       = cForkPolicy
+    , Diffusion.dcEgressPollInterval       = ncEgressPollInterval nc
+    }
   where
     peerSelectionTargets = PeerSelectionTargets {
-      targetNumberOfRootPeers        = ncDeadlineTargetOfRootPeers,
-      targetNumberOfKnownPeers       = ncDeadlineTargetOfKnownPeers,
-      targetNumberOfEstablishedPeers = ncDeadlineTargetOfEstablishedPeers,
-      targetNumberOfActivePeers      = ncDeadlineTargetOfActivePeers,
-      targetNumberOfKnownBigLedgerPeers       = ncDeadlineTargetOfKnownBigLedgerPeers,
-      targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers,
-      targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers
+      targetNumberOfRootPeers                 = ncDeadlineTargetOfRootPeers nc,
+      targetNumberOfKnownPeers                = ncDeadlineTargetOfKnownPeers nc,
+      targetNumberOfEstablishedPeers          = ncDeadlineTargetOfEstablishedPeers nc,
+      targetNumberOfActivePeers               = ncDeadlineTargetOfActivePeers nc,
+      targetNumberOfKnownBigLedgerPeers       = ncDeadlineTargetOfKnownBigLedgerPeers nc,
+      targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers nc,
+      targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers nc
     }
 
-    genesisSelectionTargets = PeerSelectionTargets {
-      targetNumberOfRootPeers        = ncSyncTargetOfRootPeers,
-      targetNumberOfKnownPeers       = ncSyncTargetOfKnownPeers,
-      targetNumberOfEstablishedPeers = ncSyncTargetOfEstablishedPeers,
-      targetNumberOfActivePeers               = ncSyncTargetOfActivePeers,
-      targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers,
-      targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
-      targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers }
-
-    cardanoPeerChurnArgs =
-      Cardano.Churn.ExtraArguments {
-        Cardano.Churn.modeVar            = churnModeVar
-      , Cardano.Churn.readFetchMode      = getFetchMode
-      , Cardano.Churn.genesisPeerTargets = genesisSelectionTargets
-      , Cardano.Churn.readUseBootstrap   = daReadUseBootstrapPeers
-      , Cardano.Churn.consensusMode      = ncConsensusMode
-      }
-
-    extraActions :: Cardano.PeerSelection.ExtraPeerSelectionActions IO
-    extraActions = Cardano.PeerSelection.ExtraPeerSelectionActions {
-        Cardano.PeerSelection.genesisPeerTargets = genesisSelectionTargets,
-        Cardano.PeerSelection.readUseBootstrapPeers = daReadUseBootstrapPeers
-      }
-
-mkNonP2PArguments
-  :: IPSubscriptionTarget
-  -> [DnsSubscriptionTarget]
-  -> Diffusion.ArgumentsExtra
-      'Diffusion.NonP2P
-      extraArgs
-      extraState
-      extraDebugState
-      extraAPI
-      extraPeers
-      extraFlags
-      extraChurnArgs
-      extraCounters
-      BootstrapPeersCriticalTimeoutError
-      ntnAddr
-      ntcAddr
-      Resolver
-      IOException
-      IO
-mkNonP2PArguments daIpProducers daDnsProducers =
-    Diffusion.NonP2PArguments NonP2P.ArgumentsExtra
-      { NonP2P.daIpProducers
-      , NonP2P.daDnsProducers
-      }
-
--- | TODO: Only needed for enabling P2P switch
---
-producerAddressesNonP2P
-  :: TopologyNonP2P.NetworkTopology TopologyNonP2P.RemoteAddress
-  -> ( [NodeIPAddress]
-     , [(NodeDnsAddress, Int)])
-producerAddressesNonP2P nt =
-  case nt of
-    TopologyNonP2P.RealNodeTopology producers' ->
-        partitionEithers
-      . mapMaybe TopologyNonP2P.remoteAddressToNodeAddress
-      $ producers'
-    TopologyNonP2P.MockNodeTopology nodeSetup ->
-        partitionEithers
-      . concatMap
-          ( mapMaybe TopologyNonP2P.remoteAddressToNodeAddress
-          . TopologyNonP2P.producers
-          )
-      $ nodeSetup
 
 producerAddresses
   :: NetworkTopology RelayAccessPoint
