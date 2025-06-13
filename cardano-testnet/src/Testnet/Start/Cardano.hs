@@ -52,6 +52,7 @@ import qualified System.Info as OS
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
+import           Testnet.Handlers (interruptNodesOnSigINT)
 import           Testnet.Process.Run (execCli', execCli_, mkExecConfig)
 import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
@@ -299,6 +300,8 @@ cardanoTestnet
     H.noteShow_ . vsep $ prettyError <$> failedNodes
     H.failure
 
+  -- Interrupt cardano nodes when the main process is interrupted
+  H.evalIO $ interruptNodesOnSigINT testnetNodes'
   H.annotateShow $ nodeSprocket <$> testnetNodes'
 
   -- FIXME: use foldEpochState waiting for chain extensions
