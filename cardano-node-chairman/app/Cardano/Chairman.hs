@@ -12,7 +12,6 @@
 module Cardano.Chairman (chairmanTest) where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.BaseTypes (unNonZero)
 import           Ouroboros.Consensus.Block.Abstract

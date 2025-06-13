@@ -68,7 +68,6 @@ deriving newtype instance   ToJSON a =>   (ToJSON (I a))
 deriving instance FromJSON a => (FromJSON (Interval a))
 deriving instance                 Functor  Interval
 deriving instance   ToJSON a =>   (ToJSON (Interval a))
-deriving instance   NFData a =>   (NFData (Interval a))
 
 unionIntv, intersectIntv :: Ord a => [Interval a] -> Interval a
 unionIntv     xs = Interval (low lo) (high hi)

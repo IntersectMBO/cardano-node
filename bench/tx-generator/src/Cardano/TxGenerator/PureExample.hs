@@ -6,7 +6,7 @@ module  Cardano.TxGenerator.PureExample
         (demo)
         where
 
-import           Cardano.Api
+import           Cardano.Api hiding (txId)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
@@ -14,7 +14,7 @@ import           Cardano.TxGenerator.ProtocolParameters (convertToLedgerProtocol
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
 import           Cardano.TxGenerator.Types (TxEnvironment (..), TxGenError (..), TxGenerator)
-import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
+import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee, mkTxIn)
 import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
 
 import           Control.Monad (foldM)
@@ -71,7 +71,7 @@ genesisTxIn :: TxIn
 genesisValue :: TxOutValue BabbageEra
 
 (genesisTxIn, genesisValue) =
-  ( TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0)
+  ( mkTxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#0"
   , lovelaceToTxOutValue ShelleyBasedEraBabbage $ L.Coin 90000000000000
   )
 
