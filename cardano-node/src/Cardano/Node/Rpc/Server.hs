@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Rpc.Server
@@ -12,6 +13,7 @@ module Cardano.Node.Rpc.Server
 import           Cardano.Api
 
 import           Cardano.Node.Configuration.POM
+import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Rpc.Proto.Api.NodeMetadata ()
 
 import           Data.Monoid
@@ -25,6 +27,7 @@ import           Network.GRPC.Server.Protobuf
 import           Network.GRPC.Server.Run
 import           Network.GRPC.Server.StreamType
 import           Network.GRPC.Spec
+import           System.FilePath (takeDirectory, (</>))
 
 import           Proto.Cardano.Node.Rpc.Node
 import           Proto.Google.Protobuf.Empty
@@ -53,10 +56,12 @@ rungrpcServer cmdPc = do
             Left err -> error $ "Error in creating the NodeConfiguration: " <> err
             Right nc' -> return nc'
 
-    let _nodeSocketConfig = ncSocketConfig nc
+    SocketConfig{ncSocketPath=Last (Just (File n2cSocketPath))} <- pure $ ncSocketConfig nc
+    let socketDir = takeDirectory n2cSocketPath
         localNodeConnInfo = LocalNodeConnectInfo (CardanoModeParams (EpochSlots 21600)) Mainnet (File "dummy-socket-path")
         config = ServerConfig {
-          serverInsecure = Just (InsecureConfig Nothing defaultInsecurePort)
+          -- serverInsecure = Just (InsecureConfig Nothing defaultInsecurePort)
+          serverInsecure = Just (InsecureUnix $ socketDir </> "grpc.sock")
         , serverSecure   = Nothing
         }
     runServerWithHandlers def config $ fromMethods (methods localNodeConnInfo)
