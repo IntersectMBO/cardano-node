@@ -2,15 +2,14 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Rpc.Client
-  ( exampleCurrentEra
-
+  ( module Network.GRPC.Client
+  , module Network.GRPC.Client.StreamType.IO
+  , module Network.GRPC.Common.Protobuf
+  , module Data.ProtoLens.Field
   )
-  where
-import           Data.ProtoLens (defMessage)
-import           Data.ProtoLens.Field (field)
-import           Lens.Micro
+where
 
-import qualified Proto.Cardano.Node.Rpc.Node as ProtoGen
-
-exampleCurrentEra :: ProtoGen.CurrentEra
-exampleCurrentEra = defMessage  & field @"era" .~ ProtoGen.Byron
+import           Data.ProtoLens.Field
+import           Network.GRPC.Client
+import           Network.GRPC.Client.StreamType.IO
+import           Network.GRPC.Common.Protobuf
