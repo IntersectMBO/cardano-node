@@ -39,6 +39,7 @@ import           Hedgehog.Internal.Property (Group (..), failWith)
 import           System.IO (FilePath, IO)
 import           Text.Show (Show (..))
 import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
+import           Control.Exception (bracket)
 
 #ifdef UNIX
 
