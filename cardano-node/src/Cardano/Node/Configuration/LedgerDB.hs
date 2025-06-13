@@ -45,6 +45,8 @@ data LedgerDbSelectorFlag =
       (Maybe Gigabytes)
       -- ^ A map size can be specified, this is the maximum disk space the LMDB
       -- database can fill. If not provided, the default of 16GB will be used.
+      (Maybe Int)
+      -- ^ An override to the max number of readers.
   | V1InMemory V1.FlushFrequency
   | V2InMemory
   deriving (Eq, Show)
@@ -129,10 +131,11 @@ defaultLMDBPath = "mainnet/db/lmdb"
 selectorToArgs :: LedgerDbSelectorFlag -> Complete LedgerDbFlavorArgs IO
 selectorToArgs (V1InMemory ff)  = LedgerDbFlavorArgsV1 $ V1.V1Args ff V1.InMemoryBackingStoreArgs
 selectorToArgs V2InMemory      = LedgerDbFlavorArgsV2 $ V2.V2Args V2.InMemoryHandleArgs
-selectorToArgs (V1LMDB ff fp l) =
+selectorToArgs (V1LMDB ff fp l mxReaders) =
     LedgerDbFlavorArgsV1
   $ V1.V1Args ff
   $ V1.LMDBBackingStoreArgs
       (fromMaybe defaultLMDBPath fp)
-      (maybe id (\ll lim -> lim { lmdbMapSize = toBytes ll }) l defaultLMDBLimits)
+      (maybe id (\overrideMaxReaders lim -> lim { lmdbMaxReaders = overrideMaxReaders }) mxReaders
+       $ maybe id (\ll lim -> lim { lmdbMapSize = toBytes ll }) l defaultLMDBLimits)
       Dict
