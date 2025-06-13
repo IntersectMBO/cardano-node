@@ -1,0 +1,34 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | This module corresponds to &quot;Control.Monad.STM&quot; in &quot;stm&quot; package</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DataKinds             #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies    #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts      #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GADTs                 #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes            #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables   #-}</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- undecidable instances needed for 'WrappedSTM' instances of 'MonadThrow' and</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- 'MonadCatch' type classes.</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances  #-}</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Monad.Class.MonadSTM</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#MonadSTM"><span class="hs-identifier">MonadSTM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#STM"><span class="hs-identifier">STM</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#retry"><span class="hs-identifier">retry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#orElse"><span class="hs-identifier">orElse</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#check"><span class="hs-identifier">check</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#throwSTM"><span class="hs-identifier">throwSTM</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-comment">-- * non standard extensions</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- $non-standard-extensions</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#MonadLabelledSTM"><span class="hs-identifier">MonadLabelledSTM</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#MonadTraceSTM"><span class="hs-identifier">MonadTraceSTM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#TraceValue"><span class="hs-identifier">TraceValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#MonadInspectSTM"><span class="hs-identifier">MonadInspectSTM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html"><span class="hs-identifier">Control.Monad.Class.MonadSTM.Internal</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- $non-standard-extensions</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- The non standard extensions include `MonadLabelledSTM` and `MonadTraceSTM` /</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- `MonadInspectSTM`.  For `IO` these are all no-op, however they greatly</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- enhance [`IOSim`](https://hackage.haskell.org/package/io-sim) capabilities.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- They are not only useful for debugging concurrency issues, but also to write</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- testable properties.</span><span>
+</span><span id="line-34"></span></pre></body></html>
