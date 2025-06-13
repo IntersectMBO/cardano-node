@@ -182,6 +182,7 @@ library
                       , io-classes >= 1.5
                       , iohk-monitoring ^>= 0.2
                       , microlens
+                      , network-mux
                       , iproute
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg ^>= 0.2
