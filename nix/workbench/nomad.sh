@@ -31,8 +31,8 @@ usage_nomad() {
                      Location of the Agent's everything folder
     $(helpcmd \(server/client\) config-file-path         NAME)
                      Location of the Agent's config file (using only one)
-    $(helpcmd \(server/client\) configure                NAME HTTP-PORT RPC-PORT SERV-PORT)
-    $(helpcmd \(server/client\) port \(http\|rcp\|serv\) NAME)
+    $(helpcmd \(server/client\) configure                NAME ADDR HTTP-PORT RPC-PORT SERV-PORT)
+    $(helpcmd \(server/client\) port \(addr\|http\|rcp\|serv\) NAME)
                      Getter for the previously configured ports
     $(helpcmd \(server/client\) pid-filepath             NAME)
                      Location of the Agent's "running" flag
@@ -425,7 +425,7 @@ EOL
           local server_name=${1:?$usage}; shift
           local client_name=${1:?$usage}; shift
           # Create config files for the server and start it.
-          if ! wb_nomad server configure "${server_name}" 4646 4647 4648
+          if ! wb_nomad server configure "${server_name}" 127.0.0.1 4646 4647 4648
           then
             fatal "Failed to configure Nomad server \"${server_name}\""
           fi
@@ -437,7 +437,7 @@ EOL
           # WARNING: Actually the client is configured to connect to all the
           # running servers, so if there are no servers ready the Nomad
           # cluster state is uknown (at least to me with the actual config).
-          if ! wb_nomad client configure "${client_name}" 14646 14647 14648
+          if ! wb_nomad client configure "${client_name}" 127.0.0.1 14646 14647 14648 "loopback"
           then
             wb_nomad server stop "${server_name}" || true
             fatal "Failed to configure Nomad client \"${client_name}\""
@@ -496,9 +496,10 @@ EOL
         ;;
 ####### server -> configure )###################################################
         configure )
-          local usage="USAGE: wb nomad ${op} ${subop} SERVER-NAME HTTP-PORT RPC-PORT SERV-PORT"
+          local usage="USAGE: wb nomad ${op} ${subop} SERVER-NAME ADDR HTTP-PORT RPC-PORT SERV-PORT"
           local name=${1:?$usage}; shift
-          # Ports
+          # Address and ports
+          local addr=${1:?$usage}; shift
           local http_port=${1:?$usage}; shift
           local rpc_port=${1:?$usage}; shift
           local serv_port=${1:?$usage}; shift
@@ -516,28 +517,31 @@ EOL
             mkdir -p "${state_dir}"/config
             mkdir -p "${state_dir}"/data/server
             # Store the ports config
-            echo "{\"http\": ${http_port}, \"rpc\": ${rpc_port}, \"serv\": ${serv_port}}" > "${state_dir}"/ports.json
+            echo "{\"addr\": \"${addr}\", \"http\": ${http_port}, \"rpc\": ${rpc_port}, \"serv\": ${serv_port}}" > "${state_dir}"/ports.json
             # Configure
             nomad_create_server_config "${name}" \
-              "${http_port}" "${rpc_port}" "${serv_port}"
+              "${addr}" "${http_port}" "${rpc_port}" "${serv_port}"
           fi
         ;;
 ####### server -> port )########################################################
         port )
-          local usage="USAGE: wb nomad ${op} ${subop} (http|rcp|serv) SERVER-NAME"
+          local usage="USAGE: wb nomad ${op} ${subop} (addr|http|rcp|serv) SERVER-NAME"
           local port=${1:?$usage}; shift
           local name=${1:?$usage}; shift
           local state_dir=$(wb_nomad server state-dir-path "${name}")
           local ports_file="${state_dir}"/ports.json
           case "$port" in
+            addr )
+              jq -r .addr "${ports_file}"
+            ;;
             http )
-              jq .http "${ports_file}"
+              jq    .http "${ports_file}"
             ;;
             rpc )
-              jq .rpc "${ports_file}"
+              jq    .rpc "${ports_file}"
             ;;
             serv )
-              jq .serv "${ports_file}"
+              jq    .serv "${ports_file}"
             ;;
             * )
               false
@@ -602,16 +606,17 @@ EOL
           msg "$(green "Nomad server \"${name}\" started with PID ${pid_number}")"
           # Even if Nomad server was already running, try to connect to it!
           local i=0 patience=25
+          local addr=$(wb_nomad server port addr "${name}")
           local http_port=$(wb_nomad server port http "${name}")
           msg "$(blue Waiting) for the listening HTTP server (${patience}s) ..."
-          until curl -Isf 127.0.0.1:"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
+          until curl -Isf "${addr}":"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
             if test $i -ge ${patience}
             then echo
               # Not using `fatal` here, let the caller decide!
               msg "$(red "FATAL: Nomad server startup did not succeed")"
-              msg "$(yellow "port \"127.0.0.1:${http_port}\" not ready")"
+              msg "$(yellow "port \"${addr}:${http_port}\" not ready")"
               msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
               wb_nomad server stop "${name}" || true
@@ -702,12 +707,14 @@ EOL
         ;;
 ####### client -> configure )###################################################
         configure )
-          local usage="USAGE: wb nomad ${op} ${subop} CLIENT-NAME HTTP-PORT RPC-PORT SERV-PORT [GENESIS-DIR]"
+          local usage="USAGE: wb nomad ${op} ${subop} CLIENT-NAME ADDR HTTP-PORT RPC-PORT SERV-PORT [DATACENTER]"
           local name=${1:?$usage}; shift
-          # Ports
+          # Address and ports
+          local addr=${1:?$usage}; shift
           local http_port=${1:?$usage}; shift
           local rpc_port=${1:?$usage}; shift
           local serv_port=${1:?$usage}; shift
+          local datacenter=${1:-loopback}; shift
           # Checks
           # Assume the presence of the PID file means "running" because it
           # can represent an abnormal exit / uknown state!
@@ -724,28 +731,32 @@ EOL
             mkdir -p "${state_dir}"/config
             mkdir -p "${state_dir}"/data/{client,plugins,alloc}
             # Store the ports config
-            echo "{\"http\": ${http_port}, \"rpc\": ${rpc_port}, \"serv\": ${serv_port}}" > "${state_dir}"/ports.json
+            echo "{\"addr\": \"${addr}\", \"http\": ${http_port}, \"rpc\": ${rpc_port}, \"serv\": ${serv_port}}" > "${state_dir}"/ports.json
             # Create configuration file
             nomad_create_client_config "${name}" \
-              "${http_port}" "${rpc_port}" "${serv_port}"
+              "${addr}" "${http_port}" "${rpc_port}" "${serv_port}" \
+              "${datacenter}"
           fi
         ;;
 ####### client -> port )########################################################
         port )
-          local usage="USAGE: wb nomad ${op} ${subop} (http|rcp|serv) CLIENT-NAME"
+          local usage="USAGE: wb nomad ${op} ${subop} (addr|http|rcp|serv) CLIENT-NAME"
           local port=${1:?$usage}; shift
           local name=${1:?$usage}; shift
           local state_dir=$(wb_nomad client state-dir-path "${name}")
           local ports_file="${state_dir}"/ports.json
           case "$port" in
+            addr )
+              jq -r .addr "${ports_file}"
+            ;;
             http )
-              jq .http "${ports_file}"
+              jq    .http "${ports_file}"
             ;;
             rpc )
-              jq .rpc "${ports_file}"
+              jq    .rpc "${ports_file}"
             ;;
             serv )
-              jq .serv "${ports_file}"
+              jq    .serv "${ports_file}"
             ;;
             * )
               false
@@ -840,16 +851,17 @@ EOL
           msg "$(green "Nomad client \"${name}\" started with PID ${pid_number}")"
           # Even if Nomad server was already running, try to connect to it!
           local i=0 patience=25
+          local addr=$(wb_nomad client port addr "${name}")
           local http_port=$(wb_nomad client port http "${name}")
           msg "$(blue Waiting) for the listening HTTP server (${patience}s) ..."
-          until curl -Isf 127.0.0.1:"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
+          until curl -Isf "${addr}":"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
             if test $i -ge ${patience}
             then echo
               # Not using `fatal` here, let the caller decide!
               msg "$(red "FATAL: Nomad client startup did not succeed")"
-              msg "$(yellow "port \"127.0.0.1:${http_port}\" not ready")"
+              msg "$(yellow "port \"${addr}:${http_port}\" not ready")"
               msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
               wb_nomad client stop "${name}" || true
@@ -857,11 +869,31 @@ EOL
             fi
             echo -ne "\b\b\b"
           done >&2
-          # Now check that the server and client are connected and the
-          # client as eligible
+          # Grab the connection details of the first running server found.
+          # Clients configs are created to connect to all the running servers.
+          local nomadAddress=""
+          local nomad_servers_dir="$(wb_nomad dir-path server)"
+          for server_name in $(ls "${nomad_servers_dir}"); do
+            if wb_nomad server is-running "${server_name}"
+            then
+              local server_addr=$(wb_nomad server port addr "${server_name}")
+              local server_port=$(wb_nomad server port rpc  "${server_name}")
+              nomadAddress="-address=${server_addr}:${server_port}"
+              break
+            fi
+          done
+          # If no running server found and no NOMAD_ADDR is not set or empty.
+          if test "${nomadAddress}" != "" && (test -z "${NOMAD_ADDR+set}" || test -z "${NOMAD_ADDR}")
+          then
+            # Use the default
+            nomadAddress="-address=http://127.0.0.1:4646"
+          else
+            nomadAddress="-address=${NOMAD_ADDR}"
+          fi
+          # Now check server and client are connected and client is eligible.
           local i=0 patience=25
           msg "$(blue Waiting) until the Nomad server sees the client (${patience}s) ..."
-          until nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq -r '.[0].Status' | grep --quiet "^ready"
+          until nomad node status "${nomadAddress}" -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq -r '.[0].Status' | grep --quiet "^ready"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
             if test $i -ge ${patience}
@@ -879,18 +911,18 @@ EOL
           done >&2
           # TODO: List the known server addresses of the client node.
           # nomad node config -servers
-          local client_id=$(nomad node status -filter "\"workbench-nomad-client-cli1\" in Name" -json | jq -r '.[0].ID')
+          local client_id=$(nomad node status "${nomadAddress}" -filter "\"workbench-nomad-client-cli1\" in Name" -json | jq -r '.[0].ID')
           # TODO: Configure the node?
           # nomad node eligibility -enable "${client_id}"
           # nomad node drain -disable "${client_id}"
           # Look for "Drivers":{"exec":  {"Detected":true,"Healthy":true}}
-          if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Detected') = "true"
+          if ! test $(nomad node status "${nomadAddress}" -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Detected') = "true"
           then
             # Not using `fatal` here, let the caller decide!
             msg "$(red "FATAL: Task driver \"exec\" was not detected")"
             return 1
           fi
-          if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Healthy') = "true"
+          if ! test $(nomad node status "${nomadAddress}" -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Healthy') = "true"
           then
             # Not using `fatal` here, let the caller decide!
             msg "$(red "FATAL: Task driver \"exec\" is not healthy")"

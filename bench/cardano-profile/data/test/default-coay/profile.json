@@ -282,6 +282,7 @@
     "heap_limit": null,
     "shutdown_on_slot_synced": null,
     "shutdown_on_block_synced": null,
+    "ssd_directory": null,
     "tracing_backend": "trace-dispatcher",
     "tracer": true,
     "utxo_lmdb": false,
@@ -315,39 +316,7 @@
     "ekg": false,
     "withresources": false
   },
-  "cluster": {
-    "nomad": {
-      "namespace": "default",
-      "class": "",
-      "resources": {
-        "producer": {
-          "cores": 2,
-          "memory": 15000,
-          "memory_max": 16000
-        },
-        "explorer": {
-          "cores": 2,
-          "memory": 15000,
-          "memory_max": 16000
-        }
-      },
-      "host_volumes": null,
-      "fetch_logs_ssh": false
-    },
-    "aws": {
-      "instance_type": {
-        "producer": "c5.2xlarge",
-        "explorer": "m5.4xlarge"
-      },
-      "use_public_routing": false
-    },
-    "minimun_storage": {
-      "producer": 12582912,
-      "explorer": 14155776
-    },
-    "keep_running": false,
-    "ssd_directory": null
-  },
+  "cluster": null,
   "name": "default-coay",
   "desc": "Default, as per nix/workbench/profile/prof0-defaults.jq",
   "overlay": {},
