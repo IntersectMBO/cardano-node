@@ -33,6 +33,7 @@ LastKnownBlockVersion-Major: 3
 LastKnownBlockVersion-Minor: 0
 LastKnownBlockVersion-Alt: 0
 MaxKnownMajorProtocolVersion: 2
+MinBigLedgerPeersForTrustedState: 5
 
 ##### Network Configuration #####
 
@@ -152,6 +153,7 @@ hasEKG: 12788
 #     - "127.0.0.1"
 #     - "2997"
 
+
 # For the Katip logging backend we must set up outputs (called scribes)
 # The available types of scribe are:
 #   FileSK for files
@@ -179,6 +181,16 @@ rotation:
   rpKeepFilesNum:  10
   rpMaxAgeHours:   24
 
+##### Peer parameters #####
+
+SyncTargetNumberOfActiveBigLedgerPeers: 30
+SyncTargetNumberOfActivePeers: 0
+SyncTargetNumberOfEstablishedBigLedgerPeers: 40
+SyncTargetNumberOfKnownBigLedgerPeers: 100
+TargetNumberOfActivePeers: 20
+TargetNumberOfEstablishedPeers: 30
+TargetNumberOfKnownPeers: 150
+TargetNumberOfRootPeers: 60
 
 ##### Coarse grained logging control #####
 
