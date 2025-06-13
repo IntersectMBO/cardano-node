@@ -91,8 +91,14 @@ library
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
                         Cardano.Node.Rpc.Client
-                        Cardano.Node.Rpc.Proto.Api.NodeMetadata
+                        Cardano.Node.Rpc.Proto.Api.Node
+                        Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query
                         Cardano.Node.Rpc.Server
+                        Cardano.Node.Rpc.Server.Config
+                        Cardano.Node.Rpc.Server.Internal.Env
+                        Cardano.Node.Rpc.Server.Internal.Error
+                        Cardano.Node.Rpc.Server.Internal.Monad
+                        Cardano.Node.Rpc.Server.Internal.UtxoRpc.Query
                         Cardano.Node.Run
                         Cardano.Node.Startup
                         Cardano.Node.STM
@@ -231,6 +237,7 @@ library
                       , psqueues
                       , random
                       , resource-registry
+                      , rio
                       , safe-exceptions
                       , scientific
                       , si-timers

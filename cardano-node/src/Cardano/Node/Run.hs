@@ -197,7 +197,7 @@ runNode cmdPc = do
           checkVRFFilePermissions stdoutTracer (File vrfFp)
       _ -> pure ()
 
-    consensusProtocol <-
+    consensusProtocol@(SomeConsensusProtocol _ runP) <-
       runThrowExceptT $
         mkConsensusProtocol
          (ncProtocolConfig nc)
@@ -205,9 +205,11 @@ runNode cmdPc = do
          -- don't need these.
          (Just $ ncProtocolFiles nc)
 
+    let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
+        networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
     race_
       (handleNodeWithTracers cmdPc nc consensusProtocol)
-      (rungrpcServer cmdPc)
+      (runRpcServer cmdPc networkMagic)
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
