@@ -23,7 +23,6 @@ import           System.Directory (removeFile)
 
 import           Cardano.Api
 import           Cardano.Node.Run (checkVRFFilePermissions)
-import           Control.Exception (bracket)
 import           Control.Monad (Monad (..))
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
@@ -40,6 +39,7 @@ import           Hedgehog.Internal.Property (Group (..), failWith)
 import           System.IO (FilePath, IO)
 import           Text.Show (Show (..))
 import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
+import           Control.Exception (bracket)
 
 #ifdef UNIX
 
@@ -47,7 +47,6 @@ import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
-import           Control.Exception (bracket)
 import           Hedgehog
 import           Hedgehog.Extras
 import qualified Hedgehog.Gen as Gen

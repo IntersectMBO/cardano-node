@@ -63,6 +63,7 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     , testnetNodes
     , wallets=wallet0:_
     } <- cardanoTestnetDefault options def conf
+  H.failure
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
@@ -79,6 +80,8 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     , "--cardano-mode"
     , "--out-file", work </> "pparams.json"
     ]
+
+  H.failure
 
   (txin1, TxOut _addr outValue _datum _refScript) <- H.nothingFailM $ findLargestUtxoWithAddress epochStateView sbe (paymentKeyInfoAddr wallet0)
   let (L.Coin initialAmount) = txOutValueToLovelace outValue
