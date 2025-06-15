@@ -181,7 +181,7 @@ library
                       , filepath
                       , http-types
                       , mime-mail
-                      , network-mux >= 0.5
+                      , network-mux >= 0.8
                       , optparse-applicative
                       , ouroboros-network ^>= 0.21.2
                       , ouroboros-network-api ^>= 0.14
