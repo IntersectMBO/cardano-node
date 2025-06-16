@@ -51,7 +51,7 @@ import qualified Hedgehog.Extras.Test.Golden as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 -- | Execute me with:
--- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/transaction/"'@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/SubmitApi.transaction/"'@
 hprop_transaction :: Property
 hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
