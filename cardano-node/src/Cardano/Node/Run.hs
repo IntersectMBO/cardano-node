@@ -518,8 +518,9 @@ handleSimpleNode blockType runP tracers nc onKernel = do
                   targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
                 },
               Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
-              Cardano.Diffusion.tracerChurnMode         = nullTracer
+              Cardano.Diffusion.tracerChurnMode         = churnModeTracer tracers
             }
+
           diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
           diffusionConfiguration =
             mkDiffusionConfiguration
@@ -528,11 +529,11 @@ handleSimpleNode blockType runP tracers nc onKernel = do
               localSocketOrPath
               publicPeerSelectionVar
               nForkPolicy cForkPolicy
-              nc
               (readTVar localRootsVar)
               (readTVar publicRootsVar)
               (readTVar useLedgerVar)
               (readTVar ledgerPeerSnapshotVar)
+              nc
       in
       Node.run
         nodeArgs {
@@ -857,25 +858,25 @@ mkDiffusionConfiguration
   -> StrictTVar IO (PublicPeerSelectionState RemoteAddress)
   -> ForkPolicy RemoteAddress
   -> ForkPolicy LocalAddress
-  -> NodeConfiguration
   -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerPeers
   -> STM IO (Maybe LedgerPeerSnapshot)
+  -> NodeConfiguration
   -> Cardano.Diffusion.CardanoConfiguration IO
 mkDiffusionConfiguration
   publicIPv4SocketOrAddr
   publicIPv6SocketOrAddr
   localSocketOrPath
-  publicPeerSelectionVar
-  nForkPolicy cForkPolicy
-  nc
+  dcPublicPeerSelectionVar
+  dcMuxForkPolicy dcLocalMuxForkPolicy
   dcReadLocalRootPeers
   dcReadPublicRootPeers
   dcReadUseLedgerPeers
   dcReadLedgerPeerSnapshot
+  nc
   =
   Diffusion.Configuration
     { Diffusion.dcIPv4Address  =
@@ -889,14 +890,14 @@ mkDiffusionConfiguration
           Just (SocketInfo addr)     -> Just (Right addr)
           Nothing                    -> Nothing
     , Diffusion.dcLocalAddress =
-        case localSocketOrPath of  -- TODO allow expressing the Nothing case in the config
+        case localSocketOrPath of
           Just (ActualSocket localSocket) -> Just (Left  localSocket)
           Just (SocketInfo localAddr)     -> Just (Right localAddr)
           Nothing                         -> Nothing
     , Diffusion.dcAcceptedConnectionsLimit = ncAcceptedConnectionsLimit nc
     , Diffusion.dcMode                     = ncDiffusionMode nc
-    , Diffusion.dcPublicPeerSelectionVar   = publicPeerSelectionVar
-    , Diffusion.dcPeerSelectionTargets     = peerSelectionTargets
+    , Diffusion.dcPublicPeerSelectionVar
+    , Diffusion.dcPeerSelectionTargets
     , Diffusion.dcReadLocalRootPeers
     , Diffusion.dcReadPublicRootPeers
     , Diffusion.dcReadLedgerPeerSnapshot
@@ -906,12 +907,12 @@ mkDiffusionConfiguration
     , Diffusion.dcTimeWaitTimeout          = ncTimeWaitTimeout nc
     , Diffusion.dcDeadlineChurnInterval    = Configuration.defaultDeadlineChurnInterval
     , Diffusion.dcBulkChurnInterval        = Configuration.defaultBulkChurnInterval
-    , Diffusion.dcMuxForkPolicy            = nForkPolicy
-    , Diffusion.dcLocalMuxForkPolicy       = cForkPolicy
+    , Diffusion.dcMuxForkPolicy
+    , Diffusion.dcLocalMuxForkPolicy
     , Diffusion.dcEgressPollInterval       = ncEgressPollInterval nc
     }
   where
-    peerSelectionTargets = PeerSelectionTargets {
+    dcPeerSelectionTargets = PeerSelectionTargets {
       targetNumberOfRootPeers                 = ncDeadlineTargetOfRootPeers nc,
       targetNumberOfKnownPeers                = ncDeadlineTargetOfKnownPeers nc,
       targetNumberOfEstablishedPeers          = ncDeadlineTargetOfEstablishedPeers nc,
