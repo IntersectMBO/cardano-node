@@ -57,10 +57,10 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNodes =
-          AutomaticNodeOptions [ SpoNodeOptions []
-                               , SpoNodeOptions []
-                               , SpoNodeOptions []
-                               ]
+          [ SpoNodeOptions []
+          , SpoNodeOptions []
+          , SpoNodeOptions []
+          ]
         }
       shelleyOptions = def { genesisEpochLength = 100 }
 
@@ -70,7 +70,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

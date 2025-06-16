@@ -71,7 +71,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
-    } <- cardanoTestnetDefault options def conf
+    } <- createAndRunTestnet options def conf
 
   poolNode1 <- H.headM testnetNodes
 

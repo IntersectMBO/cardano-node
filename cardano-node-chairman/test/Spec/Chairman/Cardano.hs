@@ -4,7 +4,7 @@
 
 module Spec.Chairman.Cardano where
 
-import           Cardano.Testnet (cardanoTestnetDefault, mkConf, testnetNodes)
+import           Cardano.Testnet (createAndRunTestnet, mkConf, testnetNodes)
 
 import           Data.Default.Class
 
@@ -19,6 +19,6 @@ hprop_chairman :: H.Property
 hprop_chairman = integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> H.runWithDefaultWatchdog_ $ do
   conf <- mkConf tempAbsPath'
 
-  allNodes <- testnetNodes <$> cardanoTestnetDefault def def conf
+  allNodes <- testnetNodes <$> createAndRunTestnet def def conf
 
   chairmanOver 120 50 conf allNodes

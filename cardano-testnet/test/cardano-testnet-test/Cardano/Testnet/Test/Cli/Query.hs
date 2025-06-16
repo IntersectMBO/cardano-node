@@ -102,7 +102,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     , configurationFile
     , wallets=wallet0:wallet1:_
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
 
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 

@@ -199,7 +199,6 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
       slotLen = 0.01
   let fastTestnetOptions = def
         { cardanoNodes =
-          AutomaticNodeOptions
             [ SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
             ]
         }
@@ -207,7 +206,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
         { genesisEpochLength = 300
         , genesisSlotLength = slotLen
         }
-  testnetRuntime <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+  testnetRuntime <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
   let allNodes = testnetNodes testnetRuntime
   H.note_ $ "All nodes: " <>  show (map nodeName allNodes)
 
@@ -247,7 +246,7 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
   let fastTestnetOptions = def
       shelleyOptions = def { genesisEpochLength = 300 }
   testnetRuntime
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
   TestnetNode{nodeProcessHandle, nodeStdout, nodeStderr} <- H.headM $ testnetNodes testnetRuntime
 
   -- send SIGINT

@@ -39,7 +39,7 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tem
     { testnetMagic
     , testnetNodes
     , configurationFile
-    } <- cardanoTestnetDefault def def conf
+    } <- createAndRunTestnet def def conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1

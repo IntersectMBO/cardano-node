@@ -92,7 +92,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
 
   node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
   poolSprocket1 <- H.noteShow $ nodeSprocket node
