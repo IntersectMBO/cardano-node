@@ -511,7 +511,8 @@ instance FromJSON PartialNodeConfiguration where
                  flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
                  mapSize :: Maybe Gigabytes <- o .:? "MapSize"
                  lmdbPath :: Maybe FilePath <- o .:? "LiveTablesPath"
-                 return $ V1LMDB flush lmdbPath mapSize
+                 mxReaders :: Maybe Int <- o .:? "MaxReaders"
+                 return $ V1LMDB flush lmdbPath mapSize mxReaders
                "V2InMemory" -> return V2InMemory
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
              pure $ Just $ LedgerDbConfiguration ldbSnapNum ldbSnapInterval qsize selector deprecatedOpts
