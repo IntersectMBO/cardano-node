@@ -24,6 +24,8 @@ import           Hedgehog.Extras.Test.Golden (diffVsGoldenFile)
 import qualified Hedgehog.Extras.Test.Process as H
 import Testnet.Components.Configuration (eraToString)
 
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_DefaultConfig/"'@
 goldenDefaultConfigYaml :: Property
 goldenDefaultConfigYaml = propertyOnce $ do
   base <- H.getProjectBase

@@ -18,6 +18,7 @@ module Testnet.Start.Cardano
   , TestnetRuntime (..)
 
   , cardanoTestnet
+  , createAndRunTestnet
   , createTestnetEnv
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
@@ -27,6 +28,8 @@ module Testnet.Start.Cardano
 
 import           Cardano.Api
 
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Cardano.Node.Configuration.Topology
 
 import           Prelude hiding (lines)
@@ -77,10 +80,14 @@ createTestnetEnv :: ()
   => HasCallStack
   => CardanoTestnetOptions
   -> GenesisOptions
+  -> UserProvidedData ShelleyGenesis
+  -> UserProvidedData AlonzoGenesis
+  -> UserProvidedData ConwayGenesis
   -> Conf
   -> H.Integration ()
 createTestnetEnv
   testnetOptions@CardanoTestnetOptions{cardanoNodeEra=asbe} genesisOptions
+  mShelley mAlonzo mConway
   Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
 
   testMinimumConfigurationRequirements testnetOptions
@@ -88,7 +95,7 @@ createTestnetEnv
   AnyShelleyBasedEra sbe <- pure asbe
   _ <- createSPOGenesisAndFiles
     testnetOptions genesisOptions
-    NoUserProvidedData NoUserProvidedData NoUserProvidedData
+    mShelley mAlonzo mConway
     (TmpAbsolutePath tmpAbsPath)
 
   configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
@@ -314,6 +321,20 @@ cardanoTestnet
     makePathsAbsolute = omap (tmpAbsPath </>)
     mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
     mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
+
+-- | A convenience wrapper around `createTestnetEnv` and `cardanoTestnet`
+createAndRunTestnet :: ()
+  => HasCallStack
+  => CardanoTestnetOptions -- ^ The options to use
+  -> GenesisOptions
+  -> Conf -- ^ Path to the test sandbox
+  -> H.Integration TestnetRuntime
+createAndRunTestnet testnetOptions genesisOptions conf = do
+  createTestnetEnv
+    testnetOptions genesisOptions
+    NoUserProvidedData NoUserProvidedData NoUserProvidedData
+    conf
+  cardanoTestnet testnetOptions genesisOptions conf
 
 -- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
 retryOnAddressInUseError

@@ -65,8 +65,10 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvGenesisOptions=genesisOptions
   , createEnvOutputDir=outputDir
   } =
-    void $ H.check $ testnetRoutine (UserProvidedEnv outputDir) $ createTestnetEnv
-      testnetOptions genesisOptions
+    void $ H.check $ testnetRoutine (UserProvidedEnv outputDir) $
+      createTestnetEnv
+        testnetOptions genesisOptions
+        NoUserProvidedData NoUserProvidedData NoUserProvidedData
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
 runCardanoOptions CardanoTestnetCliOptions
@@ -78,7 +80,10 @@ runCardanoOptions CardanoTestnetCliOptions
       NoUserProvidedEnv ->
         -- Create the sandbox, then run cardano-testnet
         runTestnet cardanoOutputDir $ \conf -> do
-          createTestnetEnv testnetOptions genesisOptions conf
+          createTestnetEnv
+            testnetOptions genesisOptions
+            NoUserProvidedData NoUserProvidedData NoUserProvidedData
+            conf
           cardanoTestnet testnetOptions genesisOptions conf
       UserProvidedEnv nodeEnvPath ->
         -- Run cardano-testnet in the sandbox provided by the user

@@ -106,17 +106,17 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   let conwayGenesisWithCommittee = defaultConwayGenesis { L.cgCommittee = committee }
 
+  createTestnetEnv
+    fastTestnetOptions genesisOptions
+    NoUserProvidedData NoUserProvidedData (UserProvidedData conwayGenesisWithCommittee)
+    conf
+
   TestnetRuntime
     { testnetMagic
     , testnetNodes
     , wallets=wallet0:_wallet1:_
     , configurationFile
-    } <- cardanoTestnet
-           fastTestnetOptions
-           genesisOptions
-           NoUserProvidedData NoUserProvidedData
-           (UserProvidedData conwayGenesisWithCommittee)
-           conf
+    } <- cardanoTestnet fastTestnetOptions genesisOptions conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1

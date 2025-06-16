@@ -87,7 +87,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -295,11 +295,11 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   pure (governanceActionTxId, governanceActionIndex)
 
 -- A pair of a vote string (i.e: "yes", "no", or "abstain") and the number of
--- a default DRep (from the ones created by 'cardanoTestnetDefault')
+-- a default DRep (from the ones created by 'createAndRunTestnet')
 type DefaultDRepVote = (String, Int)
 
 -- | Create and issue votes for (or against) a government proposal with default
--- Delegate Representative (DReps created by 'cardanoTestnetDefault') using @cardano-cli@.
+-- Delegate Representative (DReps created by 'createAndRunTestnet') using @cardano-cli@.
 voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
