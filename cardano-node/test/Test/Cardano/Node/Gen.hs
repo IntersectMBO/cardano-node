@@ -154,12 +154,14 @@ genNodeSetup =
     <*> Gen.list (Range.linear 0 6) genRootConfig
     <*> genUseLedgerPeers
 
+-- Generates only fully qualified domain names.
+--
 genRelayAddress :: Gen RelayAccessPoint
 genRelayAddress =
   Gen.choice
-    [ RelayAccessDomain <$> Gen.element cooking
+    [ RelayAccessDomain <$> ((<> ".") <$> Gen.element cooking)
                         <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
-    , RelayAccessSRVDomain <$> Gen.element cooking
+    , RelayAccessSRVDomain . (<> ".") <$> Gen.element cooking
     , RelayAccessAddress
         <$> Gen.choice
               [ IP.IPv4 . unNodeHostIPv4Address <$> genNodeHostIPv4Address
