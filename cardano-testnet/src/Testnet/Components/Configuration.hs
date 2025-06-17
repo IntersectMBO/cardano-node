@@ -17,6 +17,7 @@ module Testnet.Components.Configuration
   , getShelleyGenesisHash
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
+  , startTimeOffsetSeconds
 
   , anyEraToString
   , eraToString
