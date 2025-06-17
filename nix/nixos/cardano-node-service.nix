@@ -67,17 +67,24 @@ let
     let baseConfig =
           recursiveUpdate
             (cfg.nodeConfig
-             // (mapAttrs' (era: epoch:
-               nameValuePair "Test${era}HardForkAtEpoch" epoch
-             ) cfg.forceHardForks)
-            // (optionalAttrs cfg.useNewTopology {
-              EnableP2P = true;
-              TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
-              TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
-              TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
-              TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-              MaxConcurrencyBulkSync = 2;
-            })) cfg.extraNodeConfig;
+              // (mapAttrs' (era: epoch:
+                nameValuePair "Test${era}HardForkAtEpoch" epoch
+              ) cfg.forceHardForks)
+              // (optionalAttrs cfg.useNewTopology (
+                {
+                  EnableP2P = true;
+                  MaxConcurrencyBulkSync = 2;
+                } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
+                  TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+                } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
+                  TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+                } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
+                  TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+                } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
+                  TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+                })
+              )
+            ) cfg.extraNodeConfig;
         baseInstanceConfig =
           i:
           ( if !cfg.useLegacyTracing
@@ -611,34 +618,38 @@ in {
       };
 
       targetNumberOfRootPeers = mkOption {
-        type = types.int;
-        default = cfg.nodeConfig.TargetNumberOfRootPeers or 100;
-        description = "Limits the maximum number of root peers the node will know about";
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Limits the maximum number of root peers the node will know about.
+          The default value of null will use the Ouroboros-network default value.
+        '';
       };
 
       targetNumberOfKnownPeers = mkOption {
-        type = types.int;
-        default = cfg.nodeConfig.TargetNumberOfKnownPeers or cfg.targetNumberOfRootPeers;
+        type = types.nullOr types.int;
+        default = null;
         description = ''
           Target number for known peers (root peers + peers known through gossip).
-          Default to targetNumberOfRootPeers.
+          The default value of null will use the Ouroboros-network default value.
         '';
       };
 
       targetNumberOfEstablishedPeers = mkOption {
-        type = types.int;
-        default = cfg.nodeConfig.TargetNumberOfEstablishedPeers
-          or (cfg.targetNumberOfKnownPeers / 2);
-        description = ''Number of peers the node will be connected to, but not necessarily following their chain.
-          Default to half of targetNumberOfKnownPeers.
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Number of peers the node will be connected to, but not necessarily following their chain.
+          The default value of null will use the Ouroboros-network default value.
         '';
       };
 
       targetNumberOfActivePeers = mkOption {
-        type = types.int;
-        default = cfg.nodeConfig.TargetNumberOfActivePeers or (2 * cfg.targetNumberOfEstablishedPeers / 5);
-        description = ''Number of peers your node is actively downloading headers and blocks from.
-          Default to 2/5 of targetNumberOfEstablishedPeers.
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Number of peers your node is actively downloading headers and blocks from.
+          The default value of null will use the Ouroboros-network default value.
         '';
       };
 
