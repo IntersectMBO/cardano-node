@@ -171,3 +171,4 @@ instance Inject (Rpc.Proto UtxoRpc.ExUnits) L.ExUnits where
       { L.exUnitsMem = r ^. #memory ^. to fromIntegral
       , L.exUnitsSteps = r ^. #steps ^. to fromIntegral
       }
+
