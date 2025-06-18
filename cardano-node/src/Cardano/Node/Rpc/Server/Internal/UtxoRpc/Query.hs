@@ -11,22 +11,29 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
+{- HLINT ignore "Redundant ^." -}
+
 module Cardano.Node.Rpc.Server.Internal.UtxoRpc.Query
-  (readChainConfigMethod
+  ( readChainConfigMethod
   , readDataMethod
   , readParamsMethod
   , readTxMethod
   , readUtxosMethod
   , searchUtxosMethod
-  ) where
-
+  )
+where
 
 import           Cardano.Api
 import           Cardano.Api.Consensus
 import           Cardano.Api.Internal.Block (Hash (..))
 import           Cardano.Api.Internal.IPC (AcquiringFailure)
+import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Binary.Version as L
+import qualified Cardano.Ledger.Conway.Core as L
+import qualified Cardano.Ledger.Conway.PParams as L
+import qualified Cardano.Ledger.Plutus as L
 import qualified Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import           Cardano.Node.Rpc.Server.Internal.Error
 import           Cardano.Node.Rpc.Server.Internal.Monad
@@ -59,16 +66,21 @@ readParamsMethod req = do
           ChainPointAtGenesis -> (0, mempty) -- TODO figure out the genesis hash and slot here
           ChainPoint (SlotNo slot) (HeaderHash hash) -> (slot, SBS.fromShort hash)
 
-  let cpub = babbageEraOnwardsConstraints eon $ pparams ^. L.ppCoinsPerUTxOByteL
-      pparamsMsg = defMessage & #coinsPerUtxoByte .~ fromIntegral (L.unCoinPerByte cpub)
-      chainPointMsg =
+  let chainPointMsg =
         defMessage
           & #slot .~ slotNo
           & #hash .~ blockHash
+      pparamsMsg =
+        babbageEraOnwardsConstraints eon $
+          defMessage
+            & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL ^. to L.unCoinPerByte ^. to fromIntegral
+            & #maxTxSize .~ pparams ^. L.ppMaxTxSizeL ^. to fromIntegral
+            & #minFeeCoefficient .~ pparams ^. L.ppMinFeeBL ^. to fromIntegral
+            & #minFeeConstant .~ pparams ^. L.ppMinFeeAL ^. to fromIntegral
   pure $
     defMessage
-      & #values .~ (defMessage & #cardano .~ pparamsMsg)
       & #ledgerTip .~ chainPointMsg
+      & #values .~ (defMessage & #cardano .~ pparamsMsg)
 
 readChainConfigMethod
   :: MonadRpc e m => Proto UtxoRpc.ReadChainConfigRequest -> m (Proto UtxoRpc.ReadChainConfigResponse)
@@ -85,7 +97,6 @@ readDataMethod = undefined
 
 searchUtxosMethod :: MonadRpc e m => Proto UtxoRpc.SearchUtxosRequest -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod = undefined
-
 
 -- orphans to upstream
 instance Error QueryConvenienceError where
