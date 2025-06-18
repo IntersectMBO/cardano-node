@@ -93,7 +93,7 @@ data Profile = Profile
   , workloads :: [Workload]
 
   , tracer :: Tracer
-  , cluster :: Cluster
+  , cluster :: Maybe Cluster
   , analysis :: Analysis
   , derived :: Derived
   , cli_args :: CliArgs
@@ -392,6 +392,7 @@ instance Aeson.FromJSON Chunks where
 data Node = Node
   { 
     utxo_lmdb :: Bool
+  , ssd_directory :: Maybe String
 
   -- TODO: Move up "EnableP2P". A new level only for this?
   , verbatim :: NodeVerbatim
@@ -414,6 +415,7 @@ instance Aeson.ToJSON Node where
   toJSON n =
     Aeson.object
       [ "utxo_lmdb"                Aeson..= utxo_lmdb n
+      , "ssd_directory"            Aeson..= ssd_directory n
       , "verbatim"                 Aeson..= verbatim n
       -- TODO: Rename in workbench/bash to "trace_forwarding".
       , "tracer"                   Aeson..= trace_forwarding n
@@ -428,15 +430,16 @@ instance Aeson.FromJSON Node where
   parseJSON =
     Aeson.withObject "Node" $ \o -> do
       Node
-        <$> o Aeson..: "utxo_lmdb"
-        <*> o Aeson..: "verbatim"
+        <$> o Aeson..:  "utxo_lmdb"
+        <*> o Aeson..:? "ssd_directory"
+        <*> o Aeson..:  "verbatim"
         -- TODO: Rename in workbench/bash to "trace_forwarding".
-        <*> o Aeson..: "tracer"
-        <*> o Aeson..: "tracing_backend"
-        <*> o Aeson..: "rts_flags_override"
-        <*> o Aeson..: "heap_limit"
-        <*> o Aeson..: "shutdown_on_slot_synced"
-        <*> o Aeson..: "shutdown_on_block_synced"
+        <*> o Aeson..:  "tracer"
+        <*> o Aeson..:  "tracing_backend"
+        <*> o Aeson..:  "rts_flags_override"
+        <*> o Aeson..:  "heap_limit"
+        <*> o Aeson..:  "shutdown_on_slot_synced"
+        <*> o Aeson..:  "shutdown_on_block_synced"
 
 -- Properties passed directly to the node(s) "config.json" file.
 newtype NodeVerbatim = NodeVerbatim
@@ -610,7 +613,6 @@ data Cluster = Cluster
   { nomad :: ClusterNomad
   , aws :: ClusterAWS
   , minimun_storage :: Maybe (ByNodeType Int)
-  , ssd_directory :: Maybe String
   , keep_running :: Bool
   }
   deriving (Eq, Show, Generic)
@@ -625,7 +627,7 @@ data ClusterNomad = ClusterNomad
   { namespace :: String
   , nomad_class :: String
   , resources :: ByNodeType Resources
-  , host_volumes :: Maybe [HostVolume]
+  , host_volumes :: Maybe (ByNodeType [HostVolume])
   , fetch_logs_ssh :: Bool
   }
   deriving (Eq, Show, Generic)
@@ -650,19 +652,6 @@ instance Aeson.FromJSON ClusterNomad where
         <*> o Aeson..: "host_volumes"
         <*> o Aeson..: "fetch_logs_ssh"
 
-data HostVolume = HostVolume
-  { destination :: String
-  , read_only :: Bool
-  , source :: String
-  }
-  deriving (Eq, Show, Generic)
-
-instance Aeson.ToJSON HostVolume
-
-instance Aeson.FromJSON HostVolume where
-  parseJSON = Aeson.genericParseJSON
-    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
-
 data ClusterAWS = ClusterAWS
   { instance_type :: ByNodeType String
   , use_public_routing :: Bool
@@ -685,6 +674,7 @@ instance Aeson.ToJSON a => Aeson.ToJSON (ByNodeType a)
 
 instance Aeson.FromJSON a => Aeson.FromJSON (ByNodeType a)
 
+-- These matches Nomad "resources" inside each Job Task.
 data Resources = Resources
   { cores :: Integer
   , memory :: Integer
@@ -695,6 +685,27 @@ data Resources = Resources
 instance Aeson.ToJSON Resources
 
 instance Aeson.FromJSON Resources where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
+
+-- The is used in the Nomad Job to define "volume" at the Group level and
+-- "volume_mount" at the Task level.
+data HostVolume = HostVolume
+  { -- Used at the Task level to create the "volume_mount" property.
+    -- The destination is where it'll appear inside the Task's isolated chroot.
+    destination :: String
+    -- How it should be mounted inside the Task's isolated chroot.
+    -- Independent of how it's defined in the Nomad Client config.
+  , read_only :: Bool
+  -- Used at the Group level to create the "volume" property.
+  -- This name matches the Nomad Client config (client.host_volume.NAME).
+  , source :: String
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON HostVolume
+
+instance Aeson.FromJSON HostVolume where
   parseJSON = Aeson.genericParseJSON
     (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
