@@ -28,8 +28,13 @@ common project-config
                         -Wredundant-constraints
                         -Wunused-packages
 
+common maybe-unix
+  if !os(windows)
+    build-depends:      unix
+
 library
-  import:               project-config
+  import:               maybe-unix
+                      , project-config
 
   build-depends:        aeson
                       , aeson-pretty
@@ -101,6 +106,7 @@ library
                         Testnet.Defaults
                         Testnet.EpochStateProcessing
                         Testnet.Filepath
+                        Testnet.Handlers
                         Testnet.Ping
                         Testnet.Process.Cli.DRep
                         Testnet.Process.Cli.Keys
