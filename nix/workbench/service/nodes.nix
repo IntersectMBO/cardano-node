@@ -54,8 +54,8 @@ let
        else throw "configHardforksIntoEra:  unknown era '${era}'";
 
   liveTablesPath = i: 
-    if (profile.cluster ? "ssd_directory" && profile.cluster.ssd_directory != null)
-    then "${profile.cluster.ssd_directory}/lmdb-node-${toString i}"
+    if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
+    then "${profile.node.ssd_directory}/lmdb-node-${toString i}"
     else null;
 
   ##
@@ -73,8 +73,9 @@ let
       topology       = "topology.json";
       nodeConfigFile = "config.json";
 
-      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory
-      withUtxoHdLmdb   = profile.node.utxo_lmdb;
+      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory;
+      # non-block producers (like the explorer node) keep using the in-memory backend
+      withUtxoHdLmdb   = profile.node.utxo_lmdb && isProducer;
       lmdbDatabasePath = liveTablesPath i;
 
       ## Combine:
@@ -118,7 +119,7 @@ let
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
-                } // optionalAttrs profile.node.utxo_lmdb
+                } // optionalAttrs (profile.node.utxo_lmdb && isProducer)
                 {
                   LedgerDB = {
                     Backend = "V1LMDB";
@@ -262,9 +263,9 @@ let
       valency =
         let
           topo = topology.value;
-          val  = if hasAttr "localRoots" topo
+          val  = if hasAttr "localRoots" topo && __length topo.localRoots > 0
                   then let lr = head topo.localRoots; in lr.valency
-                  else length topo.Producers;
+                  else length (topo.Producers or []);
         in val;
 
     in {
