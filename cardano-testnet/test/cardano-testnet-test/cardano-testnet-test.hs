@@ -120,7 +120,7 @@ tests = do
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
         ]
     , T.testGroup "RPC"
-        [ ignoreOnWindows "RPC Query" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query
+        [ ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
         ]
     ]
 

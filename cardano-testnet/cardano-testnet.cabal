@@ -237,6 +237,7 @@ test-suite cardano-testnet-test
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib}
                       , cardano-ledger-api
                       , cardano-crypto-class
+                      , cardano-ledger-binary
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley

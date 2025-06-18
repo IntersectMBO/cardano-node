@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLabels #-}
@@ -8,8 +10,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{- HLINT ignore "Redundant ^." -}
+
 module Cardano.Testnet.Test.Rpc.Query
-  ( hprop_rpc_query
+  ( hprop_rpc_query_pparams
   )
 where
 
@@ -22,6 +26,10 @@ import qualified Cardano.Api.Tx.UTxO as Utxo
 
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Binary.Version as L
+import qualified Cardano.Ledger.Conway.Core as L
+import qualified Cardano.Ledger.Conway.PParams as L
+import qualified Cardano.Ledger.Plutus as L
 import qualified Cardano.Node.Rpc.Client as Rpc
 import qualified Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import           Cardano.Testnet
@@ -53,8 +61,8 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
-hprop_rpc_query :: Property
-hprop_rpc_query = integrationRetryWorkspace 2 "rpc-query" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_rpc_query_pparams :: Property
+hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
 
@@ -79,23 +87,30 @@ hprop_rpc_query = integrationRetryWorkspace 2 "rpc-query" $ \tempAbsBasePath' ->
   H.noteShowPretty_ pparams
   rpcSocket <- H.note $ takeDirectory (unFile $ nodeSocketPath node0) </> "rpc.sock"
 
-  -- \* get tip
+  ----------
+  -- Get tip
+  ----------
   QueryTipLocalStateOutput{localStateChainTip} <-
     H.noteShowM $ execCliStdoutToJson execConfig [eraName, "query", "tip"]
   (slot, blockHash) <- case localStateChainTip of
     ChainTipAtGenesis -> H.failure
     ChainTip (SlotNo slot) (HeaderHash hash) _ -> pure (slot, SBS.fromShort hash)
 
-  -- \*** RPC query
+  ------------
+  -- RPC query
+  ------------
   let rpcServer = Rpc.ServerUnix rpcSocket
   response <- H.noteShowM . H.evalIO . Rpc.withConnection def rpcServer $ \conn -> do
     let req = Rpc.defMessage
     Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) req
 
-  -- \* Test response
+  ----------------
+  -- Test response
+  ----------------
   response ^. #ledgerTip ^. #slot === slot
   response ^. #ledgerTip ^. #hash === blockHash
 
+  -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
   let chainParams = response ^. #values ^. #cardano
   babbageEraOnwardsConstraints (convert ceo) $ do
     pparams ^. L.ppCoinsPerUTxOByteL ^. to L.unCoinPerByte ^. to L.unCoin
@@ -109,9 +124,50 @@ hprop_rpc_query = integrationRetryWorkspace 2 "rpc-query" $ \tempAbsBasePath' ->
     pparams ^. L.ppPoolDepositL === chainParams ^. #poolDeposit ^. to fromIntegral
     pparams ^. L.ppEMaxL ^. to L.unEpochInterval === chainParams ^. #poolRetirementEpochBound ^. to fromIntegral
     pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools ^. to fromIntegral
-    pparams ^. L.ppA0L ^. to L.unboundRational
-      === chainParams ^. #poolInfluence ^. #numerator ^. to fromIntegral
-        % chainParams ^. #poolInfluence ^. #denominator ^. to fromIntegral
+    pparams ^. L.ppA0L ^. to L.unboundRational === chainParams ^. #poolInfluence ^. to inject
+    pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools ^. to fromIntegral
+    pparams ^. L.ppRhoL ^. to L.unboundRational === chainParams ^. #monetaryExpansion ^. to inject
+    pparams ^. L.ppMinPoolCostL === chainParams ^. #minPoolCost ^. to fromIntegral
+    ( pparams ^. L.ppProtocolVersionL ^. to L.pvMajor ^. to L.getVersion
+      , pparams ^. L.ppProtocolVersionL ^. to L.pvMinor
+      )
+      === ( chainParams ^. #protocolVersion ^. #major ^. to fromIntegral
+          , chainParams ^. #protocolVersion ^. #minor ^. to fromIntegral
+          )
+    pparams ^. L.ppMaxValSizeL === chainParams ^. #maxValueSize ^. to fromIntegral
+    pparams ^. L.ppCollateralPercentageL === chainParams ^. #collateralPercentage ^. to fromIntegral
+    pparams ^. L.ppMaxCollateralInputsL === chainParams ^. #maxCollateralInputs ^. to fromIntegral
+    let pparamsCostModels = L.getCostModelParams <$> pparams ^. L.ppCostModelsL ^. to L.costModelsValid
+    M.lookup L.PlutusV1 pparamsCostModels === Just (chainParams ^. #costModels ^. #plutusV1 ^. #values)
+    M.lookup L.PlutusV2 pparamsCostModels === Just (chainParams ^. #costModels ^. #plutusV2 ^. #values)
+    M.lookup L.PlutusV3 pparamsCostModels === Just (chainParams ^. #costModels ^. #plutusV3 ^. #values)
+    pparams ^. L.ppPricesL ^. to L.prSteps ^. to L.unboundRational
+      === chainParams ^. #prices ^. #steps ^. to inject
+    pparams ^. L.ppPricesL ^. to L.prMem ^. to L.unboundRational
+      === chainParams ^. #prices ^. #memory ^. to inject
+    pparams ^. L.ppMaxTxExUnitsL === chainParams ^. #maxExecutionUnitsPerTransaction ^. to inject
+    pparams ^. L.ppMaxBlockExUnitsL === chainParams ^. #maxExecutionUnitsPerBlock ^. to inject
+    pparams ^. L.ppMinFeeRefScriptCostPerByteL ^. to L.unboundRational
+      === chainParams ^. #minFeeScriptRefCostPerByte ^. to inject
+    -- TODO utxorpc has only one threshold, which one is this?
+    -- pparams ^. L.ppPoolVotingThresholdsL ^. to undefined === chainParams ^. #poolVotingThresholds ^. #thresholds ^. to inject
+    -- pparams ^. L.ppDRepVotingThresholdsL ^. to undefined === chainParams ^. #drepVotingThresholds ^. #thresholds ^. to inject
+    pparams ^. L.ppCommitteeMinSizeL === chainParams ^. #minCommitteeSize ^. to fromIntegral
+    pparams ^. L.ppCommitteeMaxTermLengthL ^. to L.unEpochInterval
+      === chainParams ^. #committeeTermLimit ^. to fromIntegral
+    pparams ^. L.ppGovActionLifetimeL ^. to L.unEpochInterval
+      === chainParams ^. #governanceActionValidityPeriod ^. to fromIntegral
+    pparams ^. L.ppGovActionDepositL === chainParams ^. #governanceActionDeposit ^. to fromIntegral
+    pparams ^. L.ppDRepDepositL === chainParams ^. #drepDeposit ^. to fromIntegral
+    pparams ^. L.ppDRepActivityL ^. to L.unEpochInterval
+      === chainParams ^. #drepInactivityPeriod ^. to fromIntegral
 
-  -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
-  H.failure
+instance Inject (Rpc.Proto UtxoRpc.RationalNumber) (Ratio Integer) where
+  inject r = r ^. #numerator ^. to fromIntegral % r ^. #denominator ^. to fromIntegral
+
+instance Inject (Rpc.Proto UtxoRpc.ExUnits) L.ExUnits where
+  inject r =
+    L.ExUnits
+      { L.exUnitsMem = r ^. #memory ^. to fromIntegral
+      , L.exUnitsSteps = r ^. #steps ^. to fromIntegral
+      }
