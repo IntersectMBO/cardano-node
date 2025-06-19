@@ -22,8 +22,8 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Api (File (..), FileDirection (..))
-import           Cardano.Api.Error (displayError)
+import           Cardano.Api (File (..), FileDirection (..), NetworkMagic, fromNetworkMagic)
+import           Cardano.Api.Internal.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
@@ -40,7 +40,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..), TimeoutOverride (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP, getForkPolicy)
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo' (..),
-                   gatherConfiguredSockets, getSocketOrSocketInfoAddr)
+                   gatherConfiguredSockets, getSocketOrSocketInfoAddr, SocketConfig (..))
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
@@ -52,7 +52,8 @@ import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..)
                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
-import           Cardano.Node.Rpc.Server
+import           Cardano.Rpc.Server
+import           Cardano.Rpc.Server.Config
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing.API
@@ -158,6 +159,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -179,45 +181,72 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
-    installSigTermHandler
+  installSigTermHandler
 
-    Crypto.cryptoInit
+  Crypto.cryptoInit
 
-    configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
+  let earlyTracer = stdoutTracer
+  nc@NodeConfiguration
+    { ncProtocolConfig
+    , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
+    } <- buildNodeConfiguration earlyTracer cmdPc
 
-    nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
-            Left err -> error $ "Error in creating the NodeConfiguration: " <> err
-            Right nc' -> return nc'
+  forM_ mShelleyVrfFile $
+    runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-    putStrLn $ "Node configuration: " <> show nc
+  consensusProtocol@(SomeConsensusProtocol _ runP) <-
+    runThrowExceptT $
+      mkConsensusProtocol
+       ncProtocolConfig
+       -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
+       -- don't need these.
+       (Just ncProtocolFiles)
 
-    case ncProtocolFiles nc of
-      ProtocolFilepaths{shelleyVRFFile=Just vrfFp} ->
-        runThrowExceptT $
-          checkVRFFilePermissions stdoutTracer (File vrfFp)
-      _ -> pure ()
+  let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
+      networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
+  withAsync (runRpcServer $ buildRpcConfiguration earlyTracer networkMagic cmdPc) $ \_ ->
+    handleNodeWithTracers cmdPc nc consensusProtocol
 
-    consensusProtocol@(SomeConsensusProtocol _ runP) <-
-      runThrowExceptT $
-        mkConsensusProtocol
-         (ncProtocolConfig nc)
-         -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
-         -- don't need these.
-         (Just $ ncProtocolFiles nc)
-
-    let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
-        networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
-    race_
-      (handleNodeWithTracers cmdPc nc consensusProtocol)
-      (runRpcServer cmdPc networkMagic)
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
+
+-- | Read node configuration from a file specified in 'PartialNodeConfiguration'
+buildNodeConfiguration :: Tracer IO String
+                       -> PartialNodeConfiguration -- ^ defaults
+                       -> IO NodeConfiguration
+buildNodeConfiguration tracer partialConf = do
+  configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile partialConf
+  nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> partialConf of
+          Left err -> error $ "Error in creating the NodeConfiguration: " <> err
+          Right nc' -> return nc'
+
+  traceWith tracer $ "Node configuration: " <> show nc
+  pure nc
+
+-- | Build RPC configuration. Reads the configuration file again. Allows RPC server to dynamically reload configuration from disk again.
+buildRpcConfiguration :: Tracer IO String
+                      -> NetworkMagic
+                      -> PartialNodeConfiguration
+                      -> IO RpcConfig
+buildRpcConfiguration tracer networkMagic partialConf = do
+  nc <- buildNodeConfiguration tracer partialConf
+  SocketConfig{ncSocketPath = Last mN2cSocket} <- pure $ ncSocketConfig nc
+  let nodeSocketPath = fromMaybe "rpc.sock" mN2cSocket
+      socketDir = takeDirectory $ unFile nodeSocketPath
+  pure $
+    RpcConfig
+      { isEnabled = True -- TODO take from PNC
+      , rpcSocketPath = File $ socketDir </> "rpc.sock" -- TODO take from PNC
+      , nodeSocketPath
+      , networkMagic
+      }
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
 installSigTermHandler :: IO ()
 installSigTermHandler = do
+-- TODO add SigHUP handler for RPC configuration reloading
 #ifdef UNIX
   -- Similar implementation to the RTS's handling of SIGINT (see GHC's
   -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).

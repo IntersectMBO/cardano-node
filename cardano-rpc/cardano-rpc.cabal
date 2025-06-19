@@ -1,0 +1,101 @@
+cabal-version: 3.8
+name: cardano-rpc
+version: 10.0.0
+synopsis: The cardano RPC interface
+description: The cardano RPC interface
+category:
+  Cardano,
+  Validator,
+
+copyright: 2019-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
+author: IOHK
+maintainer: operations@iohk.io
+license: Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+build-type: Custom
+extra-doc-files: ChangeLog.md
+extra-source-files: proto/**/*.proto
+
+custom-setup
+  setup-depends:
+    Cabal >=3.0 && <3.13,
+    base >=4.14 && <5,
+    proto-lens-setup >=0.4 && <0.5,
+
+common project-config
+  default-language: Haskell2010
+  default-extensions: OverloadedStrings
+  build-depends: base >=4.14 && <5
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wno-unticked-promoted-constructors
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+library
+  import: project-config
+  hs-source-dirs: src
+  build-tool-depends: proto-lens-protoc:proto-lens-protoc
+  exposed-modules:
+    Cardano.Rpc.Client
+    Cardano.Rpc.Proto.Api.Node
+    Cardano.Rpc.Proto.Api.UtxoRpc.Query
+    Cardano.Rpc.Server
+    Cardano.Rpc.Server.Config
+    Cardano.Rpc.Server.Internal.Env
+    Cardano.Rpc.Server.Internal.Error
+    Cardano.Rpc.Server.Internal.Monad
+    Cardano.Rpc.Server.Internal.UtxoRpc.Query
+    Proto.Cardano.Rpc.Node
+    Proto.Cardano.Rpc.Node_Fields
+    Proto.Utxorpc.V1alpha.Cardano.Cardano
+    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
+    Proto.Utxorpc.V1alpha.Query.Query
+    Proto.Utxorpc.V1alpha.Query.Query_Fields
+    Proto.Utxorpc.V1alpha.Submit.Submit
+    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
+    Proto.Utxorpc.V1alpha.Sync.Sync
+    Proto.Utxorpc.V1alpha.Sync.Sync_Fields
+    Proto.Utxorpc.V1alpha.Watch.Watch
+    Proto.Utxorpc.V1alpha.Watch.Watch_Fields
+
+  other-modules: Paths_cardano_rpc
+  autogen-modules:
+    Paths_cardano_rpc
+    Proto.Cardano.Rpc.Node
+    Proto.Cardano.Rpc.Node_Fields
+    Proto.Utxorpc.V1alpha.Cardano.Cardano
+    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
+    Proto.Utxorpc.V1alpha.Query.Query
+    Proto.Utxorpc.V1alpha.Query.Query_Fields
+    Proto.Utxorpc.V1alpha.Submit.Submit
+    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
+    Proto.Utxorpc.V1alpha.Sync.Sync
+    Proto.Utxorpc.V1alpha.Sync.Sync_Fields
+    Proto.Utxorpc.V1alpha.Watch.Watch
+    Proto.Utxorpc.V1alpha.Watch.Watch_Fields
+
+  build-depends:
+    base,
+    bytestring,
+    cardano-api ^>=10.16,
+    cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-conway,
+    cardano-ledger-core,
+    containers,
+    grapesy,
+    grpc-spec,
+    microlens,
+    ouroboros-network-protocols ^>=0.14,
+    proto-lens,
+    proto-lens-protobuf-types,
+    proto-lens-runtime,
+    rio,

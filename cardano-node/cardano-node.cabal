@@ -12,15 +12,8 @@ maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-build-type:             Custom
+build-type:             Simple
 extra-doc-files:        ChangeLog.md
-extra-source-files:     proto/**/*.proto
-
-custom-setup
-  setup-depends:
-     base
-   , Cabal
-   , proto-lens-setup
 
 Flag unexpected_thunks
   Description:          Turn on unexpected thunks checks
@@ -67,8 +60,6 @@ library
 
   hs-source-dirs:       src
 
-  build-tool-depends:   proto-lens-protoc:proto-lens-protoc
-
   exposed-modules:      Cardano.Node.Configuration.Logging
                         Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
@@ -90,15 +81,6 @@ library
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
-                        Cardano.Node.Rpc.Client
-                        Cardano.Node.Rpc.Proto.Api.Node
-                        Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query
-                        Cardano.Node.Rpc.Server
-                        Cardano.Node.Rpc.Server.Config
-                        Cardano.Node.Rpc.Server.Internal.Env
-                        Cardano.Node.Rpc.Server.Internal.Error
-                        Cardano.Node.Rpc.Server.Internal.Monad
-                        Cardano.Node.Rpc.Server.Internal.UtxoRpc.Query
                         Cardano.Node.Run
                         Cardano.Node.Startup
                         Cardano.Node.STM
@@ -151,24 +133,9 @@ library
                         Cardano.Tracing.Shutdown
                         Cardano.Tracing.Startup
                         Cardano.Tracing.Tracers
-                        Proto.Cardano.Node.Rpc.Node
-                        Proto.Utxorpc.V1alpha.Bitcoin.Bitcoin
-                        Proto.Utxorpc.V1alpha.Cardano.Cardano
-                        Proto.Utxorpc.V1alpha.Query.Query
-                        Proto.Utxorpc.V1alpha.Submit.Submit
-                        Proto.Utxorpc.V1alpha.Sync.Sync
-                        Proto.Utxorpc.V1alpha.Watch.Watch
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
-                        Proto.Cardano.Node.Rpc.Node
-                        Proto.Utxorpc.V1alpha.Bitcoin.Bitcoin
-                        Proto.Utxorpc.V1alpha.Cardano.Cardano
-                        Proto.Utxorpc.V1alpha.Query.Query
-                        Proto.Utxorpc.V1alpha.Submit.Submit
-                        Proto.Utxorpc.V1alpha.Sync.Sync
-                        Proto.Utxorpc.V1alpha.Watch.Watch
-
 
   build-depends:        base
                       , aeson >= 2.1.0.0
@@ -191,6 +158,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
+                      , cardano-rpc ^>= 10.0
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
@@ -202,8 +170,6 @@ library
                       , ekg-core
                       , filepath
                       , formatting
-                      , grapesy
-                      , grpc-spec
                       , generic-data
                       , hashable
                       , hostname
@@ -231,13 +197,9 @@ library
                       , ouroboros-network-protocols ^>= 0.14
                       , prettyprinter
                       , prettyprinter-ansi-terminal
-                      , proto-lens-protobuf-types
-                      , proto-lens-runtime
-                      , proto-lens
                       , psqueues
                       , random
                       , resource-registry
-                      , rio
                       , safe-exceptions
                       , scientific
                       , si-timers

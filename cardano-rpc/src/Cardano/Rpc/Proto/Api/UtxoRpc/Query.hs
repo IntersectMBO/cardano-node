@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query
+module Cardano.Rpc.Proto.Api.UtxoRpc.Query
   ( module Proto.Utxorpc.V1alpha.Query.Query
   , module Proto.Utxorpc.V1alpha.Cardano.Cardano
   )

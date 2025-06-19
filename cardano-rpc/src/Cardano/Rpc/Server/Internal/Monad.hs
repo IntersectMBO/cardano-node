@@ -9,8 +9,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
-module Cardano.Node.Rpc.Server.Internal.Monad
+module Cardano.Rpc.Server.Internal.Monad
   ( Has (..)
   , MonadRpc
   , grab
@@ -19,7 +20,7 @@ where
 
 import           Cardano.Api
 
-import           Cardano.Node.Rpc.Server.Internal.Env
+import           Cardano.Rpc.Server.Internal.Env
 
 import           GHC.Stack
 
@@ -33,6 +34,6 @@ grab = asks $ obtain @field
 {-# INLINE grab #-}
 
 instance Has LocalNodeConnectInfo RpcEnv where
-  obtain = rpcLocalNodeConnectInfo
+  obtain RpcEnv{rpcLocalNodeConnectInfo} = rpcLocalNodeConnectInfo
 
 type MonadRpc e m = (Has LocalNodeConnectInfo e, HasCallStack, MonadReader e m, MonadIO m)

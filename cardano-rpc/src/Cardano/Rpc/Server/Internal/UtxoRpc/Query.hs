@@ -11,7 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Node.Rpc.Server.Internal.UtxoRpc.Query
+module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readChainConfigMethod
   , readDataMethod
   , readParamsMethod
@@ -32,9 +32,9 @@ import qualified Cardano.Ledger.Binary.Version as L
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Plutus as L
-import qualified Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
-import           Cardano.Node.Rpc.Server.Internal.Error
-import           Cardano.Node.Rpc.Server.Internal.Monad
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
+import           Cardano.Rpc.Server.Internal.Error
+import           Cardano.Rpc.Server.Internal.Monad
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (VolatileTip))
 
 import qualified Data.ByteString.Short as SBS
