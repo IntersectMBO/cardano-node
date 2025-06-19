@@ -10,22 +10,20 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Node.Rpc.Server
+module Cardano.Rpc.Server
   ( runRpcServer
   )
 where
 
 import           Cardano.Api
 
-import           Cardano.Node.Configuration.POM
-import           Cardano.Node.Configuration.Socket (SocketConfig (..))
-import qualified Cardano.Node.Rpc.Proto.Api.Node as Rpc
-import qualified Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
-import           Cardano.Node.Rpc.Server.Internal.Env
-import           Cardano.Node.Rpc.Server.Internal.Monad
-import           Cardano.Node.Rpc.Server.Internal.UtxoRpc.Query
+import qualified Cardano.Rpc.Proto.Api.Node as Rpc
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
+import           Cardano.Rpc.Server.Config
+import           Cardano.Rpc.Server.Internal.Env
+import           Cardano.Rpc.Server.Internal.Monad
+import           Cardano.Rpc.Server.Internal.UtxoRpc.Query
 
-import           Data.Monoid
 import           Data.ProtoLens (defMessage)
 import           Data.ProtoLens.Field (field)
 import           Lens.Micro
@@ -35,7 +33,6 @@ import           Network.GRPC.Server.Protobuf
 import           Network.GRPC.Server.Run
 import           Network.GRPC.Server.StreamType
 import           Network.GRPC.Spec
-import           System.FilePath (takeDirectory, (</>))
 
 import           Proto.Google.Protobuf.Empty
 import           RIO
@@ -45,7 +42,6 @@ import           RIO
 getEraMethod :: MonadRpc e m => Proto Empty -> m (Proto Rpc.CurrentEra)
 getEraMethod _ =
   pure mockNodeResponse
-
 
 -- Mock node response
 mockNodeResponse :: Proto Rpc.CurrentEra
@@ -69,25 +65,23 @@ methodsUtxoRpc =
     . Method (mkNonStreaming searchUtxosMethod)
     $ NoMoreMethods
 
-runRpcServer :: PartialNodeConfiguration -> NetworkMagic -> IO ()
-runRpcServer cmdPc networkMagic = do
-  configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
-
-  nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
-    Left err -> error $ "Error in creating the NodeConfiguration: " <> err
-    Right nc' -> return nc'
-
-  SocketConfig{ncSocketPath = Last (Just n2cSocket)} <- pure $ ncSocketConfig nc
-  let socketDir = takeDirectory $ unFile n2cSocket
-      networkType = fromNetworkMagic networkMagic
-      localNodeConnInfo = LocalNodeConnectInfo (CardanoModeParams (EpochSlots 21600)) networkType n2cSocket
-      config =
+runRpcServer
+  :: IO RpcConfig
+  -- ^ action which reloads RPC configuration
+  -> IO ()
+runRpcServer loadRpcConfig = do
+  rpcConfig@RpcConfig{rpcSocketPath = File rpcSocketPathFp} <- loadRpcConfig
+  let config =
         ServerConfig
           { -- serverInsecure = Just (InsecureConfig Nothing defaultInsecurePort)
-            serverInsecure = Just (InsecureUnix $ socketDir </> "rpc.sock")
+            serverInsecure = Just $ InsecureUnix rpcSocketPathFp
           , serverSecure = Nothing
           }
-      rpcEnv = RpcEnv{rpcLocalNodeConnectInfo = localNodeConnInfo}
+      rpcEnv =
+        RpcEnv
+          { config = rpcConfig
+          , rpcLocalNodeConnectInfo = mkLocalNodeConnectInfo rpcConfig
+          }
   runRIO rpcEnv $
     withRunInIO $ \runInIO ->
       runServerWithHandlers def config . fmap (hoistSomeRpcHandler runInIO) $

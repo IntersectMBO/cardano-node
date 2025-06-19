@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Node.Rpc.Client
+module Cardano.Rpc.Client
   ( module Network.GRPC.Client
   , module Network.GRPC.Client.StreamType.IO
   , module Network.GRPC.Common.Protobuf

@@ -20,6 +20,7 @@ packages:
   cardano-node
   cardano-node-capi
   cardano-node-chairman
+  cardano-rpc
   cardano-submit-api
   cardano-testnet
   cardano-tracer
