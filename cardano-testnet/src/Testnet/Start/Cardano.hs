@@ -88,7 +88,10 @@ createTestnetEnv :: ()
 createTestnetEnv
   testnetOptions@CardanoTestnetOptions{cardanoNodeEra=asbe} genesisOptions
   mShelley mAlonzo mConway
-  Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
+  Conf
+    { genesisHashesPolicy
+    , tempAbsPath=TmpAbsolutePath tmpAbsPath
+    } = do
 
   testMinimumConfigurationRequirements testnetOptions
 
@@ -100,7 +103,9 @@ createTestnetEnv
 
   configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+  config <- case genesisHashesPolicy of
+    WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+    WithoutHashes -> pure $ createConfigJsonNoHash sbe
   H.evalIO $ LBS.writeFile configurationFile config
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
