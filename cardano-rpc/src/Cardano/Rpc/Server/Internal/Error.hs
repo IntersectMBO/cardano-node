@@ -10,7 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Node.Rpc.Server.Internal.Error
+module Cardano.Rpc.Server.Internal.Error
   ( throwEither
   , throwExceptT
   , RpcException (..)

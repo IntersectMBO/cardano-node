@@ -300,6 +300,7 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
+
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where

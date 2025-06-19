@@ -13,10 +13,7 @@ where
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
-import qualified Cardano.Api.Network as Net
-import qualified Cardano.Api.Network as Net.Tx
 import           Cardano.Api.Shelley
-import qualified Cardano.Api.Tx.UTxO as Utxo
 
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
 import qualified Cardano.Ledger.Api as L
@@ -24,24 +21,16 @@ import qualified Cardano.Ledger.Binary.Version as L
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Plutus as L
-import qualified Cardano.Node.Rpc.Client as Rpc
-import qualified Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
-import           Cardano.Node.Rpc.Server.Internal.UtxoRpc.Query ()
+import qualified Cardano.Rpc.Client as Rpc
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
+import           Cardano.Rpc.Server.Internal.UtxoRpc.Query ()
 import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad
 import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
-import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as M
-import           Data.Maybe
-import           Data.Proxy
-import           Data.Ratio
-import           Data.Set (Set)
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
 import           Lens.Micro
 import           System.FilePath (takeDirectory, (</>))
 
@@ -49,7 +38,6 @@ import           Testnet.Components.Query
 import           Testnet.Process.Run
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
-import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -66,18 +54,15 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
       eraName = eraToString sbe
       options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
 
-  tr@TestnetRuntime
+  TestnetRuntime
     { testnetMagic
     , configurationFile
     , testnetNodes = node0@TestnetNode{nodeSprocket} : _
-    , wallets = wallet0@(PaymentKeyInfo _ addrTxt0) : wallet1 : _
     } <-
     cardanoTestnetDefault options def conf
 
   execConfig <- mkExecConfig tempAbsPath' nodeSprocket testnetMagic
-  systemStart <- H.noteShowM $ getStartTime tempAbsPath' tr
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)
-  connectionInfo <- nodeConnectionInfo tr 0
   pparams <- unLedgerProtocolParameters <$> getProtocolParams epochStateView ceo
   H.noteShowPretty_ pparams
   rpcSocket <- H.note $ takeDirectory (unFile $ nodeSocketPath node0) </> "rpc.sock"
@@ -126,7 +111,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     ( pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
       , pparams ^. L.ppProtocolVersionL . to L.pvMinor
       )
-      === ( chainParams ^. #protocolVersion . #major . to fromIntegral
+      === ( chainParams ^. #protocolVersion . #major
           , chainParams ^. #protocolVersion . #minor . to fromIntegral
           )
     pparams ^. L.ppMaxValSizeL === chainParams ^. #maxValueSize . to fromIntegral
