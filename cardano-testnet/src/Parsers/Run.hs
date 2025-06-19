@@ -65,10 +65,13 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvGenesisOptions=genesisOptions
   , createEnvOutputDir=outputDir
   } =
-    void $ H.check $ testnetRoutine (UserProvidedEnv outputDir) $
+    void $ H.check $ testnetRoutine (UserProvidedEnv outputDir) $ \conf ->
       createTestnetEnv
         testnetOptions genesisOptions
         NoUserProvidedData NoUserProvidedData NoUserProvidedData
+        -- Do not add hashes to the main config file, so that genesis files
+        -- can be modified without having to recompute hashes every time.
+        conf{genesisHashesPolicy = WithoutHashes}
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
 runCardanoOptions CardanoTestnetCliOptions

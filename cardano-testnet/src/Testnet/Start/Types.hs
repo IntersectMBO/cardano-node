@@ -28,6 +28,7 @@ module Testnet.Start.Types
 
   , NodeLoggingFormat(..)
   , Conf(..)
+  , GenesisHashesPolicy (..)
   , NodeConfiguration
   , NodeConfigurationYaml
   , mkConf
@@ -178,16 +179,22 @@ data NodeConfiguration
 
 type NodeConfigurationYaml = File NodeConfiguration InOut
 
-newtype Conf = Conf
-  { tempAbsPath :: TmpAbsolutePath
+data GenesisHashesPolicy = WithHashes | WithoutHashes
+  deriving (Eq, Show)
+
+data Conf = Conf
+  { genesisHashesPolicy :: GenesisHashesPolicy
+  , tempAbsPath :: TmpAbsolutePath
   } deriving (Eq, Show)
 
--- | Create a 'Conf' from a temporary absolute path. Logs the argument in the test.
+-- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled.
+-- Logs the argument in the test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
   H.note_ tempAbsPath'
   pure $ Conf
-    { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
+    { genesisHashesPolicy = WithHashes
+    , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     }
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@
