@@ -6,6 +6,7 @@
 
 module Testnet.Start.Types
   ( CardanoTestnetCliOptions(..)
+  , CardanoTestnetCreateEnvOptions (..)
   , CardanoTestnetOptions(..)
   , InputNodeConfigFile(..)
   , NumDReps(..)
@@ -18,15 +19,16 @@ module Testnet.Start.Types
   , anyShelleyBasedEraToString
   , eraToString
 
-  , TestnetNodeOptions(..)
-  , AutomaticNodeOption(..)
+  , NodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
   , UserProvidedData(..)
+  , UserProvidedEnv(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
+  , GenesisHashesPolicy (..)
   , NodeConfiguration
   , NodeConfigurationYaml
   , mkConf
@@ -49,31 +51,47 @@ import qualified Hedgehog.Extras as H
 
 -- | Command line options for the @cardano-testnet@ executable. They are used
 -- in the parser, and then get split into 'CardanoTestnetOptions' and
--- 'GenesisOptions'
+-- 'GenesisOptions'. If 'cliNodeEnvironment' is provided, don't create a
+-- sandbox environment, use the one at the given path.
 data CardanoTestnetCliOptions = CardanoTestnetCliOptions
   { cliTestnetOptions :: CardanoTestnetOptions
   , cliGenesisOptions :: GenesisOptions
+  , cliNodeEnvironment :: UserProvidedEnv
   } deriving (Eq, Show)
 
 instance Default CardanoTestnetCliOptions where
   def = CardanoTestnetCliOptions
     { cliTestnetOptions = def
     , cliGenesisOptions = def
+    , cliNodeEnvironment = def
     }
+
+data UserProvidedEnv
+  = NoUserProvidedEnv
+  | UserProvidedEnv FilePath
+  deriving (Eq, Show)
+
+instance Default UserProvidedEnv where
+  def = NoUserProvidedEnv
+
+data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
+  { createEnvTestnetOptions :: CardanoTestnetOptions
+  , createEnvGenesisOptions :: GenesisOptions
+  , createEnvOutputDir :: FilePath
+  } deriving (Eq, Show)
 
 -- | Options which, contrary to 'GenesisOptions' are not implemented
 -- by tuning the genesis files.
 data CardanoTestnetOptions = CardanoTestnetOptions
-  { -- | Options controlling how many nodes to create and whether to use user-provided
-    -- configuration files, or to generate them automatically.
-    cardanoNodes :: TestnetNodeOptions
+  { -- | Options controlling how many nodes to create and of which type.
+    cardanoNodes :: [NodeOption]
   , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
-  , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
+  , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   } deriving (Eq, Show)
 
 -- | Path to the configuration file of the node, specified by the user
@@ -82,17 +100,11 @@ newtype InputNodeConfigFile = InputNodeConfigFile FilePath
 
 cardanoNumPools :: CardanoTestnetOptions -> NumPools
 cardanoNumPools CardanoTestnetOptions{cardanoNodes} =
-  NumPools $
-    case cardanoNodes of
-      UserProvidedNodeOptions _ -> 1
-      AutomaticNodeOptions opts -> length $ filter isSpoNodeOptions opts
+  NumPools $ length $ filter isSpoNodeOptions cardanoNodes
 
 cardanoNumRelays :: CardanoTestnetOptions -> NumRelays
 cardanoNumRelays CardanoTestnetOptions{cardanoNodes} =
-  NumRelays $
-    case cardanoNodes of
-      UserProvidedNodeOptions _ -> 1
-      AutomaticNodeOptions opts -> length $ filter isRelayNodeOptions opts
+  NumRelays $ length $ filter isRelayNodeOptions cardanoNodes
 
 -- | Number of stake pool nodes
 newtype NumPools = NumPools Int
@@ -114,7 +126,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
-    , cardanoOutputDir = Nothing
+    , cardanoOutputDir = def
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
@@ -133,19 +145,10 @@ instance Default GenesisOptions where
     , genesisActiveSlotsCoeff = 0.05
     }
 
-data TestnetNodeOptions =
-  UserProvidedNodeOptions FilePath
-  -- ^ Value used when the user specifies the node configuration file. We start one single SPO node.
-  | AutomaticNodeOptions [AutomaticNodeOption]
-  -- ^ Value used when @cardano-testnet@ controls the node configuration files.
-  -- We start a custom number of nodes.
-  deriving (Eq, Show)
-
--- | Type used when the user doesn't specify the node configuration file. We start
--- a custom number of nodes. The '@String' arguments will be appended to the default
--- options when starting the node.
-data AutomaticNodeOption =
-    SpoNodeOptions [String]
+-- | Whether a node should be an SPO or just a relay.
+-- The '@String' arguments will be appended to the default options when starting the node.
+data NodeOption
+  = SpoNodeOptions [String]
   | RelayNodeOptions [String]
   deriving (Eq, Show)
 
@@ -155,20 +158,20 @@ data UserProvidedData a =
     UserProvidedData a
   | NoUserProvidedData
 
-isSpoNodeOptions :: AutomaticNodeOption -> Bool
+isSpoNodeOptions :: NodeOption -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True
 isSpoNodeOptions RelayNodeOptions{} = False
 
-isRelayNodeOptions :: AutomaticNodeOption -> Bool
+isRelayNodeOptions :: NodeOption -> Bool
 isRelayNodeOptions SpoNodeOptions{} = False
 isRelayNodeOptions RelayNodeOptions{} = True
 
-cardanoDefaultTestnetNodeOptions :: TestnetNodeOptions
+cardanoDefaultTestnetNodeOptions :: [NodeOption]
 cardanoDefaultTestnetNodeOptions =
-  AutomaticNodeOptions [ SpoNodeOptions []
-                       , RelayNodeOptions []
-                       , RelayNodeOptions []
-                       ]
+  [ SpoNodeOptions []
+  , RelayNodeOptions []
+  , RelayNodeOptions []
+  ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
@@ -176,16 +179,22 @@ data NodeConfiguration
 
 type NodeConfigurationYaml = File NodeConfiguration InOut
 
-newtype Conf = Conf
-  { tempAbsPath :: TmpAbsolutePath
+data GenesisHashesPolicy = WithHashes | WithoutHashes
+  deriving (Eq, Show)
+
+data Conf = Conf
+  { genesisHashesPolicy :: GenesisHashesPolicy
+  , tempAbsPath :: TmpAbsolutePath
   } deriving (Eq, Show)
 
--- | Create a 'Conf' from a temporary absolute path. Logs the argument in the test.
+-- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled.
+-- Logs the argument in the test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
   H.note_ tempAbsPath'
   pure $ Conf
-    { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
+    { genesisHashesPolicy = WithHashes
+    , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     }
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@

@@ -51,7 +51,7 @@ hprop_ledger_events_sanity_check = integrationRetryWorkspace 2 "ledger-events-sa
         }
 
   TestnetRuntime{configurationFile, testnetNodes}
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
   nr@TestnetNode{nodeSprocket} <- H.headM testnetNodes
   let socketPath = nodeSocketPath nr
 

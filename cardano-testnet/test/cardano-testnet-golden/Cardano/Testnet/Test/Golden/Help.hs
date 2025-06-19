@@ -45,8 +45,8 @@ extractCmd = id
             (c:_) -> Char.isAlpha c
             [] -> False
 
--- | Test that converting a @cardano-address@ Byron signing key yields the
--- expected result.
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_HelpAll/"'@
 golden_HelpAll :: Property
 golden_HelpAll =
   H.propertyOnce . H.moduleWorkspace "help" $ \_ -> do
@@ -81,6 +81,8 @@ deselectSuffix suffix text =
 selectCmd :: Text -> Maybe Text
 selectCmd = selectAndDropPrefix "Usage: cardano-testnet " <=< deselectSuffix " COMMAND"
 
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_HelpCmds/"'@
 golden_HelpCmds :: Property
 golden_HelpCmds =
   H.propertyOnce . H.moduleWorkspace "help-commands" $ \_ -> do

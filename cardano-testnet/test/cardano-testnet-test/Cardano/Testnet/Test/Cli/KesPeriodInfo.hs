@@ -72,7 +72,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , testnetMagic
     , wallets=wallet0:_
     , testnetNodes
-    } <- cardanoTestnetDefault cTestnetOptions def conf
+    } <- createAndRunTestnet cTestnetOptions def conf
   node1sprocket <- H.headM $ testnetSprockets runTime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 

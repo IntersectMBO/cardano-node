@@ -38,7 +38,7 @@ hprop_run_testnet = integrationWorkspace "run-testnet" $ \tmpDir -> H.runWithDef
   TestnetRuntime
     { testnetNodes
     , testnetMagic
-    } <- cardanoTestnetDefault testnetOptions shelleyOptions conf
+    } <- createAndRunTestnet testnetOptions shelleyOptions conf
 
   -- There should only be one SPO node among three
   TestnetNode

@@ -8,6 +8,7 @@
 
 module Testnet.Components.Configuration
   ( createConfigJson
+  , createConfigJsonNoHash
   , createSPOGenesisAndFiles
   , mkTopologyConfig
   , numSeededUTxOKeys
@@ -16,6 +17,7 @@ module Testnet.Components.Configuration
   , getShelleyGenesisHash
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
+  , startTimeOffsetSeconds
 
   , anyEraToString
   , eraToString
@@ -94,6 +96,11 @@ createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ d
     getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
 
+createConfigJsonNoHash :: ()
+  => ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
+  -> LBS.ByteString
+createConfigJsonNoHash sbe =
+  A.encodePretty . Object $ defaultYamlHardforkViaConfig sbe
 
 -- Generate hashes for genesis.json files
 

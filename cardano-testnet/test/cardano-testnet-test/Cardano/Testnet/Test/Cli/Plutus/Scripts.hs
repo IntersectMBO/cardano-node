@@ -64,7 +64,7 @@ hprop_plutus_purposes_v3 = integrationWorkspace "all-plutus-script-purposes" $ \
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:wallet1:_
-    } <- cardanoTestnetDefault options def conf
+    } <- createAndRunTestnet options def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -214,7 +214,7 @@ hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempA
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
-    } <- cardanoTestnetDefault options def conf
+    } <- createAndRunTestnet options def conf
 
   node <- H.headM testnetNodes
   SpoNodeKeys{poolNodeKeysCold=KeyPair{verificationKey=spoKeyCold}} <- H.nothingFail $ poolKeys node

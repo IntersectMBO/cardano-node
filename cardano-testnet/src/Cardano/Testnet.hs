@@ -5,13 +5,13 @@ module Cardano.Testnet (
 
   -- ** Start a testnet
   cardanoTestnet,
-  cardanoTestnetDefault,
+  createAndRunTestnet,
+  createTestnetEnv,
   retryOnAddressInUseError,
 
   -- ** Testnet options
   CardanoTestnetOptions(..),
-  TestnetNodeOptions(..),
-  AutomaticNodeOption(..),
+  NodeOption(..),
   cardanoDefaultTestnetNodeOptions,
   getDefaultAlonzoGenesis,
   getDefaultShelleyGenesis,

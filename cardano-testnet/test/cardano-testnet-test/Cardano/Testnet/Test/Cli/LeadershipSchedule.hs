@@ -67,10 +67,10 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       cTestnetOptions = def
         { cardanoNodeEra = asbe
         , cardanoNodes =
-          AutomaticNodeOptions [ SpoNodeOptions []
-                               , SpoNodeOptions []
-                               , SpoNodeOptions []
-                               ]
+          [ SpoNodeOptions []
+          , SpoNodeOptions []
+          , SpoNodeOptions []
+          ]
         }
       eraString = eraToString sbe
 
@@ -79,7 +79,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
     , wallets=wallet0:_
     , configurationFile
     , testnetNodes
-    } <- cardanoTestnetDefault cTestnetOptions def conf
+    } <- createAndRunTestnet cTestnetOptions def conf
 
   node1sprocket <- H.headM $ testnetSprockets tr
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic

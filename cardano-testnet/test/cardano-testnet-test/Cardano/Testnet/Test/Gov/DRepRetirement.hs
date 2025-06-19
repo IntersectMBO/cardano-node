@@ -57,7 +57,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
