@@ -1,16 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
-{- HLINT ignore "Redundant ^." -}
 
 module Cardano.Testnet.Test.Rpc.Query
   ( hprop_rpc_query_pparams
@@ -32,6 +26,7 @@ import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Plutus as L
 import qualified Cardano.Node.Rpc.Client as Rpc
 import qualified Cardano.Node.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
+import           Cardano.Node.Rpc.Server.Internal.UtxoRpc.Query ()
 import           Cardano.Testnet
 
 import           Prelude
@@ -107,68 +102,80 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   ----------------
   -- Test response
   ----------------
-  response ^. #ledgerTip ^. #slot === slot
-  response ^. #ledgerTip ^. #hash === blockHash
+  response ^. #ledgerTip . #slot === slot
+  response ^. #ledgerTip . #hash === blockHash
 
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
-  let chainParams = response ^. #values ^. #cardano
+  let chainParams = response ^. #values . #cardano
   babbageEraOnwardsConstraints (convert ceo) $ do
-    pparams ^. L.ppCoinsPerUTxOByteL ^. to L.unCoinPerByte ^. to L.unCoin
-      === chainParams ^. #coinsPerUtxoByte ^. to fromIntegral
-    pparams ^. L.ppMaxTxSizeL === chainParams ^. #maxTxSize ^. to fromIntegral
-    pparams ^. L.ppMinFeeBL === chainParams ^. #minFeeCoefficient ^. to fromIntegral
-    pparams ^. L.ppMinFeeAL === chainParams ^. #minFeeConstant ^. to fromIntegral
-    pparams ^. L.ppMaxBBSizeL === chainParams ^. #maxBlockBodySize ^. to fromIntegral
-    pparams ^. L.ppMaxBHSizeL === chainParams ^. #maxBlockHeaderSize ^. to fromIntegral
-    pparams ^. L.ppKeyDepositL === chainParams ^. #stakeKeyDeposit ^. to fromIntegral
-    pparams ^. L.ppPoolDepositL === chainParams ^. #poolDeposit ^. to fromIntegral
-    pparams ^. L.ppEMaxL ^. to L.unEpochInterval === chainParams ^. #poolRetirementEpochBound ^. to fromIntegral
-    pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools ^. to fromIntegral
-    pparams ^. L.ppA0L ^. to L.unboundRational === chainParams ^. #poolInfluence ^. to inject
-    pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools ^. to fromIntegral
-    pparams ^. L.ppRhoL ^. to L.unboundRational === chainParams ^. #monetaryExpansion ^. to inject
-    pparams ^. L.ppMinPoolCostL === chainParams ^. #minPoolCost ^. to fromIntegral
-    ( pparams ^. L.ppProtocolVersionL ^. to L.pvMajor ^. to L.getVersion
-      , pparams ^. L.ppProtocolVersionL ^. to L.pvMinor
+    pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.unCoin
+      === chainParams ^. #coinsPerUtxoByte . to fromIntegral
+    pparams ^. L.ppMaxTxSizeL === chainParams ^. #maxTxSize . to fromIntegral
+    pparams ^. L.ppMinFeeBL === chainParams ^. #minFeeCoefficient . to fromIntegral
+    pparams ^. L.ppMinFeeAL === chainParams ^. #minFeeConstant . to fromIntegral
+    pparams ^. L.ppMaxBBSizeL === chainParams ^. #maxBlockBodySize . to fromIntegral
+    pparams ^. L.ppMaxBHSizeL === chainParams ^. #maxBlockHeaderSize . to fromIntegral
+    pparams ^. L.ppKeyDepositL === chainParams ^. #stakeKeyDeposit . to fromIntegral
+    pparams ^. L.ppPoolDepositL === chainParams ^. #poolDeposit . to fromIntegral
+    pparams ^. L.ppEMaxL . to L.unEpochInterval === chainParams ^. #poolRetirementEpochBound . to fromIntegral
+    pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools . to fromIntegral
+    pparams ^. L.ppA0L . to L.unboundRational === chainParams ^. #poolInfluence . to inject
+    pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools . to fromIntegral
+    pparams ^. L.ppRhoL . to L.unboundRational === chainParams ^. #monetaryExpansion . to inject
+    pparams ^. L.ppMinPoolCostL === chainParams ^. #minPoolCost . to fromIntegral
+    ( pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
+      , pparams ^. L.ppProtocolVersionL . to L.pvMinor
       )
-      === ( chainParams ^. #protocolVersion ^. #major ^. to fromIntegral
-          , chainParams ^. #protocolVersion ^. #minor ^. to fromIntegral
+      === ( chainParams ^. #protocolVersion . #major . to fromIntegral
+          , chainParams ^. #protocolVersion . #minor . to fromIntegral
           )
-    pparams ^. L.ppMaxValSizeL === chainParams ^. #maxValueSize ^. to fromIntegral
-    pparams ^. L.ppCollateralPercentageL === chainParams ^. #collateralPercentage ^. to fromIntegral
-    pparams ^. L.ppMaxCollateralInputsL === chainParams ^. #maxCollateralInputs ^. to fromIntegral
-    let pparamsCostModels = L.getCostModelParams <$> pparams ^. L.ppCostModelsL ^. to L.costModelsValid
-    M.lookup L.PlutusV1 pparamsCostModels === Just (chainParams ^. #costModels ^. #plutusV1 ^. #values)
-    M.lookup L.PlutusV2 pparamsCostModels === Just (chainParams ^. #costModels ^. #plutusV2 ^. #values)
-    M.lookup L.PlutusV3 pparamsCostModels === Just (chainParams ^. #costModels ^. #plutusV3 ^. #values)
-    pparams ^. L.ppPricesL ^. to L.prSteps ^. to L.unboundRational
-      === chainParams ^. #prices ^. #steps ^. to inject
-    pparams ^. L.ppPricesL ^. to L.prMem ^. to L.unboundRational
-      === chainParams ^. #prices ^. #memory ^. to inject
-    pparams ^. L.ppMaxTxExUnitsL === chainParams ^. #maxExecutionUnitsPerTransaction ^. to inject
-    pparams ^. L.ppMaxBlockExUnitsL === chainParams ^. #maxExecutionUnitsPerBlock ^. to inject
-    pparams ^. L.ppMinFeeRefScriptCostPerByteL ^. to L.unboundRational
-      === chainParams ^. #minFeeScriptRefCostPerByte ^. to inject
-    -- TODO utxorpc has only one threshold, which one is this?
-    -- pparams ^. L.ppPoolVotingThresholdsL ^. to undefined === chainParams ^. #poolVotingThresholds ^. #thresholds ^. to inject
-    -- pparams ^. L.ppDRepVotingThresholdsL ^. to undefined === chainParams ^. #drepVotingThresholds ^. #thresholds ^. to inject
-    pparams ^. L.ppCommitteeMinSizeL === chainParams ^. #minCommitteeSize ^. to fromIntegral
-    pparams ^. L.ppCommitteeMaxTermLengthL ^. to L.unEpochInterval
-      === chainParams ^. #committeeTermLimit ^. to fromIntegral
-    pparams ^. L.ppGovActionLifetimeL ^. to L.unEpochInterval
-      === chainParams ^. #governanceActionValidityPeriod ^. to fromIntegral
-    pparams ^. L.ppGovActionDepositL === chainParams ^. #governanceActionDeposit ^. to fromIntegral
-    pparams ^. L.ppDRepDepositL === chainParams ^. #drepDeposit ^. to fromIntegral
-    pparams ^. L.ppDRepActivityL ^. to L.unEpochInterval
-      === chainParams ^. #drepInactivityPeriod ^. to fromIntegral
-
-instance Inject (Rpc.Proto UtxoRpc.RationalNumber) (Ratio Integer) where
-  inject r = r ^. #numerator ^. to fromIntegral % r ^. #denominator ^. to fromIntegral
-
-instance Inject (Rpc.Proto UtxoRpc.ExUnits) L.ExUnits where
-  inject r =
-    L.ExUnits
-      { L.exUnitsMem = r ^. #memory ^. to fromIntegral
-      , L.exUnitsSteps = r ^. #steps ^. to fromIntegral
-      }
-
+    pparams ^. L.ppMaxValSizeL === chainParams ^. #maxValueSize . to fromIntegral
+    pparams ^. L.ppCollateralPercentageL === chainParams ^. #collateralPercentage . to fromIntegral
+    pparams ^. L.ppMaxCollateralInputsL === chainParams ^. #maxCollateralInputs . to fromIntegral
+    let pparamsCostModels = L.getCostModelParams <$> pparams ^. L.ppCostModelsL . to L.costModelsValid
+    M.lookup L.PlutusV1 pparamsCostModels === chainParams ^. #costModels . #plutusV1 . #values . to Just
+    M.lookup L.PlutusV2 pparamsCostModels === chainParams ^. #costModels . #plutusV2 . #values . to Just
+    M.lookup L.PlutusV3 pparamsCostModels === chainParams ^. #costModels . #plutusV3 . #values . to Just
+    pparams ^. L.ppPricesL . to L.prSteps . to L.unboundRational === chainParams ^. #prices . #steps . to inject
+    pparams ^. L.ppPricesL . to L.prMem . to L.unboundRational === chainParams ^. #prices . #memory . to inject
+    pparams ^. L.ppMaxTxExUnitsL === chainParams ^. #maxExecutionUnitsPerTransaction . to inject
+    pparams ^. L.ppMaxBlockExUnitsL === chainParams ^. #maxExecutionUnitsPerBlock . to inject
+    pparams ^. L.ppMinFeeRefScriptCostPerByteL . to L.unboundRational
+      === chainParams ^. #minFeeScriptRefCostPerByte . to inject
+    let poolVotingThresholds :: L.PoolVotingThresholds =
+          conwayEraOnwardsConstraints ceo $
+            pparams ^. L.ppPoolVotingThresholdsL
+    ( L.unboundRational
+        <$> [ poolVotingThresholds ^. L.pvtMotionNoConfidenceL
+            , poolVotingThresholds ^. L.pvtCommitteeNormalL
+            , poolVotingThresholds ^. L.pvtCommitteeNoConfidenceL
+            , poolVotingThresholds ^. L.pvtHardForkInitiationL
+            , poolVotingThresholds ^. L.pvtPPSecurityGroupL
+            ]
+      )
+      === chainParams ^. #poolVotingThresholds . #thresholds . to (map inject)
+    let drepVotingThresholds :: L.DRepVotingThresholds =
+          conwayEraOnwardsConstraints ceo $
+            pparams ^. L.ppDRepVotingThresholdsL
+    ( L.unboundRational
+        <$> [ drepVotingThresholds ^. L.dvtMotionNoConfidenceL
+            , drepVotingThresholds ^. L.dvtCommitteeNormalL
+            , drepVotingThresholds ^. L.dvtCommitteeNoConfidenceL
+            , drepVotingThresholds ^. L.dvtUpdateToConstitutionL
+            , drepVotingThresholds ^. L.dvtHardForkInitiationL
+            , drepVotingThresholds ^. L.dvtPPNetworkGroupL
+            , drepVotingThresholds ^. L.dvtPPEconomicGroupL
+            , drepVotingThresholds ^. L.dvtPPTechnicalGroupL
+            , drepVotingThresholds ^. L.dvtPPGovGroupL
+            , drepVotingThresholds ^. L.dvtTreasuryWithdrawalL
+            ]
+      )
+      === chainParams ^. #drepVotingThresholds . #thresholds . to (map inject)
+    pparams ^. L.ppCommitteeMinSizeL === chainParams ^. #minCommitteeSize . to fromIntegral
+    pparams ^. L.ppCommitteeMaxTermLengthL . to L.unEpochInterval
+      === chainParams ^. #committeeTermLimit . to fromIntegral
+    pparams ^. L.ppGovActionLifetimeL . to L.unEpochInterval
+      === chainParams ^. #governanceActionValidityPeriod . to fromIntegral
+    pparams ^. L.ppGovActionDepositL === chainParams ^. #governanceActionDeposit . to fromIntegral
+    pparams ^. L.ppDRepDepositL === chainParams ^. #drepDeposit . to fromIntegral
+    pparams ^. L.ppDRepActivityL . to L.unEpochInterval === chainParams ^. #drepInactivityPeriod . to fromIntegral
