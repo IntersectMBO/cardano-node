@@ -68,7 +68,7 @@ library
                       , extra
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.7
+                      , hedgehog-extras == 0.7.0.0
                       , lens-aeson
                       , microlens
                       , monad-control
@@ -218,6 +218,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
+                        Cardano.Testnet.Test.Rpc.Query
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SanityCheck
@@ -233,11 +234,14 @@ test-suite cardano-testnet-test
                       , bytestring
                       , cardano-api
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib}
+                      , cardano-ledger-api
                       , cardano-crypto-class
+                      , cardano-ledger-binary
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-rpc
                       , cardano-slotting
                       , cardano-strict-containers ^>= 0.1
                       , cardano-testnet

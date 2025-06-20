@@ -20,6 +20,7 @@ packages:
   cardano-node
   cardano-node-capi
   cardano-node-chairman
+  cardano-rpc
   cardano-submit-api
   cardano-testnet
   cardano-tracer
@@ -65,6 +66,13 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+
+if impl (ghc >= 9.10)
+  allow-newer:
+    -- TODO: remove - this is for protolens
+    , *:base
+    , *:ghc-prim
 
 if impl (ghc >= 9.12)
   allow-newer:
