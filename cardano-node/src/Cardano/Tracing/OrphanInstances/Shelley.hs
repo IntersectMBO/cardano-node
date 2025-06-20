@@ -20,7 +20,7 @@
 module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Api (textShow)
-import qualified Cardano.Api.Shelley as Api
+import qualified Cardano.Api as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto

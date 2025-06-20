@@ -41,7 +41,7 @@ module Testnet.Defaults
 
 import           Cardano.Api (AnyShelleyBasedEra (..), CardanoEra (..), File (..),
                    ShelleyBasedEra (..), pshow, toCardanoEra, unsafeBoundedRational)
-import qualified Cardano.Api.Shelley as Api
+import qualified Cardano.Api as Api
 
 import           Cardano.Ledger.Alonzo.Core (PParams (..))
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)

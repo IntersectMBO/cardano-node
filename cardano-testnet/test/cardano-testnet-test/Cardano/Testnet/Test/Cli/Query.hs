@@ -14,12 +14,12 @@ module Cardano.Testnet.Test.Cli.Query (
     hprop_cli_queries
 ) where
 
+import           Cardano.Api (StakeCredential (StakeCredentialByKey))
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Internal.Genesis as Api
+import           Cardano.Api.Genesis as Api
 import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), unboundRational)
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
 
 import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
@@ -319,7 +319,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         submitTx execConfig cEra signedTx
         txId <- retrieveTransactionId execConfig signedTx
         -- And we check
-        H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "tx-exists", txId ]
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "tx-exists", prettyShow txId ]
 
     TestQuerySlotNumberCmd ->
       -- slot-number
@@ -346,7 +346,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         -- Query the reference script size
         let protocolParametersOutFile = refScriptSizeWork </> "ref-script-size-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "ref-script-size"
-                                       , "--tx-in", txId ++ "#" ++ show (txIx :: Int)
+                                       , "--tx-in", prettyShow (TxIn txId txIx)
                                        , "--out-file", protocolParametersOutFile
                                        ]
         H.diffFileVsGoldenFile

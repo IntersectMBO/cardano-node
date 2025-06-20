@@ -8,7 +8,7 @@ module  Cardano.TxGenerator.Tx
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (LedgerProtocolParameters)
+import           Cardano.Api (LedgerProtocolParameters)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Fund

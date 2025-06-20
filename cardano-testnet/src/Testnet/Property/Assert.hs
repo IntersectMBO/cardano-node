@@ -16,7 +16,7 @@ module Testnet.Property.Assert
   ) where
 
 
-import           Cardano.Api.Shelley hiding (Value)
+import           Cardano.Api hiding (Value)
 
 import           Prelude hiding (lines)
 

@@ -6,16 +6,16 @@
 module Cardano.Benchmarking.GeneratorTx.SizedMetadata
 where
 
-import           Prelude
-
 import           Cardano.Api
+
+import           Cardano.TxGenerator.Utils
+
+import           Prelude
 
 import qualified Data.ByteString as BS
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
-
-import           Cardano.TxGenerator.Utils
 
 
 maxMapSize :: Int
@@ -115,7 +115,7 @@ dummyTxSizeInEra metadata = case createAndValidateTransactionBody shelleyBasedEr
  where
   dummyTx = defaultTxBodyContent shelleyBasedEra
     & setTxIns
-      [ ( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
+      [ ( mkTxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
         , BuildTxWith $ KeyWitness KeyWitnessForSpending
         )
       ]

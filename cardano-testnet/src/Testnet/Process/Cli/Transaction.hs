@@ -231,12 +231,12 @@ retrieveTransactionId
   => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
-  -> m String
+  -> m TxId
 retrieveTransactionId execConfig signedTxBody = do
   txidOutput <- execCli' execConfig
     [ "latest", "transaction", "txid"
     , "--tx-file", unFile signedTxBody
     ]
   result <- H.leftFail $ A.decodeEither' @A.Value $ fromString txidOutput
-  H.nothingFail . fmap T.unpack $ result ^? A.key "txhash" . A._String
+  H.nothingFail $ result ^? A.key "txhash" . A._JSON
 
