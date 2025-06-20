@@ -105,7 +105,9 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         set -x
-        /usr/bin/pacman --noconfirm -S mingw-w64-snappy mingw-w64-protobuf
+        pushd /tmp
+        /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-protobuf mingw-w64-x86_64-snappy
+        popd
 
     - uses: actions/checkout@v4
 
@@ -239,11 +241,11 @@ jobs:
     # to restore the original path.  Do note that some test might need msys2
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
-    # - name: Setup tmate session
-    #  if: ${{ failure() }}
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
-    #     limit-access-to-actor: true
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
 
   build-complete:
     needs: [build]
