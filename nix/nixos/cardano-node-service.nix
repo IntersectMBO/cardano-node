@@ -820,7 +820,11 @@ in {
         )
         (mkIf (cfg.useNewTopology && cfg.useSystemdReload)
           (foldl'
-            (acc: i: recursiveUpdate acc {"cardano-node/peer-snapshot-${toString i}.json".source = toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot));}) {}
+            (acc: i: recursiveUpdate acc (
+              optionalAttrs (cfg.peerSnapshotFile i != null) {
+                "cardano-node/peer-snapshot-${toString i}.json".source = toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot));
+              }
+            )) {}
           (range 0 (cfg.instances - 1)))
         )
       ];
