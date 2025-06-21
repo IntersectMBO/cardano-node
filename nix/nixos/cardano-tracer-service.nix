@@ -566,8 +566,8 @@ in {
             rpFrequencySecs = mkOption {
               type = ints.positive;
               description = ''
-                The rpFrequencySecs option specifies rotation period, in
-                seconds.
+                The rpFrequencySecs option specifies the rotation check period,
+                in seconds.
               '';
             };
 
