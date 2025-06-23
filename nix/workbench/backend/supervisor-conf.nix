@@ -112,8 +112,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -153,8 +154,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -174,8 +176,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -199,8 +202,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -224,8 +228,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
