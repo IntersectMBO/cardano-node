@@ -88,8 +88,8 @@ testnetProperty env runTn =
       H.failure -- Intentional failure to force failure report
 
 -- | Runs a routine, which is supposed to end in finite duration
-testnetRoutine :: UserProvidedEnv -> (Conf -> H.Integration ()) -> H.Property
-testnetRoutine env runRoutine = case env of
+testnetRoutine :: UserProvidedEnv -> (Conf -> H.Integration ()) -> IO ()
+testnetRoutine env runRoutine = void . H.check $ case env of
   NoUserProvidedEnv ->
     integrationWorkspace "testnet" $ mkConf >=> runRoutine
   UserProvidedEnv userOutputDir -> integration $ do

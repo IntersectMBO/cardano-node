@@ -14,8 +14,6 @@ module Parsers.Run
 import           Cardano.CLI.Environment
 
 import           Data.Foldable
-import           Data.Functor (void)
-import qualified Hedgehog as H
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
@@ -65,9 +63,12 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvGenesisOptions=genesisOptions
   , createEnvOutputDir=outputDir
   } =
-    void $ H.check $ testnetRoutine (UserProvidedEnv outputDir) $ \conf ->
+    testnetRoutine (UserProvidedEnv outputDir) $ \conf ->
       createTestnetEnv
         testnetOptions genesisOptions
+        -- The CLI does not provide a way to provide custom genesis data by design:
+        -- If the user wants to have custom genesis data, they should manually
+        -- modify the files created by this command before running the testnet.
         NoUserProvidedData NoUserProvidedData NoUserProvidedData
         -- Do not add hashes to the main config file, so that genesis files
         -- can be modified without having to recompute hashes every time.
