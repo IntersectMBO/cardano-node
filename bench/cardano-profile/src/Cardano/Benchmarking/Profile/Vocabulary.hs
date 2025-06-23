@@ -19,7 +19,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , plutusBase, plutusLoop
 , plutusSaturation, plutusDoubleSaturation, plutusDoublePlusSaturation
 
-, plutusTypeLoop, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
+, plutusTypeLoop, plutusTypeLoopV3, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
 , plutusTypeBLST, plutusTypeRIPEMD
 ) where
 
@@ -185,21 +185,24 @@ plutusDoublePlusSaturation =
 -- Plutus types ("type", "script" and "redeemer").
 --------------------------------------------------
 
--- Replaces jq's "plutus_loop_counter".
 plutusTypeLoop :: Types.Profile -> Types.Profile
 plutusTypeLoop =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop"
   . P.redeemerInt 1000000
   . P.txFee 1360000
 
--- Replaces jq's "plutus_loop2024_counter".
+plutusTypeLoopV3 :: Types.Profile -> Types.Profile
+plutusTypeLoopV3 =
+    P.plutusType "LimitSaturationLoop" . P.plutusScript "LoopV3"
+  . P.redeemerInt 1000000
+  . P.txFee 1412000
+
 plutusTypeLoop2024 :: Types.Profile -> Types.Profile
 plutusTypeLoop2024 =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop2024"
   . P.redeemerInt 1000000
   . P.txFee 1412000
 
--- Replaces jq's "plutus_loop_secp_ecdsa".
 plutusTypeECDSA :: Types.Profile -> Types.Profile
 plutusTypeECDSA =
     P.plutusType "LimitTxPerBlock_8" . P.plutusScript "EcdsaSecp256k1Loop"
@@ -211,7 +214,6 @@ plutusTypeECDSA =
     ]
   . P.txFee 1008000
 
--- Replaces jq's "plutus_loop_secp_schnorr".
 plutusTypeSchnorr :: Types.Profile -> Types.Profile
 plutusTypeSchnorr =
     P.plutusType "LimitTxPerBlock_8"   . P.plutusScript "SchnorrSecp256k1Loop"
@@ -223,7 +225,6 @@ plutusTypeSchnorr =
     ]
   . P.txFee 1004000
 
--- Replaces jq's "plutus_loop_blst".
 plutusTypeBLST :: Types.Profile -> Types.Profile
 plutusTypeBLST =
     P.plutusType "LimitTxPerBlock_8"   . P.plutusScript "HashOntoG2AndAdd"
