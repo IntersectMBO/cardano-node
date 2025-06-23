@@ -128,9 +128,10 @@ profilesNoEraCloud =
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . plutusDesc
       -- memory-constrained
-      loop     = plutus     & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
-      loop2024 = plutus     & plutusLoopBase   . V.plutusTypeLoop2024 . P.analysisSizeSmall
-      loopVolt = plutusVolt & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop       = plutus     & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop2024   = plutus     & plutusLoopBase   . V.plutusTypeLoop2024 . P.analysisSizeSmall
+      loopVolt   = plutusVolt & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      loopV3Volt = plutusVolt & plutusLoopBase   . V.plutusTypeLoopV3   . P.analysisSizeSmall
       -- steps-constrained
       ecdsa    = plutus     & plutusSecpBase   . V.plutusTypeECDSA    . P.analysisSizeModerate
       schnorr  = plutus     & plutusSecpBase   . V.plutusTypeSchnorr  . P.analysisSizeModerate
@@ -172,11 +173,12 @@ profilesNoEraCloud =
   , ecdsa     & P.name "plutus-secp-ecdsa-nomadperf"                       . P.dreps      0 . P.newTracing . P.p2pOn
   , schnorr   & P.name "plutus-secp-schnorr-nomadperf"                     . P.dreps      0 . P.newTracing . P.p2pOn
   -- Plutus (post-Voltaire profiles)
-  , loopVolt  & P.name "plutus-volt-nomadperf"                             . P.dreps  10000 . P.newTracing . P.p2pOn
-  , loopVolt  & P.name "plutus-volt-memx15-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem15x
-  , loopVolt  & P.name "plutus-volt-memx2-nomadperf"                       . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem2x
-  , loopVolt  & P.name "plutus-volt-rtsqg1-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
-  , loopVolt  & P.name "plutus-volt-lmdb-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
+  , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem15x
+  , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem2x
+  , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
+  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
   , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview
   , blst      & P.name "plutusv3-blst-stepx15-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview . P.budgetBlockStepsOneAndAHalf
