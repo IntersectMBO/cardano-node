@@ -237,11 +237,15 @@ let
     };
 
     # Specifies a key-value map that annotates with user-defined metadata.
+    # These pairs are passed through to the job as NOMAD_META_<key>=<value>
+    # environment variables. Any character in a key other than [A-Za-z0-9_.]
+    # will be converted to _.
     meta = {
+      # Available inside the entrypoint as bash variables "$NOMAD_META_#".
       # Only top level "KEY=STRING" are allowed, no child objects/attributes!
-      WORKBENCH_STATEDIR = stateDir;
-      SUPERVISORD_LOGLEVEL = task_supervisord_loglevel;
-      ONE_TRACER_PER_NODE = oneTracerPerNode;
+      WORKBENCH_STATEDIR = stateDir;                    # NOMAD_META_WORKBENCH_STATEDIR
+      SUPERVISORD_LOGLEVEL = task_supervisord_loglevel; # NOMAD_META_SUPERVISORD_LOGLEVEL
+      ONE_TRACER_PER_NODE = oneTracerPerNode;           # NOMAD_META_ONE_TRACER_PER_NODE
     };
 
     # A group defines a series of tasks that should be co-located on the same
@@ -465,22 +469,29 @@ let
       //
       # If it needs host volumes add the constraints (can't be "null" or "[]".)
       ### - https://developer.hashicorp.com/nomad/tutorials/stateful-workloads/stateful-workloads-host-volumes
-      (lib.optionalAttrs (profile.cluster.nomad.host_volumes != null) {
-        volume = lib.listToAttrs (lib.lists.imap0
-          (i: v: {
-            # Internal name, reference to mount in this group's tasks below.
-            name = "volume-${taskName}-${toString i}";
-            value = {
-              type = "host"; # We only support type "host".
-              read_only = v.read_only;
-              # How it is named in the Nomad Client's config.
-              # https://developer.hashicorp.com/nomad/docs/configuration/client#host_volume-block
-              source = v.source;
-            };
-          })
-          profile.cluster.nomad.host_volumes
-        );
-      })
+      (
+        let
+          # JSON Object like `{"explorer": null, "producers": [...]}`.
+          nodeType = if nodeSpec.name == "explorer" then "explorer" else "producer";
+          volumesList = profile.cluster.nomad.host_volumes.${nodeType} or null;
+        in
+          (lib.attrsets.optionalAttrs (volumesList != null)
+            { volume = lib.listToAttrs (lib.lists.imap0
+              (i: v: {
+                # Internal name, reference to mount in this group's tasks below.
+                name = "volume-${taskName}-${toString i}";
+                value = {
+                  type = "host"; # We only support type "host".
+                  read_only = v.read_only;
+                  # How it is named in the Nomad Client's config.
+                  # https://developer.hashicorp.com/nomad/docs/configuration/client#host_volume-block
+                  source = v.source;
+                };
+              })
+              volumesList
+            );}
+          )
+      )
       //
       {
         # The task stanza creates an individual unit of work, such as a Docker
@@ -559,8 +570,11 @@ let
               # When using dedicated Nomad clusters on AWS we want to use public
               # IPs/routing, all the other cloud runs will run behind a
               # VPC/firewall.
-              if profile.cluster.aws.use_public_routing
+              if (profile.cluster or null) != null && profile.cluster.aws.use_public_routing
               then "\${attr.unique.platform.aws.public-ipv4}"
+              # Will need something like ${attr.meta.my_ip} / ${attr.meta.my_ip}
+              # defined in the client config `meta { my_ip = "X.X.X.X" }` for
+              # something specific or when creating clusters for testing.
               else "" # Local runs just use 127.0.0.1.
             ;
             # Specifies the port to advertise for this service. The value of
@@ -591,17 +605,23 @@ let
           };
 
           # If it needs host volumes mount them (defined above if any).
-          volume_mount = if profile.cluster.nomad.host_volumes != null
-            then lib.lists.imap0
-              (i: v: {
-                # Internal name, defined above in the group's specification.
-                volume = "volume-${taskName}-${toString i}";
-                # Where it is going to be mounted inside the Task.
-                destination = v.destination;
-                read_only = v.read_only;
-              })
-              profile.cluster.nomad.host_volumes
-            else null
+          volume_mount =
+            let
+              # JSON Object like `{"explorer": null, "producers": [...]}`.
+              nodeType = if nodeSpec.name == "explorer" then "explorer" else "producer";
+              volumesList = profile.cluster.nomad.host_volumes.${nodeType} or null;
+            in
+              if volumesList != null
+              then lib.lists.imap0
+                (i: v: {
+                  # Internal name, defined above in the group's specification.
+                  volume = "volume-${taskName}-${toString i}";
+                  # Where it is going to be mounted inside the Task.
+                  destination = v.destination;
+                  read_only = v.read_only;
+                })
+                volumesList
+              else null
           ;
 
           # Specifies the set of templates to render for the task. Templates can
@@ -1306,7 +1326,7 @@ let
       [
         # Address string to
         (
-          if profile.cluster.aws.use_public_routing
+          if (profile.cluster or null) != null && profile.cluster.aws.use_public_routing
           then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
           else ''--host-addr 0.0.0.0''
         )

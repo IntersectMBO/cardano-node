@@ -1,7 +1,5 @@
-import           Cardano.Logging
+import           Cardano.Logging hiding (stdoutTracer)
 import           Cardano.Logging.Test.Config
-import           Cardano.Logging.Test.Oracles
-import           Cardano.Logging.Test.Script
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 
@@ -107,11 +105,11 @@ ekgTracers confState = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     store           <- newStore
-    ekgTracer       <- ekgTracer emptyTraceConfig store
+    trEkg           <- ekgTracer emptyTraceConfig store
     tr              <- mkCardanoTracer
                         stdoutTracer'
                         forwardTracer'
-                        (Just ekgTracer)
+                        (Just trEkg)
                         ["Test"]
     configureTracers confState config4 [tr]
     pure tr
@@ -122,5 +120,6 @@ timesRepeat n action = do
   action
   timesRepeat (n - 1) action
 
+sendMessage :: Int -> Trace IO Message -> IO ()
 sendMessage n tr =
   timesRepeat n (traceWith tr (Message1 1 1))

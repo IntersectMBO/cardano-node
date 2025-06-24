@@ -128,9 +128,10 @@ profilesNoEraCloud =
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . plutusDesc
       -- memory-constrained
-      loop     = plutus     & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
-      loop2024 = plutus     & plutusLoopBase   . V.plutusTypeLoop2024 . P.analysisSizeSmall
-      loopVolt = plutusVolt & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop       = plutus     & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop2024   = plutus     & plutusLoopBase   . V.plutusTypeLoop2024 . P.analysisSizeSmall
+      loopVolt   = plutusVolt & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      loopV3Volt = plutusVolt & plutusLoopBase   . V.plutusTypeLoopV3   . P.analysisSizeSmall
       -- steps-constrained
       ecdsa    = plutus     & plutusSecpBase   . V.plutusTypeECDSA    . P.analysisSizeModerate
       schnorr  = plutus     & plutusSecpBase   . V.plutusTypeSchnorr  . P.analysisSizeModerate
@@ -139,6 +140,16 @@ profilesNoEraCloud =
       -- PParams overlays and calibration for 4 tx per block memory full.
       blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay Pl.calibrateLoopBlockMemx15
       blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay Pl.calibrateLoopBlockMemx2
+      -- LMDB helper. Node config add the "hostvolume"s as a cluster constraint.
+      lmdb =   P.lmdb
+             -- The name of the defined volume in the Nomad Client config and
+             -- where to mount it inside the isolated chroot.
+             -- If the volume is not present the deployment will fail!
+             . P.nomadHostVolume (Types.ByNodeType {
+                 Types.producer = [Types.HostVolume "/ephemeral" False "ephemeral"]
+               , Types.explorer = Nothing
+               })
+             . P.ssdDirectory "/ephemeral"
   in [
   -- Value (pre-Voltaire profiles)
     value     & P.name "value-nomadperf"                                   . P.dreps      0 . P.newTracing . P.p2pOn
@@ -151,6 +162,7 @@ profilesNoEraCloud =
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing . P.p2pOn
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
+  , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
   , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
@@ -161,10 +173,12 @@ profilesNoEraCloud =
   , ecdsa     & P.name "plutus-secp-ecdsa-nomadperf"                       . P.dreps      0 . P.newTracing . P.p2pOn
   , schnorr   & P.name "plutus-secp-schnorr-nomadperf"                     . P.dreps      0 . P.newTracing . P.p2pOn
   -- Plutus (post-Voltaire profiles)
-  , loopVolt  & P.name "plutus-volt-nomadperf"                             . P.dreps  10000 . P.newTracing . P.p2pOn
-  , loopVolt  & P.name "plutus-volt-memx15-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem15x
-  , loopVolt  & P.name "plutus-volt-memx2-nomadperf"                       . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem2x
-  , loopVolt  & P.name "plutus-volt-rtsqg1-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
+  , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem15x
+  , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem2x
+  , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
+  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
   , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview
   , blst      & P.name "plutusv3-blst-stepx15-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview . P.budgetBlockStepsOneAndAHalf
@@ -281,6 +295,7 @@ profilesNoEraCloud =
 
 nomadPerf :: Types.Profile -> Types.Profile
 nomadPerf =
+  -- Exact regions with availability zone (AZ) to match.
   P.regions
     [
       Types.AWS Types.EU_CENTRAL_1
@@ -288,27 +303,40 @@ nomadPerf =
     , Types.AWS Types.AP_SOUTHEAST_2
     ]
   .
-  P.nomadNamespace "perf"
+  -- Logical cluster separation. To avoid conflicts with same-server machines.
+  P.nomadNamespace "perf" . P.nomadClass "perf"
   .
-  P.nomadClass "perf"
-  .
+  -- This will be used as constraints at the Task level.
   P.nomadResources (Types.ByNodeType {
-    Types.producer = Types.Resources 8 15400 16000
-  , Types.explorer = Just $ Types.Resources 16 32000 64000
+    Types.producer = Types.Resources {
+      Types.cores = 8
+    , Types.memory = 15400
+    , Types.memory_max = 16000
+    }
+  , Types.explorer = Just $ Types.Resources {
+      Types.cores = 16
+    , Types.memory = 32000
+    , Types.memory_max = 64000
+    }
   })
   .
-  P.nomadSSHLogsOn
-  .
-  P.clusterKeepRunningOn
-  .
+  -- Instance types will be used as Group "constraints".
   P.awsInstanceTypes (Types.ByNodeType {
-    Types.producer = "c5.2xlarge"
+    Types.producer = "c5d.2xlarge"
   , Types.explorer = Just "m5.4xlarge"
   })
   .
+  -- Force all network related stuff to "attr.unique.platform.aws.public-ipv4".
   P.usePublicRouting
   .
+  -- Nomad cloud backend Jobs won't start below these levels.
   P.clusterMinimunStorage (Just $ Types.ByNodeType {
     Types.producer = 12582912
   , Types.explorer = Just 14155776
   })
+  .
+  -- Flag to use SSH instead of `nomad exec` to fetch the logs.
+  P.nomadSSHLogsOn
+  .
+  -- Don't stop the Nomad Job when finished.
+  P.clusterKeepRunningOn

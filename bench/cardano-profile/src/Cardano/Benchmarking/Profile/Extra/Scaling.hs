@@ -40,7 +40,6 @@ profilesNoEraScalingLocal =
         . P.loopback
         . V.valueLocal
         . E.fastDuration
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     fastStartup & P.name "faststartup-24M"                    . P.utxo 24000000 . V.fundsDefault . V.genesisVariant300
   ]
@@ -101,9 +100,16 @@ clusterNomadSsdNoRegions =
   , Types.explorer = Just $ Types.Resources 16 120000 124000
   })
   .
-  P.nomadHostVolume (Types.HostVolume "/ssd2" False "ssd2")
-  .
-  P.nomadHostVolume (Types.HostVolume "/ssd1" False "ssd1")
+  P.nomadHostVolume (
+    let hostVolumes =
+          [ Types.HostVolume "/ssd1" False "ssd1"
+          , Types.HostVolume "/ssd2" False "ssd2"
+          ]
+    in  Types.ByNodeType {
+          Types.producer = hostVolumes
+        , Types.explorer = Just hostVolumes
+        }
+  )
   .
   P.nomadSSHLogsOn
   .

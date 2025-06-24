@@ -3346,7 +3346,8 @@ backend_nomad() {
 # (Task Drivers are also called plugins because they are pluggable).
 nomad_create_server_config() {
   local name=$1
-  local http_port=$2 rpc_port=$3 serv_port=$4
+  local addr=$2
+  local http_port=$3 rpc_port=$4 serv_port=$5
   local state_dir=$(wb_nomad server state-dir-path "${name}")
   local config_file=$(wb_nomad server config-file-path "${name}")
   # Config:
@@ -3387,7 +3388,7 @@ data_dir  = "${state_dir}/data"
 # bind all network services to the same address. It is also possible to bind the
 # individual services to different addresses using the "addresses" configuration
 # option. Dev mode (-dev) defaults to localhost.
-bind_addr = "127.0.0.1"
+bind_addr = "${addr}"
 # Specifies the network ports used for different services required by the Nomad
 # agent.
 ports = {
@@ -3416,19 +3417,19 @@ ports = {
 advertise {
   # The address to advertise for the HTTP interface. This should be reachable by
   # all the nodes from which end users are going to use the Nomad CLI tools.
-  http = "127.0.0.1"
+  http = "${addr}"
   # The address used to advertise to Nomad clients for connecting to Nomad
   # servers for RPC. This allows Nomad clients to connect to Nomad servers from
   # behind a NAT gateway. This address much be reachable by all Nomad client
   # nodes. When set, the Nomad servers will use the advertise.serf address for
   # RPC connections amongst themselves. Setting this value on a Nomad client has
   # no effect.
-  rpc = "127.0.0.1"
+  rpc = "${addr}"
   # The address advertised for the gossip layer. This address must be reachable
   # from all server nodes. It is not required that clients can reach this
   # address. Nomad servers will communicate to each other over RPC using the
   # advertised Serf IP and advertised RPC Port.
-  serf = "127.0.0.1"
+  serf = "${addr}"
 }
 # The tls stanza configures Nomad's TLS communication via HTTP and RPC to
 # enforce secure cluster communication between servers, clients, and between.
@@ -3580,7 +3581,9 @@ EOF
 
 nomad_create_client_config() {
   local name=$1
-  local http_port=$2 rpc_port=$3 serv_port=$4
+  local addr=$2
+  local http_port=$3 rpc_port=$4 serv_port=$5
+  local datacenter=${6:-loopback}
   local cni_plugins_path=$(dirname $(which bridge))
   local state_dir=$(wb_nomad client state-dir-path "${name}")
   local config_file=$(wb_nomad client config-file-path "${name}")
@@ -3590,15 +3593,30 @@ nomad_create_client_config() {
   for server_name in $(ls "${nomad_servers_dir}"); do
     if wb_nomad server is-running "${server_name}"
     then
-      local port=$(wb_nomad server port rpc "${server_name}")
+      local server_addr=$(wb_nomad server port addr "${server_name}")
+      local server_port=$(wb_nomad server port rpc  "${server_name}")
       if test -z "${servers_addresses}"
       then
-        servers_addresses="${servers_addresses} \"127.0.0.1:${port}\""
+        servers_addresses="\"${server_addr}:${server_port}\""
       else
-        servers_addresses="${servers_addresses}, \"127.0.0.1:${port}\""
+        servers_addresses="${servers_addresses}, \"${server_addr}:${server_port}\""
       fi
     fi
   done
+  # If NOMAD_ADDR is not unset and not empty, add it to the list of servers.
+  if ! test -z "${NOMAD_ADDR+set}" && test -n "${NOMAD_ADDR}"
+  then
+    local hostname
+    # Forcing the default port!
+    hostname="${NOMAD_ADDR#*://}" # Take out the "http://" part.
+    hostname="${hostname%:*}"     # Keep up to ":".
+    if test -z "${servers_addresses}"
+    then
+      servers_addresses="\"${hostname}:4647\""
+    else
+      servers_addresses="${servers_addresses}, \"${hostname}:4647\""
+    fi
+  fi
   # Config:
   # - Nomad agent configuration docs:
   # - - https://developer.hashicorp.com/nomad/docs/configuration
@@ -3616,7 +3634,7 @@ nomad_create_client_config() {
 region = "global"
 # Specifies the data center of the local agent. All members of a datacenter
 # should share a local LAN connection.
-datacenter = "loopback"
+datacenter = "${datacenter}"
 # Specifies the name of the local node. This value is used to identify
 # individual agents. When specified on a server, the name must be unique within
 # the region.
@@ -3643,7 +3661,7 @@ plugin_dir  = "${state_dir}/data/plugins"
 # bind all network services to the same address. It is also possible to bind the
 # individual services to different addresses using the "addresses" configuration
 # option. Dev mode (-dev) defaults to localhost.
-bind_addr = "127.0.0.1"
+bind_addr = "${addr}"
 # Specifies the network ports used for different services required by the Nomad
 # agent.
 ports = {
@@ -3670,14 +3688,14 @@ ports = {
 advertise {
   # The address to advertise for the HTTP interface. This should be reachable by
   # all the nodes from which end users are going to use the Nomad CLI tools.
-  http = "127.0.0.1"
+  http = "${addr}"
   # The address used to advertise to Nomad clients for connecting to Nomad
   # servers for RPC. This allows Nomad clients to connect to Nomad servers from
   # behind a NAT gateway. This address much be reachable by all Nomad client
   # nodes. When set, the Nomad servers will use the advertise.serf address for
   # RPC connections amongst themselves. Setting this value on a Nomad client has
   # no effect.
-  rpc = "127.0.0.1"
+  rpc = "${addr}"
 }
 # The tls stanza configures Nomad's TLS communication via HTTP and RPC to
 # enforce secure cluster communication between servers, clients, and between.
@@ -3874,6 +3892,11 @@ client {
     # working directory.
     disable_file_sandbox = false
   }
+
+  # To use when resolving IPs.
+  #meta {
+  #  my_ip = "${addr}"
+  #}
 
 }
 

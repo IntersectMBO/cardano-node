@@ -1,15 +1,10 @@
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
-
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
 
 module Cardano.Tracer.Test.ForwardingStressTest.Script
   ( TestSetup(..)
