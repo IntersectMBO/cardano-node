@@ -523,10 +523,10 @@ instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr lAddr) where
   getSeverityAnnotation ev =
    case ev of
      PeerStatusChanged {}       -> Info
-     PeerStatusChangeFailure {} -> Error
-     PeerMonitoringError {}     -> Error
+     PeerStatusChangeFailure {} -> Info
+     PeerMonitoringError {}     -> Info
      PeerMonitoringResult {}    -> Debug
-     AcquireConnectionError {}  -> Error
+     AcquireConnectionError {}  -> Info
 
 instance HasPrivacyAnnotation (PeerSelectionCounters extraCounters)
 instance HasSeverityAnnotation (PeerSelectionCounters extraCounters) where

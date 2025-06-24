@@ -2,6 +2,8 @@
 
 ## Next version
 
+- Lower the log severity from Error to Info for PeerStatusChangeFailure, PeerMonitoringError and AcquireConnectionError.
+
 * Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
   (from `cardano-tracer:Cardano.Node.Startup` to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`), `NodePeers`
   (from `cardano-node:Cardano.Node.Tracing.Peers` to `trace-dispatcher:Cardano.Logging.Types.NodePeers`), and
