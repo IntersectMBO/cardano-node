@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,6 +11,7 @@ module Cardano.Node.Configuration.Topology
   , NodeHostIPv4Address(..)
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
+  , NodeId(..)
   , RemoteAddress(..)
   , nodeAddressToSockAddr
   , readTopologyFile
@@ -25,6 +28,7 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Control.Exception (Exception (..), IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
+import           Data.Aeson.Types (parseFail)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -32,6 +36,7 @@ import           Data.Foldable
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Generics (Generic)
 import           Text.Read (readMaybe)
 
 
@@ -54,6 +59,18 @@ data RemoteAddress = RemoteAddress
   -- a Boolean value, @0@ means to ignore the address;
   } deriving (Eq, Ord, Show)
 
+newtype NodeId = NodeId Int
+  deriving (Eq, Ord, Show)
+
+instance ToJSON NodeId where
+  toJSON (NodeId i) = String $ Text.pack $ "node_" ++ show i
+
+instance FromJSON NodeId where
+  parseJSON = withText "NodeId" $ \t -> case Text.breakOn "_" t of
+    ("node", textId) -> case eitherDecodeStrictText textId of
+      Right i -> pure $ NodeId i
+      Left _ -> parseFail $ "Incorrect format for NodeId: " ++ show t
+    _ -> parseFail $ "Incorrect format for NodeId: " ++ show t
 
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
 -- non zero return corresponding NodeAddress.
@@ -95,7 +112,7 @@ data NodeSetup a = NodeSetup
   , nodeIPv4Address :: !(Maybe NodeIPv4Address)
   , nodeIPv6Address :: !(Maybe NodeIPv6Address)
   , producers :: ![a]
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance (FromJSON a) => FromJSON (NodeSetup a) where
   parseJSON = withObject "NodeSetup" $ \o ->
@@ -117,7 +134,7 @@ instance (ToJSON a) => ToJSON (NodeSetup a) where
 data NetworkTopology a
   = MockNodeTopology ![NodeSetup a]
   | RealNodeTopology ![a]
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance (FromJSON a) => FromJSON (NetworkTopology a) where
   parseJSON = withObject "NetworkTopology" $ \o -> asum
