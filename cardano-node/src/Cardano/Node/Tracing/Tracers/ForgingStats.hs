@@ -100,13 +100,17 @@ calculateForgingStats stats _context
     TraceNodeCannotForge {} =
       pure $ stats  { fsNodeCannotForgeNum  = fsNodeCannotForgeNum stats + 1 }
 calculateForgingStats stats _context
-    TraceNodeIsLeader {} =
-        pure $ stats  { fsNodeIsLeaderNum  = fsNodeIsLeaderNum stats + 1 }
+    (TraceNodeIsLeader (SlotNo slot)) =
+      pure $ stats  { fsNodeIsLeaderNum = fsNodeIsLeaderNum stats + 1
+                    , fsLastSlot = fromIntegral slot }
 calculateForgingStats stats _context
     TraceForgedBlock {} =
         pure $ stats  { fsBlocksForgedNum  = fsBlocksForgedNum stats + 1 }
 calculateForgingStats stats _context
     (TraceNodeNotLeader (SlotNo slot')) =
+      -- Node is not a leader again: The number of blocks forged by
+      -- this node should now be equal to the number of slots when
+      -- this node was a leader.
       let slot = fromIntegral slot'
       in if fsLastSlot stats == 0 || succ (fsLastSlot stats) == slot
             then pure $ stats { fsLastSlot = slot }
