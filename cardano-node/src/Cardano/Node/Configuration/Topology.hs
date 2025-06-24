@@ -1,5 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.Configuration.Topology
@@ -9,6 +12,7 @@ module Cardano.Node.Configuration.Topology
   , NodeHostIPv4Address(..)
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
+  , NodeId(..)
   , RemoteAddress(..)
   , nodeAddressToSockAddr
   , readTopologyFile
@@ -32,6 +36,7 @@ import           Data.Foldable
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Generics (Generic)
 import           Text.Read (readMaybe)
 
 
@@ -54,6 +59,8 @@ data RemoteAddress = RemoteAddress
   -- a Boolean value, @0@ means to ignore the address;
   } deriving (Eq, Ord, Show)
 
+newtype NodeId = NodeId Int
+  deriving (Eq, Ord, Show, Generic, FromJSON, ToJSON)
 
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
 -- non zero return corresponding NodeAddress.
@@ -95,7 +102,7 @@ data NodeSetup a = NodeSetup
   , nodeIPv4Address :: !(Maybe NodeIPv4Address)
   , nodeIPv6Address :: !(Maybe NodeIPv6Address)
   , producers :: ![a]
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance (FromJSON a) => FromJSON (NodeSetup a) where
   parseJSON = withObject "NodeSetup" $ \o ->
@@ -117,7 +124,7 @@ instance (ToJSON a) => ToJSON (NodeSetup a) where
 data NetworkTopology a
   = MockNodeTopology ![NodeSetup a]
   | RealNodeTopology ![a]
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance (FromJSON a) => FromJSON (NetworkTopology a) where
   parseJSON = withObject "NetworkTopology" $ \o -> asum
