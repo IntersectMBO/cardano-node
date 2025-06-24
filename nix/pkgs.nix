@@ -35,16 +35,10 @@ in with final;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
-  # TODO Use `compiler-nix-name` here instead of `"ghc928"`
-  # and fix the resulting `hlint` 3.6.1 warnings.
-  hlint = haskell-nix.tool "ghc928" "hlint" ({config, ...}: {
-    version = {
-      ghc8107 = "3.4.1";
-      ghc927 = "3.5";
-      ghc928 = "3.5";
-    }.${config.compiler-nix-name} or "3.6.1";
-    index-state = "2024-12-24T12:56:48Z";
-  });
+  hlint = haskell-nix.tool "ghc96" "hlint" {
+    version = "3.8";
+    index-state = "2025-04-22T00:00:00Z";
+  };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
     version = "0.8.7";
