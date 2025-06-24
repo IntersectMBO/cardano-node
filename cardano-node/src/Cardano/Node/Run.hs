@@ -228,19 +228,19 @@ buildNodeConfiguration tracer partialConf = do
 buildRpcConfiguration :: Tracer IO String
                       -> NetworkMagic
                       -> PartialNodeConfiguration
-                      -> IO RpcConfig
+                      -> IO (RpcConfig, SocketPath, NetworkMagic)
 buildRpcConfiguration tracer networkMagic partialConf = do
   nc <- buildNodeConfiguration tracer partialConf
   SocketConfig{ncSocketPath = Last mN2cSocket} <- pure $ ncSocketConfig nc
   let nodeSocketPath = fromMaybe "rpc.sock" mN2cSocket
       socketDir = takeDirectory $ unFile nodeSocketPath
   pure $
-    RpcConfig
+    (RpcConfig
       { isEnabled = True -- TODO take from PNC
       , rpcSocketPath = File $ socketDir </> "rpc.sock" -- TODO take from PNC
-      , nodeSocketPath
-      , networkMagic
       }
+      , nodeSocketPath
+      , networkMagic)
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.

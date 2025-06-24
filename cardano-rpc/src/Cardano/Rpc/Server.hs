@@ -32,7 +32,7 @@ import           Network.GRPC.Server
 import           Network.GRPC.Server.Protobuf
 import           Network.GRPC.Server.Run
 import           Network.GRPC.Server.StreamType
-import           Network.GRPC.Spec
+import           Network.GRPC.Spec hiding (Identity)
 
 import           Proto.Google.Protobuf.Empty
 import           RIO
@@ -66,11 +66,13 @@ methodsUtxoRpc =
     $ NoMoreMethods
 
 runRpcServer
-  :: IO RpcConfig
+  :: IO (RpcConfig, SocketPath, NetworkMagic)
   -- ^ action which reloads RPC configuration
   -> IO ()
 runRpcServer loadRpcConfig = do
-  rpcConfig@RpcConfig{rpcSocketPath = File rpcSocketPathFp} <- loadRpcConfig
+  (rpcConfig@RpcConfig{rpcSocketPath = Identity (File rpcSocketPathFp)}
+    ,nodeSocketPath
+    ,networkMagic) <- loadRpcConfig
   let config =
         ServerConfig
           { -- serverInsecure = Just (InsecureConfig Nothing defaultInsecurePort)
@@ -80,7 +82,7 @@ runRpcServer loadRpcConfig = do
       rpcEnv =
         RpcEnv
           { config = rpcConfig
-          , rpcLocalNodeConnectInfo = mkLocalNodeConnectInfo rpcConfig
+          , rpcLocalNodeConnectInfo = mkLocalNodeConnectInfo nodeSocketPath networkMagic
           }
   runRIO rpcEnv $
     withRunInIO $ \runInIO ->

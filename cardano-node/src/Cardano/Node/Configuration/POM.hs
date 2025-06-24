@@ -53,6 +53,7 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Cardano.Rpc.Server.Config (RpcConfigF(..), PartialRpcConfig)
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -301,6 +302,9 @@ data PartialNodeConfiguration
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
 
+         -- gRPC
+       , pncRpcConfig :: !(Last PartialRpcConfig)
+
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -418,6 +422,11 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
+      pncRpcConfig <- fmap (Last . Just) $
+        RpcConfig
+          <$> (Last <$> v .:? "EnableRpc")
+          <*> (Last <$> v .:? "RpcSocketPath")
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -463,6 +472,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
+           , pncRpcConfig
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -710,6 +720,7 @@ defaultPartialNodeConfiguration =
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
       -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
+    , pncRpcConfig = Last . Just $ RpcConfig (Last $ Just False) mempty
     }
 
 lastOption :: Parser a -> Parser (Last a)

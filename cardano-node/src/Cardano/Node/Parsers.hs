@@ -19,6 +19,7 @@ import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), 
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (RpcConfigF(..), PartialRpcConfig, nodeSocketPathToRpcSocketPath)
 import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
@@ -49,7 +50,7 @@ nodeRunParser = do
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseNodeDatabasePaths
   validate <- lastOption parseValidateDB
-  socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
+  socketFp <- lastOption $ parseSocketPath "socket-path" "Path to a cardano-node socket"
   traceForwardSocket <- lastOption parseTracerSocketMode
   nodeConfigFp <- lastOption parseConfigFile
 
@@ -73,6 +74,9 @@ nodeRunParser = do
 
   -- Hidden options (to be removed eventually)
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
+
+  -- gRPC
+  pncRpcConfig <- lastOption $ parseRpcConfig socketFp
 
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
@@ -132,12 +136,15 @@ nodeRunParser = do
            , pncPeerSharing = mempty
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty
+           , pncRpcConfig
            }
 
-parseSocketPath :: Text -> Parser SocketPath
-parseSocketPath helpMessage =
+parseSocketPath :: Text -- ^ option name
+                -> Text -- ^ help text
+                -> Parser SocketPath
+parseSocketPath optionName helpMessage =
   fmap File $ strOption $ mconcat
-    [ long "socket-path"
+    [ long (toS optionName)
     , help (toS helpMessage)
     , completer (bashCompleter "file")
     , metavar "FILEPATH"
@@ -362,6 +369,28 @@ parseStartAsNonProducingNode =
         , "credentials are specified."
         ]
     ]
+
+parseRpcConfig :: Parser PartialRpcConfig
+parseRpcConfig = do
+  isEnabled <- lastOption parseRpcToggle
+  socketPath <- lastOption parseRpcSocketPath
+  -- TODO move this to building actual node configuration?
+  -- let defaultedSocketPath <-  (nodeSocketPathToRpcSocketPath <$> nodeSocketPath)
+  pure $ RpcConfig isEnabled socketPath
+  where
+    parseRpcToggle :: Parser Bool
+    parseRpcToggle =
+      switch (
+           long "grpc-enable"
+        <> help "[EXPERIMENTAL] Enable node gRPC endpoint."
+      )
+    parseRpcSocketPath :: Parser SocketPath
+    parseRpcSocketPath = 
+      parseSocketPath 
+        "gprc-socket-path" 
+        "[EXPERIMENTAL] gRPC socket path. Defaults to rpc.sock in the same directory as node socket."
+  
+  
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.
