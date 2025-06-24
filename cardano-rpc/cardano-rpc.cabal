@@ -91,6 +91,8 @@ library
     cardano-ledger-conway,
     cardano-ledger-core,
     containers,
+    filepath,
+    generic-data,
     grapesy,
     grpc-spec,
     microlens,
