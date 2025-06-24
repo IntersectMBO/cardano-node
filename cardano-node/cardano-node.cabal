@@ -264,7 +264,7 @@ test-suite cardano-node-test
                       , filepath
                       , hedgehog
                       , hedgehog-corpus
-                      , hedgehog-extras
+                      , hedgehog-extras ^>= 0.7.0
                       , iproute
                       , mtl
                       , ouroboros-consensus
