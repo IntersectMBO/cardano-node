@@ -7,6 +7,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- HLINT ignore "Use any" -}
+
 module Cardano.Tracer.Configuration
   ( Address (..)
   , Endpoint (..)

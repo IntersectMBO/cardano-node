@@ -5,6 +5,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{- HLINT ignore "Functor law" -}
+
 module Cardano.Tracer.Test.TestSetup
   ( module Cardano.Tracer.Test.TestSetup
   , module Ouroboros.Network.Magic

@@ -4,6 +4,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 
 {- HLINT ignore "Use mapMaybe" -}
+{- HLINT ignore "Use concatMap" -}
 
 module Cardano.Analysis.Summary (module Cardano.Analysis.Summary) where
 
@@ -215,7 +216,7 @@ slotDomains :: Genesis
             -> ( DataDomain I RUTCTime
                , DataDomain I RUTCTime
                , DataDomain I RUTCTime)
-slotDomains gsis (firstLOs, lastLOs) (catMaybes . fmap ddFiltered -> xs) =
+slotDomains gsis (firstLOs, lastLOs) (mapMaybe ddFiltered -> xs) =
   ( DataDomain (I <$> Interval minStartRaw maxStopRaw)
         (Just $ I <$> Interval minStartFlt maxStopFlt)
                (I $ maxStopRaw  `utcTimeDeltaSec` minStartRaw)

@@ -6,6 +6,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{- HLINT ignore "Redundant <$>" -}
+
 module Cardano.Tracing.Config
   ( TraceOptions (..)
   , TraceSelection (..)
