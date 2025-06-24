@@ -428,7 +428,7 @@ mkProtVer (majorProtVer, minorProtVer) =
 ppProtocolVersionL' ::  Lens' (PParams Ledger.ShelleyEra) ProtVer
 ppProtocolVersionL' = Ledger.ppLens . Ledger.hkdProtocolVersionL @Ledger.ShelleyEra @Identity
 
-defaultMainnetTopology :: NetworkTopology
+defaultMainnetTopology :: NetworkTopology RemoteAddress
 defaultMainnetTopology =
   let single = RemoteAddress
          { raAddress  = "relays-new.cardano-mainnet.iohk.io"

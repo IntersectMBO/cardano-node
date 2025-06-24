@@ -295,7 +295,7 @@ ifaceAddress = "127.0.0.1"
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
 mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
   where
-    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P :: NonP2P.NetworkTopology NonP2P.RemoteAddress
     topologyNonP2P =
       NonP2P.RealNodeTopology
         [ NonP2P.RemoteAddress (fromString ifaceAddress)
