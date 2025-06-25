@@ -5,6 +5,7 @@ module Test.Cardano.Node.Json
   ) where
 
 import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology)
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 
 import           Data.Aeson (decode, encode, fromJSON, toJSON)
 import           Data.Maybe (isJust)
@@ -63,7 +64,7 @@ prop_decode_NetworkTopology_JSON :: Property
 prop_decode_NetworkTopology_JSON =
   Hedgehog.property $ do
     enc <- Hedgehog.forAll genNetworkTopologyEncoding
-    let tp :: Maybe NetworkTopology
+    let tp :: Maybe (NetworkTopology RelayAccessPoint)
         tp = decode enc
     Hedgehog.assert $ isJust tp
 
