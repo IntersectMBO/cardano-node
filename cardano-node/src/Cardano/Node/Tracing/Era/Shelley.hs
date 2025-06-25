@@ -19,7 +19,7 @@ module Cardano.Node.Tracing.Era.Shelley () where
 
 import           Cardano.Api (textShow)
 import           Cardano.Api.Ledger (fromVRFVerKeyHash)
-import qualified Cardano.Api.Shelley as Api
+import qualified Cardano.Api as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
@@ -740,9 +740,6 @@ instance
   ) => LogFormatting (ShelleyNewEpochPredFailure era) where
   forMachine dtal (EpochFailure f) = forMachine dtal f
   forMachine dtal (MirFailure f) = forMachine dtal f
-  forMachine _dtal (CorruptRewardUpdate update) =
-    mconcat [ "kind" .= String "CorruptRewardUpdate"
-             , "update" .= String (textShow update) ]
 
 
 instance

@@ -13,6 +13,7 @@ module Cardano.Node.Protocol.Byron
   ) where
 
 import           Cardano.Api.Byron
+import           Cardano.Api
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update

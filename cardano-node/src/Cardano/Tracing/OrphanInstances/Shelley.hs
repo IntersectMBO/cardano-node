@@ -20,7 +20,7 @@
 module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Api (textShow)
-import qualified Cardano.Api.Shelley as Api
+import qualified Cardano.Api as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
@@ -859,9 +859,6 @@ instance
   ) => ToObject (ShelleyNewEpochPredFailure ledgerera) where
   toObject verb (EpochFailure f) = toObject verb f
   toObject verb (MirFailure f) = toObject verb f
-  toObject _verb (CorruptRewardUpdate update) =
-    mconcat [ "kind" .= String "CorruptRewardUpdate"
-             , "update" .= String (textShow update) ]
 
 
 instance
@@ -1326,6 +1323,7 @@ instance ToJSON ShelleyNodeToClientVersion where
   toJSON ShelleyNodeToClientVersion10 = String "ShelleyNodeToClientVersion10"
   toJSON ShelleyNodeToClientVersion11 = String "ShelleyNodeToClientVersion11"
   toJSON ShelleyNodeToClientVersion12 = String "ShelleyNodeToClientVersion12"
+  toJSON ShelleyNodeToClientVersion13 = String "ShelleyNodeToClientVersion13"
 
 instance Core.Crypto c => ToObject (PraosChainSelectView c) where
   toObject _ PraosChainSelectView {

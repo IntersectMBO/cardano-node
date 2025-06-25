@@ -260,8 +260,10 @@ instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protoco
     . Shelley.shelleyLedgerState
   ledgerDRepCount =
       Map.size
-    . Shelley.vsDReps
-    . (^. Shelley.certVStateL)
+    . undefined
+    -- . State.vsDReps
+    -- . (^. vsDRepsL)
+    -- . (^. Shelley.certVStateL)
     . Shelley.lsCertState
     . Shelley.esLState
     . Shelley.nesEs

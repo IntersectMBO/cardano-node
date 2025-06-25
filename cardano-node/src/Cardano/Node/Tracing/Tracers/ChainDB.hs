@@ -2223,21 +2223,24 @@ instance MetaTrace V1.BackingStoreValueHandleTrace where
     ]
 
 instance LogFormatting V2.FlavorImplSpecificTrace where
-  forMachine _dtal V2.FlavorImplSpecificTraceInMemory =
-    mconcat [ "kind" .= String "InMemory" ]
-  forMachine _dtal V2.FlavorImplSpecificTraceOnDisk =
-    mconcat [ "kind" .= String "OnDisk" ]
+  forMachine _dtal _ = undefined
+  -- forMachine _dtal V2.FlavorImplSpecificTraceInMemory =
+  --   mconcat [ "kind" .= String "InMemory" ]
+  -- forMachine _dtal V2.FlavorImplSpecificTraceOnDisk =
+  --   mconcat [ "kind" .= String "OnDisk" ]
 
-  forHuman V2.FlavorImplSpecificTraceInMemory =
-    "An in-memory backing store event was traced"
-  forHuman V2.FlavorImplSpecificTraceOnDisk =
-    "An on-disk backing store event was traced"
+  forHuman _ = undefined
+  -- forHuman V2.FlavorImplSpecificTraceInMemory =
+  --   "An in-memory backing store event was traced"
+  -- forHuman V2.FlavorImplSpecificTraceOnDisk =
+  --   "An on-disk backing store event was traced"
 
 instance MetaTrace V2.FlavorImplSpecificTrace where
-  namespaceFor V2.FlavorImplSpecificTraceInMemory =
-    Namespace [] ["InMemory"]
-  namespaceFor V2.FlavorImplSpecificTraceOnDisk =
-    Namespace [] ["OnDisk"]
+  namespaceFor _ = undefined
+  -- namespaceFor V2.FlavorImplSpecificTraceInMemory =
+  --   Namespace [] ["InMemory"]
+  -- namespaceFor V2.FlavorImplSpecificTraceOnDisk =
+  --   Namespace [] ["OnDisk"]
 
   severityFor (Namespace _ ["InMemory"]) _ = Just Info
   severityFor (Namespace _ ["OnDisk"])   _ = Just Info

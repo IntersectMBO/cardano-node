@@ -2388,6 +2388,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_18 = Number 18
   toJSON NodeToClientV_19 = Number 19
   toJSON NodeToClientV_20 = Number 20
+  toJSON NodeToClientV_21 = Number 21
   -- NB: When adding a new version here, update FromJSON below as well!
 
 instance FromJSON NodeToClientVersion where
@@ -2395,6 +2396,8 @@ instance FromJSON NodeToClientVersion where
   parseJSON (Number 17) = return NodeToClientV_17
   parseJSON (Number 18) = return NodeToClientV_18
   parseJSON (Number 19) = return NodeToClientV_19
+  parseJSON (Number 20) = return NodeToClientV_20
+  parseJSON (Number 21) = return NodeToClientV_21
   parseJSON (Number x) = fail ("FromJSON.NodeToClientVersion: unsupported node-to-client protocol version " ++ show x)
   parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
 
