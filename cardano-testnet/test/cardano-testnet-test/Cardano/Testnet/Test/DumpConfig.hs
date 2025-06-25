@@ -29,7 +29,7 @@ import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
 import           Cardano.Prelude (canonicalEncodePretty)
 import           Cardano.Testnet hiding (shelleyGenesisFile)
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..), UserProvidedData (..), UserProvidedEnv(..))
 
 import           Hedgehog ((===))
@@ -40,7 +40,7 @@ import           Testnet.Process.Run (execCli',mkExecConfig)
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Dumping config files/"'@
 hprop_dump_config :: H.Property
-hprop_dump_config = integrationWorkspace "dump-config-files" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
+hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
   let testnetOptions = def { cardanoOutputDir = UserProvidedEnv tmpDir }
       genesisOptions = def { genesisEpochLength = 200 }

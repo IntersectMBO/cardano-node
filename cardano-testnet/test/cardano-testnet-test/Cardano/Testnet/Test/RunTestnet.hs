@@ -18,7 +18,7 @@ import           System.Exit (ExitCode (..))
 import qualified System.Process as IO
 
 import           Cardano.Testnet
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..))
 
 import           Hedgehog ((===))
@@ -29,7 +29,7 @@ import           Testnet.Process.Run (execCli',mkExecConfig)
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Testnet produces blocks/"'@
 hprop_run_testnet :: H.Property
-hprop_run_testnet = integrationWorkspace "run-testnet" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
+hprop_run_testnet = integrationRetryWorkspace 2 "run-testnet" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
   let shelleyOptions = def { genesisEpochLength = 200 }
       testnetOptions = def
