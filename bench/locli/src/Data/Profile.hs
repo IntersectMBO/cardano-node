@@ -7,10 +7,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
 
-{- HLINT ignore "Avoid lambda" -}
-{- HLINT ignore "Eta reduce" -}
-{- HLINT ignore "Use head" -}
-
 module Data.Profile
   ( ProfileEntry (..)
   , ProfilingData (..)
@@ -72,7 +68,7 @@ traverseProfilingDataCDF f xs =
   ProfilingData
   <$> flip Map.traverseWithKey (Map.unions $ pdMap <$> xs)
              \fName ProfileEntry{peTime=_, peAlloc=_, ..} ->
-               let fNameEntries = xs <&> Map.lookup fName . pdMap & catMaybes
+               let fNameEntries = mapMaybe (Map.lookup fName . pdMap) xs
                in (\peTime peAlloc -> ProfileEntry {..})
                   <$> f (fmap peTime  fNameEntries)
                   <*> f (fmap peAlloc fNameEntries)

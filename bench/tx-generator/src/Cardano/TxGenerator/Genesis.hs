@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- HLINT ignore "Use map" -}
+{- HLINT ignore "Use map with tuple-section" -}
 
 -- | This module provides means to secure funds that are given in genesis.
 --   To secure a fund, the key locking the transaction ouput in genesis has to be provided.

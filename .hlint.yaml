@@ -51,6 +51,9 @@
 #
 # Generalise map to fmap, ++ to <>
 # - group: {name: generalise, enabled: true}
+#
+# Warn on use of partial functions
+# - group: {name: partial, enabled: true}
 
 
 # Ignore some builtin hints

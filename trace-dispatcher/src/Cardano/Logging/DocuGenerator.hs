@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {- HLINT ignore "Use map" -}
+{- HLINT ignore "Use map with tuple-section" -}
 
 module Cardano.Logging.DocuGenerator (
   -- First call documentTracer for every tracer and then

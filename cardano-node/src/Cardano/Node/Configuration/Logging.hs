@@ -77,7 +77,7 @@ import           Control.Concurrent.MVar (MVar, newMVar)
 import           Control.Concurrent.STM (STM)
 import           Control.Exception (IOException)
 import           Control.Exception.Safe (MonadCatch)
-import           Control.Monad (forM_, forever, void, when)
+import           Control.Monad
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
@@ -240,7 +240,7 @@ createLoggingLayer ver nodeConfig' p = do
 
          forM_ [metricsLogger, errorsLoggers] $ \loggerName ->
            Config.getBackends logConfig loggerName >>= \backends ->
-             when (TraceForwarderBK `notElem` backends) $
+             unless (TraceForwarderBK `elem` backends) $
                Config.setBackends logConfig loggerName $ Just (TraceForwarderBK : backends)
 
      Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
