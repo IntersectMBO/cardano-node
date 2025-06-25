@@ -1133,7 +1133,7 @@ producerAddressesNonP2P nt =
       $ nodeSetup
 
 producerAddresses
-  :: NetworkTopology
+  :: NetworkTopology RelayAccessPoint
   -> ( [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
      , Map RelayAccessPoint PeerAdvertise
      )

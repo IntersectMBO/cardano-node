@@ -305,7 +305,7 @@ mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
         ]
 mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
   where
-    rootConfig :: P2P.RootConfig
+    rootConfig :: P2P.RootConfig RelayAccessPoint
     rootConfig =
       P2P.RootConfig
         [ RelayAccessAddress (fromString ifaceAddress)
@@ -314,7 +314,7 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
         ]
         P2P.DoNotAdvertisePeer
 
-    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups :: P2P.LocalRootPeersGroups RelayAccessPoint
     localRootPeerGroups =
       P2P.LocalRootPeersGroups
         [ P2P.LocalRootPeersGroup rootConfig
@@ -324,7 +324,7 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
                                   InitiatorAndResponderDiffusionMode
         ]
 
-    topologyP2P :: P2P.NetworkTopology
+    topologyP2P :: P2P.NetworkTopology RelayAccessPoint
     topologyP2P =
       P2P.RealNodeTopology
         localRootPeerGroups
