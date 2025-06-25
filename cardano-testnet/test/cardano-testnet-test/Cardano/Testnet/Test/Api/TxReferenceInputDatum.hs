@@ -67,7 +67,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
     , testnetNodes = node0 : _
     , wallets = wallet0@(PaymentKeyInfo _ addrTxt0) : wallet1 : _
     } <-
-    cardanoTestnetDefault options def conf
+    createAndRunTestnet options def conf
 
   systemStart <- H.noteShowM $ getStartTime tempAbsPath' tr
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)

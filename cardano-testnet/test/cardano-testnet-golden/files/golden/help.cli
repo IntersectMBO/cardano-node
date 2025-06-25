@@ -1,6 +1,6 @@
-Usage: cardano-testnet (cardano | version | help)
+Usage: cardano-testnet (cardano | create-env | version | help)
 
-Usage: cardano-testnet cardano [--num-pool-nodes COUNT | --node-config FILEPATH]
+Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [ --shelley-era
   | --allegra-era
   | --mary-era
@@ -17,8 +17,30 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT | --node-config FILEPATH]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
+  [--node-env FILEPATH]
 
   Start a testnet in any era
+
+Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
+  [ --shelley-era
+  | --allegra-era
+  | --mary-era
+  | --alonzo-era
+  | --babbage-era
+  | --conway-era
+  ]
+  [--max-lovelace-supply WORD64]
+  [--nodeLoggingFormat LOGGING_FORMAT]
+  [--num-dreps NUMBER]
+  [--enable-new-epoch-state-logging]
+  [--output-dir DIRECTORY]
+  --testnet-magic INT
+  [--epoch-length SLOTS]
+  [--slot-length SECONDS]
+  [--active-slots-coeff DOUBLE]
+  --output DIRECTORY
+
+  Create a sandbox for Cardano testnet
 
 Usage: cardano-testnet version 
 

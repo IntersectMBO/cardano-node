@@ -75,7 +75,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

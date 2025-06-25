@@ -59,7 +59,7 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

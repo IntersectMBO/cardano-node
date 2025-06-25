@@ -1,4 +1,4 @@
-Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
+Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [ --shelley-era
   | --allegra-era
   | --mary-era
@@ -15,9 +15,9 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
-  [--node-env FILEPATH]
+  --output DIRECTORY
 
-  Start a testnet in any era
+  Create a sandbox for Cardano testnet
 
 Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
@@ -57,8 +57,5 @@ Available options:
   --active-slots-coeff DOUBLE
                            Active slots coefficient. Ignored if a custom Shelley
                            genesis file is passed. (default: 5.0e-2)
-  --node-env FILEPATH      Path to the node's environment (which is generated
-                           otherwise). You can generate a default environment
-                           with the 'create-env' command, then modify it and
-                           pass it with this argument.
+  --output DIRECTORY       Directory where to create the sandbox environment.
   -h,--help                Show this help text

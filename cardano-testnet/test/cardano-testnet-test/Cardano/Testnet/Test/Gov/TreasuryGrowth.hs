@@ -46,7 +46,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
                            , genesisActiveSlotsCoeff = 0.3
                            }
 
-  TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- cardanoTestnetDefault options shelleyOptions conf
+  TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- createAndRunTestnet options shelleyOptions conf
 
   (execConfig, socketPathAbs) <- do
     TestnetNode{nodeSprocket} <- H.headM testnetNodes

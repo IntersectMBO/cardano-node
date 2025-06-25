@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Parsers.Run
@@ -9,22 +10,12 @@ module Parsers.Run
   , opts
   ) where
 
-import           Cardano.Api.Shelley (ShelleyGenesis)
 
 import           Cardano.CLI.Environment
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
-import           Cardano.Node.Configuration.POM
-import           Cardano.Node.Types
 
-import qualified Data.Aeson as Aeson
 import           Data.Foldable
-import           Data.Monoid
-import           Data.Yaml (decodeFileThrow)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
-import qualified System.Directory as System
-import           System.FilePath (takeDirectory, (</>))
 
 import           Testnet.Property.Run
 import           Testnet.Start.Cardano
@@ -45,6 +36,7 @@ opts envCli = Opt.info (commands envCli <**> helper) idm
 -- via StartCardanoTestnet
 data CardanoTestnetCommands
   = StartCardanoTestnet CardanoTestnetCliOptions
+  | CreateTestnetEnv CardanoTestnetCreateEnvOptions
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
@@ -52,6 +44,7 @@ commands :: EnvCli -> Parser CardanoTestnetCommands
 commands envCli =
   asum
     [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
+    , fmap CreateTestnetEnv (subparser (cmdCreateEnv envCli))
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref (opts envCli)) (subparser cmdHelp)
     ]
@@ -60,54 +53,43 @@ commands envCli =
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
   StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
+  CreateTestnetEnv cmdOpts -> createEnvOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
 
+createEnvOptions :: CardanoTestnetCreateEnvOptions -> IO ()
+createEnvOptions CardanoTestnetCreateEnvOptions
+  { createEnvTestnetOptions=testnetOptions
+  , createEnvGenesisOptions=genesisOptions
+  , createEnvOutputDir=outputDir
+  } =
+    testnetRoutine (UserProvidedEnv outputDir) $ \conf ->
+      createTestnetEnv
+        testnetOptions genesisOptions
+        -- The CLI does not provide a way to provide custom genesis data by design:
+        -- If the user wants to have custom genesis data, they should manually
+        -- modify the files created by this command before running the testnet.
+        NoUserProvidedData NoUserProvidedData NoUserProvidedData
+        -- Do not add hashes to the main config file, so that genesis files
+        -- can be modified without having to recompute hashes every time.
+        conf{genesisHashesPolicy = WithoutHashes}
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
-runCardanoOptions (CardanoTestnetCliOptions testnetOptions genesisOptions) =
-    case cardanoNodes testnetOptions of
-      AutomaticNodeOptions _ -> runTestnet testnetOptions $ cardanoTestnetDefault testnetOptions genesisOptions
-      UserProvidedNodeOptions nodeInputConfigFile -> do
-        nodeConfigFile <- readNodeConfigurationFile nodeInputConfigFile
-        let protocolConfig :: NodeProtocolConfiguration =
-              case getLast $ pncProtocolConfig nodeConfigFile of
-                Nothing -> error $ "Genesis files not specified in node configuration file: " <> nodeInputConfigFile
-                Just x -> x
-            adjustedProtocolConfig =
-              -- Make all the files be relative to the location of the config file.
-              adjustFilePaths (takeDirectory nodeInputConfigFile </>) protocolConfig
-            (shelley, alonzo, conway) = getShelleyGenesises adjustedProtocolConfig
-        shelleyGenesis :: UserProvidedData ShelleyGenesis <-
-          genesisFilepathToData $ npcShelleyGenesisFile shelley
-        alonzoGenesis :: UserProvidedData AlonzoGenesis <-
-          genesisFilepathToData $ npcAlonzoGenesisFile alonzo
-        conwayGenesis :: UserProvidedData ConwayGenesis <-
-          genesisFilepathToData $ npcConwayGenesisFile conway
-        runTestnet testnetOptions $ cardanoTestnet
-          testnetOptions
-          genesisOptions
-          shelleyGenesis
-          alonzoGenesis
-          conwayGenesis
-  where
-    getShelleyGenesises (NodeProtocolConfigurationCardano _byron shelley alonzo conway _hardForkConfig _checkPointConfig) =
-      (shelley, alonzo, conway)
-    readNodeConfigurationFile :: FilePath -> IO PartialNodeConfiguration
-    readNodeConfigurationFile file = do
-      errOrNodeConfig <- Aeson.eitherDecodeFileStrict' file
-      case errOrNodeConfig of
-        Left err -> error $ "Error reading node configuration file: " <> err
-        Right nodeConfig -> pure nodeConfig
-    genesisFilepathToData :: Aeson.FromJSON a => GenesisFile -> IO (UserProvidedData a)
-    genesisFilepathToData (GenesisFile filepath) = do
-      exists <- System.doesFileExist filepath
-      if exists
-        then UserProvidedData <$> decodeFileThrow filepath
-        else
-          -- Here we forbid mixing defaulting of genesis files with providing a user node configuration file:
-          --
-          -- Because of this check, either the user passes a node configuration file AND he passes all the genesis files.
-          -- Or the user doesn't pass a node configuration file AND cardano-testnet generates all the genesis files.
-          -- See the discussion here: https://github.com/IntersectMBO/cardano-node/pull/6103#discussion_r1995431437
-          error $ "Genesis file specified in node configuration file does not exist: " <> filepath
+runCardanoOptions CardanoTestnetCliOptions
+  { cliTestnetOptions=testnetOptions@CardanoTestnetOptions{cardanoOutputDir}
+  , cliGenesisOptions=genesisOptions
+  , cliNodeEnvironment=env
+  } =
+    case env of
+      NoUserProvidedEnv ->
+        -- Create the sandbox, then run cardano-testnet
+        runTestnet cardanoOutputDir $ \conf -> do
+          createTestnetEnv
+            testnetOptions genesisOptions
+            NoUserProvidedData NoUserProvidedData NoUserProvidedData
+            conf
+          cardanoTestnet testnetOptions genesisOptions conf
+      UserProvidedEnv nodeEnvPath ->
+        -- Run cardano-testnet in the sandbox provided by the user
+        -- In that case, 'cardanoOutputDir' is not used
+        runTestnet (UserProvidedEnv nodeEnvPath) $ cardanoTestnet testnetOptions genesisOptions
