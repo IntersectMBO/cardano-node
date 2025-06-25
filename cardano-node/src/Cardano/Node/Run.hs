@@ -22,8 +22,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Api (File (..), FileDirection (..))
-import           Cardano.Api.Internal.Error (displayError)
+import           Cardano.Api (File (..), FileDirection (..), displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
@@ -249,7 +248,7 @@ handleNodeWithTracers cmdPc nc0 p@(SomeConsensusProtocol blockType runP) = do
             EnabledP2PMode -> nc0
       case ncTraceConfig nc of
         TraceDispatcher{} -> do
-          blockForging <- snd (Api.protocolInfo runP)
+          blockForging <- snd (Api.protocolInfo runP) nullTracer -- FIXME: this should be a real tracer
           tracers <-
             initTraceDispatcher
               nc
@@ -308,7 +307,7 @@ handleNodeWithTracers cmdPc nc0 p@(SomeConsensusProtocol blockType runP) = do
 
           traceWith (nodeVersionTracer tracers) getNodeVersion
           let isNonProducing = ncStartAsNonProducingNode nc
-          blockForging <- snd (Api.protocolInfo runP)
+          blockForging <- snd (Api.protocolInfo runP) nullTracer -- FIXME: this should be a real tracer
           traceWith (startupTracer tracers)
                     (BlockForgingUpdate (if isNonProducing || null blockForging
                                           then DisabledBlockForging
@@ -506,7 +505,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnProtocolInfo   = pInfo
               , rnNodeKernelHook = \registry nodeKernel -> do
                   -- set the initial block forging
-                  blockForging <- snd (Api.protocolInfo runP)
+                  blockForging <- snd (Api.protocolInfo runP) nullTracer -- FIXME: this should be a real tracer
 
                   unless (ncStartAsNonProducingNode nc) $
                     setBlockForging nodeKernel blockForging
@@ -604,7 +603,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnProtocolInfo   = pInfo
                 , rnNodeKernelHook = \registry nodeKernel -> do
                     -- set the initial block forging
-                    blockForging <- snd (Api.protocolInfo runP)
+                    blockForging <- snd (Api.protocolInfo runP)nullTracer -- FIXME: this should be a real tracer
 
                     unless (ncStartAsNonProducingNode nc) $
                       setBlockForging nodeKernel blockForging
@@ -813,7 +812,7 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
-          blockForging <- snd (Api.protocolInfo runP')
+          blockForging <- snd (Api.protocolInfo runP') nullTracer -- FIXME: this should be a real tracer
           traceWith startupTracer
                     (BlockForgingUpdate (if null blockForging
                                           then DisabledBlockForging

@@ -342,6 +342,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "Startup"]
     configureTracers configReflection trConfig [consensusStartupErrorTr]
 
+    !consensusKESAgentTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "KESAgent"]
+
     !consensusGddTr <- mkCardanoTracer
                  trBase trForward mbTrEKG
                  ["Consensus", "GDD"]
@@ -402,6 +406,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith keepAliveClientTr
       , Consensus.consensusErrorTracer = Tracer $
           traceWith consensusStartupErrorTr . ConsensusStartupException
+      , Consensus.kesAgentTracer = Tracer $
+          traceWith consensusKESAgentTr
       , Consensus.gsmTracer = Tracer $
           traceWith consensusGsmTr
       , Consensus.csjTracer = Tracer $

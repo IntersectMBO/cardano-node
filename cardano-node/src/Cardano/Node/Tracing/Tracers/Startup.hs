@@ -471,6 +471,7 @@ nodeToClientVersionToInt = \case
   NodeToClientV_18 -> 18
   NodeToClientV_19 -> 19
   NodeToClientV_20 -> 20
+  NodeToClientV_21 -> 21
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case

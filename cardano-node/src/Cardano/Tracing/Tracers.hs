@@ -553,6 +553,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
+      , Consensus.kesAgentTracer = nullTracer
       , Consensus.gsmTracer = nullTracer
       , Consensus.csjTracer = nullTracer
       , Consensus.dbfTracer = nullTracer
@@ -859,6 +860,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
           traceWith (toLogObject tr) (readableTraceBlockchainTimeEvent ev)
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
+    , Consensus.kesAgentTracer = contramap show $ tracerOnOff (traceKESAgent trSel) verb "KESAgent" tr
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
     , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr

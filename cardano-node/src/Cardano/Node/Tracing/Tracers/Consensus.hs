@@ -80,6 +80,7 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+import Ouroboros.Consensus.Protocol.Praos.AgentClient
 
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
@@ -2267,3 +2268,31 @@ instance ( StandardHash blk
             ]
 
   forHuman = showT
+
+--------------------------------------------------------------------------------
+-- KES Agent tracer
+--------------------------------------------------------------------------------
+
+instance LogFormatting KESAgentClientTrace where
+  forMachine _dtal = \case
+    KESAgentClientException _ ->
+      mconcat [ "kind" .= String "KESAgentClientException" ]
+    KESAgentClientTrace _ ->
+      mconcat [ "kind" .= String "KESAgentClientTrace" ]
+
+  forHuman = showT
+
+
+instance MetaTrace KESAgentClientTrace where
+  namespaceFor = \case
+    KESAgentClientException _ ->
+      Namespace [] ["KESAgentClientException"]
+    KESAgentClientTrace _ ->
+      Namespace [] ["KESAgentClientTrace"]
+
+  severityFor = undefined
+  documentFor = undefined
+  allNamespaces =
+    [ Namespace [] ["KESAgentClientException"]
+    , Namespace [] ["KESAgentClientTrace"]
+    ]

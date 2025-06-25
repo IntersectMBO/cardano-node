@@ -39,7 +39,7 @@ import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..), PraosCredentialsSource(..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
 
@@ -224,6 +224,7 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
                              (teVrf,  loc "vrf")
                              (teKes,  loc "kes")
 
+-- TODO: enable KES agent
 mkPraosLeaderCredentials ::
      OperationalCertificate
   -> SigningKey VrfKey
@@ -236,11 +237,11 @@ mkPraosLeaderCredentials
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
-        praosCanBeLeaderOpCert     = opcert,
+          praosCanBeLeaderCredentialsSource =
+            PraosCredentialsUnsound opcert kesKey,
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
           praosCanBeLeaderSignKeyVRF = vrfKey
         },
-      shelleyLeaderCredentialsInitSignKey = kesKey,
       shelleyLeaderCredentialsLabel = "Shelley"
     }
 
