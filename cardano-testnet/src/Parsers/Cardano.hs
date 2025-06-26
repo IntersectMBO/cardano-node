@@ -35,6 +35,7 @@ optsCreateTestnet envCli = CardanoTestnetCreateEnvOptions
   <$> pCardanoTestnetCliOptions envCli
   <*> pGenesisOptions
   <*> pEnvOutputDir
+  <*> pTopologyType
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
@@ -90,6 +91,13 @@ pNodeEnvironment = fmap (maybe NoUserProvidedEnv UserProvidedEnv) <$>
     <> OA.metavar "FILEPATH"
     <> OA.help "Path to the node's environment (which is generated otherwise). You can generate a default environment with the 'create-env' command, then modify it and pass it with this argument."
     )
+
+pTopologyType :: Parser TopologyType
+pTopologyType = OA.flag DirectTopology P2PTopology
+  (  OA.long "p2p-topology"
+  <> OA.help "Use P2P topology files instead of \"direct\" topology files"
+  <> OA.showDefault
+  )
 
 pEnvOutputDir :: Parser FilePath
 pEnvOutputDir = OA.strOption

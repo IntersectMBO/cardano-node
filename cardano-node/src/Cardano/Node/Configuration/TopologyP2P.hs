@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -17,6 +19,7 @@ module Cardano.Node.Configuration.TopologyP2P
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
   , PeerAdvertise(..)
+  , defaultTopology
   , nodeAddressToSockAddr
   , readTopologyFile
   , readPeerSnapshotFile
@@ -54,6 +57,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Generics (Generic)
 import           System.FilePath (takeDirectory, (</>))
 
 data NodeSetup a = NodeSetup
@@ -62,7 +66,7 @@ data NodeSetup a = NodeSetup
   , nodeIPv6Address :: !(Maybe NodeIPv6Address)
   , producers       :: ![RootConfig a]
   , useLedger       :: !UseLedgerPeers
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance FromJSON a => FromJSON (NodeSetup a) where
   parseJSON = withObject "NodeSetup" $ \o ->
@@ -94,7 +98,7 @@ data RootConfig a = RootConfig
   , rootAdvertise    :: PeerAdvertise
     -- ^ 'advertise' configures whether the root should be advertised through
     -- peer sharing.
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance FromJSON a => FromJSON (RootConfig a) where
   parseJSON = withObject "RootConfig" $ \o ->
@@ -134,7 +138,7 @@ data LocalRootPeersGroup a = LocalRootPeersGroup
     -- state.
   , rootDiffusionMode :: DiffusionMode
     -- ^ diffusion mode; used for local root peers.
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 -- | Does not use the 'FromJSON' instance of 'RootConfig', so that
 -- 'accessPoints', 'advertise', 'valency' and 'warmValency' fields are attached to the
@@ -166,7 +170,7 @@ instance ToJSON a => ToJSON (LocalRootPeersGroup a) where
 
 newtype LocalRootPeersGroups a = LocalRootPeersGroups
   { groups :: [LocalRootPeersGroup a]
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance FromJSON a => FromJSON (LocalRootPeersGroups a) where
   parseJSON = fmap LocalRootPeersGroups . parseJSONList
@@ -176,7 +180,7 @@ instance ToJSON a => ToJSON (LocalRootPeersGroups a) where
 
 newtype PublicRootPeers a = PublicRootPeers
   { publicRoots :: RootConfig a
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance FromJSON a => FromJSON (PublicRootPeers a) where
   parseJSON = fmap PublicRootPeers . parseJSON
@@ -191,7 +195,7 @@ data NetworkTopology a = RealNodeTopology
   , ntUseBootstrapPeers    :: !UseBootstrapPeers
   , ntPeerSnapshotPath     :: !(Maybe PeerSnapshotFile)
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 instance AdjustFilePaths (NetworkTopology a) where
   adjustFilePaths f nt@(RealNodeTopology _ _ _ _ mPeerSnapshotPath) =
@@ -287,6 +291,34 @@ readPeerSnapshotFile  (PeerSnapshotFile peerSnapshotFile) =
     either error pure =<< eitherDecodeFileStrict peerSnapshotFile
   where
     handleException = handleAny $ \e -> error $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> displayException e
+
+defaultTopology :: [a] -> NetworkTopology a
+defaultTopology addresses = RealNodeTopology
+  { ntLocalRootPeersGroups = LocalRootPeersGroups
+    { groups = [
+        LocalRootPeersGroup
+          { localRoots = RootConfig
+            { rootAccessPoints = addresses
+            , rootAdvertise = DoNotAdvertisePeer
+            }
+          , hotValency = HotValency 1
+          , warmValency = WarmValency 1
+          , trustable = IsTrustable
+          , rootDiffusionMode = InitiatorAndResponderDiffusionMode
+          }
+      ]
+    }
+  , ntPublicRootPeers =
+    [ PublicRootPeers
+        RootConfig
+        { rootAccessPoints = []
+        , rootAdvertise = DoNotAdvertisePeer
+        }
+    ]
+  , ntUseLedgerPeers = DontUseLedgerPeers
+  , ntUseBootstrapPeers = DontUseBootstrapPeers
+  , ntPeerSnapshotPath = Nothing
+  }
 
 --
 -- Checking for chance of progress in bootstrap phase

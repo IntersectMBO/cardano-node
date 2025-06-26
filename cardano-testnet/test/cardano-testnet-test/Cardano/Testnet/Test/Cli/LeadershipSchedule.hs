@@ -24,6 +24,7 @@ import           Prelude
 import           Control.Monad (void)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as J
 import           Data.Default.Class
 import           Data.List ((\\))
@@ -256,7 +257,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- createConfigJson tempAbsPath sbe
+  jsonBS <- Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePort <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $

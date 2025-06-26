@@ -52,7 +52,7 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   -- Generate the sandbox
   conf <- mkConf tmpDir
   createTestnetEnv
-    testnetOptions genesisOptions
+    testnetOptions genesisOptions def
     NoUserProvidedData NoUserProvidedData NoUserProvidedData
     -- Do not add hashes to the main config file, so that genesis files
     -- can be modified without having to recompute hashes every time.
