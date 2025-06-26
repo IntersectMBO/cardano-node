@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -43,7 +44,8 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..), PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
+import           Cardano.Node.Orphans ()
 
 import           Control.Exception (IOException)
 import           Control.Monad
@@ -167,27 +169,38 @@ readLeaderCredentialsSingleton
    ProtocolFilepaths
      { shelleyCertFile      = Nothing,
        shelleyVRFFile       = Nothing,
-       shelleyKESFile       = Nothing
+       shelleyKESSource     = Nothing
      } = pure []
 -- Or to supply all of the files
 readLeaderCredentialsSingleton
   ProtocolFilepaths { shelleyCertFile = Just opCertFile,
                       shelleyVRFFile = Just vrfFile,
-                      shelleyKESFile = Just kesFile
+                      shelleyKESSource = Just kesSource
                     } = do
     vrfSKey <-
       firstExceptT FileError (newExceptT $ readFileTextEnvelope (File vrfFile))
 
-    (opCert, kesSKey) <- opCertKesKeyCheck (File kesFile) (File opCertFile)
+    (credentialsSource, vkey) <- case kesSource of
+      KESKeyFilePath kesFile -> do
+        (OperationalCertificate opCert vkey, KesSigningKey kesKey) <-
+          opCertKesKeyCheck (File kesFile) (File opCertFile)
+        pure (PraosCredentialsUnsound opCert kesKey, vkey)
 
-    return [mkPraosLeaderCredentials opCert vrfSKey kesSKey]
+      -- TODO: minor yikes: when we're using an agent, we don't check that the
+      -- opcert and the key provided by the KES agent match, like we do when
+      -- the key is provided in a file on the command line
+      KESAgentSocketPath socketFile -> do
+        OperationalCertificate _ vkey <- firstExceptT FileError $ newExceptT $ readFileTextEnvelope $ File opCertFile
+        pure (PraosCredentialsAgent socketFile, vkey)
+
+    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey]
 
 -- But not OK to supply some of the files without the others.
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
      left OCertNotSpecified
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyVRFFile = Nothing} =
      left VRFKeyNotSpecified
-readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESFile = Nothing} =
+readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESSource = Nothing} =
      left KESKeyNotSpecified
 
 opCertKesKeyCheck
@@ -251,20 +264,20 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
                              (teKes,  loc "kes")
 
 mkPraosLeaderCredentials ::
-     OperationalCertificate
+     PraosCredentialsSource StandardCrypto
+  -> VerificationKey StakePoolKey
   -> SigningKey VrfKey
-  -> SigningKey KesKey
   -> ShelleyLeaderCredentials StandardCrypto
 mkPraosLeaderCredentials
-    (OperationalCertificate opcert (StakePoolVerificationKey vkey))
-    (VrfSigningKey vrfKey)
-    (KesSigningKey kesKey) =
+    credentialsSource
+    (StakePoolVerificationKey vkey)
+    (VrfSigningKey vrfKey) =
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
+          praosCanBeLeaderCredentialsSource = credentialsSource,
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
-          praosCanBeLeaderSignKeyVRF = vrfKey,
-          praosCanBeLeaderCredentialsSource = PraosCredentialsUnsound opcert kesKey
+          praosCanBeLeaderSignKeyVRF = vrfKey
         },
       shelleyLeaderCredentialsLabel = "Shelley"
     }
