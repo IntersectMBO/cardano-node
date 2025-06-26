@@ -78,29 +78,28 @@ createConfigJson :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> m LBS.ByteString
+  -> m (KeyMap Aeson.Value)
 createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron-genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
 
-  pure . A.encodePretty . Object
-    $ mconcat [ byronGenesisHash
-              , shelleyGenesisHash
-              , alonzoGenesisHash
-              , conwayGenesisHash
-              , defaultYamlHardforkViaConfig sbe
-              ]
+  pure $ mconcat
+    [ byronGenesisHash
+    , shelleyGenesisHash
+    , alonzoGenesisHash
+    , conwayGenesisHash
+    , defaultYamlHardforkViaConfig sbe
+    ]
    where
     getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
 
 createConfigJsonNoHash :: ()
   => ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> LBS.ByteString
-createConfigJsonNoHash sbe =
-  A.encodePretty . Object $ defaultYamlHardforkViaConfig sbe
+  -> KeyMap Aeson.Value
+createConfigJsonNoHash = defaultYamlHardforkViaConfig
 
 -- Generate hashes for genesis.json files
 
