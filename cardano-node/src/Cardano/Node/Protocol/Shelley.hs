@@ -211,10 +211,11 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      :: ShelleyCredentials
      -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
-     mkPraosLeaderCredentials
-       <$> undefined scCert -- parseEnvelope scCert
-       <*> undefined scVrf -- parseEnvelope scVrf
-       <*> undefined scKes -- parseEnvelope scKes
+    OperationalCertificate opCert vkey <- parseEnvelope scCert
+    scVrf' <- parseEnvelope scVrf
+    KesSigningKey scKes' <- parseEnvelope scKes
+    pure $
+      mkPraosLeaderCredentials (PraosCredentialsUnsound opCert scKes') vkey scVrf'
 
    readBulkFile
      :: Maybe FilePath
@@ -254,11 +255,11 @@ mkPraosLeaderCredentials
       shelleyLeaderCredentialsLabel = "Shelley"
     }
 
-_parseEnvelope ::
+parseEnvelope ::
      HasTextEnvelope a
   => (TextEnvelope, String)
   -> ExceptT PraosLeaderCredentialsError IO a
-_parseEnvelope (te, loc) =
+parseEnvelope (te, loc) =
   firstExceptT (FileError . Api.FileError loc) . hoistEither $
     deserialiseFromTextEnvelope te
 
