@@ -16,6 +16,7 @@ module Cardano.Node.Types
   , GenesisFile(..)
   , PeerSnapshotFile (..)
   , CheckpointsFile(..)
+  , KESSource(..)
   , ProtocolFilepaths (..)
   , hasProtocolFile
   , GenesisHash(..)
@@ -166,11 +167,16 @@ class AdjustFilePaths a where
   adjustFilePaths :: (FilePath -> FilePath) -> a -> a
 
 
+data KESSource
+  = KESKeyFilePath FilePath
+  | KESAgentSocketPath FilePath
+  deriving (Eq, Show)
+
 data ProtocolFilepaths =
      ProtocolFilepaths {
        byronCertFile        :: !(Maybe FilePath)
      , byronKeyFile         :: !(Maybe FilePath)
-     , shelleyKESFile       :: !(Maybe FilePath)
+     , shelleyKESSource     :: !(Maybe KESSource)
      , shelleyVRFFile       :: !(Maybe FilePath)
      , shelleyCertFile      :: !(Maybe FilePath)
      , shelleyBulkCredsFile :: !(Maybe FilePath)
@@ -183,14 +189,14 @@ hasProtocolFile :: ProtocolFilepaths -> Bool
 hasProtocolFile ProtocolFilepaths {
     byronCertFile,
     byronKeyFile,
-    shelleyKESFile,
+    shelleyKESSource,
     shelleyVRFFile,
     shelleyCertFile,
     shelleyBulkCredsFile
   }
   =  isJust byronCertFile
   || isJust byronKeyFile
-  || isJust shelleyKESFile
+  || isJust shelleyKESSource
   || isJust shelleyVRFFile
   || isJust shelleyCertFile
   || isJust shelleyBulkCredsFile
