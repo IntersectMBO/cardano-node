@@ -28,7 +28,6 @@ import           Data.Text (Text, pack)
 import           Data.Typeable
 import           Formatting
 import qualified Network.Mux as Mux
-import           Network.Mux.TCPInfo (StructTCPInfo (..))
 import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
 import           Network.TypedProtocol.Codec (AnyMessage (..))
 

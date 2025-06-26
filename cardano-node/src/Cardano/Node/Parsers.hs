@@ -63,7 +63,7 @@ nodeRunParser = do
   -- Protocol files
   byronCertFile   <- optional parseByronDelegationCert
   byronKeyFile    <- optional parseByronSigningKey
-  shelleyKESFile  <- optional parseKesKeyFilePath
+  shelleyKESSource  <- optional parseKesSourceFilePath
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
@@ -98,7 +98,7 @@ nodeRunParser = do
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
              , byronKeyFile
-             , shelleyKESFile
+             , shelleyKESSource
              , shelleyVRFFile
              , shelleyCertFile
              , shelleyBulkCredsFile
@@ -376,15 +376,33 @@ parseBulkCredsFilePath =
         <> completer (bashCompleter "file")
     )
 
---TODO: pass the current KES evolution, not the KES_0
-parseKesKeyFilePath :: Parser FilePath
-parseKesKeyFilePath =
-  strOption
-    ( long "shelley-kes-key"
-        <> metavar "FILEPATH"
-        <> help "Path to the KES signing key."
-        <> completer (bashCompleter "file")
-    )
+-- --TODO: pass the current KES evolution, not the KES_0
+-- parseKesKeyFilePath :: Parser FilePath
+-- parseKesKeyFilePath =
+--   strOption
+--     ( long "shelley-kes-key"
+--         <> metavar "FILEPATH"
+--         <> help "Path to the KES signing key."
+--         <> completer (bashCompleter "file")
+--     )
+
+parseKesSourceFilePath :: Parser KESSource
+parseKesSourceFilePath = asum
+  [ KESKeyFilePath <$>
+      strOption
+        ( long "shelley-kes-key"
+            <> metavar "FILEPATH"
+            <> help "Path to the KES signing key."
+            <> completer (bashCompleter "file")
+        )
+  , KESAgentSocketPath <$>
+      strOption
+        ( long "shelley-kes-agent-socket"
+            <> metavar "SOCKET_FILEPATH"
+            <> help "Path to the KES Agent socket"
+            <> completer (bashCompleter "file")
+        )
+  ]
 
 parseVrfKeyFilePath :: Parser FilePath
 parseVrfKeyFilePath =
