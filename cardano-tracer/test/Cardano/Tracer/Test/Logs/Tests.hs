@@ -1,3 +1,5 @@
+{-# options_ghc -w #-}
+
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -7,6 +9,7 @@ module Cardano.Tracer.Test.Logs.Tests
   ( tests
   ) where
 
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils (isItLog)
 import           Cardano.Tracer.MetaTrace
@@ -16,7 +19,8 @@ import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
 
-import           Control.Concurrent.Async (withAsync)
+--import           Control.Concurrent.Async (withAsync)
+import           Control.Concurrent.Async (withAsync, link)
 import           Control.Monad (forM)
 import           Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
@@ -31,20 +35,26 @@ import           Test.Tasty.QuickCheck
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Logs"
-  [ testProperty ".log"             do propRunInLogsStructure  ts (propLogs      ts ForHuman   100 60)
-  , testProperty ".log"             do propRunInLogsStructure  ts (propLogs      ts ForHuman   4   1)
-  , testProperty ".json"            do propRunInLogsStructure  ts (propLogs      ts ForMachine 100 60)
-  , testProperty "multi, initiator" do propRunInLogsStructure2 ts (propMultiInit ts ForMachine)
-  , testProperty "multi, responder" do propRunInLogsStructure  ts (propMultiResp ts ForMachine)
+  [ testProperty ".log"                    do propRunInLogsStructure       ts (propLogs      ts ForHuman   100 60)
+  , testProperty ".log"                    do propRunInLogsStructure       ts (propLogs      ts ForHuman   4   1)
+  , testProperty ".json"                   do propRunInLogsStructure       ts (propLogs      ts ForMachine 100 60)
+  , testProperty "multi, initiator socket" do propRunInLogsStructureLocal2 ts (propMultiInit ts ForMachine)
+  , testProperty "multi, responder socket" do propRunInLogsStructureLocal  ts (propMultiResp ts ForMachine)
+
+  -- BALDUR: new
+  -- [ testProperty "multi, initiator, port" do propRunInLogsStructurePort2   ts (propMultiInit ts ForMachine)
+  -- , testProperty "multi, responder, port" do propRunInLogsStructurePort    ts (propMultiResp ts ForMachine)
   ]
 
 propLogs :: TestSetup Identity -> LogFormat -> Word64 -> Word64 -> FilePath -> FilePath -> IO Property
 propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
+  withAsync (doRunCardanoTracer (acceptConfig rootDir) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \async1 -> do
+    link async1
     sleep 1.0
-    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) \_ -> do
+    withAsync (launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 1000 10000) \async2 -> do
+      link async2
       sleep 8.0 -- Wait till some rotation is done.
       applyBrake stopProtocols
       sleep 0.5
@@ -66,15 +76,15 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
                 [_oneLog] -> false "there is still 1 single log, no rotation"
                 _logs     -> return $ property True
  where
-  config = TracerConfig
+  acceptConfig root = TracerConfig
     { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
-    , network        = AcceptAt (LocalSocket localSock)
+    , network        = AcceptAt (Net.LocalPipe localSock)
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
     , hasEKG         = Nothing
     , hasPrometheus  = Nothing
     , hasRTView      = Nothing
-    , logging        = NE.fromList [LoggingParams rootDir FileMode format]
+    , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Just $ RotationParams
                          { rpFrequencySecs = 3
                          , rpLogLimitBytes = logRotLimitBytes
@@ -89,23 +99,23 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
     , ekgRequestFull = Nothing
     }
 
-propMultiInit :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
-propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
+propMultiInit :: TestSetup Identity -> LogFormat -> FilePath -> HowToConnect -> HowToConnect -> IO Property
+propMultiInit ts@TestSetup{..} format rootDir howToConnect1 howToConnect2 = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock1 localSock2) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
+  withAsync (doRunCardanoTracer (config rootDir) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
     sleep 1.0
-    withAsync (launchForwardersSimple ts Responder localSock1 1000 10000) \_ -> do
+    withAsync (launchForwardersSimple ts Responder howToConnect1 1000 10000) \_ -> do
       sleep 1.0
-      withAsync (launchForwardersSimple ts Responder localSock2 1000 10000) \_ -> do
+      withAsync (launchForwardersSimple ts Responder howToConnect2 1000 10000) \_ -> do
         sleep 5.0 -- Wait till some work is done.
         applyBrake stopProtocols
         sleep 0.5
   checkMultiResults rootDir
  where
-  config root p1 p2 = TracerConfig
+  config root = TracerConfig
     { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
-    , network        = ConnectTo $ NE.fromList [LocalSocket p1, LocalSocket p2]
+    , network        = ConnectTo $ NE.fromList [howToConnect1, howToConnect2]
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
     , hasEKG         = Nothing
@@ -121,23 +131,23 @@ propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
     , ekgRequestFull = Nothing
     }
 
-propMultiResp :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> IO Property
-propMultiResp ts@TestSetup{..} format rootDir localSock = do
+propMultiResp :: TestSetup Identity -> LogFormat -> FilePath -> HowToConnect -> IO Property
+propMultiResp ts@TestSetup{..} format rootDir howToConnect = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
+  withAsync (doRunCardanoTracer (respConfig rootDir) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
     sleep 1.0
-    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) \_ -> do
+    withAsync (launchForwardersSimple ts Initiator howToConnect 1000 10000) \_ -> do
       sleep 1.0
-      withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) \_ -> do
+      withAsync (launchForwardersSimple ts Initiator howToConnect 1000 10000) \_ -> do
         sleep 5.0 -- Wait till some work is done.
         applyBrake stopProtocols
         sleep 0.5
   checkMultiResults rootDir
  where
-  config root p = TracerConfig
+  respConfig root = TracerConfig
     { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
-    , network        = AcceptAt $ LocalSocket p
+    , network        = AcceptAt howToConnect
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
     , hasEKG         = Nothing
@@ -154,8 +164,9 @@ propMultiResp ts@TestSetup{..} format rootDir localSock = do
     }
 
 checkMultiResults :: FilePath -> IO Property
-checkMultiResults rootDir =
+checkMultiResults rootDir = do
   -- Check if the root directory exists...
+  sleep 100
   doesDirectoryExist rootDir >>= \case
     False -> false "root dir doesn't exist"
     True ->

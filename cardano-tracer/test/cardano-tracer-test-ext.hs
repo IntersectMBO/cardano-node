@@ -4,6 +4,7 @@
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
 import           Cardano.Logging
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Test.ForwardingStressTest.Script
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
 import           Cardano.Tracer.Test.Utils
@@ -133,7 +134,7 @@ getExternalTracerState TestSetup{..} ref = do
      (forwardSink, _dpStore) <- withIOManager \iomgr -> do
        -- For simplicity, we are always 'Initiator',
        -- so 'cardano-tracer' is always a 'Responder'.
-       let tracerSocketMode = Just (unI tsSockExternal, Initiator)
+       let tracerSocketMode = Just (Net.LocalPipe (unI tsSockExternal), Initiator)
            forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
        initForwarding iomgr forwardingConf (unI tsNetworkMagic) Nothing tracerSocketMode
      pure (externalTracerHdl, forwardTracer forwardSink)
