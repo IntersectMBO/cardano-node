@@ -261,7 +261,7 @@ jobs:
     - name: Create Release Tag
       id: create_release_tag
       run: |
-        echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+        echo "TAG=${GITHUB_REF/refs\/tags\//}" >> "$GITHUB_OUTPUT"
 
     - name: Create Release
       id: create_release
@@ -275,7 +275,7 @@ jobs:
         prerelease: false
 
     - name: Download Artifact
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: artifacts-ubuntu-latest
 
