@@ -36,7 +36,7 @@ let
   # recover CHaP location from cardano's project
   chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
-  nixPlanJson = cardanoNodeProject.plan-nix.json;
+  nixPlanJson = cardanoNodeProject.plan-nix + "/plan.json";
 
   # Optimize cache hits setting gitrev using bash once inside the shell.
   workbench-envars =

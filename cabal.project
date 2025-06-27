@@ -32,7 +32,8 @@ packages:
   trace-resources
   trace-forward
 
-extra-packages: Cabal
+-- Needed when cross compiling
+extra-packages: alex
 
 program-options
   ghc-options: -Werror
