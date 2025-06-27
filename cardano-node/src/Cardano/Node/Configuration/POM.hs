@@ -407,7 +407,6 @@ instance FromJSON PartialNodeConfiguration where
               Just True  -> Last $ Just EnabledP2PMode
 
       -- Peer Sharing
-      -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
       -- pncConsensusMode determines whether Genesis is enabled in the first place.
