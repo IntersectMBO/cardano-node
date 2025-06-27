@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Client
   ( module Network.GRPC.Client

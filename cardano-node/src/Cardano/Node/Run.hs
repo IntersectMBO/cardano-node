@@ -23,7 +23,7 @@ module Cardano.Node.Run
   ) where
 
 import           Cardano.Api (File (..), FileDirection (..), NetworkMagic, fromNetworkMagic)
-import           Cardano.Api.Internal.Error (displayError)
+import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
@@ -172,6 +172,7 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
+import GHC.Stack
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -189,7 +190,9 @@ runNode cmdPc = do
   nc@NodeConfiguration
     { ncProtocolConfig
     , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
-    } <- buildNodeConfiguration earlyTracer cmdPc
+    } <- buildNodeConfiguration cmdPc
+
+  traceWith earlyTracer $ "Node configuration: " <> show nc
 
   forM_ mShelleyVrfFile $
     runThrowExceptT . checkVRFFilePermissions earlyTracer . File
@@ -204,49 +207,37 @@ runNode cmdPc = do
 
   let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
       networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
-  withAsync (runRpcServer $ buildRpcConfiguration earlyTracer networkMagic cmdPc) $ \_ ->
+  -- TODO move initialisation somewhere else, so that the correct tracer is used, instead of stdout default one
+  withAsync (runRpcServer earlyTracer $ buildRpcConfiguration networkMagic cmdPc) $ \_ ->
     handleNodeWithTracers cmdPc nc consensusProtocol
-
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
 
 -- | Read node configuration from a file specified in 'PartialNodeConfiguration'
-buildNodeConfiguration :: Tracer IO String
-                       -> PartialNodeConfiguration -- ^ defaults
+buildNodeConfiguration :: HasCallStack
+                       => PartialNodeConfiguration -- ^ defaults
                        -> IO NodeConfiguration
-buildNodeConfiguration tracer partialConf = do
+buildNodeConfiguration partialConf = do
   configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile partialConf
-  nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> partialConf of
-          Left err -> error $ "Error in creating the NodeConfiguration: " <> err
-          Right nc' -> return nc'
-
-  traceWith tracer $ "Node configuration: " <> show nc
-  pure nc
+  either
+    (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
+    pure
+    $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
 
 -- | Build RPC configuration. Reads the configuration file again. Allows RPC server to dynamically reload configuration from disk again.
-buildRpcConfiguration :: Tracer IO String
-                      -> NetworkMagic
+buildRpcConfiguration :: HasCallStack
+                      => NetworkMagic
                       -> PartialNodeConfiguration
-                      -> IO (RpcConfig, SocketPath, NetworkMagic)
-buildRpcConfiguration tracer networkMagic partialConf = do
-  nc <- buildNodeConfiguration tracer partialConf
-  SocketConfig{ncSocketPath = Last mN2cSocket} <- pure $ ncSocketConfig nc
-  let nodeSocketPath = fromMaybe "rpc.sock" mN2cSocket
-      socketDir = takeDirectory $ unFile nodeSocketPath
-  pure $
-    (RpcConfig
-      { isEnabled = True -- TODO take from PNC
-      , rpcSocketPath = File $ socketDir </> "rpc.sock" -- TODO take from PNC
-      }
-      , nodeSocketPath
-      , networkMagic)
+                      -> IO (RpcConfig, NetworkMagic)
+buildRpcConfiguration networkMagic partialConf = do
+  NodeConfiguration{ncRpcConfig} <- buildNodeConfiguration partialConf
+  pure (ncRpcConfig, networkMagic)
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
 installSigTermHandler :: IO ()
 installSigTermHandler = do
--- TODO add SigHUP handler for RPC configuration reloading
 #ifdef UNIX
   -- Similar implementation to the RTS's handling of SIGINT (see GHC's
   -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).
@@ -771,6 +762,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers
 --------------------------------------------------------------------------------
+
+-- TODO add SIGHUP handler for RPC configuration reloading
 
 -- | The P2P SIGHUP handler can update block forging & reconfigure network topology.
 --

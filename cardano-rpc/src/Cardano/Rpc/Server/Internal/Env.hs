@@ -1,4 +1,5 @@
 {-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Cardano.Rpc.Server.Internal.Env
   ( RpcEnv (..)
@@ -6,13 +7,16 @@ module Cardano.Rpc.Server.Internal.Env
   )
 where
 
-import Cardano.Api
+import           Cardano.Api
 
-import Cardano.Rpc.Server.Config
+import           Cardano.Rpc.Server.Config
+
+import           Control.Tracer (Tracer)
 
 data RpcEnv = RpcEnv
   { config :: !RpcConfig
-  , -- TODO replace with connection manager for connection pooling, Data.Pool from resource-pool perhaps?
+  , tracer :: forall m. MonadIO m => Tracer m String
+  , -- TODO replace with better connection management than one connection per rpc request
     rpcLocalNodeConnectInfo :: !LocalNodeConnectInfo
   }
 

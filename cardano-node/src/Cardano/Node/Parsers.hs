@@ -19,8 +19,8 @@ import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), 
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
-import           Cardano.Rpc.Server.Config (RpcConfigF(..), PartialRpcConfig, nodeSocketPathToRpcSocketPath)
 import           Cardano.Prelude (ConvertText (..))
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
@@ -76,7 +76,7 @@ nodeRunParser = do
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
   -- gRPC
-  pncRpcConfig <- lastOption $ parseRpcConfig socketFp
+  pncRpcConfig <- parseRpcConfig
 
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
@@ -374,9 +374,7 @@ parseRpcConfig :: Parser PartialRpcConfig
 parseRpcConfig = do
   isEnabled <- lastOption parseRpcToggle
   socketPath <- lastOption parseRpcSocketPath
-  -- TODO move this to building actual node configuration?
-  -- let defaultedSocketPath <-  (nodeSocketPathToRpcSocketPath <$> nodeSocketPath)
-  pure $ RpcConfig isEnabled socketPath
+  pure $ RpcConfig isEnabled socketPath mempty
   where
     parseRpcToggle :: Parser Bool
     parseRpcToggle =
@@ -385,12 +383,10 @@ parseRpcConfig = do
         <> help "[EXPERIMENTAL] Enable node gRPC endpoint."
       )
     parseRpcSocketPath :: Parser SocketPath
-    parseRpcSocketPath = 
-      parseSocketPath 
-        "gprc-socket-path" 
+    parseRpcSocketPath =
+      parseSocketPath
+        "gprc-socket-path"
         "[EXPERIMENTAL] gRPC socket path. Defaults to rpc.sock in the same directory as node socket."
-  
-  
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

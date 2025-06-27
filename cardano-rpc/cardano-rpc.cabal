@@ -27,7 +27,9 @@ custom-setup
 
 common project-config
   default-language: Haskell2010
-  default-extensions: OverloadedStrings
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
   build-depends: base >=4.14 && <5
   ghc-options:
     -Wall
@@ -85,18 +87,18 @@ library
   build-depends:
     base,
     bytestring,
-    cardano-api ^>=10.16,
+    cardano-api ^>=10.17,
     cardano-ledger-api,
     cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
     containers,
+    contra-tracer < 2,
     filepath,
     generic-data,
     grapesy,
     grpc-spec,
     microlens,
-    ouroboros-network-protocols ^>=0.14,
     proto-lens,
     proto-lens-protobuf-types,
     proto-lens-runtime,

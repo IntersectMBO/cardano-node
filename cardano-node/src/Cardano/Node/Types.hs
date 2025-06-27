@@ -45,7 +45,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
-import           Cardano.Rpc.Server.Config (RpcConfigF(..))
+import           Cardano.Rpc.Server.Config (RpcConfigF (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 import           Control.Exception
@@ -464,7 +464,11 @@ instance AdjustFilePaths (File a b) where
   adjustFilePaths f (File p) = File $ f p
 
 instance Functor f => AdjustFilePaths (RpcConfigF f) where
-  adjustFilePaths f (RpcConfig isEnabled socketPath) = RpcConfig isEnabled (adjustFilePaths f <$> socketPath)
+  adjustFilePaths f (RpcConfig isEnabled rpcSocketPath nodeSocketPath) =
+    RpcConfig
+      isEnabled
+      (adjustFilePaths f <$> rpcSocketPath)
+      (adjustFilePaths f <$> nodeSocketPath)
 
 data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath

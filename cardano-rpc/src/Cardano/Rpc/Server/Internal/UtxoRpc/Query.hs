@@ -22,9 +22,6 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
 where
 
 import           Cardano.Api
-import           Cardano.Api.Consensus
-import           Cardano.Api.Internal.Block (Hash (..))
-import           Cardano.Api.Internal.IPC (AcquiringFailure)
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Api as L
@@ -35,7 +32,6 @@ import qualified Cardano.Ledger.Plutus as L
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import           Cardano.Rpc.Server.Internal.Error
 import           Cardano.Rpc.Server.Internal.Monad
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (VolatileTip))
 
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as M

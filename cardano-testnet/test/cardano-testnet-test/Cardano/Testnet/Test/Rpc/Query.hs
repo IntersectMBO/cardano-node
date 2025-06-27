@@ -13,7 +13,6 @@ where
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
 import qualified Cardano.Ledger.Api as L
@@ -32,7 +31,6 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
 import qualified Data.Map.Strict as M
 import           Lens.Micro
-import           System.FilePath (takeDirectory, (</>))
 
 import           Testnet.Components.Query
 import           Testnet.Process.Run
@@ -52,20 +50,20 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       eraName = eraToString sbe
-      options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
+      options = def{cardanoNodeEra = AnyShelleyBasedEra sbe, cardanoEnableRpc=True}
 
   TestnetRuntime
     { testnetMagic
     , configurationFile
     , testnetNodes = node0@TestnetNode{nodeSprocket} : _
     } <-
-    cardanoTestnetDefault options def conf
+    createAndRunTestnet options def conf
 
   execConfig <- mkExecConfig tempAbsPath' nodeSprocket testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)
   pparams <- unLedgerProtocolParameters <$> getProtocolParams epochStateView ceo
   H.noteShowPretty_ pparams
-  rpcSocket <- H.note $ takeDirectory (unFile $ nodeSocketPath node0) </> "rpc.sock"
+  rpcSocket <- H.note . unFile $ nodeRpcSocketPath node0
 
   ----------
   -- Get tip

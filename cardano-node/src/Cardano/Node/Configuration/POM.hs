@@ -10,6 +10,8 @@
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
+{- HLINT ignore "Functor law" -}
+
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
   , ResponderCoreAffinityPolicy (..)
@@ -36,6 +38,8 @@ import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
+                   makeRpcConfig)
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
@@ -53,7 +57,6 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
-import           Cardano.Rpc.Server.Config (RpcConfigF(..), PartialRpcConfig)
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -204,6 +207,9 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+         -- gRPC
+       , ncRpcConfig :: RpcConfig
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -284,12 +290,12 @@ data PartialNodeConfiguration
        , pncSyncTargetOfKnownBigLedgerPeers       :: !(Last Int)
        , pncSyncTargetOfEstablishedBigLedgerPeers :: !(Last Int)
        , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
+         -- Consensus mode for diffusion layer
+       , pncConsensusMode :: !(Last ConsensusMode)
+
          -- Minimum number of active big ledger peers we must be connected to
          -- in Genesis mode
        , pncMinBigLedgerPeersForTrustedState :: !(Last NumberOfBigLedgerPeers)
-
-         -- Consensus mode for diffusion layer
-       , pncConsensusMode :: !(Last ConsensusMode)
 
          -- Network P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
@@ -303,8 +309,7 @@ data PartialNodeConfiguration
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
 
          -- gRPC
-       , pncRpcConfig :: !(Last PartialRpcConfig)
-
+       , pncRpcConfig :: !PartialRpcConfig
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -422,10 +427,11 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
-      pncRpcConfig <- fmap (Last . Just) $
+      pncRpcConfig <-
         RpcConfig
           <$> (Last <$> v .:? "EnableRpc")
           <*> (Last <$> v .:? "RpcSocketPath")
+          <*> pure mempty
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -720,7 +726,7 @@ defaultPartialNodeConfiguration =
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
       -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
-    , pncRpcConfig = Last . Just $ RpcConfig (Last $ Just False) mempty
+    , pncRpcConfig = mempty
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -856,6 +862,9 @@ makeNodeConfiguration pnc = do
   experimentalProtocols <-
     lastToEither "Missing ExperimentalProtocolsEnabled" $
       pncExperimentalProtocolsEnabled pnc
+
+  ncRpcConfig <- makeRpcConfig $ (pncRpcConfig pnc){nodeSocketPath=ncSocketPath socketConfig}
+
   return $ NodeConfiguration
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
@@ -910,6 +919,7 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncRpcConfig
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

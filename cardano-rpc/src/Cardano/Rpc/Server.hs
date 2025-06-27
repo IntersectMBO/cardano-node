@@ -7,7 +7,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server
@@ -24,6 +23,7 @@ import           Cardano.Rpc.Server.Internal.Env
 import           Cardano.Rpc.Server.Internal.Monad
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Query
 
+import           Control.Tracer
 import           Data.ProtoLens (defMessage)
 import           Data.ProtoLens.Field (field)
 import           Lens.Micro
@@ -40,8 +40,7 @@ import           RIO
 -- Individual handlers
 
 getEraMethod :: MonadRpc e m => Proto Empty -> m (Proto Rpc.CurrentEra)
-getEraMethod _ =
-  pure mockNodeResponse
+getEraMethod _ = pure mockNodeResponse
 
 -- Mock node response
 mockNodeResponse :: Proto Rpc.CurrentEra
@@ -66,28 +65,46 @@ methodsUtxoRpc =
     $ NoMoreMethods
 
 runRpcServer
-  :: IO (RpcConfig, SocketPath, NetworkMagic)
+  :: Tracer IO String
+  -> IO (RpcConfig, NetworkMagic)
   -- ^ action which reloads RPC configuration
   -> IO ()
-runRpcServer loadRpcConfig = do
-  (rpcConfig@RpcConfig{rpcSocketPath = Identity (File rpcSocketPathFp)}
-    ,nodeSocketPath
-    ,networkMagic) <- loadRpcConfig
+runRpcServer tracer loadRpcConfig = handleExceptions $ do
+  ( rpcConfig@RpcConfig
+      { isEnabled = Identity isEnabled
+      , rpcSocketPath = Identity (File rpcSocketPathFp)
+      , nodeSocketPath = Identity nodeSocketPath
+      }
+    , networkMagic
+    ) <-
+    loadRpcConfig
   let config =
         ServerConfig
-          { -- serverInsecure = Just (InsecureConfig Nothing defaultInsecurePort)
-            serverInsecure = Just $ InsecureUnix rpcSocketPathFp
+          { serverInsecure = Just $ InsecureUnix rpcSocketPathFp
           , serverSecure = Nothing
           }
       rpcEnv =
         RpcEnv
           { config = rpcConfig
+          , tracer = natTracer liftIO tracer
           , rpcLocalNodeConnectInfo = mkLocalNodeConnectInfo nodeSocketPath networkMagic
           }
-  runRIO rpcEnv $
-    withRunInIO $ \runInIO ->
-      runServerWithHandlers def config . fmap (hoistSomeRpcHandler runInIO) $
-        mconcat
-          [ fromMethods methodsNodeRpc
-          , fromMethods methodsUtxoRpc
-          ]
+
+  -- TODO this is logged by node configuration already, so it would make sense to log it again when
+  -- configuration gets reloaded
+  -- putTrace $ "RPC configuration: " <> show rpcConfig
+
+  when isEnabled $
+    runRIO rpcEnv $
+      withRunInIO $ \runInIO ->
+        runServerWithHandlers def config . fmap (hoistSomeRpcHandler runInIO) $
+          mconcat
+            [ fromMethods methodsNodeRpc
+            , fromMethods methodsUtxoRpc
+            ]
+  where
+    handleExceptions :: (HasCallStack => IO ()) -> IO ()
+    handleExceptions = handleAny $ \e ->
+      putTrace $ "RPC server fatal error: " <> displayException e
+
+    putTrace = traceWith tracer

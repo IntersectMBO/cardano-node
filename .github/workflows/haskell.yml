@@ -103,7 +103,7 @@ jobs:
 
     - name: "[Windows] Install grpc dependencies"
       if: runner.os == 'Windows'
-      run: /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-snappy mingw-w64-x86_64-protobuf 
+      run: /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-snappy mingw-w64-x86_64-protobuf
 
     - name: "[macOS] Install grpc dependencies"
       if: runner.os == 'macOS'
@@ -241,11 +241,11 @@ jobs:
     # to restore the original path.  Do note that some test might need msys2
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
 
   build-complete:
     needs: [build]
