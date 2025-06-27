@@ -107,6 +107,7 @@ let
                   TurnOnLogMetrics             = true;
                   SnapshotInterval             = 4230;
                   ChainSyncIdleTimeout         = 0;
+                  PeerSharing                  = false;
 
                   ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
                   ## NB. the following inequality must hold: known >= established >= active >= 0
