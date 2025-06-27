@@ -702,6 +702,7 @@ allocate-run-nomadcloud() {
       # We do this for each producer instead of for all producer at once because
       # even if modules have the same name from a Nomad perspective, in each
       # client the real path is defined in Nomad's config file and may differ!
+      # It's "slow" (fetches individual client configs), done only if necessary.
       if    test "${node_name}" != "explorer"                                  \
          && jqtest '.node.utxo_lmdb' "${dir}"/profile.json                     \
          && jqtest '(.cluster.nomad.host_volumes.producer | length) > 0' "${dir}"/profile.json
@@ -711,19 +712,19 @@ allocate-run-nomadcloud() {
         do
           # Compare the SSD directory the node will use and volume destination.
           local ssd_directory host_volume_destination
-          ssd_directory="$(jq -r . '.node.ssd_directory' "${dir}"/profile.json)"
+          ssd_directory="$(jq -r '.node.ssd_directory' "${dir}"/profile.json)"
           host_volume_destination="$(jq -r ".cluster.nomad.host_volumes.producer[${host_volume_key}].destination" "${dir}"/profile.json)"
           if test "${ssd_directory}" = "${host_volume_destination}"
           then
             # Use volume source to fetch the path defined in the client machine.
             local host_volume_source host_volume_path
             host_volume_source="$(jq -r ".cluster.nomad.host_volumes.producer[${host_volume_key}].source" "${dir}"/profile.json)"
-            host_volume_path="$(wb nomad clients ssh "${client_name}" "jq -r .client.host_volume[\"${host_volume_source}\"].path /etc/nomad.json")"
+            host_volume_path="$(wb nomad clients ssh "${client_name}" cat /etc/nomad.json | jq -r ".client.host_volume[\"${host_volume_source}\"].path")"
             local rm_command
-            rm_command="rm -rf \"${host_volume_path}/\""
-            msg "$(yellow "About to: ${rm_command}")"
+            rm_command="rm -rf \"${host_volume_path}\"/*"
+            msg "$(yellow "About to: \"${rm_command}\"")"
             read -p "Hit enter to continue ..."
-            wb nomad clients ssh producers "${client_name}" "${rm_command}"
+            wb nomad clients ssh "${client_name}" "${rm_command}"
           fi
         done
       fi
