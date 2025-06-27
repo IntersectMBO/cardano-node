@@ -1,0 +1,177 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Utils.MD5</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="Distribution.Utils.MD5.html#MD5"><span class="hs-identifier">MD5</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Distribution.Utils.MD5.html#showMD5"><span class="hs-identifier">showMD5</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Distribution.Utils.MD5.html#md5"><span class="hs-identifier">md5</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Helpers</span></span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Utils.MD5.html#md5FromInteger"><span class="hs-identifier">md5FromInteger</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Binary</span></span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Utils.MD5.html#binaryPutMD5"><span class="hs-identifier">binaryPutMD5</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Utils.MD5.html#binaryGetMD5"><span class="hs-identifier">binaryGetMD5</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.html#/Data.Binary.html"><span class="hs-identifier">Data.Binary</span></a></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Get.Internal.html#Get/Data.Binary.Get.Internal.html#Get"><span class="hs-identifier">Get</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#Put/Data.Binary.Put.html#Put"><span class="hs-identifier">Put</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Get.html#/Data.Binary.Get.html"><span class="hs-identifier">Data.Binary.Get</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Get.html#getWord64le/Data.Binary.Get.html#getWord64le"><span class="hs-identifier">getWord64le</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#/Data.Binary.Put.html"><span class="hs-identifier">Data.Binary.Put</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#putWord64le/Data.Binary.Put.html#putWord64le"><span class="hs-identifier">putWord64le</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Bits.html#/Data.Bits.html"><span class="hs-identifier">Data.Bits</span></a></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Bits.html#complement/GHC.Bits.html#complement"><span class="hs-identifier">complement</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Bits.html#shiftR/GHC.Bits.html#shiftR"><span class="hs-identifier">shiftR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Bits.html#.%26./GHC.Bits.html#.%26."><span class="hs-operator">(.&amp;.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Foreign.Ptr.html#/Foreign.Ptr.html"><span class="hs-identifier">Foreign.Ptr</span></a></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#castPtr/GHC.Ptr.html#castPtr"><span class="hs-identifier">castPtr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.html#/GHC.Fingerprint.html"><span class="hs-identifier">GHC.Fingerprint</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier">Fingerprint</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.html#fingerprintData/GHC.Fingerprint.html#fingerprintData"><span class="hs-identifier">fingerprintData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Numeric.html#/Numeric.html"><span class="hs-identifier">Numeric</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/Numeric.html#showHex/Numeric.html#showHex"><span class="hs-identifier">showHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/System.IO.Unsafe.html#/System.IO.Unsafe.html"><span class="hs-identifier">System.IO.Unsafe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.Unsafe.html#unsafeDupablePerformIO/GHC.IO.Unsafe.html#unsafeDupablePerformIO"><span class="hs-identifier">unsafeDupablePerformIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>        </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Unsafe.html#/Data.ByteString.Unsafe.html"><span class="hs-identifier">Data.ByteString.Unsafe</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">type</span><span> </span><span id="MD5"><span class="annot"><a href="Distribution.Utils.MD5.html#MD5"><span class="hs-identifier hs-var">MD5</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-type">Fingerprint</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | Show 'MD5' in human readable form</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- &gt;&gt;&gt; showMD5 (Fingerprint 123 456)</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- &quot;000000000000007b00000000000001c8&quot;</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- &gt;&gt;&gt; showMD5 $ md5 $ BS.pack [0..127]</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- &quot;37eff01866ba3f538421b30b7cbefcac&quot;</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- @since  3.2.0.0</span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Distribution.Utils.MD5.html#showMD5"><span class="hs-identifier hs-type">showMD5</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Utils.MD5.html#MD5"><span class="hs-identifier hs-type">MD5</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-36"></span><span id="showMD5"><span class="annot"><span class="annottext">showMD5 :: MD5 -&gt; String
+</span><a href="Distribution.Utils.MD5.html#showMD5"><span class="hs-identifier hs-var hs-var">showMD5</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-type">Fingerprint</span></a></span><span> </span><span id="local-6989586621679377063"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377063"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679377064"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377064"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679377065"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679377066"><span class="hs-identifier hs-var">a'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679377065"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679377067"><span class="hs-identifier hs-var">b'</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>    </span><span id="local-6989586621679377066"><span class="annot"><span class="annottext">a' :: String
+</span><a href="#local-6989586621679377066"><span class="hs-identifier hs-var hs-var">a'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; String -&gt; String
+forall a. Integral a =&gt; a -&gt; String -&gt; String
+</span><a href="../../base-4.18.2.1/src/Numeric.html#showHex/Numeric.html#showHex"><span class="hs-identifier hs-var">showHex</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377063"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679377067"><span class="annot"><span class="annottext">b' :: String
+</span><a href="#local-6989586621679377067"><span class="hs-identifier hs-var hs-var">b'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; String -&gt; String
+forall a. Integral a =&gt; a -&gt; String -&gt; String
+</span><a href="../../base-4.18.2.1/src/Numeric.html#showHex/Numeric.html#showHex"><span class="hs-identifier hs-var">showHex</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377064"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679377065"><span class="annot"><span class="annottext">pad :: String -&gt; String
+</span><a href="#local-6989586621679377065"><span class="hs-identifier hs-var hs-var">pad</span></a></span></span><span> </span><span id="local-6989586621679377076"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679377076"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; String
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#replicate/GHC.List.html#replicate"><span class="hs-identifier hs-var">replicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#-/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#length/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679377076"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'0'</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679377076"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><span class="hs-comment">-- | @since  3.2.0.0</span></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Distribution.Utils.MD5.html#md5"><span class="hs-identifier hs-type">md5</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Utils.MD5.html#MD5"><span class="hs-identifier hs-type">MD5</span></a></span><span>
+</span><span id="line-43"></span><span id="md5"><span class="annot"><span class="annottext">md5 :: ByteString -&gt; MD5
+</span><a href="Distribution.Utils.MD5.html#md5"><span class="hs-identifier hs-var hs-var">md5</span></a></span></span><span> </span><span id="local-6989586621679377079"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679377079"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO MD5 -&gt; MD5
+forall a. IO a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.IO.Unsafe.html#unsafeDupablePerformIO/GHC.IO.Unsafe.html#unsafeDupablePerformIO"><span class="hs-identifier hs-var">unsafeDupablePerformIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO MD5 -&gt; MD5) -&gt; IO MD5 -&gt; MD5
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; (CStringLen -&gt; IO MD5) -&gt; IO MD5
+forall a. ByteString -&gt; (CStringLen -&gt; IO a) -&gt; IO a
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Unsafe.html#unsafeUseAsCStringLen/Data.ByteString.Unsafe.html#unsafeUseAsCStringLen"><span class="hs-identifier hs-var">BS.unsafeUseAsCStringLen</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679377079"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">((CStringLen -&gt; IO MD5) -&gt; IO MD5)
+-&gt; (CStringLen -&gt; IO MD5) -&gt; IO MD5
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679377081"><span class="annot"><span class="annottext">Ptr CChar
+</span><a href="#local-6989586621679377081"><span class="hs-identifier hs-var">ptr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679377082"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377082"><span class="hs-identifier hs-var">len</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">Ptr Word8 -&gt; Int -&gt; IO MD5
+</span><a href="../../base-4.18.2.1/src/GHC.Fingerprint.html#fingerprintData/GHC.Fingerprint.html#fingerprintData"><span class="hs-identifier hs-var">fingerprintData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr CChar -&gt; Ptr Word8
+forall a b. Ptr a -&gt; Ptr b
+</span><a href="../../base-4.18.2.1/src/GHC.Ptr.html#castPtr/GHC.Ptr.html#castPtr"><span class="hs-identifier hs-var">castPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr CChar
+</span><a href="#local-6989586621679377081"><span class="hs-identifier hs-var">ptr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377082"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | @since  3.2.0.0</span></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Distribution.Utils.MD5.html#binaryPutMD5"><span class="hs-identifier hs-type">binaryPutMD5</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Utils.MD5.html#MD5"><span class="hs-identifier hs-type">MD5</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#Put/Data.Binary.Put.html#Put"><span class="hs-identifier hs-type">Put</span></a></span><span>
+</span><span id="line-48"></span><span id="binaryPutMD5"><span class="annot"><span class="annottext">binaryPutMD5 :: MD5 -&gt; Put
+</span><a href="Distribution.Utils.MD5.html#binaryPutMD5"><span class="hs-identifier hs-var hs-var">binaryPutMD5</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-type">Fingerprint</span></a></span><span> </span><span id="local-6989586621679377083"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377083"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679377084"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377084"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#putWord64le/Data.Binary.Put.html#putWord64le"><span class="hs-identifier hs-var">putWord64le</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377083"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#putWord64le/Data.Binary.Put.html#putWord64le"><span class="hs-identifier hs-var">putWord64le</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377084"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><span class="hs-comment">-- | @since  3.2.0.0</span></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Distribution.Utils.MD5.html#binaryGetMD5"><span class="hs-identifier hs-type">binaryGetMD5</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Get.Internal.html#Get/Data.Binary.Get.Internal.html#Get"><span class="hs-identifier hs-type">Get</span></a></span><span> </span><span class="annot"><a href="Distribution.Utils.MD5.html#MD5"><span class="hs-identifier hs-type">MD5</span></a></span><span>
+</span><span id="line-54"></span><span id="binaryGetMD5"><span class="annot"><span class="annottext">binaryGetMD5 :: Get MD5
+</span><a href="Distribution.Utils.MD5.html#binaryGetMD5"><span class="hs-identifier hs-var hs-var">binaryGetMD5</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679377085"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377085"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get Word64
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Get.html#getWord64le/Data.Binary.Get.html#getWord64le"><span class="hs-identifier hs-var">getWord64le</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679377086"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377086"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get Word64
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Get.html#getWord64le/Data.Binary.Get.html#getWord64le"><span class="hs-identifier hs-var">getWord64le</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">MD5 -&gt; Get MD5
+forall a. a -&gt; Get a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; MD5
+</span><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-var">Fingerprint</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377085"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377086"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- &gt;&gt;&gt; showMD5 $ md5FromInteger 0x37eff01866ba3f538421b30b7cbefcac</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- &quot;37eff01866ba3f538421b30b7cbefcac&quot;</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- Note: the input is truncated:</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- &gt;&gt;&gt; showMD5 $ md5FromInteger 0x1230000037eff01866ba3f538421b30b7cbefcac</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- &quot;37eff01866ba3f538421b30b7cbefcac&quot;</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- Yet, negative numbers are not a problem...</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- &gt;&gt;&gt; showMD5 $ md5FromInteger (-1)</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- &quot;ffffffffffffffffffffffffffffffff&quot;</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- @since 3.4.0.0</span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Distribution.Utils.MD5.html#md5FromInteger"><span class="hs-identifier hs-type">md5FromInteger</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Utils.MD5.html#MD5"><span class="hs-identifier hs-type">MD5</span></a></span><span>
+</span><span id="line-76"></span><span id="md5FromInteger"><span class="annot"><span class="annottext">md5FromInteger :: Integer -&gt; MD5
+</span><a href="Distribution.Utils.MD5.html#md5FromInteger"><span class="hs-identifier hs-var hs-var">md5FromInteger</span></a></span></span><span> </span><span id="local-6989586621679377087"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679377087"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; MD5
+</span><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-var">Fingerprint</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377088"><span class="hs-identifier hs-var">hi</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377089"><span class="hs-identifier hs-var">lo</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679377096"><span class="annot"><span class="annottext">mask :: Word64
+</span><a href="#local-6989586621679377096"><span class="hs-identifier hs-var hs-var">mask</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Bits.html#complement/GHC.Bits.html#complement"><span class="hs-identifier hs-var">complement</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679377089"><span class="annot"><span class="annottext">lo :: Word64
+</span><a href="#local-6989586621679377089"><span class="hs-identifier hs-var hs-var">lo</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377096"><span class="hs-identifier hs-var">mask</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Bits.html#.%26./GHC.Bits.html#.%26."><span class="hs-operator hs-var">.&amp;.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word64
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#fromInteger/GHC.Num.html#fromInteger"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679377087"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span id="local-6989586621679377088"><span class="annot"><span class="annottext">hi :: Word64
+</span><a href="#local-6989586621679377088"><span class="hs-identifier hs-var hs-var">hi</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377096"><span class="hs-identifier hs-var">mask</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Bits.html#.%26./GHC.Bits.html#.%26."><span class="hs-operator hs-var">.&amp;.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word64
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#fromInteger/GHC.Num.html#fromInteger"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679377087"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int -&gt; Integer
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Bits.html#shiftR/GHC.Bits.html#shiftR"><span class="hs-operator hs-var">`shiftR`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span></pre></body></html>

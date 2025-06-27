@@ -1,0 +1,224 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.DependencyMap</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier">DependencyMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#toDepMap"><span class="hs-identifier">toDepMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#fromDepMap"><span class="hs-identifier">fromDepMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#constrainBy"><span class="hs-identifier">constrainBy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Dependency.html"><span class="hs-identifier">Distribution.Types.Dependency</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html"><span class="hs-identifier">Distribution.Types.LibraryName</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PackageName.html"><span class="hs-identifier">Distribution.Types.PackageName</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PackageVersionConstraint.html"><span class="hs-identifier">Distribution.Types.PackageVersionConstraint</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Lazy.html#/Data.Map.Lazy.html"><span class="hs-identifier">Data.Map.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | A map of dependencies.  Newtyped since the default monoid instance is not</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   appropriate.  The monoid instance uses 'intersectVersionRanges'.</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">newtype</span><span> </span><span id="DependencyMap"><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-var">DependencyMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DependencyMap"><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-var">DependencyMap</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unDependencyMap"><span class="annot"><span class="annottext">DependencyMap
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="Distribution.Types.DependencyMap.html#unDependencyMap"><span class="hs-identifier hs-var hs-var">unDependencyMap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PackageName.html#PackageName"><span class="hs-identifier hs-type">PackageName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.NonEmptySet.html#NonEmptySet"><span class="hs-identifier hs-type">NonEmptySet</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679426429"><span id="local-6989586621679426437"><span id="local-6989586621679426441"><span class="annot"><span class="annottext">Int -&gt; DependencyMap -&gt; ShowS
+[DependencyMap] -&gt; ShowS
+DependencyMap -&gt; String
+(Int -&gt; DependencyMap -&gt; ShowS)
+-&gt; (DependencyMap -&gt; String)
+-&gt; ([DependencyMap] -&gt; ShowS)
+-&gt; Show DependencyMap
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DependencyMap -&gt; ShowS
+showsPrec :: Int -&gt; DependencyMap -&gt; ShowS
+$cshow :: DependencyMap -&gt; String
+show :: DependencyMap -&gt; String
+$cshowList :: [DependencyMap] -&gt; ShowS
+showList :: [DependencyMap] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426453"><span id="local-6989586621679426457"><span id="local-6989586621679426460"><span id="local-6989586621679426472"><span class="annot"><span class="annottext">ReadPrec [DependencyMap]
+ReadPrec DependencyMap
+Int -&gt; ReadS DependencyMap
+ReadS [DependencyMap]
+(Int -&gt; ReadS DependencyMap)
+-&gt; ReadS [DependencyMap]
+-&gt; ReadPrec DependencyMap
+-&gt; ReadPrec [DependencyMap]
+-&gt; Read DependencyMap
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS DependencyMap
+readsPrec :: Int -&gt; ReadS DependencyMap
+$creadList :: ReadS [DependencyMap]
+readList :: ReadS [DependencyMap]
+$creadPrec :: ReadPrec DependencyMap
+readPrec :: ReadPrec DependencyMap
+$creadListPrec :: ReadPrec [DependencyMap]
+readListPrec :: ReadPrec [DependencyMap]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426484"><span id="local-6989586621679426491"><span class="annot"><span class="annottext">DependencyMap -&gt; DependencyMap -&gt; Bool
+(DependencyMap -&gt; DependencyMap -&gt; Bool)
+-&gt; (DependencyMap -&gt; DependencyMap -&gt; Bool) -&gt; Eq DependencyMap
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DependencyMap -&gt; DependencyMap -&gt; Bool
+== :: DependencyMap -&gt; DependencyMap -&gt; Bool
+$c/= :: DependencyMap -&gt; DependencyMap -&gt; Bool
+/= :: DependencyMap -&gt; DependencyMap -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679426515"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>    </span><span id="local-6989586621679426519"><span class="annot"><span class="annottext">mempty :: DependencyMap
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; DependencyMap
+</span><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-var">DependencyMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+forall k a. Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#empty/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span id="local-6989586621679426522"><span class="annot"><span class="annottext">mappend :: DependencyMap -&gt; DependencyMap -&gt; DependencyMap
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DependencyMap -&gt; DependencyMap -&gt; DependencyMap
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679426525"><span id="local-6989586621679426528"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span><span> </span><span id="local-6989586621679426534"><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426534"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679426535"><span class="annot"><span class="annottext">&lt;&gt; :: DependencyMap -&gt; DependencyMap -&gt; DependencyMap
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span><span> </span><span id="local-6989586621679426536"><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426536"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>        </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; DependencyMap
+</span><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-var">DependencyMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((VersionRange, NonEmptySet LibraryName)
+ -&gt; (VersionRange, NonEmptySet LibraryName)
+ -&gt; (VersionRange, NonEmptySet LibraryName))
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#unionWith/Data.Map.Internal.html#unionWith"><span class="hs-identifier hs-var">Map.unionWith</span></a></span><span> </span><span class="annot"><span class="annottext">(VersionRange, NonEmptySet LibraryName)
+-&gt; (VersionRange, NonEmptySet LibraryName)
+-&gt; (VersionRange, NonEmptySet LibraryName)
+</span><a href="Distribution.Types.DependencyMap.html#intersectVersionRangesAndJoinComponents"><span class="hs-identifier hs-var">intersectVersionRangesAndJoinComponents</span></a></span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426534"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426536"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Distribution.Types.DependencyMap.html#intersectVersionRangesAndJoinComponents"><span class="hs-identifier hs-type">intersectVersionRangesAndJoinComponents</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.NonEmptySet.html#NonEmptySet"><span class="hs-identifier hs-type">NonEmptySet</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>                                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.NonEmptySet.html#NonEmptySet"><span class="hs-identifier hs-type">NonEmptySet</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>                                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.NonEmptySet.html#NonEmptySet"><span class="hs-identifier hs-type">NonEmptySet</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="intersectVersionRangesAndJoinComponents"><span class="annot"><span class="annottext">intersectVersionRangesAndJoinComponents :: (VersionRange, NonEmptySet LibraryName)
+-&gt; (VersionRange, NonEmptySet LibraryName)
+-&gt; (VersionRange, NonEmptySet LibraryName)
+</span><a href="Distribution.Types.DependencyMap.html#intersectVersionRangesAndJoinComponents"><span class="hs-identifier hs-var hs-var">intersectVersionRangesAndJoinComponents</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679426539"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426539"><span class="hs-identifier hs-var">va</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426540"><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426540"><span class="hs-identifier hs-var">ca</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679426541"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426541"><span class="hs-identifier hs-var">vb</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426542"><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426542"><span class="hs-identifier hs-var">cb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#intersectVersionRanges"><span class="hs-identifier hs-var">intersectVersionRanges</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426539"><span class="hs-identifier hs-var">va</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426541"><span class="hs-identifier hs-var">vb</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426540"><span class="hs-identifier hs-var">ca</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmptySet LibraryName
+-&gt; NonEmptySet LibraryName -&gt; NonEmptySet LibraryName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426542"><span class="hs-identifier hs-var">cb</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Distribution.Types.DependencyMap.html#toDepMap"><span class="hs-identifier hs-type">toDepMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span><span>
+</span><span id="line-39"></span><span id="toDepMap"><span class="annot"><span class="annottext">toDepMap :: [Dependency] -&gt; DependencyMap
+</span><a href="Distribution.Types.DependencyMap.html#toDepMap"><span class="hs-identifier hs-var hs-var">toDepMap</span></a></span></span><span> </span><span id="local-6989586621679426543"><span class="annot"><span class="annottext">[Dependency]
+</span><a href="#local-6989586621679426543"><span class="hs-identifier hs-var">ds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; DependencyMap
+</span><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-var">DependencyMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map PackageName (VersionRange, NonEmptySet LibraryName)
+ -&gt; DependencyMap)
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; DependencyMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((VersionRange, NonEmptySet LibraryName)
+ -&gt; (VersionRange, NonEmptySet LibraryName)
+ -&gt; (VersionRange, NonEmptySet LibraryName))
+-&gt; [(PackageName, (VersionRange, NonEmptySet LibraryName))]
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#fromListWith/Data.Map.Internal.html#fromListWith"><span class="hs-identifier hs-var">Map.fromListWith</span></a></span><span> </span><span class="annot"><span class="annottext">(VersionRange, NonEmptySet LibraryName)
+-&gt; (VersionRange, NonEmptySet LibraryName)
+-&gt; (VersionRange, NonEmptySet LibraryName)
+</span><a href="Distribution.Types.DependencyMap.html#intersectVersionRangesAndJoinComponents"><span class="hs-identifier hs-var">intersectVersionRangesAndJoinComponents</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679426545"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426546"><span class="hs-identifier hs-var">vr</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426547"><span class="hs-identifier hs-var">cs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span> </span><span id="local-6989586621679426545"><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679426545"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679426546"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426546"><span class="hs-identifier hs-var">vr</span></a></span></span><span> </span><span id="local-6989586621679426547"><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426547"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Dependency]
+</span><a href="#local-6989586621679426543"><span class="hs-identifier hs-var">ds</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Distribution.Types.DependencyMap.html#fromDepMap"><span class="hs-identifier hs-type">fromDepMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span id="fromDepMap"><span class="annot"><span class="annottext">fromDepMap :: DependencyMap -&gt; [Dependency]
+</span><a href="Distribution.Types.DependencyMap.html#fromDepMap"><span class="hs-identifier hs-var hs-var">fromDepMap</span></a></span></span><span> </span><span id="local-6989586621679426549"><span class="annot"><span class="annottext">DependencyMap
+</span><a href="#local-6989586621679426549"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">PackageName
+-&gt; VersionRange -&gt; NonEmptySet LibraryName -&gt; Dependency
+</span><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-var">Dependency</span></a></span><span> </span><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679426550"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426551"><span class="hs-identifier hs-var">vr</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426552"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679426550"><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679426550"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">,</span><span class="hs-special">(</span><span id="local-6989586621679426551"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426551"><span class="hs-identifier hs-var">vr</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679426552"><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426552"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; [(PackageName, (VersionRange, NonEmptySet LibraryName))]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#toList/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DependencyMap
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="Distribution.Types.DependencyMap.html#unDependencyMap"><span class="hs-identifier hs-var">unDependencyMap</span></a></span><span> </span><span class="annot"><span class="annottext">DependencyMap
+</span><a href="#local-6989586621679426549"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Apply extra constraints to a dependency map.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- Combines dependencies where the result will only contain keys from the left</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- (first) map.  If a key also exists in the right map, both constraints will</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- be intersected.</span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Distribution.Types.DependencyMap.html#constrainBy"><span class="hs-identifier hs-type">constrainBy</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.PackageVersionConstraint.html#PackageVersionConstraint"><span class="hs-identifier hs-type">PackageVersionConstraint</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span><span>
+</span><span id="line-53"></span><span id="constrainBy"><span class="annot"><span class="annottext">constrainBy :: DependencyMap -&gt; [PackageVersionConstraint] -&gt; DependencyMap
+</span><a href="Distribution.Types.DependencyMap.html#constrainBy"><span class="hs-identifier hs-var hs-var">constrainBy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DependencyMap -&gt; PackageVersionConstraint -&gt; DependencyMap)
+-&gt; DependencyMap -&gt; [PackageVersionConstraint] -&gt; DependencyMap
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldl%27/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">DependencyMap -&gt; PackageVersionConstraint -&gt; DependencyMap
+</span><a href="#local-6989586621679426555"><span class="hs-identifier hs-var">tightenConstraint</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679426555"><span class="annot"><span class="annottext">tightenConstraint :: DependencyMap -&gt; PackageVersionConstraint -&gt; DependencyMap
+</span><a href="#local-6989586621679426555"><span class="hs-identifier hs-var hs-var">tightenConstraint</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-type">DependencyMap</span></a></span><span> </span><span id="local-6989586621679426558"><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426558"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.PackageVersionConstraint.html#PackageVersionConstraint"><span class="hs-identifier hs-type">PackageVersionConstraint</span></a></span><span> </span><span id="local-6989586621679426560"><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679426560"><span class="hs-identifier hs-var">pn</span></a></span></span><span> </span><span id="local-6989586621679426561"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426561"><span class="hs-identifier hs-var">vr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; DependencyMap
+</span><a href="Distribution.Types.DependencyMap.html#DependencyMap"><span class="hs-identifier hs-var">DependencyMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map PackageName (VersionRange, NonEmptySet LibraryName)
+ -&gt; DependencyMap)
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; DependencyMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-55"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PackageName
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; Maybe (VersionRange, NonEmptySet LibraryName)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679426560"><span class="hs-identifier hs-var">pn</span></a></span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426558"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-56"></span><span>            </span><span class="annot"><span class="annottext">Maybe (VersionRange, NonEmptySet LibraryName)
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426558"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-57"></span><span>            </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679426563"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426563"><span class="hs-identifier hs-var">vr'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426564"><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426564"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PackageName
+-&gt; (VersionRange, NonEmptySet LibraryName)
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+-&gt; Map PackageName (VersionRange, NonEmptySet LibraryName)
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#insert/Data.Map.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679426560"><span class="hs-identifier hs-var">pn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#intersectVersionRanges"><span class="hs-identifier hs-var">intersectVersionRanges</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426563"><span class="hs-identifier hs-var">vr'</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679426561"><span class="hs-identifier hs-var">vr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NonEmptySet LibraryName
+</span><a href="#local-6989586621679426564"><span class="hs-identifier hs-var">cs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map PackageName (VersionRange, NonEmptySet LibraryName)
+</span><a href="#local-6989586621679426558"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-58"></span></pre></body></html>

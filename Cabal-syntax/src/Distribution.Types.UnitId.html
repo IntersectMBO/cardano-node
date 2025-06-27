@@ -1,0 +1,731 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679420776"><span id="local-6989586621679420777"><span id="local-6989586621679420778"><span id="local-6989586621679420779"></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.UnitId</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier">UnitId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#unUnitId"><span class="hs-identifier">unUnitId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#mkUnitId"><span class="hs-identifier">mkUnitId</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier">DefUnitId</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#unsafeMkDefUnitId"><span class="hs-identifier">unsafeMkDefUnitId</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#unDefUnitId"><span class="hs-identifier">unDefUnitId</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#newSimpleUnitId"><span class="hs-identifier">newSimpleUnitId</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#mkLegacyUnitId"><span class="hs-identifier">mkLegacyUnitId</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#getHSLibraryName"><span class="hs-identifier">getHSLibraryName</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html"><span class="hs-identifier">Distribution.Utils.ShortText</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html"><span class="hs-identifier">Distribution.Types.ComponentId</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PackageId.html"><span class="hs-identifier">Distribution.Types.PackageId</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier">text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | A unit identifier identifies a (possibly instantiated)</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- package/component that can be installed the installed package</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- database.  There are several types of components that can be</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- installed:</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--  * A traditional library with no holes, so that 'unitIdHash'</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--    is @Nothing@.  In the absence of Backpack, 'UnitId'</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--    is the same as a 'ComponentId'.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--  * An indefinite, Backpack library with holes.  In this case,</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--    'unitIdHash' is still @Nothing@, but in the install,</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--    there are only interfaces, no compiled objects.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--  * An instantiated Backpack library with all the holes</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--    filled in.  'unitIdHash' is a @Just@ a hash of the</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--    instantiating mapping.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- A unit is a component plus the additional information on how the</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- holes are filled in. Thus there is a one to many relationship: for a</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- particular component there are many different ways of filling in the</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- holes, and each different combination is a unit (and has a separate</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- 'UnitId').</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- 'UnitId' is distinct from 'OpenUnitId', in that it is always</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- installed, whereas 'OpenUnitId' are intermediate unit identities</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- that arise during mixin linking, and don't necessarily correspond</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- to any actually installed unit.  Since the mapping is not actually</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- recorded in a 'UnitId', you can't actually substitute over them</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- (but you can substitute over 'OpenUnitId').  See also</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- &quot;Distribution.Backpack.FullUnitId&quot; for a mechanism for expanding an</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- instantiated 'UnitId' to retrieve its mapping.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- Backwards compatibility note: if you need to get the string</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- representation of a UnitId to pass, e.g., as a @-package-id@</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- flag, use the 'display' function, which will work on all</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- versions of Cabal.</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">newtype</span><span> </span><span id="UnitId"><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-var">UnitId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnitId"><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-var">UnitId</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html#ShortText"><span class="hs-identifier hs-type">ShortText</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679420794"><span id="local-6989586621679420796"><span class="annot"><span class="annottext">(forall x. UnitId -&gt; Rep UnitId x)
+-&gt; (forall x. Rep UnitId x -&gt; UnitId) -&gt; Generic UnitId
+forall x. Rep UnitId x -&gt; UnitId
+forall x. UnitId -&gt; Rep UnitId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. UnitId -&gt; Rep UnitId x
+from :: forall x. UnitId -&gt; Rep UnitId x
+$cto :: forall x. Rep UnitId x -&gt; UnitId
+to :: forall x. Rep UnitId x -&gt; UnitId
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679420800"><span id="local-6989586621679420804"><span id="local-6989586621679420807"><span id="local-6989586621679420815"><span class="annot"><span class="annottext">ReadPrec [UnitId]
+ReadPrec UnitId
+Int -&gt; ReadS UnitId
+ReadS [UnitId]
+(Int -&gt; ReadS UnitId)
+-&gt; ReadS [UnitId]
+-&gt; ReadPrec UnitId
+-&gt; ReadPrec [UnitId]
+-&gt; Read UnitId
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS UnitId
+readsPrec :: Int -&gt; ReadS UnitId
+$creadList :: ReadS [UnitId]
+readList :: ReadS [UnitId]
+$creadPrec :: ReadPrec UnitId
+readPrec :: ReadPrec UnitId
+$creadListPrec :: ReadPrec [UnitId]
+readListPrec :: ReadPrec [UnitId]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679420819"><span id="local-6989586621679420825"><span id="local-6989586621679420829"><span class="annot"><span class="annottext">Int -&gt; UnitId -&gt; ShowS
+[UnitId] -&gt; ShowS
+UnitId -&gt; String
+(Int -&gt; UnitId -&gt; ShowS)
+-&gt; (UnitId -&gt; String) -&gt; ([UnitId] -&gt; ShowS) -&gt; Show UnitId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UnitId -&gt; ShowS
+showsPrec :: Int -&gt; UnitId -&gt; ShowS
+$cshow :: UnitId -&gt; String
+show :: UnitId -&gt; String
+$cshowList :: [UnitId] -&gt; ShowS
+showList :: [UnitId] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679420833"><span id="local-6989586621679420838"><span class="annot"><span class="annottext">UnitId -&gt; UnitId -&gt; Bool
+(UnitId -&gt; UnitId -&gt; Bool)
+-&gt; (UnitId -&gt; UnitId -&gt; Bool) -&gt; Eq UnitId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UnitId -&gt; UnitId -&gt; Bool
+== :: UnitId -&gt; UnitId -&gt; Bool
+$c/= :: UnitId -&gt; UnitId -&gt; Bool
+/= :: UnitId -&gt; UnitId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679420846"><span id="local-6989586621679420851"><span id="local-6989586621679420855"><span id="local-6989586621679420859"><span id="local-6989586621679420863"><span id="local-6989586621679420867"><span id="local-6989586621679420871"><span class="annot"><span class="annottext">Eq UnitId
+Eq UnitId =&gt;
+(UnitId -&gt; UnitId -&gt; Ordering)
+-&gt; (UnitId -&gt; UnitId -&gt; Bool)
+-&gt; (UnitId -&gt; UnitId -&gt; Bool)
+-&gt; (UnitId -&gt; UnitId -&gt; Bool)
+-&gt; (UnitId -&gt; UnitId -&gt; Bool)
+-&gt; (UnitId -&gt; UnitId -&gt; UnitId)
+-&gt; (UnitId -&gt; UnitId -&gt; UnitId)
+-&gt; Ord UnitId
+UnitId -&gt; UnitId -&gt; Bool
+UnitId -&gt; UnitId -&gt; Ordering
+UnitId -&gt; UnitId -&gt; UnitId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: UnitId -&gt; UnitId -&gt; Ordering
+compare :: UnitId -&gt; UnitId -&gt; Ordering
+$c&lt; :: UnitId -&gt; UnitId -&gt; Bool
+&lt; :: UnitId -&gt; UnitId -&gt; Bool
+$c&lt;= :: UnitId -&gt; UnitId -&gt; Bool
+&lt;= :: UnitId -&gt; UnitId -&gt; Bool
+$c&gt; :: UnitId -&gt; UnitId -&gt; Bool
+&gt; :: UnitId -&gt; UnitId -&gt; Bool
+$c&gt;= :: UnitId -&gt; UnitId -&gt; Bool
+&gt;= :: UnitId -&gt; UnitId -&gt; Bool
+$cmax :: UnitId -&gt; UnitId -&gt; UnitId
+max :: UnitId -&gt; UnitId -&gt; UnitId
+$cmin :: UnitId -&gt; UnitId -&gt; UnitId
+min :: UnitId -&gt; UnitId -&gt; UnitId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679420879"><span id="local-6989586621679420883"><span id="local-6989586621679420886"><span id="local-6989586621679420888"><span id="local-6989586621679420890"><span id="local-6989586621679420896"><span id="local-6989586621679420901"><span id="local-6989586621679420904"><span id="local-6989586621679420907"><span id="local-6989586621679420910"><span id="local-6989586621679420913"><span id="local-6989586621679420916"><span id="local-6989586621679420921"><span id="local-6989586621679420926"><span class="annot"><span class="annottext">Typeable UnitId
+Typeable UnitId =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; UnitId -&gt; c UnitId)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnitId)
+-&gt; (UnitId -&gt; Constr)
+-&gt; (UnitId -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnitId))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UnitId))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; UnitId -&gt; UnitId)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId)
+-&gt; Data UnitId
+UnitId -&gt; Constr
+UnitId -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; UnitId -&gt; UnitId
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnitId
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UnitId -&gt; c UnitId
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnitId)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UnitId)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UnitId -&gt; c UnitId
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UnitId -&gt; c UnitId
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnitId
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnitId
+$ctoConstr :: UnitId -&gt; Constr
+toConstr :: UnitId -&gt; Constr
+$cdataTypeOf :: UnitId -&gt; DataType
+dataTypeOf :: UnitId -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnitId)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnitId)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UnitId)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UnitId)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; UnitId -&gt; UnitId
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; UnitId -&gt; UnitId
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnitId -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnitId -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UnitId -&gt; m UnitId
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679420932"><span class="annot"><span class="annottext">UnitId -&gt; ()
+(UnitId -&gt; ()) -&gt; NFData UnitId
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: UnitId -&gt; ()
+rnf :: UnitId -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679420939"><span id="local-6989586621679420946"><span id="local-6989586621679420952"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span></span></span></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679420971"><span id="local-6989586621679420978"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span></span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- | The textual format for 'UnitId' coincides with the format</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- GHC accepts for @-package-id@.</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679421008"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679421011"><span class="annot"><span class="annottext">pretty :: UnitId -&gt; Doc
+</span><a href="#local-6989586621679421011"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; (UnitId -&gt; String) -&gt; UnitId -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId -&gt; String
+</span><a href="Distribution.Types.UnitId.html#unUnitId"><span class="hs-identifier hs-var">unUnitId</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | The textual format for 'UnitId' coincides with the format</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- GHC accepts for @-package-id@.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621679421030"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m UnitId
+</span><a href="#local-6989586621679421030"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#mkUnitId"><span class="hs-identifier hs-var">mkUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; UnitId) -&gt; m String -&gt; m UnitId
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch1"><span class="hs-identifier hs-var">P.munch1</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="#local-6989586621679421034"><span class="hs-identifier hs-var">isUnitChar</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-comment">-- https://gitlab.haskell.org/ghc/ghc/issues/17752</span><span>
+</span><span id="line-83"></span><span>        </span><span id="local-6989586621679421034"><span class="annot"><span class="annottext">isUnitChar :: Char -&gt; Bool
+</span><a href="#local-6989586621679421034"><span class="hs-identifier hs-var hs-var">isUnitChar</span></a></span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><a href="#local-6989586621679421034"><span class="hs-identifier hs-var">isUnitChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><a href="#local-6989586621679421034"><span class="hs-identifier hs-var">isUnitChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><a href="#local-6989586621679421034"><span class="hs-identifier hs-var">isUnitChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'+'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><a href="#local-6989586621679421034"><span class="hs-identifier hs-var">isUnitChar</span></a></span><span> </span><span id="local-6989586621679421035"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679421035"><span class="hs-identifier hs-var">c</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Unicode.html#isAlphaNum/GHC.Unicode.html#isAlphaNum"><span class="hs-identifier hs-var">isAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679421035"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- | If you need backwards compatibility, consider using 'display'</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- instead, which is supported by all versions of Cabal.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Distribution.Types.UnitId.html#unUnitId"><span class="hs-identifier hs-type">unUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-93"></span><span id="unUnitId"><span class="annot"><span class="annottext">unUnitId :: UnitId -&gt; String
+</span><a href="Distribution.Types.UnitId.html#unUnitId"><span class="hs-identifier hs-var hs-var">unUnitId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span id="local-6989586621679421037"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679421037"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; String
+</span><a href="Distribution.Utils.ShortText.html#fromShortText"><span class="hs-identifier hs-var">fromShortText</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679421037"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Distribution.Types.UnitId.html#mkUnitId"><span class="hs-identifier hs-type">mkUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span>
+</span><span id="line-96"></span><span id="mkUnitId"><span class="annot"><span class="annottext">mkUnitId :: String -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#mkUnitId"><span class="hs-identifier hs-var hs-var">mkUnitId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-var">UnitId</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortText -&gt; UnitId) -&gt; (String -&gt; ShortText) -&gt; String -&gt; UnitId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShortText
+</span><a href="Distribution.Utils.ShortText.html#toShortText"><span class="hs-identifier hs-var">toShortText</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- | 'mkUnitId'</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.String.html#IsString/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>    </span><span id="local-6989586621679421043"><span class="annot"><span class="annottext">fromString :: String -&gt; UnitId
+</span><a href="../../base-4.18.2.1/src/Data.String.html#fromString/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#mkUnitId"><span class="hs-identifier hs-var">mkUnitId</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Create a unit identity with no associated hash directly</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- from a 'ComponentId'.</span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Distribution.Types.UnitId.html#newSimpleUnitId"><span class="hs-identifier hs-type">newSimpleUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span>
+</span><span id="line-107"></span><span id="newSimpleUnitId"><span class="annot"><span class="annottext">newSimpleUnitId :: ComponentId -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#newSimpleUnitId"><span class="hs-identifier hs-var hs-var">newSimpleUnitId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#mkUnitId"><span class="hs-identifier hs-var">mkUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; UnitId)
+-&gt; (ComponentId -&gt; String) -&gt; ComponentId -&gt; UnitId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; String
+</span><a href="Distribution.Types.ComponentId.html#unComponentId"><span class="hs-identifier hs-var">unComponentId</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- | Make an old-style UnitId from a package identifier.</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- Assumed to be for the public library</span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Distribution.Types.UnitId.html#mkLegacyUnitId"><span class="hs-identifier hs-type">mkLegacyUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.PackageId.html#PackageId"><span class="hs-identifier hs-type">PackageId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span>
+</span><span id="line-112"></span><span id="mkLegacyUnitId"><span class="annot"><span class="annottext">mkLegacyUnitId :: PackageId -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#mkLegacyUnitId"><span class="hs-identifier hs-var hs-var">mkLegacyUnitId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#newSimpleUnitId"><span class="hs-identifier hs-var">newSimpleUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">(ComponentId -&gt; UnitId)
+-&gt; (PackageId -&gt; ComponentId) -&gt; PackageId -&gt; UnitId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ComponentId
+</span><a href="Distribution.Types.ComponentId.html#mkComponentId"><span class="hs-identifier hs-var">mkComponentId</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ComponentId)
+-&gt; (PackageId -&gt; String) -&gt; PackageId -&gt; ComponentId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PackageId -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><span class="hs-comment">-- | Returns library name prefixed with HS, suitable for filenames</span></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Distribution.Types.UnitId.html#getHSLibraryName"><span class="hs-identifier hs-type">getHSLibraryName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-116"></span><span id="getHSLibraryName"><span class="annot"><span class="annottext">getHSLibraryName :: UnitId -&gt; String
+</span><a href="Distribution.Types.UnitId.html#getHSLibraryName"><span class="hs-identifier hs-var hs-var">getHSLibraryName</span></a></span></span><span> </span><span id="local-6989586621679421047"><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621679421047"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;HS&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621679421047"><span class="hs-identifier hs-var">uid</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | A 'UnitId' for a definite package.  The 'DefUnitId' invariant says</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- that a 'UnitId' identified this way is definite; i.e., it has no</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- unfilled holes.</span><span>
+</span><span id="line-121"></span><span class="hs-keyword">newtype</span><span> </span><span id="DefUnitId"><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-var">DefUnitId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DefUnitId"><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-var">DefUnitId</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unDefUnitId"><span class="annot"><span class="annottext">DefUnitId -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#unDefUnitId"><span class="hs-identifier hs-var hs-var">unDefUnitId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679421050"><span id="local-6989586621679421052"><span class="annot"><span class="annottext">(forall x. DefUnitId -&gt; Rep DefUnitId x)
+-&gt; (forall x. Rep DefUnitId x -&gt; DefUnitId) -&gt; Generic DefUnitId
+forall x. Rep DefUnitId x -&gt; DefUnitId
+forall x. DefUnitId -&gt; Rep DefUnitId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. DefUnitId -&gt; Rep DefUnitId x
+from :: forall x. DefUnitId -&gt; Rep DefUnitId x
+$cto :: forall x. Rep DefUnitId x -&gt; DefUnitId
+to :: forall x. Rep DefUnitId x -&gt; DefUnitId
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421055"><span id="local-6989586621679421059"><span id="local-6989586621679421062"><span id="local-6989586621679421070"><span class="annot"><span class="annottext">ReadPrec [DefUnitId]
+ReadPrec DefUnitId
+Int -&gt; ReadS DefUnitId
+ReadS [DefUnitId]
+(Int -&gt; ReadS DefUnitId)
+-&gt; ReadS [DefUnitId]
+-&gt; ReadPrec DefUnitId
+-&gt; ReadPrec [DefUnitId]
+-&gt; Read DefUnitId
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS DefUnitId
+readsPrec :: Int -&gt; ReadS DefUnitId
+$creadList :: ReadS [DefUnitId]
+readList :: ReadS [DefUnitId]
+$creadPrec :: ReadPrec DefUnitId
+readPrec :: ReadPrec DefUnitId
+$creadListPrec :: ReadPrec [DefUnitId]
+readListPrec :: ReadPrec [DefUnitId]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421073"><span id="local-6989586621679421077"><span id="local-6989586621679421081"><span class="annot"><span class="annottext">Int -&gt; DefUnitId -&gt; ShowS
+[DefUnitId] -&gt; ShowS
+DefUnitId -&gt; String
+(Int -&gt; DefUnitId -&gt; ShowS)
+-&gt; (DefUnitId -&gt; String)
+-&gt; ([DefUnitId] -&gt; ShowS)
+-&gt; Show DefUnitId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DefUnitId -&gt; ShowS
+showsPrec :: Int -&gt; DefUnitId -&gt; ShowS
+$cshow :: DefUnitId -&gt; String
+show :: DefUnitId -&gt; String
+$cshowList :: [DefUnitId] -&gt; ShowS
+showList :: [DefUnitId] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421084"><span id="local-6989586621679421088"><span class="annot"><span class="annottext">DefUnitId -&gt; DefUnitId -&gt; Bool
+(DefUnitId -&gt; DefUnitId -&gt; Bool)
+-&gt; (DefUnitId -&gt; DefUnitId -&gt; Bool) -&gt; Eq DefUnitId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DefUnitId -&gt; DefUnitId -&gt; Bool
+== :: DefUnitId -&gt; DefUnitId -&gt; Bool
+$c/= :: DefUnitId -&gt; DefUnitId -&gt; Bool
+/= :: DefUnitId -&gt; DefUnitId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421095"><span id="local-6989586621679421099"><span id="local-6989586621679421103"><span id="local-6989586621679421107"><span id="local-6989586621679421111"><span id="local-6989586621679421115"><span id="local-6989586621679421119"><span class="annot"><span class="annottext">Eq DefUnitId
+Eq DefUnitId =&gt;
+(DefUnitId -&gt; DefUnitId -&gt; Ordering)
+-&gt; (DefUnitId -&gt; DefUnitId -&gt; Bool)
+-&gt; (DefUnitId -&gt; DefUnitId -&gt; Bool)
+-&gt; (DefUnitId -&gt; DefUnitId -&gt; Bool)
+-&gt; (DefUnitId -&gt; DefUnitId -&gt; Bool)
+-&gt; (DefUnitId -&gt; DefUnitId -&gt; DefUnitId)
+-&gt; (DefUnitId -&gt; DefUnitId -&gt; DefUnitId)
+-&gt; Ord DefUnitId
+DefUnitId -&gt; DefUnitId -&gt; Bool
+DefUnitId -&gt; DefUnitId -&gt; Ordering
+DefUnitId -&gt; DefUnitId -&gt; DefUnitId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: DefUnitId -&gt; DefUnitId -&gt; Ordering
+compare :: DefUnitId -&gt; DefUnitId -&gt; Ordering
+$c&lt; :: DefUnitId -&gt; DefUnitId -&gt; Bool
+&lt; :: DefUnitId -&gt; DefUnitId -&gt; Bool
+$c&lt;= :: DefUnitId -&gt; DefUnitId -&gt; Bool
+&lt;= :: DefUnitId -&gt; DefUnitId -&gt; Bool
+$c&gt; :: DefUnitId -&gt; DefUnitId -&gt; Bool
+&gt; :: DefUnitId -&gt; DefUnitId -&gt; Bool
+$c&gt;= :: DefUnitId -&gt; DefUnitId -&gt; Bool
+&gt;= :: DefUnitId -&gt; DefUnitId -&gt; Bool
+$cmax :: DefUnitId -&gt; DefUnitId -&gt; DefUnitId
+max :: DefUnitId -&gt; DefUnitId -&gt; DefUnitId
+$cmin :: DefUnitId -&gt; DefUnitId -&gt; DefUnitId
+min :: DefUnitId -&gt; DefUnitId -&gt; DefUnitId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421126"><span id="local-6989586621679421129"><span id="local-6989586621679421132"><span id="local-6989586621679421134"><span id="local-6989586621679421136"><span id="local-6989586621679421142"><span id="local-6989586621679421147"><span id="local-6989586621679421150"><span id="local-6989586621679421153"><span id="local-6989586621679421156"><span id="local-6989586621679421159"><span id="local-6989586621679421162"><span id="local-6989586621679421167"><span id="local-6989586621679421172"><span class="annot"><span class="annottext">Typeable DefUnitId
+Typeable DefUnitId =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; DefUnitId -&gt; c DefUnitId)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c DefUnitId)
+-&gt; (DefUnitId -&gt; Constr)
+-&gt; (DefUnitId -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c DefUnitId))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c DefUnitId))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; DefUnitId -&gt; DefUnitId)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId)
+-&gt; Data DefUnitId
+DefUnitId -&gt; Constr
+DefUnitId -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; DefUnitId -&gt; DefUnitId
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c DefUnitId
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; DefUnitId -&gt; c DefUnitId
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c DefUnitId)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c DefUnitId)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; DefUnitId -&gt; c DefUnitId
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; DefUnitId -&gt; c DefUnitId
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c DefUnitId
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c DefUnitId
+$ctoConstr :: DefUnitId -&gt; Constr
+toConstr :: DefUnitId -&gt; Constr
+$cdataTypeOf :: DefUnitId -&gt; DataType
+dataTypeOf :: DefUnitId -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c DefUnitId)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c DefUnitId)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c DefUnitId)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c DefUnitId)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; DefUnitId -&gt; DefUnitId
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; DefUnitId -&gt; DefUnitId
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; DefUnitId -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; DefUnitId -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; DefUnitId -&gt; m DefUnitId
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421177"><span id="local-6989586621679421181"><span id="local-6989586621679421185"><span class="annot"><span class="annottext">Get DefUnitId
+[DefUnitId] -&gt; Put
+DefUnitId -&gt; Put
+(DefUnitId -&gt; Put)
+-&gt; Get DefUnitId -&gt; ([DefUnitId] -&gt; Put) -&gt; Binary DefUnitId
+forall t. (t -&gt; Put) -&gt; Get t -&gt; ([t] -&gt; Put) -&gt; Binary t
+$cput :: DefUnitId -&gt; Put
+put :: DefUnitId -&gt; Put
+$cget :: Get DefUnitId
+get :: Get DefUnitId
+$cputList :: [DefUnitId] -&gt; Put
+putList :: [DefUnitId] -&gt; Put
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Binary</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421190"><span class="annot"><span class="annottext">DefUnitId -&gt; ()
+(DefUnitId -&gt; ()) -&gt; NFData DefUnitId
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: DefUnitId -&gt; ()
+rnf :: DefUnitId -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679421195"><span id="local-6989586621679421199"><span class="annot"><span class="annottext">CabalSpecVersion -&gt; DefUnitId -&gt; Doc
+DefUnitId -&gt; Doc
+(DefUnitId -&gt; Doc)
+-&gt; (CabalSpecVersion -&gt; DefUnitId -&gt; Doc) -&gt; Pretty DefUnitId
+forall a. (a -&gt; Doc) -&gt; (CabalSpecVersion -&gt; a -&gt; Doc) -&gt; Pretty a
+$cpretty :: DefUnitId -&gt; Doc
+pretty :: DefUnitId -&gt; Doc
+$cprettyVersioned :: CabalSpecVersion -&gt; DefUnitId -&gt; Doc
+prettyVersioned :: CabalSpecVersion -&gt; DefUnitId -&gt; Doc
+</span><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Pretty</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679421206"><span id="local-6989586621679421213"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-type">DefUnitId</span></a></span></span></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- Workaround for a GHC 8.0.1 bug, see</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- https://github.com/haskell/cabal/issues/4793#issuecomment-334258288</span><span>
+</span><span id="line-128"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-type">DefUnitId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679421239"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m DefUnitId
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnitId -&gt; DefUnitId
+</span><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-var">DefUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">(UnitId -&gt; DefUnitId) -&gt; m UnitId -&gt; m DefUnitId
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m UnitId
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m UnitId
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- | Unsafely create a 'DefUnitId' from a 'UnitId'.  Your responsibility</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- is to ensure that the 'DefUnitId' invariant holds.</span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Distribution.Types.UnitId.html#unsafeMkDefUnitId"><span class="hs-identifier hs-type">unsafeMkDefUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-type">DefUnitId</span></a></span><span>
+</span><span id="line-134"></span><span id="unsafeMkDefUnitId"><span class="annot"><span class="annottext">unsafeMkDefUnitId :: UnitId -&gt; DefUnitId
+</span><a href="Distribution.Types.UnitId.html#unsafeMkDefUnitId"><span class="hs-identifier hs-var hs-var">unsafeMkDefUnitId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnitId -&gt; DefUnitId
+</span><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-var">DefUnitId</span></a></span><span>
+</span><span id="line-135"></span></pre></body></html>

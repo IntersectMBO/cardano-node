@@ -1,0 +1,895 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679381796"><span id="local-6989586621679381797"><span id="local-6989586621679381798"><span id="local-6989586621679381799"><span id="local-6989586621679381800"><span id="local-6989586621679381801"></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.Condition</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier">Condition</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.Condition.html#cNot"><span class="hs-identifier">cNot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.Condition.html#cAnd"><span class="hs-identifier">cAnd</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier">cOr</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Types.Condition.html#simplifyCondition"><span class="hs-identifier">simplifyCondition</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="annot"><span class="hs-comment">-- | A boolean expression parameterized over the variable type used.</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">data</span><span> </span><span id="Condition"><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-var">Condition</span></a></span></span><span> </span><span id="local-6989586621679381567"><span class="annot"><a href="#local-6989586621679381567"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Var"><span class="annot"><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679381567"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-17"></span><span>                 </span><span class="hs-glyph">|</span><span> </span><span id="Lit"><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-18"></span><span>                 </span><span class="hs-glyph">|</span><span> </span><span id="CNot"><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-var">CNot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381567"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>                 </span><span class="hs-glyph">|</span><span> </span><span id="COr"><span class="annot"><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381567"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381567"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>                 </span><span class="hs-glyph">|</span><span> </span><span id="CAnd"><span class="annot"><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-var">CAnd</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381567"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381567"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679381813"><span id="local-6989586621679381830"><span id="local-6989586621679381833"><span class="annot"><span class="annottext">Int -&gt; Condition c -&gt; ShowS
+[Condition c] -&gt; ShowS
+Condition c -&gt; String
+(Int -&gt; Condition c -&gt; ShowS)
+-&gt; (Condition c -&gt; String)
+-&gt; ([Condition c] -&gt; ShowS)
+-&gt; Show (Condition c)
+forall c. Show c =&gt; Int -&gt; Condition c -&gt; ShowS
+forall c. Show c =&gt; [Condition c] -&gt; ShowS
+forall c. Show c =&gt; Condition c -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall c. Show c =&gt; Int -&gt; Condition c -&gt; ShowS
+showsPrec :: Int -&gt; Condition c -&gt; ShowS
+$cshow :: forall c. Show c =&gt; Condition c -&gt; String
+show :: Condition c -&gt; String
+$cshowList :: forall c. Show c =&gt; [Condition c] -&gt; ShowS
+showList :: [Condition c] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679381838"><span id="local-6989586621679381849"><span class="annot"><span class="annottext">Condition c -&gt; Condition c -&gt; Bool
+(Condition c -&gt; Condition c -&gt; Bool)
+-&gt; (Condition c -&gt; Condition c -&gt; Bool) -&gt; Eq (Condition c)
+forall c. Eq c =&gt; Condition c -&gt; Condition c -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall c. Eq c =&gt; Condition c -&gt; Condition c -&gt; Bool
+== :: Condition c -&gt; Condition c -&gt; Bool
+$c/= :: forall c. Eq c =&gt; Condition c -&gt; Condition c -&gt; Bool
+/= :: Condition c -&gt; Condition c -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679381858"><span id="local-6989586621679381869"><span id="local-6989586621679381878"><span id="local-6989586621679381880"><span id="local-6989586621679381882"><span id="local-6989586621679381888"><span id="local-6989586621679381893"><span id="local-6989586621679381896"><span id="local-6989586621679381899"><span id="local-6989586621679381902"><span id="local-6989586621679381905"><span id="local-6989586621679381908"><span id="local-6989586621679381913"><span id="local-6989586621679381918"><span class="annot"><span class="annottext">Typeable (Condition c)
+Typeable (Condition c) =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Condition c -&gt; c (Condition c))
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Condition c))
+-&gt; (Condition c -&gt; Constr)
+-&gt; (Condition c -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Condition c)))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c (Condition c)))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Condition c -&gt; Condition c)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c))
+-&gt; Data (Condition c)
+Condition c -&gt; Constr
+Condition c -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Condition c -&gt; Condition c
+forall c. Data c =&gt; Typeable (Condition c)
+forall c. Data c =&gt; Condition c -&gt; Constr
+forall c. Data c =&gt; Condition c -&gt; DataType
+forall c.
+Data c =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Condition c -&gt; Condition c
+forall c u.
+Data c =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; u
+forall c u.
+Data c =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; [u]
+forall c r r'.
+Data c =&gt;
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+forall c r r'.
+Data c =&gt;
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+forall c (m :: * -&gt; *).
+(Data c, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+forall c (m :: * -&gt; *).
+(Data c, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+forall c (c :: * -&gt; *).
+Data c =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Condition c)
+forall c (c :: * -&gt; *).
+Data c =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Condition c -&gt; c (Condition c)
+forall c (t :: * -&gt; *) (c :: * -&gt; *).
+(Data c, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Condition c))
+forall c (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data c, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Condition c))
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Condition c)
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Condition c -&gt; c (Condition c)
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Condition c))
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Condition c))
+$cgfoldl :: forall c (c :: * -&gt; *).
+Data c =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Condition c -&gt; c (Condition c)
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Condition c -&gt; c (Condition c)
+$cgunfold :: forall c (c :: * -&gt; *).
+Data c =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Condition c)
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Condition c)
+$ctoConstr :: forall c. Data c =&gt; Condition c -&gt; Constr
+toConstr :: Condition c -&gt; Constr
+$cdataTypeOf :: forall c. Data c =&gt; Condition c -&gt; DataType
+dataTypeOf :: Condition c -&gt; DataType
+$cdataCast1 :: forall c (t :: * -&gt; *) (c :: * -&gt; *).
+(Data c, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Condition c))
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Condition c))
+$cdataCast2 :: forall c (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data c, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Condition c))
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Condition c))
+$cgmapT :: forall c.
+Data c =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Condition c -&gt; Condition c
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Condition c -&gt; Condition c
+$cgmapQl :: forall c r r'.
+Data c =&gt;
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+$cgmapQr :: forall c r r'.
+Data c =&gt;
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Condition c -&gt; r
+$cgmapQ :: forall c u.
+Data c =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; [u]
+$cgmapQi :: forall c u.
+Data c =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Condition c -&gt; u
+$cgmapM :: forall c (m :: * -&gt; *).
+(Data c, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+$cgmapMp :: forall c (m :: * -&gt; *).
+(Data c, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+$cgmapMo :: forall c (m :: * -&gt; *).
+(Data c, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Condition c -&gt; m (Condition c)
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679381925"><span id="local-6989586621679381927"><span class="annot"><span class="annottext">(forall x. Condition c -&gt; Rep (Condition c) x)
+-&gt; (forall x. Rep (Condition c) x -&gt; Condition c)
+-&gt; Generic (Condition c)
+forall x. Rep (Condition c) x -&gt; Condition c
+forall x. Condition c -&gt; Rep (Condition c) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall c x. Rep (Condition c) x -&gt; Condition c
+forall c x. Condition c -&gt; Rep (Condition c) x
+$cfrom :: forall c x. Condition c -&gt; Rep (Condition c) x
+from :: forall x. Condition c -&gt; Rep (Condition c) x
+$cto :: forall c x. Rep (Condition c) x -&gt; Condition c
+to :: forall x. Rep (Condition c) x -&gt; Condition c
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><span class="hs-comment">-- | Boolean negation of a 'Condition' value.</span></span><span>
+</span><span id="line-24"></span><span id="local-6989586621679381565"><span class="annot"><a href="Distribution.Types.Condition.html#cNot"><span class="hs-identifier hs-type">cNot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381565"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381565"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-25"></span><span id="cNot"><span class="annot"><span class="annottext">cNot :: forall a. Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#cNot"><span class="hs-identifier hs-var hs-var">cNot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span id="local-6989586621679381930"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679381930"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition a
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679381930"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Distribution.Types.Condition.html#cNot"><span class="hs-identifier hs-var">cNot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679381932"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381932"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381932"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Distribution.Types.Condition.html#cNot"><span class="hs-identifier hs-var">cNot</span></a></span><span> </span><span id="local-6989586621679381933"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381933"><span class="hs-identifier hs-var">c</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; Condition a
+forall a. Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-var">CNot</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381933"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><span class="hs-comment">-- | Boolean AND of two 'Condition' values.</span></span><span>
+</span><span id="line-30"></span><span id="local-6989586621679381568"><span class="annot"><a href="Distribution.Types.Condition.html#cAnd"><span class="hs-identifier hs-type">cAnd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381568"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381568"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381568"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-31"></span><span id="cAnd"><span class="annot"><span class="annottext">cAnd :: forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#cAnd"><span class="hs-identifier hs-var hs-var">cAnd</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition a
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Distribution.Types.Condition.html#cAnd"><span class="hs-identifier hs-var">cAnd</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition a
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Distribution.Types.Condition.html#cAnd"><span class="hs-identifier hs-var">cAnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>  </span><span id="local-6989586621679381934"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381934"><span class="hs-identifier hs-var">x</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381934"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Distribution.Types.Condition.html#cAnd"><span class="hs-identifier hs-var">cAnd</span></a></span><span> </span><span id="local-6989586621679381935"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381935"><span class="hs-identifier hs-var">x</span></a></span></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381935"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Distribution.Types.Condition.html#cAnd"><span class="hs-identifier hs-var">cAnd</span></a></span><span> </span><span id="local-6989586621679381936"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381936"><span class="hs-identifier hs-var">x</span></a></span></span><span>           </span><span id="local-6989586621679381937"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381937"><span class="hs-identifier hs-var">y</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; Condition a -&gt; Condition a
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-var">CAnd</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381936"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381937"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><span class="hs-comment">-- | Boolean OR of two 'Condition' values.</span></span><span>
+</span><span id="line-38"></span><span id="local-6989586621679381570"><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-type">cOr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679381570"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381570"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381570"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381570"><span class="hs-identifier hs-type">v</span></a></span></span><span>
+</span><span id="line-39"></span><span id="cOr"><span class="annot"><span class="annottext">cOr :: forall v. Eq v =&gt; Condition v -&gt; Condition v -&gt; Condition v
+</span><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-var hs-var">cOr</span></a></span></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Condition v
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition v
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-var">cOr</span></a></span><span>  </span><span class="annot"><span class="annottext">Condition v
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition v
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-var">cOr</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679381941"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381941"><span class="hs-identifier hs-var">x</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381941"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-var">cOr</span></a></span><span>  </span><span id="local-6989586621679381942"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381942"><span class="hs-identifier hs-var">x</span></a></span></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381942"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-var">cOr</span></a></span><span>  </span><span id="local-6989586621679381943"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381943"><span class="hs-identifier hs-var">c</span></a></span></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679381944"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381944"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381943"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Condition v -&gt; Condition v -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381944"><span class="hs-identifier hs-var">d</span></a></span><span>                   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition v
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-var">cOr</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679381945"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381945"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span>    </span><span id="local-6989586621679381946"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381946"><span class="hs-identifier hs-var">d</span></a></span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381945"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Condition v -&gt; Condition v -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381946"><span class="hs-identifier hs-var">d</span></a></span><span>                   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition v
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Distribution.Types.Condition.html#cOr"><span class="hs-identifier hs-var">cOr</span></a></span><span>  </span><span id="local-6989586621679381947"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381947"><span class="hs-identifier hs-var">x</span></a></span></span><span>           </span><span id="local-6989586621679381948"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381948"><span class="hs-identifier hs-var">y</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition v -&gt; Condition v -&gt; Condition v
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381947"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679381948"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679381951"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679381960"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381960"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679381961"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Condition a -&gt; Condition b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var hs-var hs-var hs-var">`fmap`</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679381962"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679381962"><span class="hs-identifier hs-var">c</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Condition b
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381960"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679381962"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span id="local-6989586621679381963"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679381963"><span class="hs-identifier hs-var">c</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition b
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679381963"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679381964"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381964"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679381965"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381965"><span class="hs-identifier hs-var">c</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-var">CNot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall a b. (a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381964"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381965"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679381966"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381966"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-type">COr</span></a></span><span> </span><span id="local-6989586621679381967"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381967"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679381968"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381968"><span class="hs-identifier hs-var">d</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall a b. (a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381966"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381967"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall a b. (a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381966"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381968"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679381969"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381969"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-type">CAnd</span></a></span><span> </span><span id="local-6989586621679381970"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381970"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679381971"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381971"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-var">CAnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall a b. (a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381969"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381970"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall a b. (a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679381969"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679381971"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679381973"><span id="local-6989586621679381980"><span id="local-6989586621679381985"><span id="local-6989586621679381988"><span id="local-6989586621679381991"><span id="local-6989586621679381994"><span id="local-6989586621679381997"><span id="local-6989586621679382000"><span id="local-6989586621679382003"><span id="local-6989586621679382006"><span id="local-6989586621679382009"><span id="local-6989586621679382012"><span id="local-6989586621679382017"><span id="local-6989586621679382022"><span id="local-6989586621679382027"><span id="local-6989586621679382032"><span class="annot"><a href="../../base-4.18.2.1/src/Data.Foldable.html#Foldable/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679382051"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382051"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679382052"><span class="annot"><span class="annottext">foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Condition a -&gt; m
+</span><a href="#local-6989586621679382052"><span class="hs-operator hs-var hs-var hs-var hs-var">`foldMap`</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679382054"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382054"><span class="hs-identifier hs-var">c</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382051"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382054"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; m
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-operator hs-var">`foldMap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier">_</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679382055"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382055"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-operator hs-var">`foldMap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679382056"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382056"><span class="hs-identifier hs-var">c</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Condition a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Condition a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382055"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382056"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679382057"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382057"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-operator hs-var">`foldMap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-type">COr</span></a></span><span> </span><span id="local-6989586621679382058"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382058"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679382059"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382059"><span class="hs-identifier hs-var">d</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Condition a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Condition a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382057"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382058"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Condition a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Condition a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382057"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382059"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679382060"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382060"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-operator hs-var">`foldMap`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-type">CAnd</span></a></span><span> </span><span id="local-6989586621679382061"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382061"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679382062"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382062"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Condition a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Condition a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382060"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382061"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Condition a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Condition a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldMap/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679382060"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382062"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679382069"><span id="local-6989586621679382075"><span id="local-6989586621679382080"><span class="annot"><a href="../../base-4.18.2.1/src/Data.Traversable.html#Traversable/Data.Traversable.html#Traversable"><span class="hs-identifier hs-type">Traversable</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679382105"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382105"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679382106"><span class="annot"><span class="annottext">traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+</span><a href="#local-6989586621679382106"><span class="hs-operator hs-var hs-var hs-var hs-var">`traverse`</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679382108"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382108"><span class="hs-identifier hs-var">c</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Condition b
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Condition b) -&gt; f b -&gt; f (Condition b)
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382105"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382108"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-operator hs-var">`traverse`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span id="local-6989586621679382109"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679382109"><span class="hs-identifier hs-var">c</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; f (Condition b)
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition b -&gt; f (Condition b)) -&gt; Condition b -&gt; f (Condition b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition b
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679382109"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679382110"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382110"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-operator hs-var">`traverse`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679382111"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382111"><span class="hs-identifier hs-var">c</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-var">CNot</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition b -&gt; Condition b) -&gt; f (Condition b) -&gt; f (Condition b)
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382110"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382111"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679382112"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382112"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-operator hs-var">`traverse`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-type">COr</span></a></span><span> </span><span id="local-6989586621679382113"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382113"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679382114"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382114"><span class="hs-identifier hs-var">d</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span><span>  </span><span class="annot"><span class="annottext">(Condition b -&gt; Condition b -&gt; Condition b)
+-&gt; f (Condition b) -&gt; f (Condition b -&gt; Condition b)
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382112"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382113"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">f (Condition b -&gt; Condition b)
+-&gt; f (Condition b) -&gt; f (Condition b)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382112"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382114"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679382115"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382115"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-operator hs-var">`traverse`</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-type">CAnd</span></a></span><span> </span><span id="local-6989586621679382116"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382116"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679382117"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382117"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-var">CAnd</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition b -&gt; Condition b -&gt; Condition b)
+-&gt; f (Condition b) -&gt; f (Condition b -&gt; Condition b)
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382115"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382116"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">f (Condition b -&gt; Condition b)
+-&gt; f (Condition b) -&gt; f (Condition b)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Condition a -&gt; f (Condition b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679382115"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382117"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679382123"><span id="local-6989586621679382127"><span id="local-6989586621679382130"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679382133"><span class="annot"><span class="annottext">pure :: forall c. c -&gt; Condition c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition a
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679382136"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. Condition (a -&gt; b) -&gt; Condition a -&gt; Condition b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;*&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition (a -&gt; b) -&gt; Condition a -&gt; Condition b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#ap/GHC.Base.html#ap"><span class="hs-identifier hs-var">ap</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679382142"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monad/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679382147"><span class="annot"><span class="annottext">return :: forall c. c -&gt; Condition c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition a
+forall c. c -&gt; Condition c
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-comment">-- Terminating cases</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679382153"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">(&gt;&gt;=)</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span id="local-6989586621679382154"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679382154"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition b
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679382154"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">(&gt;&gt;=)</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679382155"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382155"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679382156"><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382156"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382156"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382155"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-comment">-- Recursing cases</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">(&gt;&gt;=)</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span>  </span><span id="local-6989586621679382157"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382157"><span class="hs-identifier hs-var">x</span></a></span></span><span>  </span><span class="hs-special">)</span><span> </span><span id="local-6989586621679382158"><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382158"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-var">CNot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382157"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall a b. Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382158"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">(&gt;&gt;=)</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-type">COr</span></a></span><span>   </span><span id="local-6989586621679382159"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382159"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679382160"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382160"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679382161"><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382161"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382159"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall a b. Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382161"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382160"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall a b. Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382161"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">(&gt;&gt;=)</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-type">CAnd</span></a></span><span>  </span><span id="local-6989586621679382162"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382162"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679382163"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382163"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679382164"><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382164"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition b -&gt; Condition b -&gt; Condition b
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-var">CAnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382162"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall a b. Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382164"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382163"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall a b. Condition a -&gt; (a -&gt; Condition b) -&gt; Condition b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Condition b
+</span><a href="#local-6989586621679382164"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679381651"><span id="local-6989586621679382171"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381651"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679382175"><span class="annot"><span class="annottext">mempty :: Condition a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition a
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679382177"><span class="annot"><span class="annottext">mappend :: Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; Condition a -&gt; Condition a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679382178"><span id="local-6989586621679382181"><span id="local-6989586621679382184"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679382178"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679382189"><span class="annot"><span class="annottext">&lt;&gt; :: Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; Condition a -&gt; Condition a
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679382195"><span id="local-6989586621679382199"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Alternative/GHC.Base.html#Alternative"><span class="hs-identifier hs-type">Alternative</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679382203"><span class="annot"><span class="annottext">empty :: forall a. Condition a
+</span><a href="#local-6989586621679382203"><span class="hs-identifier hs-var hs-var hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679382206"><span class="annot"><span class="annottext">&lt;|&gt; :: forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="#local-6989586621679382206"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;|&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; Condition a -&gt; Condition a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#MonadPlus/GHC.Base.html#MonadPlus"><span class="hs-identifier hs-type">MonadPlus</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679382217"><span class="annot"><span class="annottext">mzero :: forall a. Condition a
+</span><a href="#local-6989586621679382217"><span class="hs-identifier hs-var hs-var hs-var hs-var">mzero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679382220"><span class="annot"><span class="annottext">mplus :: forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="#local-6989586621679382220"><span class="hs-identifier hs-var hs-var hs-var hs-var">mplus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; Condition a -&gt; Condition a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679381709"><span id="local-6989586621679382224"><span id="local-6989586621679382231"><span id="local-6989586621679382237"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381709"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381709"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679381747"><span id="local-6989586621679382311"><span id="local-6989586621679382318"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381747"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381747"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679381751"><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381751"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381751"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679382405"><span class="annot"><span class="annottext">rnf :: Condition c -&gt; ()
+</span><a href="#local-6989586621679382405"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition c -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="annot"><span class="hs-comment">-- | Simplify the condition and return its free variables.</span></span><span>
+</span><span id="line-104"></span><span id="local-6989586621679381763"><span id="local-6989586621679381764"><span class="annot"><a href="Distribution.Types.Condition.html#simplifyCondition"><span class="hs-identifier hs-type">simplifyCondition</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381763"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-105"></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679381763"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Either.html#Either/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381764"><span class="hs-identifier hs-type">d</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span>   </span><span class="annot"><span class="hs-comment">-- ^ (partial) variable assignment</span></span><span>
+</span><span id="line-106"></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679381764"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679381764"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-107"></span><span id="simplifyCondition"><span class="annot"><span class="annottext">simplifyCondition :: forall c d.
+Condition c -&gt; (c -&gt; Either d Bool) -&gt; (Condition d, [d])
+</span><a href="Distribution.Types.Condition.html#simplifyCondition"><span class="hs-identifier hs-var hs-var">simplifyCondition</span></a></span></span><span> </span><span id="local-6989586621679382408"><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382408"><span class="hs-identifier hs-var">cond</span></a></span></span><span> </span><span id="local-6989586621679382409"><span class="annot"><span class="annottext">c -&gt; Either d Bool
+</span><a href="#local-6989586621679382409"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition d -&gt; (Condition d, [d])
+forall {a}. Condition a -&gt; (Condition a, [a])
+</span><a href="#local-6989586621679382410"><span class="hs-identifier hs-var">fv</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition d -&gt; (Condition d, [d]))
+-&gt; (Condition c -&gt; Condition d)
+-&gt; Condition c
+-&gt; (Condition d, [d])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Condition c -&gt; Condition d
+</span><a href="#local-6989586621679382412"><span class="hs-identifier hs-var">walk</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition c -&gt; (Condition d, [d]))
+-&gt; Condition c -&gt; (Condition d, [d])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382408"><span class="hs-identifier hs-var">cond</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>    </span><span id="local-6989586621679382412"><span class="annot"><span class="annottext">walk :: Condition c -&gt; Condition d
+</span><a href="#local-6989586621679382412"><span class="hs-identifier hs-var hs-var">walk</span></a></span></span><span> </span><span id="local-6989586621679382413"><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382413"><span class="hs-identifier hs-var">cnd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382413"><span class="hs-identifier hs-var">cnd</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-110"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679382414"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679382414"><span class="hs-identifier hs-var">v</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(d -&gt; Condition d)
+-&gt; (Bool -&gt; Condition d) -&gt; Either d Bool -&gt; Condition d
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#either/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">d -&gt; Condition d
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c -&gt; Either d Bool
+</span><a href="#local-6989586621679382409"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679382414"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span id="local-6989586621679382416"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679382416"><span class="hs-identifier hs-var">b</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679382416"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679382417"><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382417"><span class="hs-identifier hs-var">c</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Condition c -&gt; Condition d
+</span><a href="#local-6989586621679382412"><span class="hs-identifier hs-var">walk</span></a></span><span> </span><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382417"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-113"></span><span>                   </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-114"></span><span>                   </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-115"></span><span>                   </span><span id="local-6989586621679382418"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382418"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition d -&gt; Condition d
+forall a. Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-var">CNot</span></a></span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382418"><span class="hs-identifier hs-var">c'</span></a></span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-type">COr</span></a></span><span> </span><span id="local-6989586621679382419"><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382419"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679382420"><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382420"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition c -&gt; Condition d
+</span><a href="#local-6989586621679382412"><span class="hs-identifier hs-var">walk</span></a></span><span> </span><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382419"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Condition c -&gt; Condition d
+</span><a href="#local-6989586621679382412"><span class="hs-identifier hs-var">walk</span></a></span><span> </span><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382420"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-117"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679382421"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382421"><span class="hs-identifier hs-var">d'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382421"><span class="hs-identifier hs-var">d'</span></a></span><span>
+</span><span id="line-118"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-119"></span><span>                   </span><span class="hs-special">(</span><span id="local-6989586621679382422"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382422"><span class="hs-identifier hs-var">c'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382422"><span class="hs-identifier hs-var">c'</span></a></span><span>
+</span><span id="line-120"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition d
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-121"></span><span>                   </span><span class="hs-special">(</span><span id="local-6989586621679382423"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382423"><span class="hs-identifier hs-var">c'</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679382424"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382424"><span class="hs-identifier hs-var">d'</span></a></span></span><span class="hs-special">)</span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition d -&gt; Condition d -&gt; Condition d
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382423"><span class="hs-identifier hs-var">c'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382424"><span class="hs-identifier hs-var">d'</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-type">CAnd</span></a></span><span> </span><span id="local-6989586621679382425"><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382425"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679382426"><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382426"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition c -&gt; Condition d
+</span><a href="#local-6989586621679382412"><span class="hs-identifier hs-var">walk</span></a></span><span> </span><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382425"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Condition c -&gt; Condition d
+</span><a href="#local-6989586621679382412"><span class="hs-identifier hs-var">walk</span></a></span><span> </span><span class="annot"><span class="annottext">Condition c
+</span><a href="#local-6989586621679382426"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-123"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-124"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679382427"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382427"><span class="hs-identifier hs-var">d'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382427"><span class="hs-identifier hs-var">d'</span></a></span><span>
+</span><span id="line-125"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition d
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition d
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-126"></span><span>                    </span><span class="hs-special">(</span><span id="local-6989586621679382428"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382428"><span class="hs-identifier hs-var">c'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382428"><span class="hs-identifier hs-var">c'</span></a></span><span>
+</span><span id="line-127"></span><span>                    </span><span class="hs-special">(</span><span id="local-6989586621679382429"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382429"><span class="hs-identifier hs-var">c'</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679382430"><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382430"><span class="hs-identifier hs-var">d'</span></a></span></span><span class="hs-special">)</span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition d -&gt; Condition d -&gt; Condition d
+forall a. Condition a -&gt; Condition a -&gt; Condition a
+</span><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-var">CAnd</span></a></span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382429"><span class="hs-identifier hs-var">c'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition d
+</span><a href="#local-6989586621679382430"><span class="hs-identifier hs-var">d'</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-comment">-- gather free vars</span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621679382410"><span class="annot"><span class="annottext">fv :: Condition a -&gt; (Condition a, [a])
+</span><a href="#local-6989586621679382410"><span class="hs-identifier hs-var hs-var">fv</span></a></span></span><span> </span><span id="local-6989586621679382431"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382431"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382431"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; [a]
+forall a. Condition a -&gt; [a]
+</span><a href="#local-6989586621679382432"><span class="hs-identifier hs-var">fv'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382431"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679382432"><span class="annot"><span class="annottext">fv' :: Condition a -&gt; [a]
+</span><a href="#local-6989586621679382432"><span class="hs-identifier hs-var hs-var">fv'</span></a></span></span><span> </span><span id="local-6989586621679382433"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382433"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382433"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679382434"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382434"><span class="hs-identifier hs-var">v</span></a></span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679382434"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-132"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-type">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier">_</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-type">CNot</span></a></span><span> </span><span id="local-6989586621679382435"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382435"><span class="hs-identifier hs-var">c'</span></a></span></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; [a]
+</span><a href="#local-6989586621679382432"><span class="hs-identifier hs-var">fv'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382435"><span class="hs-identifier hs-var">c'</span></a></span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-type">COr</span></a></span><span> </span><span id="local-6989586621679382436"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382436"><span class="hs-identifier hs-var">c1</span></a></span></span><span> </span><span id="local-6989586621679382437"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382437"><span class="hs-identifier hs-var">c2</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; [a]
+</span><a href="#local-6989586621679382432"><span class="hs-identifier hs-var">fv'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382436"><span class="hs-identifier hs-var">c1</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; [a]
+</span><a href="#local-6989586621679382432"><span class="hs-identifier hs-var">fv'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382437"><span class="hs-identifier hs-var">c2</span></a></span><span>
+</span><span id="line-135"></span><span>      </span><span class="annot"><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-type">CAnd</span></a></span><span> </span><span id="local-6989586621679382438"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382438"><span class="hs-identifier hs-var">c1</span></a></span></span><span> </span><span id="local-6989586621679382439"><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382439"><span class="hs-identifier hs-var">c2</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; [a]
+</span><a href="#local-6989586621679382432"><span class="hs-identifier hs-var">fv'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382438"><span class="hs-identifier hs-var">c1</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a -&gt; [a]
+</span><a href="#local-6989586621679382432"><span class="hs-identifier hs-var">fv'</span></a></span><span> </span><span class="annot"><span class="annottext">Condition a
+</span><a href="#local-6989586621679382439"><span class="hs-identifier hs-var">c2</span></a></span><span>
+</span><span id="line-136"></span></pre></body></html>

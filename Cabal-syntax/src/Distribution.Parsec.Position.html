@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Parsec.Position</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier">Position</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Position.html#incPos"><span class="hs-identifier">incPos</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Position.html#retPos"><span class="hs-identifier">retPos</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Position.html#showPos"><span class="hs-identifier">showPos</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Position.html#zeroPos"><span class="hs-identifier">zeroPos</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Position.html#positionCol"><span class="hs-identifier">positionCol</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Position.html#positionRow"><span class="hs-identifier">positionRow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="annot"><span class="hs-comment">-- | 1-indexed row and column positions in a file.</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">data</span><span> </span><span id="Position"><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-var">Position</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Position"><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-var">Position</span></a></span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span>  </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>           </span><span class="hs-comment">-- row</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span>  </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>           </span><span class="hs-comment">-- column</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679382497"><span id="local-6989586621679382502"><span class="annot"><span class="annottext">Position -&gt; Position -&gt; Bool
+(Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool) -&gt; Eq Position
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Position -&gt; Position -&gt; Bool
+== :: Position -&gt; Position -&gt; Bool
+$c/= :: Position -&gt; Position -&gt; Bool
+/= :: Position -&gt; Position -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679382509"><span id="local-6989586621679382514"><span id="local-6989586621679382518"><span id="local-6989586621679382522"><span id="local-6989586621679382525"><span id="local-6989586621679382528"><span id="local-6989586621679382531"><span class="annot"><span class="annottext">Eq Position
+Eq Position =&gt;
+(Position -&gt; Position -&gt; Ordering)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Position)
+-&gt; (Position -&gt; Position -&gt; Position)
+-&gt; Ord Position
+Position -&gt; Position -&gt; Bool
+Position -&gt; Position -&gt; Ordering
+Position -&gt; Position -&gt; Position
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Position -&gt; Position -&gt; Ordering
+compare :: Position -&gt; Position -&gt; Ordering
+$c&lt; :: Position -&gt; Position -&gt; Bool
+&lt; :: Position -&gt; Position -&gt; Bool
+$c&lt;= :: Position -&gt; Position -&gt; Bool
+&lt;= :: Position -&gt; Position -&gt; Bool
+$c&gt; :: Position -&gt; Position -&gt; Bool
+&gt; :: Position -&gt; Position -&gt; Bool
+$c&gt;= :: Position -&gt; Position -&gt; Bool
+&gt;= :: Position -&gt; Position -&gt; Bool
+$cmax :: Position -&gt; Position -&gt; Position
+max :: Position -&gt; Position -&gt; Position
+$cmin :: Position -&gt; Position -&gt; Position
+min :: Position -&gt; Position -&gt; Position
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679382535"><span id="local-6989586621679382540"><span id="local-6989586621679382544"><span class="annot"><span class="annottext">Int -&gt; Position -&gt; ShowS
+[Position] -&gt; ShowS
+Position -&gt; String
+(Int -&gt; Position -&gt; ShowS)
+-&gt; (Position -&gt; String) -&gt; ([Position] -&gt; ShowS) -&gt; Show Position
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Position -&gt; ShowS
+showsPrec :: Int -&gt; Position -&gt; ShowS
+$cshow :: Position -&gt; String
+show :: Position -&gt; String
+$cshowList :: [Position] -&gt; ShowS
+showList :: [Position] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679382548"><span id="local-6989586621679382550"><span class="annot"><span class="annottext">(forall x. Position -&gt; Rep Position x)
+-&gt; (forall x. Rep Position x -&gt; Position) -&gt; Generic Position
+forall x. Rep Position x -&gt; Position
+forall x. Position -&gt; Rep Position x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Position -&gt; Rep Position x
+from :: forall x. Position -&gt; Rep Position x
+$cto :: forall x. Rep Position x -&gt; Position
+to :: forall x. Rep Position x -&gt; Position
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679382554"><span id="local-6989586621679382561"><span id="local-6989586621679382567"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span></span></span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679382605"><span class="annot"><span class="annottext">rnf :: Position -&gt; ()
+</span><a href="#local-6989586621679382605"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Position -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><span class="hs-comment">-- | Shift position by n columns to the right.</span></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Distribution.Parsec.Position.html#incPos"><span class="hs-identifier hs-type">incPos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span>
+</span><span id="line-26"></span><span id="incPos"><span class="annot"><span class="annottext">incPos :: Int -&gt; Position -&gt; Position
+</span><a href="Distribution.Parsec.Position.html#incPos"><span class="hs-identifier hs-var hs-var">incPos</span></a></span></span><span> </span><span id="local-6989586621679382608"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382608"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span id="local-6989586621679382609"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382609"><span class="hs-identifier hs-var">row</span></a></span></span><span> </span><span id="local-6989586621679382610"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382610"><span class="hs-identifier hs-var">col</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Position
+</span><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-var">Position</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382609"><span class="hs-identifier hs-var">row</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382610"><span class="hs-identifier hs-var">col</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#%2B/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382608"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><span class="hs-comment">-- | Shift position to beginning of next row.</span></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Distribution.Parsec.Position.html#retPos"><span class="hs-identifier hs-type">retPos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span>
+</span><span id="line-30"></span><span id="retPos"><span class="annot"><span class="annottext">retPos :: Position -&gt; Position
+</span><a href="Distribution.Parsec.Position.html#retPos"><span class="hs-identifier hs-var hs-var">retPos</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span id="local-6989586621679382612"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382612"><span class="hs-identifier hs-var">row</span></a></span></span><span> </span><span id="local-6989586621679382613"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382613"><span class="hs-identifier hs-var">_col</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Position
+</span><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-var">Position</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382612"><span class="hs-identifier hs-var">row</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#%2B/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Distribution.Parsec.Position.html#showPos"><span class="hs-identifier hs-type">showPos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-33"></span><span id="showPos"><span class="annot"><span class="annottext">showPos :: Position -&gt; String
+</span><a href="Distribution.Parsec.Position.html#showPos"><span class="hs-identifier hs-var hs-var">showPos</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span id="local-6989586621679382614"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382614"><span class="hs-identifier hs-var">row</span></a></span></span><span> </span><span id="local-6989586621679382615"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382615"><span class="hs-identifier hs-var">col</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382614"><span class="hs-identifier hs-var">row</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;:&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382615"><span class="hs-identifier hs-var">col</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Distribution.Parsec.Position.html#zeroPos"><span class="hs-identifier hs-type">zeroPos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span>
+</span><span id="line-36"></span><span id="zeroPos"><span class="annot"><span class="annottext">zeroPos :: Position
+</span><a href="Distribution.Parsec.Position.html#zeroPos"><span class="hs-identifier hs-var hs-var">zeroPos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Position
+</span><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-var">Position</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><span class="hs-comment">-- | @since 3.0.0.0</span></span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Distribution.Parsec.Position.html#positionCol"><span class="hs-identifier hs-type">positionCol</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-40"></span><span id="positionCol"><span class="annot"><span class="annottext">positionCol :: Position -&gt; Int
+</span><a href="Distribution.Parsec.Position.html#positionCol"><span class="hs-identifier hs-var hs-var">positionCol</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679382617"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382617"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382617"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><span class="hs-comment">-- | @since 3.0.0.0</span></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Distribution.Parsec.Position.html#positionRow"><span class="hs-identifier hs-type">positionRow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-44"></span><span id="positionRow"><span class="annot"><span class="annottext">positionRow :: Position -&gt; Int
+</span><a href="Distribution.Parsec.Position.html#positionRow"><span class="hs-identifier hs-var hs-var">positionRow</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span id="local-6989586621679382618"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382618"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679382618"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-45"></span></pre></body></html>

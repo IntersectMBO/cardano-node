@@ -1,0 +1,503 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveFunctor         #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.FieldGrammar.Pretty</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFieldGrammar"><span class="hs-identifier">PrettyFieldGrammar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#prettyFieldGrammar"><span class="hs-identifier">prettyFieldGrammar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.CabalSpecVersion.html"><span class="hs-identifier">Distribution.CabalSpecVersion</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Compat.Lens.html"><span class="hs-identifier">Distribution.Compat.Lens</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Compat.Newtype.html"><span class="hs-identifier">Distribution.Compat.Newtype</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Fields.Field.html"><span class="hs-identifier">Distribution.Fields.Field</span></a></span><span>     </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier">FieldName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Fields.Pretty.html"><span class="hs-identifier">Distribution.Fields.Pretty</span></a></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier">PrettyField</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier">Pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Pretty.html#showFreeText"><span class="hs-identifier">showFreeText</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Pretty.html#showFreeTextV3"><span class="hs-identifier">showFreeTextV3</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#toUTF8BS"><span class="hs-identifier">toUTF8BS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>              </span><span class="hs-special">(</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier">Doc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>              </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PP</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html"><span class="hs-identifier">Distribution.FieldGrammar.Class</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">newtype</span><span> </span><span id="PrettyFieldGrammar"><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFieldGrammar"><span class="hs-identifier hs-var">PrettyFieldGrammar</span></a></span></span><span> </span><span id="local-6989586621679452903"><span class="annot"><a href="#local-6989586621679452903"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621679452904"><span class="annot"><a href="#local-6989586621679452904"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PrettyFG"><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="fieldGrammarPretty"><span class="annot"><span class="annottext">forall s a.
+PrettyFieldGrammar s a -&gt; CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#fieldGrammarPretty"><span class="hs-identifier hs-var hs-var">fieldGrammarPretty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.CabalSpecVersion.html#CabalSpecVersion"><span class="hs-identifier hs-type">CabalSpecVersion</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679452903"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679453058"><span id="local-6989586621679453061"><span class="annot"><span class="annottext">(forall a b.
+ (a -&gt; b) -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s b)
+-&gt; (forall a b.
+    a -&gt; PrettyFieldGrammar s b -&gt; PrettyFieldGrammar s a)
+-&gt; Functor (PrettyFieldGrammar s)
+forall a b. a -&gt; PrettyFieldGrammar s b -&gt; PrettyFieldGrammar s a
+forall a b.
+(a -&gt; b) -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s b
+forall s a b. a -&gt; PrettyFieldGrammar s b -&gt; PrettyFieldGrammar s a
+forall s a b.
+(a -&gt; b) -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall s a b.
+(a -&gt; b) -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s b
+fmap :: forall a b.
+(a -&gt; b) -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s b
+$c&lt;$ :: forall s a b. a -&gt; PrettyFieldGrammar s b -&gt; PrettyFieldGrammar s a
+&lt;$ :: forall a b. a -&gt; PrettyFieldGrammar s b -&gt; PrettyFieldGrammar s a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679452934"><span id="local-6989586621679453070"><span id="local-6989586621679453074"><span id="local-6989586621679453077"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFieldGrammar"><span class="hs-identifier hs-type">PrettyFieldGrammar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679452934"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>    </span><span id="local-6989586621679453082"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; PrettyFieldGrammar s a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">s
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[PrettyField ()]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-type">PrettyFG</span></a></span><span> </span><span id="local-6989586621679453085"><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453085"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679453086"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b.
+PrettyFieldGrammar s (a -&gt; b)
+-&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-type">PrettyFG</span></a></span><span> </span><span id="local-6989586621679453087"><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453087"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s b
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679453088"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453088"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679453089"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453089"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453085"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453088"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453089"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">[PrettyField ()] -&gt; [PrettyField ()] -&gt; [PrettyField ()]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453087"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453088"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453089"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- | We can use 'PrettyFieldGrammar' to pp print the @s@.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- /Note:/ there is not trailing @($+$ text &quot;&quot;)@.</span><span>
+</span><span id="line-34"></span><span id="local-6989586621679452942"><span id="local-6989586621679452943"><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#prettyFieldGrammar"><span class="hs-identifier hs-type">prettyFieldGrammar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.CabalSpecVersion.html#CabalSpecVersion"><span class="hs-identifier hs-type">CabalSpecVersion</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFieldGrammar"><span class="hs-identifier hs-type">PrettyFieldGrammar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679452942"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679452943"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679452942"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-35"></span><span id="prettyFieldGrammar"><span class="annot"><span class="annottext">prettyFieldGrammar :: forall s a.
+CabalSpecVersion -&gt; PrettyFieldGrammar s a -&gt; s -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#prettyFieldGrammar"><span class="hs-identifier hs-var hs-var">prettyFieldGrammar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PrettyFieldGrammar s a
+ -&gt; CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; CabalSpecVersion
+-&gt; PrettyFieldGrammar s a
+-&gt; s
+-&gt; [PrettyField ()]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">PrettyFieldGrammar s a -&gt; CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+forall s a.
+PrettyFieldGrammar s a -&gt; CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#fieldGrammarPretty"><span class="hs-identifier hs-var">fieldGrammarPretty</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679453125"><span class="annot"><a href="Distribution.FieldGrammar.Class.html#FieldGrammar"><span class="hs-identifier hs-type">FieldGrammar</span></a></span><span> </span><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFieldGrammar"><span class="hs-identifier hs-type">PrettyFieldGrammar</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679453129"><span class="annot"><span class="annottext">blurFieldGrammar :: forall a b d.
+ALens' a b -&gt; PrettyFieldGrammar b d -&gt; PrettyFieldGrammar a d
+</span><a href="#local-6989586621679453129"><span class="hs-identifier hs-var hs-var hs-var hs-var">blurFieldGrammar</span></a></span></span><span> </span><span id="local-6989586621679453131"><span class="annot"><span class="annottext">ALens' a b
+</span><a href="#local-6989586621679453131"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-type">PrettyFG</span></a></span><span> </span><span id="local-6989586621679453132"><span class="annot"><span class="annottext">CabalSpecVersion -&gt; b -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453132"><span class="hs-identifier hs-var">pp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; a -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar a d
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679453133"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453133"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; b -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453132"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453133"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">(b -&gt; [PrettyField ()]) -&gt; (a -&gt; b) -&gt; a -&gt; [PrettyField ()]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' a b -&gt; a -&gt; b
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' a b
+</span><a href="#local-6989586621679453131"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679453140"><span class="annot"><span class="annottext">uniqueFieldAla :: forall b a s.
+(Pretty b, Newtype a b) =&gt;
+FieldName -&gt; (a -&gt; b) -&gt; ALens' s a -&gt; PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453140"><span class="hs-identifier hs-var hs-var hs-var hs-var">uniqueFieldAla</span></a></span></span><span> </span><span id="local-6989586621679453142"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453142"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621679453143"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453143"><span class="hs-identifier hs-var">_pack</span></a></span></span><span> </span><span id="local-6989586621679453144"><span class="annot"><span class="annottext">ALens' s a
+</span><a href="#local-6989586621679453144"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="annot"><span class="annottext">((CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+ -&gt; PrettyFieldGrammar s a)
+-&gt; (CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679453145"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453145"><span class="hs-identifier hs-var">_v</span></a></span></span><span> </span><span id="local-6989586621679453146"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453146"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="annottext">FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var">ppField</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453142"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; a -&gt; b
+forall o n. Newtype o n =&gt; (o -&gt; n) -&gt; o -&gt; n
+</span><a href="Distribution.Compat.Newtype.html#pack%27"><span class="hs-identifier hs-var">pack'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453143"><span class="hs-identifier hs-var">_pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ALens' s a -&gt; s -&gt; a
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s a
+</span><a href="#local-6989586621679453144"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453146"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679453150"><span class="annot"><span class="annottext">booleanFieldDef :: forall s.
+FieldName -&gt; ALens' s Bool -&gt; Bool -&gt; PrettyFieldGrammar s Bool
+</span><a href="#local-6989586621679453150"><span class="hs-identifier hs-var hs-var hs-var hs-var">booleanFieldDef</span></a></span></span><span> </span><span id="local-6989586621679453152"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453152"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621679453153"><span class="annot"><span class="annottext">ALens' s Bool
+</span><a href="#local-6989586621679453153"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679453154"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679453154"><span class="hs-identifier hs-var">def</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s Bool
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+forall {p}. p -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453155"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>        </span><span id="local-6989586621679453155"><span class="annot"><span class="annottext">pp :: p -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453155"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679453161"><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679453161"><span class="hs-identifier hs-var">_v</span></a></span></span><span> </span><span id="local-6989586621679453162"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453162"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-46"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679453163"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679453154"><span class="hs-identifier hs-var">def</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[PrettyField ()]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var">ppField</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453152"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">PP.text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679453163"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>          </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>            </span><span id="local-6989586621679453163"><span class="annot"><span class="annottext">b :: Bool
+</span><a href="#local-6989586621679453163"><span class="hs-identifier hs-var hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ALens' s Bool -&gt; s -&gt; Bool
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s Bool
+</span><a href="#local-6989586621679453153"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453162"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621679453168"><span class="annot"><span class="annottext">optionalFieldAla :: forall b a s.
+(Pretty b, Newtype a b) =&gt;
+FieldName
+-&gt; (a -&gt; b) -&gt; ALens' s (Maybe a) -&gt; PrettyFieldGrammar s (Maybe a)
+</span><a href="#local-6989586621679453168"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionalFieldAla</span></a></span></span><span> </span><span id="local-6989586621679453170"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453170"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621679453171"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453171"><span class="hs-identifier hs-var">_pack</span></a></span></span><span> </span><span id="local-6989586621679453172"><span class="annot"><span class="annottext">ALens' s (Maybe a)
+</span><a href="#local-6989586621679453172"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s (Maybe a)
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453173"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>        </span><span id="local-6989586621679453173"><span class="annot"><span class="annottext">pp :: CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453173"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679453177"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453177"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679453178"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453178"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ALens' s (Maybe a) -&gt; s -&gt; Maybe a
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s (Maybe a)
+</span><a href="#local-6989586621679453172"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453178"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-54"></span><span>            </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[PrettyField ()]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-55"></span><span>            </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679453179"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453179"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var">ppField</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453170"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; b -&gt; Doc
+forall a. Pretty a =&gt; CabalSpecVersion -&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#prettyVersioned"><span class="hs-identifier hs-var">prettyVersioned</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453177"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; a -&gt; b
+forall o n. Newtype o n =&gt; (o -&gt; n) -&gt; o -&gt; n
+</span><a href="Distribution.Compat.Newtype.html#pack%27"><span class="hs-identifier hs-var">pack'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453171"><span class="hs-identifier hs-var">_pack</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453179"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679453184"><span class="annot"><span class="annottext">optionalFieldDefAla :: forall b a s.
+(Pretty b, Newtype a b, Eq a) =&gt;
+FieldName -&gt; (a -&gt; b) -&gt; ALens' s a -&gt; a -&gt; PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453184"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionalFieldDefAla</span></a></span></span><span> </span><span id="local-6989586621679453186"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453186"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621679453187"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453187"><span class="hs-identifier hs-var">_pack</span></a></span></span><span> </span><span id="local-6989586621679453188"><span class="annot"><span class="annottext">ALens' s a
+</span><a href="#local-6989586621679453188"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679453189"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453189"><span class="hs-identifier hs-var">def</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453190"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>        </span><span id="local-6989586621679453190"><span class="annot"><span class="annottext">pp :: CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453190"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679453195"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453195"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679453196"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453196"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-60"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453197"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453189"><span class="hs-identifier hs-var">def</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[PrettyField ()]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-61"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var">ppField</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453186"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; b -&gt; Doc
+forall a. Pretty a =&gt; CabalSpecVersion -&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#prettyVersioned"><span class="hs-identifier hs-var">prettyVersioned</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453195"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; a -&gt; b
+forall o n. Newtype o n =&gt; (o -&gt; n) -&gt; o -&gt; n
+</span><a href="Distribution.Compat.Newtype.html#pack%27"><span class="hs-identifier hs-var">pack'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453187"><span class="hs-identifier hs-var">_pack</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453197"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>            </span><span id="local-6989586621679453197"><span class="annot"><span class="annottext">x :: a
+</span><a href="#local-6989586621679453197"><span class="hs-identifier hs-var hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ALens' s a -&gt; s -&gt; a
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s a
+</span><a href="#local-6989586621679453188"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453196"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679453198"><span class="annot"><span class="annottext">freeTextField :: forall s.
+FieldName
+-&gt; ALens' s (Maybe String) -&gt; PrettyFieldGrammar s (Maybe String)
+</span><a href="#local-6989586621679453198"><span class="hs-identifier hs-var hs-var hs-var hs-var">freeTextField</span></a></span></span><span> </span><span id="local-6989586621679453200"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453200"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621679453201"><span class="annot"><span class="annottext">ALens' s (Maybe String)
+</span><a href="#local-6989586621679453201"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s (Maybe String)
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453202"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>        </span><span id="local-6989586621679453202"><span class="annot"><span class="annottext">pp :: CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453202"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679453204"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453204"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679453205"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453205"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[PrettyField ()]
+-&gt; (String -&gt; [PrettyField ()]) -&gt; Maybe String -&gt; [PrettyField ()]
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Maybe.html#maybe/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">[PrettyField ()]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var">ppField</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453200"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc -&gt; [PrettyField ()])
+-&gt; (String -&gt; Doc) -&gt; String -&gt; [PrettyField ()]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="#local-6989586621679453207"><span class="hs-identifier hs-var">showFT</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ALens' s (Maybe String) -&gt; s -&gt; Maybe String
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s (Maybe String)
+</span><a href="#local-6989586621679453201"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453205"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>            </span><span id="local-6989586621679453207"><span class="annot"><span class="annottext">showFT :: String -&gt; Doc
+</span><a href="#local-6989586621679453207"><span class="hs-identifier hs-var hs-var">showFT</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453204"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; CabalSpecVersion -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="Distribution.CabalSpecVersion.html#CabalSpecV3_0"><span class="hs-identifier hs-var">CabalSpecV3_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="Distribution.Pretty.html#showFreeTextV3"><span class="hs-identifier hs-var">showFreeTextV3</span></a></span><span>
+</span><span id="line-68"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="Distribution.Pretty.html#showFreeText"><span class="hs-identifier hs-var">showFreeText</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- it's ok to just show, as showFreeText of empty string is empty.</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679453211"><span class="annot"><span class="annottext">freeTextFieldDef :: forall s.
+FieldName -&gt; ALens' s String -&gt; PrettyFieldGrammar s String
+</span><a href="#local-6989586621679453211"><span class="hs-identifier hs-var hs-var hs-var hs-var">freeTextFieldDef</span></a></span></span><span> </span><span id="local-6989586621679453213"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453213"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621679453214"><span class="annot"><span class="annottext">ALens' s String
+</span><a href="#local-6989586621679453214"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s String
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453215"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>        </span><span id="local-6989586621679453215"><span class="annot"><span class="annottext">pp :: CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453215"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679453216"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453216"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679453217"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453217"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var">ppField</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453213"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="#local-6989586621679453218"><span class="hs-identifier hs-var">showFT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ALens' s String -&gt; s -&gt; String
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s String
+</span><a href="#local-6989586621679453214"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453217"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>            </span><span id="local-6989586621679453218"><span class="annot"><span class="annottext">showFT :: String -&gt; Doc
+</span><a href="#local-6989586621679453218"><span class="hs-identifier hs-var hs-var">showFT</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453216"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; CabalSpecVersion -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="Distribution.CabalSpecVersion.html#CabalSpecV3_0"><span class="hs-identifier hs-var">CabalSpecV3_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="Distribution.Pretty.html#showFreeTextV3"><span class="hs-identifier hs-var">showFreeTextV3</span></a></span><span>
+</span><span id="line-74"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="Distribution.Pretty.html#showFreeText"><span class="hs-identifier hs-var">showFreeText</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679453222"><span class="annot"><span class="annottext">freeTextFieldDefST :: forall s.
+FieldName -&gt; ALens' s ShortText -&gt; PrettyFieldGrammar s ShortText
+</span><a href="#local-6989586621679453222"><span class="hs-identifier hs-var hs-var hs-var hs-var">freeTextFieldDefST</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; ALens' s ShortText -&gt; PrettyFieldGrammar s ShortText
+forall (g :: * -&gt; * -&gt; *) s (c :: * -&gt; Constraint).
+(Functor (g s), FieldGrammar c g) =&gt;
+FieldName -&gt; ALens' s ShortText -&gt; g s ShortText
+</span><a href="Distribution.FieldGrammar.Class.html#defaultFreeTextFieldDefST"><span class="hs-identifier hs-var">defaultFreeTextFieldDefST</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679453228"><span class="annot"><span class="annottext">monoidalFieldAla :: forall b a s.
+(Pretty b, Monoid a, Newtype a b) =&gt;
+FieldName -&gt; (a -&gt; b) -&gt; ALens' s a -&gt; PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453228"><span class="hs-identifier hs-var hs-var hs-var hs-var">monoidalFieldAla</span></a></span></span><span> </span><span id="local-6989586621679453230"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453230"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621679453231"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453231"><span class="hs-identifier hs-var">_pack</span></a></span></span><span> </span><span id="local-6989586621679453232"><span class="annot"><span class="annottext">ALens' s a
+</span><a href="#local-6989586621679453232"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453233"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>        </span><span id="local-6989586621679453233"><span class="annot"><span class="annottext">pp :: CabalSpecVersion -&gt; s -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453233"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679453236"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453236"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679453237"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453237"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var">ppField</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453230"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; b -&gt; Doc
+forall a. Pretty a =&gt; CabalSpecVersion -&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#prettyVersioned"><span class="hs-identifier hs-var">prettyVersioned</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679453236"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; a -&gt; b
+forall o n. Newtype o n =&gt; (o -&gt; n) -&gt; o -&gt; n
+</span><a href="Distribution.Compat.Newtype.html#pack%27"><span class="hs-identifier hs-var">pack'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679453231"><span class="hs-identifier hs-var">_pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ALens' s a -&gt; s -&gt; a
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s a
+</span><a href="#local-6989586621679453232"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679453237"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679453238"><span class="annot"><span class="annottext">prefixedFields :: forall s.
+FieldName
+-&gt; ALens' s [(String, String)]
+-&gt; PrettyFieldGrammar s [(String, String)]
+</span><a href="#local-6989586621679453238"><span class="hs-identifier hs-var hs-var hs-var hs-var">prefixedFields</span></a></span></span><span> </span><span id="local-6989586621679453240"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453240"><span class="hs-identifier hs-var">_fnPfx</span></a></span></span><span> </span><span id="local-6989586621679453241"><span class="annot"><span class="annottext">ALens' s [(String, String)]
+</span><a href="#local-6989586621679453241"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s [(String, String)]
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[(String, String)] -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453242"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, String)] -&gt; [PrettyField ()])
+-&gt; (s -&gt; [(String, String)]) -&gt; s -&gt; [PrettyField ()]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s [(String, String)] -&gt; s -&gt; [(String, String)]
+forall s t a b. ALens s t a b -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#aview"><span class="hs-identifier hs-var">aview</span></a></span><span> </span><span class="annot"><span class="annottext">ALens' s [(String, String)]
+</span><a href="#local-6989586621679453241"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>        </span><span id="local-6989586621679453242"><span class="annot"><span class="annottext">pp :: [(String, String)] -&gt; [PrettyField ()]
+</span><a href="#local-6989586621679453242"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679453243"><span class="annot"><span class="annottext">[(String, String)]
+</span><a href="#local-6989586621679453243"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>            </span><span class="hs-comment">-- always print the field, even its Doc is empty.</span><span>
+</span><span id="line-86"></span><span>            </span><span class="hs-comment">-- i.e. don't use ppField</span><span>
+</span><span id="line-87"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">() -&gt; FieldName -&gt; Doc -&gt; PrettyField ()
+forall ann. ann -&gt; FieldName -&gt; Doc -&gt; PrettyField ann
+</span><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-var">PrettyField</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; FieldName
+</span><a href="Distribution.Utils.Generic.html#toUTF8BS"><span class="hs-identifier hs-var">toUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679453245"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Doc -&gt; PrettyField ()) -&gt; Doc -&gt; PrettyField ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#vcat/Text.PrettyPrint.HughesPJ.html#vcat"><span class="hs-identifier hs-var">PP.vcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Doc] -&gt; Doc) -&gt; [Doc] -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; [String] -&gt; [Doc]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">PP.text</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [Doc]) -&gt; [String] -&gt; [Doc]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String]
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#lines/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679453248"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-88"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679453245"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679453245"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679453248"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679453248"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(String, String)]
+</span><a href="#local-6989586621679453243"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-89"></span><span>            </span><span class="hs-comment">-- fnPfx `isPrefixOf` n</span><span>
+</span><span id="line-90"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679453250"><span class="annot"><span class="annottext">knownField :: forall s. FieldName -&gt; PrettyFieldGrammar s ()
+</span><a href="#local-6989586621679453250"><span class="hs-identifier hs-var hs-var hs-var hs-var">knownField</span></a></span></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; PrettyFieldGrammar s ()
+forall a. a -&gt; PrettyFieldGrammar s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679453252"><span class="annot"><span class="annottext">deprecatedSince :: forall s a.
+CabalSpecVersion
+-&gt; String -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453252"><span class="hs-identifier hs-var hs-var hs-var hs-var">deprecatedSince</span></a></span></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679453254"><span class="annot"><span class="annottext">PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453254"><span class="hs-identifier hs-var">x</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453254"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- TODO: as PrettyFieldGrammar isn't aware of cabal-version: we output the field</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- this doesn't affect roundtrip as `removedIn` fields cannot be parsed</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">-- so invalid documents can be only manually constructed.</span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679453255"><span class="annot"><span class="annottext">removedIn :: forall s a.
+CabalSpecVersion
+-&gt; String -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453255"><span class="hs-identifier hs-var hs-var hs-var hs-var">removedIn</span></a></span></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679453257"><span class="annot"><span class="annottext">PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453257"><span class="hs-identifier hs-var">x</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453257"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679453258"><span class="annot"><span class="annottext">availableSince :: forall a s.
+CabalSpecVersion
+-&gt; a -&gt; PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453258"><span class="hs-identifier hs-var hs-var hs-var hs-var">availableSince</span></a></span></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s a
+forall a. a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#id/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621679453264"><span class="annot"><span class="annottext">hiddenField :: forall s a. PrettyFieldGrammar s a -&gt; PrettyFieldGrammar s a
+</span><a href="#local-6989586621679453264"><span class="hs-identifier hs-var hs-var hs-var hs-var">hiddenField</span></a></span></span><span> </span><span class="annot"><span class="annottext">PrettyFieldGrammar s a
+</span><span class="hs-identifier">_</span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+forall s a.
+(CabalSpecVersion -&gt; s -&gt; [PrettyField ()])
+-&gt; PrettyFieldGrammar s a
+</span><a href="Distribution.FieldGrammar.Pretty.html#PrettyFG"><span class="hs-identifier hs-var">PrettyFG</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">s -&gt; [PrettyField ()]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-type">ppField</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">Doc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-102"></span><span id="ppField"><span class="annot"><span class="annottext">ppField :: FieldName -&gt; Doc -&gt; [PrettyField ()]
+</span><a href="Distribution.FieldGrammar.Pretty.html#ppField"><span class="hs-identifier hs-var hs-var">ppField</span></a></span></span><span> </span><span id="local-6989586621679453266"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453266"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679453267"><span class="annot"><span class="annottext">Doc
+</span><a href="#local-6989586621679453267"><span class="hs-identifier hs-var">fielddoc</span></a></span></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Bool
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#isEmpty/Text.PrettyPrint.HughesPJ.html#isEmpty"><span class="hs-identifier hs-var">PP.isEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="#local-6989586621679453267"><span class="hs-identifier hs-var">fielddoc</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">() -&gt; FieldName -&gt; Doc -&gt; PrettyField ()
+forall ann. ann -&gt; FieldName -&gt; Doc -&gt; PrettyField ann
+</span><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-var">PrettyField</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679453266"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="#local-6989586621679453267"><span class="hs-identifier hs-var">fielddoc</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span></pre></body></html>
