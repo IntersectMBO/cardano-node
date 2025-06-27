@@ -671,26 +671,28 @@ defaultPartialNodeConfiguration =
             DefaultQueryBatchSize
             V2InMemory
             noDeprecatedOptions
-    , pncProtocolIdleTimeout   = Last (Just Ouroboros.defaultProtocolIdleTimeout)
-    , pncTimeWaitTimeout       = Last (Just Ouroboros.defaultTimeWaitTimeout)
-    , pncEgressPollInterval    = Last (Just Ouroboros.defaultEgressPollInterval)
-    , pncAcceptedConnectionsLimit =
-        Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
-    , pncChainSyncIdleTimeout           = mempty
-    , pncDeadlineTargetOfRootPeers        = Last (Just deadlineRoots)
-    , pncDeadlineTargetOfKnownPeers       = Last (Just deadlineKnown)
-    , pncDeadlineTargetOfEstablishedPeers = Last (Just deadlineEstablished)
-    , pncDeadlineTargetOfActivePeers      = Last (Just deadlineActive)
-    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just deadlineBigKnown)
-    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just deadlineBigEst)
-    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just deadlineBigAct)
-    , pncSyncTargetOfRootPeers          = Last (Just syncRoots)
-    , pncSyncTargetOfKnownPeers         = Last (Just syncKnown)
-    , pncSyncTargetOfEstablishedPeers   = Last (Just syncEstablished)
-    , pncSyncTargetOfActivePeers        = Last (Just syncActive)
-    , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
-    , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
-    , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
+    , pncProtocolIdleTimeout      = Last (Just Ouroboros.defaultProtocolIdleTimeout)
+    , pncTimeWaitTimeout          = Last (Just Ouroboros.defaultTimeWaitTimeout)
+    , pncEgressPollInterval       = Last (Just Ouroboros.defaultEgressPollInterval)
+    , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
+    , pncChainSyncIdleTimeout     = mempty
+
+    , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 Ouroboros.defaultDeadlineTargets)
+    , pncDeadlineTargetOfKnownPeers                = Last (Just $ targetNumberOfKnownPeers                Ouroboros.defaultDeadlineTargets)
+    , pncDeadlineTargetOfEstablishedPeers          = Last (Just $ targetNumberOfEstablishedPeers          Ouroboros.defaultDeadlineTargets)
+    , pncDeadlineTargetOfActivePeers               = Last (Just $ targetNumberOfActivePeers               Ouroboros.defaultDeadlineTargets)
+    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just $ targetNumberOfKnownBigLedgerPeers       Ouroboros.defaultDeadlineTargets)
+    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Ouroboros.defaultDeadlineTargets)
+    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just $ targetNumberOfActiveBigLedgerPeers      Ouroboros.defaultDeadlineTargets)
+
+    , pncSyncTargetOfRootPeers                     = Last (Just $ targetNumberOfRootPeers                 Cardano.defaultSyncTargets)
+    , pncSyncTargetOfKnownPeers                    = Last (Just $ targetNumberOfKnownPeers                Cardano.defaultSyncTargets)
+    , pncSyncTargetOfEstablishedPeers              = Last (Just $ targetNumberOfEstablishedPeers          Cardano.defaultSyncTargets)
+    , pncSyncTargetOfActivePeers                   = Last (Just $ targetNumberOfActivePeers               Cardano.defaultSyncTargets)
+    , pncSyncTargetOfKnownBigLedgerPeers           = Last (Just $ targetNumberOfKnownBigLedgerPeers       Cardano.defaultSyncTargets)
+    , pncSyncTargetOfEstablishedBigLedgerPeers     = Last (Just $ targetNumberOfEstablishedBigLedgerPeers  Cardano.defaultSyncTargets)
+    , pncSyncTargetOfActiveBigLedgerPeers          = Last (Just $ targetNumberOfActiveBigLedgerPeers      Cardano.defaultSyncTargets)
+
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
     , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
     , pncEnableP2P     = Last (Just EnabledP2PMode)
@@ -698,25 +700,6 @@ defaultPartialNodeConfiguration =
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
     }
-  where
-    PeerSelectionTargets {
-      targetNumberOfRootPeers        = deadlineRoots,
-      targetNumberOfKnownPeers       = deadlineKnown,
-      targetNumberOfEstablishedPeers = deadlineEstablished,
-      targetNumberOfActivePeers      = deadlineActive,
-      targetNumberOfKnownBigLedgerPeers       = deadlineBigKnown,
-      targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
-      targetNumberOfActiveBigLedgerPeers      = deadlineBigAct
-    } = Ouroboros.defaultDeadlineTargets
-    PeerSelectionTargets {
-      targetNumberOfRootPeers        = syncRoots,
-      targetNumberOfKnownPeers       = syncKnown,
-      targetNumberOfEstablishedPeers = syncEstablished,
-      targetNumberOfActivePeers      = syncActive,
-      targetNumberOfKnownBigLedgerPeers       = syncBigKnown,
-      targetNumberOfEstablishedBigLedgerPeers = syncBigEst,
-      targetNumberOfActiveBigLedgerPeers      = syncBigAct
-    } = Cardano.defaultSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional
