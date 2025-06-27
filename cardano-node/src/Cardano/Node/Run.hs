@@ -172,6 +172,7 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
+import GHC.Stack
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -212,7 +213,8 @@ runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
 
 -- | Read node configuration from a file specified in 'PartialNodeConfiguration'
-buildNodeConfiguration :: Tracer IO String
+buildNodeConfiguration :: HasCallStack 
+                       => Tracer IO String
                        -> PartialNodeConfiguration -- ^ defaults
                        -> IO NodeConfiguration
 buildNodeConfiguration tracer partialConf = do
@@ -225,22 +227,14 @@ buildNodeConfiguration tracer partialConf = do
   pure nc
 
 -- | Build RPC configuration. Reads the configuration file again. Allows RPC server to dynamically reload configuration from disk again.
-buildRpcConfiguration :: Tracer IO String
+buildRpcConfiguration :: HasCallStack
+                      => Tracer IO String
                       -> NetworkMagic
                       -> PartialNodeConfiguration
-                      -> IO (RpcConfig, SocketPath, NetworkMagic)
+                      -> IO (RpcConfig, NetworkMagic)
 buildRpcConfiguration tracer networkMagic partialConf = do
-  nc <- buildNodeConfiguration tracer partialConf
-  SocketConfig{ncSocketPath = Last mN2cSocket} <- pure $ ncSocketConfig nc
-  let nodeSocketPath = fromMaybe "rpc.sock" mN2cSocket
-      socketDir = takeDirectory $ unFile nodeSocketPath
-  pure $
-    (RpcConfig
-      { isEnabled = True -- TODO take from PNC
-      , rpcSocketPath = File $ socketDir </> "rpc.sock" -- TODO take from PNC
-      }
-      , nodeSocketPath
-      , networkMagic)
+  NodeConfiguration{ncRpcConfig} <- buildNodeConfiguration tracer partialConf
+  pure (ncRpcConfig, networkMagic)
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.

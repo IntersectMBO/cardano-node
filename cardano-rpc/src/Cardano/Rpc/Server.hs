@@ -7,7 +7,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server
@@ -66,13 +65,18 @@ methodsUtxoRpc =
     $ NoMoreMethods
 
 runRpcServer
-  :: IO (RpcConfig, SocketPath, NetworkMagic)
+  :: IO (RpcConfig, NetworkMagic)
   -- ^ action which reloads RPC configuration
   -> IO ()
 runRpcServer loadRpcConfig = do
-  (rpcConfig@RpcConfig{rpcSocketPath = Identity (File rpcSocketPathFp)}
-    ,nodeSocketPath
-    ,networkMagic) <- loadRpcConfig
+  ( rpcConfig@RpcConfig
+      { isEnabled = Identity isEnabled
+      , rpcSocketPath = Identity (File rpcSocketPathFp)
+      , nodeSocketPath = Identity nodeSocketPath
+      }
+    , networkMagic
+    ) <-
+    loadRpcConfig
   let config =
         ServerConfig
           { -- serverInsecure = Just (InsecureConfig Nothing defaultInsecurePort)
@@ -84,10 +88,12 @@ runRpcServer loadRpcConfig = do
           { config = rpcConfig
           , rpcLocalNodeConnectInfo = mkLocalNodeConnectInfo nodeSocketPath networkMagic
           }
-  runRIO rpcEnv $
-    withRunInIO $ \runInIO ->
-      runServerWithHandlers def config . fmap (hoistSomeRpcHandler runInIO) $
-        mconcat
-          [ fromMethods methodsNodeRpc
-          , fromMethods methodsUtxoRpc
-          ]
+  -- TODO: log here rpc server statup config trace
+  when isEnabled $
+    runRIO rpcEnv $
+      withRunInIO $ \runInIO ->
+        runServerWithHandlers def config . fmap (hoistSomeRpcHandler runInIO) $
+          mconcat
+            [ fromMethods methodsNodeRpc
+            , fromMethods methodsUtxoRpc
+            ]

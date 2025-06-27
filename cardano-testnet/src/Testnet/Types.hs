@@ -21,6 +21,7 @@ module Testnet.Types
   , testnetSprockets
   , TestnetNode(..)
   , nodeSocketPath
+  , nodeRpcSocketPath
   , nodeConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
@@ -54,6 +55,7 @@ import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (nodeSocketPathToRpcSocketPath)
 
 import           Prelude
 
@@ -150,6 +152,10 @@ isTestnetNodeSpo = isJust . poolKeys
 
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
+
+-- | Provide a default RPC socket path
+nodeRpcSocketPath :: TestnetNode -> SocketPath
+nodeRpcSocketPath = nodeSocketPathToRpcSocketPath . nodeSocketPath
 
 -- | Connection data for a node in the testnet
 nodeConnectionInfo :: MonadTest m

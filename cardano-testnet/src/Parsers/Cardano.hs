@@ -65,6 +65,7 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
       <>  OA.metavar "DIRECTORY"
       )))
+  <*> pure False -- disable gRPC
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
