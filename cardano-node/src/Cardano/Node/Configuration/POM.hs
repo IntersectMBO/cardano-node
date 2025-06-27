@@ -672,9 +672,13 @@ defaultPartialNodeConfiguration =
             V2InMemory
             noDeprecatedOptions
     , pncProtocolIdleTimeout      = Last (Just Ouroboros.defaultProtocolIdleTimeout)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultProtocolIdleTimeout
     , pncTimeWaitTimeout          = Last (Just Ouroboros.defaultTimeWaitTimeout)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultTimeWaitTimeout
     , pncEgressPollInterval       = Last (Just Ouroboros.defaultEgressPollInterval)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultEgressPollInterval
     , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
     , pncChainSyncIdleTimeout     = mempty
 
     , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 Ouroboros.defaultDeadlineTargets)
@@ -684,6 +688,7 @@ defaultPartialNodeConfiguration =
     , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just $ targetNumberOfKnownBigLedgerPeers       Ouroboros.defaultDeadlineTargets)
     , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Ouroboros.defaultDeadlineTargets)
     , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just $ targetNumberOfActiveBigLedgerPeers      Ouroboros.defaultDeadlineTargets)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultDeadlineTargets
 
     , pncSyncTargetOfRootPeers                     = Last (Just $ targetNumberOfRootPeers                 Cardano.defaultSyncTargets)
     , pncSyncTargetOfKnownPeers                    = Last (Just $ targetNumberOfKnownPeers                Cardano.defaultSyncTargets)
@@ -692,12 +697,17 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfKnownBigLedgerPeers           = Last (Just $ targetNumberOfKnownBigLedgerPeers       Cardano.defaultSyncTargets)
     , pncSyncTargetOfEstablishedBigLedgerPeers     = Last (Just $ targetNumberOfEstablishedBigLedgerPeers  Cardano.defaultSyncTargets)
     , pncSyncTargetOfActiveBigLedgerPeers          = Last (Just $ targetNumberOfActiveBigLedgerPeers      Cardano.defaultSyncTargets)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultSyncTargets
 
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultNumberOfBigLedgerPeers
     , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
     , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just Ouroboros.defaultPeerSharing)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultPeerSharing 
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
+      -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
     }
 
