@@ -57,7 +57,7 @@ in with final;
       ghc963 = haskell-nix.sources."hls-2.5";
       ghc964 = haskell-nix.sources."hls-2.6";
       ghc981 = haskell-nix.sources."hls-2.6";
-    }.${compiler-nix-name} or haskell-nix.sources."hls-2.8";
+    }.${compiler-nix-name} or haskell-nix.sources."hls-2.10";
     cabalProject = builtins.readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
@@ -172,7 +172,7 @@ in with final;
   );
 
   # Disable failing python uvloop tests
-  python39 = prev.python39.override {
+  python310 = prev.python310.override {
     packageOverrides = pythonFinal: pythonPrev: {
       uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
         disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" "tests/test_dns.py" ];
