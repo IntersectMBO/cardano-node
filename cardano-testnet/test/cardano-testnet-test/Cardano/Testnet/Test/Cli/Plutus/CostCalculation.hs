@@ -12,20 +12,15 @@ module Cardano.Testnet.Test.Cli.Plutus.CostCalculation
   )
 where
 
-import           Cardano.Api (AnyCardanoEra (AnyCardanoEra),
-                   AnyShelleyBasedEra (AnyShelleyBasedEra), ExceptT, File (File), MonadIO (liftIO),
-                   ShelleyBasedEra (ShelleyBasedEraConway), ToCardanoEra (toCardanoEra),
-                   deserialiseAnyVerificationKey, liftEither, mapSomeAddressVerificationKey,
-                   renderTxIn, serialiseToRawBytesHex, unFile, verificationKeyHash)
+import           Cardano.Api hiding (Value)
 import           Cardano.Api.Experimental (Some (Some))
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval), unCoin)
+import           Cardano.Api.Ledger (EpochInterval (..))
 
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
-import           Control.Monad.Except (runExceptT)
 import           Data.Aeson (Value, encodeFile)
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Value (..), object)
@@ -156,12 +151,12 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
       [ eraName
       , "transaction", "build"
       , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-      , "--tx-in", txIdLock <> "#" <> show txIxLock
+      , "--tx-in", prettyShow (TxIn txIdLock txIxLock)
       , "--spending-reference-tx-in-inline-datum-present"
-      , "--spending-tx-in-reference", txIdPublishRefScript <> "#" <> show txIxPublishRefScript
+      , "--spending-tx-in-reference", prettyShow (TxIn txIdPublishRefScript txIxPublishRefScript)
       , "--spending-plutus-script-v3"
       , "--spending-reference-tx-in-redeemer-value", "42"
-      , "--tx-in-collateral", Text.unpack $ renderTxIn largestUTxO
+      , "--tx-in-collateral", prettyShow largestUTxO
       , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show (unCoin (transferAmount - enoughAmountForFees))
       , "--out-file", unFile unsignedUnlockTx
       ]
@@ -281,10 +276,10 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
       [ eraName
       , "transaction", "build"
       , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-      , "--tx-in", txIdIncludedScriptLock <> "#" <> show txIxIncludedScriptLock
+      , "--tx-in", prettyShow (TxIn txIdIncludedScriptLock txIxIncludedScriptLock)
       , "--tx-in-script-file", unFile plutusV3Script
       , "--tx-in-redeemer-value", "42"
-      , "--tx-in-collateral", Text.unpack $ renderTxIn newLargestUTxO
+      , "--tx-in-collateral", prettyShow newLargestUTxO
       , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show (unCoin (includedScriptLockAmount - enoughAmountForFees))
       , "--out-file", unFile unsignedIncludedScript
       ]
@@ -396,7 +391,7 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
       [ eraName
       , "transaction", "build"
       , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-      , "--tx-in", txIdSimpleScriptLock <> "#" <> show txIxSimpleScriptLock
+      , "--tx-in", prettyShow (TxIn txIdSimpleScriptLock txIxSimpleScriptLock)
       , "--tx-in-script-file", unFile simpleScript
       , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show (unCoin (lockedAmount - enoughAmountForFees))
       , "--witness-override", "2"

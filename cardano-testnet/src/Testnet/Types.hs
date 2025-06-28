@@ -46,11 +46,9 @@ module Testnet.Types
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types

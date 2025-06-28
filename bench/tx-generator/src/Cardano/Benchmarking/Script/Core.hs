@@ -19,7 +19,6 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ShelleyLedgerEra)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -51,7 +50,6 @@ import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import qualified Cardano.TxGenerator.Utils as Utils
 import           Cardano.TxGenerator.UTxO
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
 import           Prelude
 

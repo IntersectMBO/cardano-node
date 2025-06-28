@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-06-24T21:06:59Z
-  , cardano-haskell-packages 2025-06-24T21:42:18Z
+  , cardano-haskell-packages 2025-06-27T07:22:28Z
 
 packages:
   cardano-node
@@ -72,3 +72,11 @@ if impl (ghc >= 9.12)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+    type: git
+    location: https://github.com/intersectmbo/cardano-cli
+    -- mgalazyn/fix/fix-missing-certificates-in-tx-build
+    tag: e0d1fb55de15000056e50e1d3f37a8559faf78fe
+    --sha256: sha256-lZvZi1rFo0cStw6yDIDVC40XtY0Md36/GevA3xg2TIc=
+    subdir: cardano-cli

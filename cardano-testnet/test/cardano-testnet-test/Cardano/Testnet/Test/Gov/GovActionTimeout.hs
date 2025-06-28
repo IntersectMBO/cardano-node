@@ -19,7 +19,6 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
-import           Data.String (fromString)
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
@@ -138,7 +137,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
 
   -- Check proposal expired
   mGovernanceActionTxIx <- watchEpochStateUpdate epochStateView (EpochInterval 2) $ \(anyNewEpochState, _, _) ->
-      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      return $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
 
   mGovernanceActionTxIx H.=== Nothing
 

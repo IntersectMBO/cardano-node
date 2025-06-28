@@ -9,7 +9,6 @@ module Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Internal.Address (StakeCredential (..), toShelleyStakeCredential)
 
 import           Cardano.CLI.Type.Key (SomeSigningKey (AStakeSigningKey))
 import qualified Cardano.Ledger.UMap as L
@@ -88,7 +87,7 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
 
   -- obtain stake key hash as ledger's Credential
   AStakeSigningKey key <- H.leftFailM . H.evalIO $
-    readKeyFileAnyOf
+    readFormattedFileAnyOf
       [FromSomeType (AsSigningKey AsStakeKey) AStakeSigningKey]
       [FromSomeType (AsSigningKey AsStakeKey) AStakeSigningKey]
       (signingKey stakeKeys)

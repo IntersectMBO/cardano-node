@@ -40,7 +40,7 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 10.16
+                      , cardano-api ^>= 10.17
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.11
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -68,7 +68,7 @@ library
                       , extra
                       , filepath
                       , hedgehog
-                      , hedgehog-extras < 0.7.1
+                      , hedgehog-extras ^>= 0.8
                       , lens-aeson
                       , microlens
                       , monad-control

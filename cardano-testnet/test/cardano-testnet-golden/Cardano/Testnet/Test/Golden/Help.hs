@@ -23,7 +23,6 @@ import           Text.Regex (Regex, mkRegex, subRegex)
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras as H
 import           Hedgehog.Extras.Stock.OS (isWin32)
-import qualified Hedgehog.Extras.Test.Golden as H
 
 ansiRegex :: Regex
 ansiRegex = mkRegex "\\[[0-9]+m"

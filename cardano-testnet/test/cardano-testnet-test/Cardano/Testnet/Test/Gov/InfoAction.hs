@@ -11,10 +11,8 @@ module Cardano.Testnet.Test.Gov.InfoAction
   ( hprop_ledger_events_info_action
   ) where
 
-import           Cardano.Api as Api
-import           Cardano.Api.Internal.Error
+import           Cardano.Api hiding (txId)
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
-import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -27,7 +25,6 @@ import           Data.Bifunctor (first)
 import           Data.Default.Class
 import           Data.Foldable
 import qualified Data.Map.Strict as Map
-import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
@@ -190,11 +187,11 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , "--tx-file", txbodySignedFp
     ]
 
-  txIdString <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
+  txId <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
 
   governanceActionIndex <-
     H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString txIdString) anyNewEpochState
+      pure $ maybeExtractGovernanceActionIndex txId anyNewEpochState
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
@@ -204,8 +201,8 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     execCli' execConfig
       [ eraName, "governance", "vote", "create"
       , "--yes"
-      , "--governance-action-tx-id", txIdString
-      , "--governance-action-index", show @Word16 governanceActionIndex
+      , "--governance-action-tx-id", prettyShow txId
+      , "--governance-action-index", show governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n
       ]

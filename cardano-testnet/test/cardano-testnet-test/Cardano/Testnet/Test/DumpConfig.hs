@@ -8,6 +8,15 @@ module Cardano.Testnet.Test.DumpConfig
   ( hprop_dump_config
   ) where
 
+import           Cardano.Api (BlockNo (..), ChainTip (..), ShelleyGenesis, runExceptT,
+                   sgSystemStart)
+import           Cardano.Api.Byron (GenesisData (..))
+import qualified Cardano.Api.Byron as Byron
+
+import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
+import           Cardano.Prelude (canonicalEncodePretty)
+import           Cardano.Testnet hiding (shelleyGenesisFile)
+
 import           Prelude
 
 import qualified Data.Aeson as A
@@ -20,22 +29,15 @@ import           System.Exit (ExitCode (..))
 import           System.FilePath ((</>))
 import qualified System.Process as IO
 
-import           Cardano.Api (BlockNo (..), ChainTip (..))
-import qualified Cardano.Api.Byron as Byron
-import           Cardano.Api.Byron (GenesisData (..))
-import qualified Cardano.Api.Shelley as Shelley
-import           Cardano.Api.Shelley (ShelleyGenesis (..))
-import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
-import           Cardano.Prelude (canonicalEncodePretty)
-import           Cardano.Testnet hiding (shelleyGenesisFile)
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
+import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..), UserProvidedData (..), UserProvidedEnv(..))
+import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..),
+                   UserProvidedData (..), UserProvidedEnv (..))
 
 import           Hedgehog ((===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
-import           Testnet.Process.Run (execCli',mkExecConfig)
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Dumping config files/"'@
@@ -64,14 +66,14 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   startTime <- H.noteShow $ Time.addUTCTime startTimeOffsetSeconds currentTime
 
   -- Update start time in Byron genesis file
-  eByron <- Byron.runExceptT $ Byron.readGenesisData byronGenesisFile
+  eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
   (byronGenesis', _byronHash) <- H.leftFail eByron
   let byronGenesis = byronGenesis'{gdStartTime = startTime}
   H.lbsWriteFile byronGenesisFile $ canonicalEncodePretty byronGenesis
 
   -- Update start time in Shelley genesis file
   eShelley <- H.readJsonFile shelleyGenesisFile
-  shelleyGenesis' :: Shelley.ShelleyGenesis <- H.leftFail eShelley
+  shelleyGenesis' :: ShelleyGenesis <- H.leftFail eShelley
   let shelleyGenesis = shelleyGenesis'{sgSystemStart = startTime}
   H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
 

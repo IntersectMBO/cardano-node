@@ -17,7 +17,7 @@ module Testnet.Process.Cli.DRep
   , makeActivityChangeProposal
   ) where
 
-import           Cardano.Api hiding (Certificate, TxBody)
+import           Cardano.Api hiding (Certificate, TxBody, txId)
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
 
@@ -34,7 +34,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Typeable (Typeable)
 import           Data.Word (Word16)
-import           GHC.Exts (fromString)
 import           GHC.Stack
 import           Lens.Micro ((^?))
 import           System.Directory (makeAbsolute)
@@ -155,7 +154,7 @@ generateVoteFiles
               -- stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' to store
             -- the output voting files.
-  -> String -- ^ Transaction ID string of the governance action.
+  -> TxId -- ^ Transaction ID string of the governance action.
   -> Word16 -- ^ Index of the governance action.
   -> [(KeyPair PaymentKey, [Char])] -- ^ List of tuples where each tuple contains a 'PaymentKeyPair'
                                 -- representing the DRep key pair and a 'String' representing the
@@ -168,8 +167,8 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
     void $ execCli' execConfig
       [ "conway", "governance", "vote", "create"
       , "--" ++ vote
-      , "--governance-action-tx-id", governanceActionTxId
-      , "--governance-action-index", show @Word16 governanceActionIndex
+      , "--governance-action-tx-id", prettyShow governanceActionTxId
+      , "--governance-action-index", show governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp drepKeyPair
       , "--out-file", unFile path
       ]
@@ -354,7 +353,7 @@ makeActivityChangeProposal
   -> KeyPair StakeKey -- ^ registered staking keys
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> EpochInterval -- ^ Number of epochs to wait for the proposal to be registered by the chain.
-  -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
+  -> m (TxId, Word16) -- ^ The transaction id and the index of the governance action.
 makeActivityChangeProposal execConfig epochStateView ceo work
                            prevGovActionInfo drepActivity stakeKeyPair wallet timeout = do
 
@@ -421,6 +420,6 @@ makeActivityChangeProposal execConfig epochStateView ceo work
 
   governanceActionIndex <-
     H.nothingFailM $ watchEpochStateUpdate epochStateView timeout $ \(anyNewEpochState, _, _) ->
-      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      return $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
 
   return (governanceActionTxId, governanceActionIndex)

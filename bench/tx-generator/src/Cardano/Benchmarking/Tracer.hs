@@ -43,7 +43,6 @@ import           Data.Kind
 import           Data.List (find)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
-import           Data.Proxy
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock
