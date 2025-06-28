@@ -1,10 +1,13 @@
 {
-  "ByronGenesisFile": "byron-genesis.json",
-  "ShelleyGenesisFile": "shelley-genesis.json",
   "AlonzoGenesisFile": "alonzo-genesis.json",
-  "ConwayGenesisFile": "conway-genesis.json",
   "ApplicationName": "cardano-sl",
   "ApplicationVersion": 0,
+  "ByronGenesisFile": "byron-genesis.json",
+  "ConsensusMode": "PraosMode",
+  "ConwayGenesisFile": "conway-genesis.json",
+  "EnableP2P": true,
+  "ExperimentalHardForksEnabled": true,
+  "ExperimentalProtocolsEnabled": true,
   "LastKnownBlockVersion-Alt": 0,
   "LastKnownBlockVersion-Major": 3,
   "LastKnownBlockVersion-Minor": 1,
@@ -19,17 +22,15 @@
   "PBftSignatureThreshold": 1.1,
   "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresMagic",
-  "TestShelleyHardForkAtEpoch": 0,
+  "ShelleyGenesisFile": "shelley-genesis.json",
   "TestAllegraHardForkAtEpoch": 0,
-  "TestMaryHardForkAtEpoch": 0,
   "TestAlonzoHardForkAtEpoch": 0,
-  "EnableP2P": true,
-  "ExperimentalProtocolsEnabled": true,
-  "ExperimentalHardForksEnabled": true,
+  "TestMaryHardForkAtEpoch": 0,
+  "TestShelleyHardForkAtEpoch": 0,
   "TraceOptionForwarder": {
     "connQueueSize": 64,
     "disconnQueueSize": 128,
-    "maxReconnectDeplay": 30
+    "maxReconnectDelay": 30
   },
   "TraceOptionMetricsPrefix": "cardano.node.metrics.",
   "TraceOptionPeerFrequency": 2000,
@@ -69,6 +70,9 @@
     "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
       "maxFrequency": 2.0
     },
+    "ChainDB.LedgerEvent.Forker": {
+      "severity": "Silence"
+    },
     "ChainSync.Client": {
       "severity": "Warning"
     },
@@ -80,6 +84,18 @@
     },
     "Mempool": {
       "severity": "Info"
+    },
+    "Mempool.AttemptAdd": {
+      "severity": "Silence"
+    },
+    "Mempool.LedgerFound": {
+      "severity": "Silence"
+    },
+    "Mempool.LedgerNotFound": {
+      "severity": "Silence"
+    },
+    "Mempool.SyncNotNeeded": {
+      "severity": "Silence"
     },
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
