@@ -20,6 +20,7 @@ packages:
   cardano-node
   cardano-node-capi
   cardano-node-chairman
+  cardano-rpc
   cardano-submit-api
   cardano-testnet
   cardano-tracer
@@ -60,6 +61,13 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+
+
+if impl (ghc >= 9.10)
+  allow-newer:
+    -- TODO: remove - this is for protolens
+    , *:base
+    , *:ghc-prim
 
 if impl (ghc >= 9.12)
   allow-newer:
