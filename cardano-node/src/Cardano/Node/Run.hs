@@ -1115,7 +1115,7 @@ mkNonP2PArguments daIpProducers daDnsProducers =
 -- | TODO: Only needed for enabling P2P switch
 --
 producerAddressesNonP2P
-  :: TopologyNonP2P.NetworkTopology
+  :: TopologyNonP2P.NetworkTopology TopologyNonP2P.RemoteAddress
   -> ( [NodeIPAddress]
      , [(NodeDnsAddress, Int)])
 producerAddressesNonP2P nt =
@@ -1133,7 +1133,7 @@ producerAddressesNonP2P nt =
       $ nodeSetup
 
 producerAddresses
-  :: NetworkTopology
+  :: NetworkTopology RelayAccessPoint
   -> ( [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
      , Map RelayAccessPoint PeerAdvertise
      )

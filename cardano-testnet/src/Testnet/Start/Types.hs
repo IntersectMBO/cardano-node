@@ -23,6 +23,7 @@ module Testnet.Start.Types
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
+  , TopologyType(..)
   , UserProvidedData(..)
   , UserProvidedEnv(..)
 
@@ -74,10 +75,19 @@ data UserProvidedEnv
 instance Default UserProvidedEnv where
   def = NoUserProvidedEnv
 
+data TopologyType
+  = DirectTopology
+  | P2PTopology
+  deriving (Eq, Show)
+
+instance Default TopologyType where
+  def = DirectTopology
+
 data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   { createEnvTestnetOptions :: CardanoTestnetOptions
   , createEnvGenesisOptions :: GenesisOptions
   , createEnvOutputDir :: FilePath
+  , createEnvTopologyType :: TopologyType
   } deriving (Eq, Show)
 
 -- | Options which, contrary to 'GenesisOptions' are not implemented

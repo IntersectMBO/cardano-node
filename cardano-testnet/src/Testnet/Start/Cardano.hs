@@ -30,7 +30,9 @@ import           Cardano.Api
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.Configuration.Topology (NodeId(..), RemoteAddress(..))
+import qualified Cardano.Node.Configuration.Topology as Direct
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 
 import           Prelude hiding (lines)
 
@@ -38,6 +40,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Default.Class (def)
 import           Data.Either
 import           Data.Functor
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
@@ -80,13 +83,19 @@ createTestnetEnv :: ()
   => HasCallStack
   => CardanoTestnetOptions
   -> GenesisOptions
+  -> TopologyType
   -> UserProvidedData ShelleyGenesis
   -> UserProvidedData AlonzoGenesis
   -> UserProvidedData ConwayGenesis
   -> Conf
   -> H.Integration ()
 createTestnetEnv
-  testnetOptions@CardanoTestnetOptions{cardanoNodeEra=asbe} genesisOptions
+  testnetOptions@CardanoTestnetOptions
+    { cardanoNodeEra=asbe
+    , cardanoNodes
+    }
+  genesisOptions
+  topologyType
   mShelley mAlonzo mConway
   Conf
     { genesisHashesPolicy
@@ -107,6 +116,21 @@ createTestnetEnv
     WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
     WithoutHashes -> pure $ createConfigJsonNoHash sbe
   H.evalIO $ LBS.writeFile configurationFile config
+
+  -- Create network topology, with abstract IDs in lieu of addresses
+  let nodeIds = fst <$> zip [1..] cardanoNodes
+  forM_ nodeIds $ \i -> do
+    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
+    H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
+
+    let producers = NodeId <$> filter (/= i) nodeIds
+    case topologyType of
+      DirectTopology ->
+        let topology = Direct.RealNodeTopology producers
+        in H.lbsWriteFile (nodeDataDir </> "topology.json") $ encode topology
+      P2PTopology ->
+        let topology = P2P.defaultTopology producers
+        in H.lbsWriteFile (nodeDataDir </> "topology.json") $ encode topology
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:
@@ -215,26 +239,42 @@ cardanoTestnet
   portNumbersWithNodeOptions <- forM cardanoNodes
     (\nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address)
 
-  let portNumbers = snd <$> portNumbersWithNodeOptions
+  let portNumbers = zip [1..] $ snd <$> portNumbersWithNodeOptions
 
-  forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
+  forM_ portNumbers $ \(i, portNumber) -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
     H.writeFile (nodeDataDir </> "port") (show portNumber)
 
-  -- Make Non P2P topology files
-  forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do
-    -- TODO: if the user provided its own configuration file, and requested a P2P topology file,
-    -- we should generate a P2P topology file instead of a non-P2P one.
-    let producers = flip map (filter (/= myPortNumber) portNumbers) $ \otherProducerPort ->
-          RemoteAddress
-            { raAddress = showIpv4Address testnetDefaultIpv4Address
-            , raPort = otherProducerPort
-            , raValency = 1
-            }
+  let idToRemoteAddress (NodeId i) = case lookup i portNumbers of
+        Just port -> pure $ RemoteAddress
+          { raAddress = showIpv4Address testnetDefaultIpv4Address
+          , raPort = port
+          , raValency = 1
+          }
+        Nothing -> do
+          H.note_ "Found node id that was unaccounted for"
+          H.failure
 
-    H.lbsWriteFile (tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json") . encode $
-      RealNodeTopology producers
+  -- Implement concrete topology from abstract one, if necessary
+  forM_ portNumbers $ \(i, _port) -> do
+    let topologyPath = tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json"
+
+    -- Try to decode either a direct topology file, or a P2P one
+    H.evalIO (decodeFileStrict topologyPath) >>= \case
+      Just (abstractTopology :: Direct.NetworkTopology NodeId) -> do
+        topology <- mapM idToRemoteAddress abstractTopology
+        H.lbsWriteFile topologyPath $ encode topology
+      Nothing ->
+        H.evalIO (decodeFileStrict topologyPath) >>= \case
+          Just (abstractTopology :: P2P.NetworkTopology NodeId) -> do
+            topology <- mapM idToRemoteAddress abstractTopology
+            H.lbsWriteFile topologyPath $ encode topology
+          Nothing ->
+            -- There can be multiple reason for why the decoding has failed.
+            -- Here we assume, very optimistically, that the user has already
+            -- instantiated it with a concrete topology file.
+            pure ()
 
   eTestnetNodes <- H.forConcurrently (zip [1..] portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
     let nodeName = Defaults.defaultNodeName i
@@ -336,7 +376,7 @@ createAndRunTestnet :: ()
   -> H.Integration TestnetRuntime
 createAndRunTestnet testnetOptions genesisOptions conf = do
   createTestnetEnv
-    testnetOptions genesisOptions
+    testnetOptions genesisOptions def
     NoUserProvidedData NoUserProvidedData NoUserProvidedData
     conf
   cardanoTestnet testnetOptions genesisOptions conf
