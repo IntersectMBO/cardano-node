@@ -30,7 +30,7 @@
   "TraceOptionForwarder": {
     "connQueueSize": 64,
     "disconnQueueSize": 128,
-    "maxReconnectDeplay": 30
+    "maxReconnectDelay": 30
   },
   "TraceOptionMetricsPrefix": "cardano.node.metrics.",
   "TraceOptionPeerFrequency": 2000,
@@ -47,7 +47,7 @@
       "severity": "Notice"
     },
     "BlockFetch.Client.CompletedBlockFetch": {
-      "maxFrequency": 2
+      "maxFrequency": 2.0
     },
     "BlockFetch.Decision": {
       "severity": "Silence"
@@ -59,16 +59,19 @@
       "severity": "Silence"
     },
     "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
-      "maxFrequency": 2
+      "maxFrequency": 2.0
     },
     "ChainDB.AddBlockEvent.AddedBlockToQueue": {
-      "maxFrequency": 2
+      "maxFrequency": 2.0
     },
     "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
-      "maxFrequency": 2
+      "maxFrequency": 2.0
     },
     "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
-      "maxFrequency": 2
+      "maxFrequency": 2.0
+    },
+    "ChainDB.LedgerEvent.Forker": {
+      "severity": "Silence"
     },
     "ChainSync.Client": {
       "severity": "Warning"
@@ -80,6 +83,18 @@
       "severity": "Info"
     },
     "Mempool": {
+      "severity": "Silence"
+    },
+    "Mempool.AttemptAdd": {
+      "severity": "Silence"
+    },
+    "Mempool.LedgerFound": {
+      "severity": "Silence"
+    },
+    "Mempool.LedgerNotFound": {
+      "severity": "Silence"
+    },
+    "Mempool.SyncNotNeeded": {
       "severity": "Silence"
     },
     "Net.ConnectionManager.Remote": {
