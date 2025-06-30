@@ -23,6 +23,7 @@ import qualified Cardano.Benchmarking.Profile.Playground as Pl (calibrateLoopBlo
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
+import qualified Cardano.Benchmarking.Profile.Workload.CGroupMemory as C
 import qualified Cardano.Benchmarking.Profile.Workload.Voting as W
 import qualified Cardano.Benchmarking.Profile.Workload.Latency as L
 
@@ -161,6 +162,7 @@ profilesNoEraCloud =
   , value     & P.name "value-oldtracing-nomadperf-nop2p"                  . P.dreps      0 . P.oldTracing . P.p2pOff
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing . P.p2pOn
+              . P.workloadAppend C.cgroupMemoryWorkload
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
   , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
   -- Plutus (pre-Voltaire profiles)
@@ -319,6 +321,12 @@ nomadPerfBase =
   P.clusterMinimunStorage (Just $ Types.ByNodeType {
     Types.producer = 12582912
   , Types.explorer = Just 14155776
+  })
+  .
+  -- Require the cgroup fs mounted by default.
+  P.appendNomadHostVolume (Types.ByNodeType {
+    Types.producer = [Types.HostVolume "/sys/fs/cgroup" True "cgroup"]
+  , Types.explorer = Nothing
   })
   .
   -- Flag to use SSH instead of `nomad exec` to fetch the logs.
