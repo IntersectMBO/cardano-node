@@ -670,6 +670,12 @@ data ByNodeType a = ByNodeType
   }
   deriving (Eq, Show, Generic)
 
+instance Semigroup a => Semigroup (ByNodeType a) where
+  (ByNodeType p me) <> (ByNodeType p' me') = (ByNodeType (p <> p') (me <> me'))
+
+instance Monoid a => Monoid (ByNodeType a) where
+  mempty = ByNodeType mempty Nothing
+
 instance Aeson.ToJSON a => Aeson.ToJSON (ByNodeType a)
 
 instance Aeson.FromJSON a => Aeson.FromJSON (ByNodeType a)

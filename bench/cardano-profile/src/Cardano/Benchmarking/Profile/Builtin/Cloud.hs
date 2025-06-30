@@ -145,7 +145,7 @@ profilesNoEraCloud =
              -- The name of the defined volume in the Nomad Client config and
              -- where to mount it inside the isolated chroot.
              -- If the volume is not present the deployment will fail!
-             . P.nomadHostVolume (Types.ByNodeType {
+             . P.appendNomadHostVolume (Types.ByNodeType {
                  Types.producer = [Types.HostVolume "/ephemeral" False "ephemeral"]
                , Types.explorer = Nothing
                })
@@ -293,8 +293,8 @@ profilesNoEraCloud =
 
 --------------------------------------------------------------------------------
 
-nomadPerf :: Types.Profile -> Types.Profile
-nomadPerf =
+nomadPerfBase :: Types.Profile -> Types.Profile
+nomadPerfBase =
   -- Exact regions with availability zone (AZ) to match.
   P.regions
     [
@@ -305,20 +305,6 @@ nomadPerf =
   .
   -- Logical cluster separation. To avoid conflicts with same-server machines.
   P.nomadNamespace "perf" . P.nomadClass "perf"
-  .
-  -- This will be used as constraints at the Task level.
-  P.nomadResources (Types.ByNodeType {
-    Types.producer = Types.Resources {
-      Types.cores = 8
-    , Types.memory = 15400
-    , Types.memory_max = 16000
-    }
-  , Types.explorer = Just $ Types.Resources {
-      Types.cores = 16
-    , Types.memory = 32000
-    , Types.memory_max = 64000
-    }
-  })
   .
   -- Instance types will be used as Group "constraints".
   P.awsInstanceTypes (Types.ByNodeType {
@@ -340,3 +326,28 @@ nomadPerf =
   .
   -- Don't stop the Nomad Job when finished.
   P.clusterKeepRunningOn
+
+nomadPerf :: Types.Profile -> Types.Profile
+nomadPerf =
+  nomadPerfBase . nomadPerfResourcesAll
+
+nomadPerfResourcesAll :: Types.Profile -> Types.Profile
+nomadPerfResourcesAll =
+  -- This will be used as constraints at the Task level.
+  P.nomadResources (Types.ByNodeType {
+    Types.producer = Types.Resources {
+      Types.cores = 8
+    , Types.memory = 15400
+    , Types.memory_max = 16000
+    }
+  -- Explorer is unchanged between cloud profiles.
+  , Types.explorer = Just resourcesExplorer
+  })
+
+resourcesExplorer :: Types.Resources
+resourcesExplorer =
+  Types.Resources {
+    Types.cores = 16
+  , Types.memory = 32000
+  , Types.memory_max = 64000
+  }
