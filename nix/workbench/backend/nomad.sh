@@ -3904,6 +3904,12 @@ client {
     disable_file_sandbox = false
   }
 
+  # Feature parity with the "nomadperf" cloud cluster.
+  host_volume "cgroup" {
+    path = "/sys/fs/cgroup"
+    read_only = true
+  }
+
   # To use when resolving IPs.
   #meta {
   #  my_ip = "${addr}"
