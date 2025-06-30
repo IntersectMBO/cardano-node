@@ -181,6 +181,7 @@ library
                       , hostname
                       , io-classes >= 1.5
                       , iohk-monitoring ^>= 0.2
+                      , kes-agent
                       , microlens
                       , network-mux
                       , iproute

@@ -81,6 +81,7 @@ import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 import Ouroboros.Consensus.Protocol.Praos.AgentClient
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
@@ -2273,12 +2274,115 @@ instance ( StandardHash blk
 -- KES Agent tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting KESAgentClientTrace where
+instance LogFormatting Agent.ServiceClientTrace where
   forMachine _dtal = \case
-    KESAgentClientException _ ->
-      mconcat [ "kind" .= String "KESAgentClientException" ]
-    KESAgentClientTrace _ ->
-      mconcat [ "kind" .= String "KESAgentClientTrace" ]
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeTrace" ]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeFailed" ]
+    Agent.ServiceClientDriverTrace _sdt ->
+      mconcat [ "kind" .= String "ServiceClientDriverTrace" ]
+    Agent.ServiceClientSocketClosed ->
+      mconcat [ "kind" .= String "ServiceClientSocketClosed" ]
+    Agent.ServiceClientConnected _s ->
+      mconcat [ "kind" .= String "ServiceClientConnected" ]
+    Agent.ServiceClientAttemptReconnect _ _ _ _ ->
+      mconcat [ "kind" .= String "ServiceClientAttemptReconnect" ]
+    Agent.ServiceClientReceivedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientReceivedKey" ]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientDeclinedKey" ]
+    Agent.ServiceClientDroppedKey ->
+      mconcat [ "kind" .= String "ServiceClientDroppedKey" ]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      mconcat [ "kind" .= String "ServiceClientOpCertNumberCheck" ]
+    Agent.ServiceClientAbnormalTermination _s ->
+      mconcat [ "kind" .= String "ServiceClientAbnormalTermination" ]
+    Agent.ServiceClientStopped ->
+      mconcat [ "kind" .= String "ServiceClientStopped" ]
+
+  forHuman = showT
+
+instance MetaTrace Agent.ServiceClientTrace where
+  namespaceFor = \case
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      Namespace [] ["ServiceClientVersionHandshakeTrace"]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      Namespace [] ["ServiceClientVersionHandshakeFailed"]
+    Agent.ServiceClientDriverTrace _sdt ->
+      Namespace [] ["ServiceClientDriverTrace"]
+    Agent.ServiceClientSocketClosed ->
+      Namespace [] ["ServiceClientSocketClosed"]
+    Agent.ServiceClientConnected _s ->
+      Namespace [] ["ServiceClientConnected"]
+    Agent.ServiceClientAttemptReconnect _ _ _ _ ->
+      Namespace [] ["ServiceClientAttemptReconnect"]
+    Agent.ServiceClientReceivedKey _tbt ->
+      Namespace [] ["ServiceClientReceivedKey"]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      Namespace [] ["ServiceClientDeclinedKey"]
+    Agent.ServiceClientDroppedKey ->
+      Namespace [] ["ServiceClientDroppedKey"]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      Namespace [] ["ServiceClientOpCertNumberCheck"]
+    Agent.ServiceClientAbnormalTermination _s ->
+      Namespace [] ["ServiceClientAbnormalTermination"]
+    Agent.ServiceClientStopped ->
+      Namespace [] ["ServiceClientStopped"]
+
+  severityFor ns _ = case ns of
+    Namespace [] ["ServiceClientVersionHandshakeTrace"] ->
+      Just Debug
+    Namespace [] ["ServiceClientVersionHandshakeFailed"] ->
+      Just Error
+    Namespace [] ["ServiceClientDriverTrace"] ->
+      Just Debug
+    Namespace [] ["ServiceClientSocketClosed"] ->
+      Just Info
+    Namespace [] ["ServiceClientConnected"] ->
+      Just Info
+    Namespace [] ["ServiceClientAttemptReconnect"] ->
+      Just Info
+    Namespace [] ["ServiceClientReceivedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientDeclinedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientDroppedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientOpCertNumberCheck"] ->
+      Just Debug
+    Namespace [] ["ServiceClientAbnormalTermination"] ->
+      Just Error
+    Namespace [] ["ServiceClientStopped"] ->
+      Just Info
+    Namespace _ _ -> Nothing
+
+  documentFor _ = Nothing
+  allNamespaces =
+    [ Namespace [] ["ServiceClientVersionHandshakeTrace"]
+    , Namespace [] ["ServiceClientVersionHandshakeFailed"]
+    , Namespace [] ["ServiceClientDriverTrace"]
+    , Namespace [] ["ServiceClientSocketClosed"]
+    , Namespace [] ["ServiceClientConnected"]
+    , Namespace [] ["ServiceClientAttemptReconnect"]
+    , Namespace [] ["ServiceClientReceivedKey"]
+    , Namespace [] ["ServiceClientDeclinedKey"]
+    , Namespace [] ["ServiceClientDroppedKey"]
+    , Namespace [] ["ServiceClientOpCertNumberCheck"]
+    , Namespace [] ["ServiceClientAbnormalTermination"]
+    , Namespace [] ["ServiceClientStopped"]
+    ]
+
+instance LogFormatting KESAgentClientTrace where
+  forMachine dtal = \case
+    KESAgentClientException ex -> mconcat
+      [ "kind" .= String "KESAgentClientException"
+      , "exception" .= String (Text.pack $ show ex)
+      ]
+    KESAgentClientTrace t -> mconcat
+      [ "kind" .= String "KESAgentClientTrace"
+      , "trace" .= forMachine dtal t
+      ]
 
   forHuman = showT
 
@@ -2287,12 +2391,15 @@ instance MetaTrace KESAgentClientTrace where
   namespaceFor = \case
     KESAgentClientException _ ->
       Namespace [] ["KESAgentClientException"]
-    KESAgentClientTrace _ ->
-      Namespace [] ["KESAgentClientTrace"]
+    KESAgentClientTrace t -> nsCast $ namespaceFor t
 
-  severityFor = undefined
-  documentFor = undefined
+  severityFor (Namespace [] ["KESAgentClientException"]) _ = Just Error
+  severityFor (Namespace [] ["KESAgentClientTrace"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor _ = Nothing
+
   allNamespaces =
-    [ Namespace [] ["KESAgentClientException"]
-    , Namespace [] ["KESAgentClientTrace"]
-    ]
+    Namespace [] ["KESAgentClientException"] :
+    fmap nsCast (allNamespaces :: [Namespace Agent.ServiceClientTrace])
+

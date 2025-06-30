@@ -30,7 +30,6 @@ module Cardano.Node.Tracing.Render
   , renderMissingRedeemers
   ) where
 
--- import qualified Cardano.Api.Shelley as Api
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
