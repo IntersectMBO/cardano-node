@@ -99,8 +99,8 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Cluster params.
   , clusterMinimunStorage, ssdDirectory, clusterKeepRunningOn
-  , nomadNamespace, nomadClass, nomadResources, nomadHostVolume, nomadSSHLogsOn
-  , awsInstanceTypes, usePublicRouting
+  , nomadNamespace, nomadClass, nomadResources, appendNomadHostVolume
+  , nomadSSHLogsOn, awsInstanceTypes, usePublicRouting
 
   -- Analysis params.
   , analysisOff, analysisStandard, analysisPerformance
@@ -877,8 +877,12 @@ nomadClass nc = nomad (\n -> n {Types.nomad_class = nc})
 nomadResources :: Types.ByNodeType Types.Resources -> Types.Profile -> Types.Profile
 nomadResources r = nomad (\n -> n {Types.resources = r})
 
-nomadHostVolume :: Types.ByNodeType [Types.HostVolume] -> Types.Profile -> Types.Profile
-nomadHostVolume h = nomad (\n -> n {Types.host_volumes = Just h})
+appendNomadHostVolume :: Types.ByNodeType [Types.HostVolume] -> Types.Profile -> Types.Profile
+appendNomadHostVolume h = nomad (\n -> n {Types.host_volumes = Just $
+                                  case Types.host_volumes n of
+                                    Nothing -> h
+                                    (Just bnt) -> bnt <> h
+                                })
 
 nomadSSHLogsOn :: Types.Profile -> Types.Profile
 nomadSSHLogsOn = nomad (\n -> n {Types.fetch_logs_ssh = True})
