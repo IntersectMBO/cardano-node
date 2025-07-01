@@ -1,12 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE GADTs #-}
 
 module Cardano.Logging.Tracer.DataPoint
   (
     DataPoint (..)
+  , DataPointName
   , DataPointStore
   , initDataPointStore
   , writeToStore
@@ -18,15 +19,14 @@ import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 
-import Control.DeepSeq ( NFData, NFData, deepseq )
-import           Control.Monad.IO.Class
-import qualified Control.Tracer as NT
-import           Data.Text (Text, intercalate)
-
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
+import           Control.DeepSeq (NFData, deepseq)
+import           Control.Monad.IO.Class
+import qualified Control.Tracer as NT
 import           Data.Aeson
 import qualified Data.Map.Strict as M
+import           Data.Text (Text, intercalate)
 
 ---------------------------------------------------------------------------
 --

@@ -73,7 +73,6 @@ library
                       , ouroboros-network-framework ^>= 0.18.0.1
                       , serialise
                       , stm
-                      , text
                       , typed-protocols ^>= 0.3
                       , typed-protocols-cborg
                       , trace-dispatcher
@@ -89,7 +88,6 @@ test-suite test
                         Test.Trace.Forward.Protocol.TraceObject.Examples
                         Test.Trace.Forward.Protocol.TraceObject.Item
                         Test.Trace.Forward.Protocol.TraceObject.Tests
-                        Trace.Forward.Forwaring
 
                         Test.Trace.Forward.Protocol.DataPoint.Codec
                         Test.Trace.Forward.Protocol.DataPoint.Direct
@@ -113,8 +111,6 @@ test-suite test
                       , tasty-quickcheck
                       , typed-protocols
                       , text
-                      , ekg-core
-                      , ekg-forward
 
   ghc-options:          -rtsopts
                         -threaded
