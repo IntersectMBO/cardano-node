@@ -88,6 +88,7 @@ test-suite test
                         Test.Trace.Forward.Protocol.TraceObject.Examples
                         Test.Trace.Forward.Protocol.TraceObject.Item
                         Test.Trace.Forward.Protocol.TraceObject.Tests
+                        Trace.Forward.Forwaring
 
                         Test.Trace.Forward.Protocol.DataPoint.Codec
                         Test.Trace.Forward.Protocol.DataPoint.Direct
@@ -111,6 +112,8 @@ test-suite test
                       , tasty-quickcheck
                       , typed-protocols
                       , text
+                      , ekg-core
+                      , ekg-forward
 
   ghc-options:          -rtsopts
                         -threaded
