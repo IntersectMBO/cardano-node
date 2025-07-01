@@ -73,8 +73,6 @@ import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (SockAddr)
 
-import           Trace.Forward.Utils.DataPoint (DataPoint)
-
 -- | Construct tracers for all system components.
 --
 mkDispatchTracers
