@@ -826,24 +826,28 @@ backend_nomad() {
       fi
       # Stop tracer(s).
       #################
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if test "${one_tracer_per_node}" = "true"
+      # A "tracer"(s) is optional.
+      if jqtest ".node.tracer" "${dir}"/profile.json
       then
-        local jobs_tracers_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad stop-all-tracers "${dir}" "${node}" &
-          jobs_tracers_array+=("$!")
-        done
-        if ! wait_all "${jobs_tracers_array[@]}"
+        local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+        if test "${one_tracer_per_node}" = "true"
         then
-          msg "$(red "Failed to stop tracer(s)")"
-        fi
-      else
-        if ! backend_nomad stop-all-tracers "${dir}" "tracer"
-        then
-          msg "$(red "Failed to stop tracer")"
+          local jobs_tracers_array=()
+          local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+          for node in ${nodes[*]}
+          do
+            backend_nomad stop-all-tracers "${dir}" "${node}" &
+            jobs_tracers_array+=("$!")
+          done
+          if ! wait_all "${jobs_tracers_array[@]}"
+          then
+            msg "$(red "Failed to stop tracer(s)")"
+          fi
+        else
+          if ! backend_nomad stop-all-tracers "${dir}" "tracer"
+          then
+            msg "$(red "Failed to stop tracer")"
+          fi
         fi
       fi
     ;;
@@ -1537,44 +1541,44 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
 
       # A "tracer"(s) is optional.
-      if jqtest ".node.tracer" "${dir}"/profile.json
+      if ! jqtest ".node.tracer" "${dir}"/profile.json
       then
         true
-      fi
-
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if ! test "${one_tracer_per_node}" = "true"
-      then
-        backend_nomad start-tracer "${dir}" "tracer"
       else
-        local jobs_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad start-tracer "${dir}" "${node}" &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
+        local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+        if ! test "${one_tracer_per_node}" = "true"
         then
-          if ! wait_kill_em_all "${jobs_array[@]}"
+          backend_nomad start-tracer "${dir}" "tracer"
+        else
+          local jobs_array=()
+          local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+          for node in ${nodes[*]}
+          do
+            backend_nomad start-tracer "${dir}" "${node}" &
+            jobs_array+=("$!")
+          done
+          # Wait and check!
+          if test -n "${jobs_array}"
           then
-            msg "$(red "Failed to start tracer(s)")"
-            backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-            fatal "scenario.sh start-tracers failed!"
-          else
-            for node in ${nodes[*]}
-            do
-              if ! test -f "${dir}"/tracer/"${node}"/started
-              then
-                msg "$(red "Tracer for \"${node}\" failed to start!")"
-                backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-                fatal "scenario.sh start-tracers failed!"
-              fi
-            done
+            if ! wait_kill_em_all "${jobs_array[@]}"
+            then
+              msg "$(red "Failed to start tracer(s)")"
+              backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+              fatal "scenario.sh start-tracers failed!"
+            else
+              for node in ${nodes[*]}
+              do
+                if ! test -f "${dir}"/tracer/"${node}"/started
+                then
+                  msg "$(red "Tracer for \"${node}\" failed to start!")"
+                  backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+                  fatal "scenario.sh start-tracers failed!"
+                fi
+              done
+            fi
           fi
+          return 0
         fi
-        return 0
       fi
     ;;
 
