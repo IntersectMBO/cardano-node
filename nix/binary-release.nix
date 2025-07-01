@@ -45,6 +45,20 @@ let
         (builtins.toJSON
           (env.nodeConfigBp // genesisAttrs));
 
+      nodeConfigLegacy= pkgs.writeText
+        "config-legacy.json"
+        (builtins.toJSON
+          (env.nodeConfigLegacy // genesisAttrs));
+
+      nodeConfigBpLegacy= pkgs.writeText
+        "config-bp-legacy.json"
+        (builtins.toJSON
+          (env.nodeConfigBpLegacy // genesisAttrs));
+
+      tracerConfig = pkgs.writeText
+        "tracer-config.json"
+        (builtins.toJSON env.tracerConfig);
+
       peerSnapshot = pkgs.writeText
         "peer-snapshot.json"
         (builtins.toJSON env.peerSnapshot);
@@ -60,6 +74,9 @@ let
         mkdir -p "share/${name}"
         jq . < "${nodeConfig}" > share/${name}/config.json
         jq . < "${nodeConfigBp}" > share/${name}/config-bp.json
+        jq . < "${nodeConfigLegacy}" > share/${name}/config-legacy.json
+        jq . < "${nodeConfigBpLegacy}" > share/${name}/config-bp-legacy.json
+        jq . < "${tracerConfig}" > share/${name}/tracer-config.json
         jq . < "${peerSnapshot}" > share/${name}/peer-snapshot.json
         jq . < "${topologyConfig}" > share/${name}/topology.json
         cp -n --remove-destination -v \
