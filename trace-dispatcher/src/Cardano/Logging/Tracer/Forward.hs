@@ -13,29 +13,26 @@ import           Cardano.Logging.Types
 import           Control.Monad.IO.Class
 import qualified Control.Tracer as T
 
-import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
-
 
 ---------------------------------------------------------------------------
 
 -- | It is mandatory to construct only one forwardTracer tracer in any application!
 -- Throwing away a forwardTracer tracer and using a new one will result in an exception
 forwardTracer :: forall m. (MonadIO m)
-  => ForwardSink TraceObject
+  => (TraceObject -> IO ())
   -> Trace m FormattedMessage
-forwardTracer forwardSink =
-  Trace $ T.arrow $ T.emit $ uncurry (output forwardSink)
+forwardTracer write =
+  Trace $ T.arrow $ T.emit $ uncurry output
  where
   output ::
-       ForwardSink TraceObject
-    -> LoggingContext
+       LoggingContext
     -> Either TraceControl FormattedMessage
     -> m ()
-  output sink LoggingContext {} (Right (FormattedForwarder lo)) = liftIO $
-    writeToSink sink lo
-  output _sink LoggingContext {} (Left TCReset) = liftIO $ do
+  output LoggingContext {} (Right (FormattedForwarder lo)) = liftIO $
+    write lo
+  output LoggingContext {} (Left TCReset) = liftIO $ do
     pure ()
-  output _sink lk (Left c@TCDocument {}) =
+  output lk (Left c@TCDocument {}) =
     docIt Forwarder (lk, Left c)
-  output _sink LoggingContext {} (Right _)  = pure ()
-  output _sink LoggingContext {} _  = pure ()
+  output LoggingContext {} (Right _)  = pure ()
+  output LoggingContext {} _  = pure ()
