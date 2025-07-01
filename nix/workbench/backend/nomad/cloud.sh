@@ -1083,16 +1083,20 @@ fetch-logs-ssh-node() {
   fi
   # Download tracer(s) logs. ###################################################
   ##############################################################################
-  msg "$(blue Fetching) $(yellow "program \"tracer\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-  if ! rsync -e "${ssh_command}" -au                 \
-         -f'- start.sh' -f'- config.json'            \
-         -f'- tracer.socket' -f'- logRoot/'          \
-         "${public_ipv4}":/local/run/current/tracer/ \
-         "${dir}"/tracer/"${node}"/
+  # A "tracer"(s) is optional.
+  if jqtest ".node.tracer" "${dir}"/profile.json
   then
-    node_ok="false"
-    touch "${dir}"/nomad/"${node}"/download_failed
-    msg "$(red Error fetching) $(yellow "program \"tracer\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    msg "$(blue Fetching) $(yellow "program \"tracer\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    if ! rsync -e "${ssh_command}" -au                 \
+           -f'- start.sh' -f'- config.json'            \
+           -f'- tracer.socket' -f'- logRoot/'          \
+           "${public_ipv4}":/local/run/current/tracer/ \
+           "${dir}"/tracer/"${node}"/
+    then
+      node_ok="false"
+      touch "${dir}"/nomad/"${node}"/download_failed
+      msg "$(red Error fetching) $(yellow "program \"tracer\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    fi
   fi
   # Allow the user to do something if a download fails
   if ! test "${node_ok}" = "true"
