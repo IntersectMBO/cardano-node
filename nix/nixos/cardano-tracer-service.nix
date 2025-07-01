@@ -110,7 +110,6 @@ with builtins; let
     echo "..or, once again, in a single line:"
     echo "${toString cmd}"
 
-    trap 'RC="$?"; echo "Service binary 'cardano-tracer' returned status: $RC" >&2; exit $RC' EXIT
     ${toString cmd}
   '';
 
@@ -292,7 +291,7 @@ in {
 
       executable = mkOption {
         type = str;
-        default = "${cfg.package}/bin/cardano-tracer";
+        default = "exec ${cfg.package}/bin/cardano-tracer";
         description = ''
           The cardano-tracer executable invocation to use.
         '';
