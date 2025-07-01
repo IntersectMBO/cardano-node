@@ -43,6 +43,7 @@ library
                         Trace.Forward.Protocol.TraceObject.Codec
                         Trace.Forward.Protocol.TraceObject.Forwarder
                         Trace.Forward.Protocol.TraceObject.Type
+                        Trace.Forward.Forwarding
 
                         Trace.Forward.Run.DataPoint.Acceptor
                         Trace.Forward.Run.DataPoint.Forwarder
@@ -54,6 +55,7 @@ library
 
                         Trace.Forward.Utils.DataPoint
                         Trace.Forward.Utils.TraceObject
+                        Trace.Forward.Utils.ForwardSink
 
   build-depends:        aeson
                       , async
@@ -61,11 +63,12 @@ library
                       , cborg
                       , containers
                       , contra-tracer
-                      , deepseq
                       , extra
                       , io-classes
                       , network-mux
                       , ouroboros-network-api
+                      , ekg-core
+                      , ekg-forward
                       , singletons ^>= 3.0
                       , ouroboros-network-framework ^>= 0.18.0.1
                       , serialise
@@ -73,6 +76,7 @@ library
                       , text
                       , typed-protocols ^>= 0.3
                       , typed-protocols-cborg
+                      , trace-dispatcher
 
 test-suite test
   import:               project-config
@@ -85,6 +89,7 @@ test-suite test
                         Test.Trace.Forward.Protocol.TraceObject.Examples
                         Test.Trace.Forward.Protocol.TraceObject.Item
                         Test.Trace.Forward.Protocol.TraceObject.Tests
+                        Trace.Forward.Forwaring
 
                         Test.Trace.Forward.Protocol.DataPoint.Codec
                         Test.Trace.Forward.Protocol.DataPoint.Direct
@@ -108,6 +113,8 @@ test-suite test
                       , tasty-quickcheck
                       , typed-protocols
                       , text
+                      , ekg-core
+                      , ekg-forward
 
   ghc-options:          -rtsopts
                         -threaded

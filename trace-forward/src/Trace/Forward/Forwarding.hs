@@ -3,7 +3,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.Forwarding
+module Trace.Forward.Forwarding
   (
     initForwarding
   , initForwardingDelayed
@@ -52,6 +52,7 @@ import           Trace.Forward.Run.DataPoint.Forwarder
 import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
+import Trace.Forward.Utils.ForwardSink (ForwardSink)
 
 initForwarding :: forall m. (MonadIO m)
   => IOManager

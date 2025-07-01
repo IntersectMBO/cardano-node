@@ -35,7 +35,7 @@ common project-config
                         -Wno-incomplete-patterns
 
   if impl(ghc >= 9.8)
-    ghc-options:        -Wno-x-partial  
+    ghc-options:        -Wno-x-partial
 
 
 library
@@ -47,7 +47,6 @@ library
                       Cardano.Logging.Consistency
                       Cardano.Logging.DocuGenerator
                       Cardano.Logging.Formatter
-                      Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
                       Cardano.Logging.Prometheus.Exposition
                       Cardano.Logging.Prometheus.NetworkRun
@@ -94,7 +93,6 @@ library
                       , text
                       , time
                       , time-manager
-                      , trace-forward
                       , unagi-chan >= 0.4.1.4
                       , unix-compat
                       , unliftio
@@ -146,7 +144,6 @@ test-suite trace-dispatcher-test
                       , tasty-quickcheck
                       , time
                       , trace-dispatcher
-                      , trace-forward
                       , unagi-chan
                       , unliftio
                       , unliftio-core
