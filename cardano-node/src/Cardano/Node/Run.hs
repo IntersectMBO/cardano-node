@@ -23,7 +23,7 @@ module Cardano.Node.Run
   ) where
 
 import           Cardano.Api (File (..), FileDirection (..))
-import           Cardano.Api.Internal.Error (displayError)
+import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 

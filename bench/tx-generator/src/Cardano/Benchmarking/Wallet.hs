@@ -9,9 +9,8 @@ Beyond the basic wallet functions, there are some functions
 manipulating the 'FundQueue' held in a 'WalletRef' by side
 effect, like 'createAndStore' and 'mangle'.
 -}
-module Cardano.Benchmarking.Wallet
-where
-import           Cardano.Api
+module Cardano.Benchmarking.Wallet where
+import           Cardano.Api hiding (txId)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue as FundQueue

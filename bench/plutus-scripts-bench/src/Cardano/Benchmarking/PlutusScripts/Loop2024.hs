@@ -9,15 +9,18 @@
 
 module Cardano.Benchmarking.PlutusScripts.Loop2024 (script) where
 
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
+import           Cardano.Api (PlutusScript (..), PlutusScriptV1, PlutusScriptVersion (..),
+                   Script (..), toScriptInAnyLang)
+
+import           Cardano.Benchmarking.ScriptAPI
+import qualified PlutusLedgerApi.V1 as PlutusV1
+
 import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1, Script(..), toScriptInAnyLang, PlutusScriptVersion(..))
-import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 
-import qualified PlutusLedgerApi.V1 as PlutusV1
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Syntax
 import           PlutusTx
 import           PlutusTx.Builtins (unsafeDataAsI)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))

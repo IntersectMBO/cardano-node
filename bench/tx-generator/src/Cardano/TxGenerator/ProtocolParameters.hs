@@ -30,13 +30,14 @@ where
 
 --------------------------------------------------------------------------------
 
-import           Cardano.Api (AnyPlutusScriptVersion (..), CostModel, ExecutionUnits,
+import           Cardano.Api (AnyPlutusScriptVersion (..), CostModel, ExecutionUnitPrices (..),
+                   ExecutionUnits, LedgerProtocolParameters (..),
                    PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3), PraosNonce,
-                   ProtocolParametersConversionError (..), makePraosNonce)
-import           Cardano.Api.Shelley (ExecutionUnitPrices (..), LedgerProtocolParameters (..),
+                   ProtocolParametersConversionError (..),
                    ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraMary, ShelleyBasedEraShelley),
                    ShelleyLedgerEra, fromAlonzoCostModels, fromAlonzoExUnits, fromAlonzoPrices,
-                   toAlonzoCostModels, toAlonzoExUnits, toAlonzoPrices, toLedgerNonce)
+                   makePraosNonce, toAlonzoCostModels, toAlonzoExUnits, toAlonzoPrices,
+                   toLedgerNonce)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto

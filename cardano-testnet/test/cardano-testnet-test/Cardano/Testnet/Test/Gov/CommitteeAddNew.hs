@@ -27,7 +27,6 @@ import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.Maybe.Strict
 import           Data.Set (Set)
-import           Data.String
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
@@ -227,11 +226,11 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     signTx execConfig cEra work "signed-proposal" (File txbodyFp) [Some $ paymentKeyInfoPair wallet0]
   submitTx execConfig cEra signedProposalTx
 
-  governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
+  governanceActionTxId <- H.noteShowM $ retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIx <-
     H.nothingFailM . watchEpochStateUpdate epochStateView (L.EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
 
   dRepVoteFiles <-
     DRep.generateVoteFiles

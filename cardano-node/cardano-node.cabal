@@ -142,7 +142,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.16
+                      , cardano-api ^>= 10.17.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -264,7 +264,7 @@ test-suite cardano-node-test
                       , filepath
                       , hedgehog
                       , hedgehog-corpus
-                      , hedgehog-extras ^>= 0.7.0
+                      , hedgehog-extras ^>= 0.8
                       , iproute
                       , mtl
                       , ouroboros-consensus

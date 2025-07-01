@@ -11,7 +11,7 @@
 
 module Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd (script) where
 
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
+import           Cardano.Api (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
                    Script (..), toScriptInAnyLang)
 
 import           Cardano.Benchmarking.ScriptAPI

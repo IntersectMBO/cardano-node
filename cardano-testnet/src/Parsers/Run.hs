@@ -10,7 +10,6 @@ module Parsers.Run
   , opts
   ) where
 
-
 import           Cardano.CLI.Environment
 
 import           Data.Foldable

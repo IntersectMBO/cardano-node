@@ -8,7 +8,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ( hprop_ledger_events_propose_new_constitution
   ) where
 
-import           Cardano.Api as Api
+import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (..))
 
@@ -28,7 +28,6 @@ import qualified Data.Aeson.Lens as Aeson
 import           Data.Default.Class
 import           Data.Maybe
 import           Data.Maybe.Strict
-import           Data.String
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Vector as Vector
@@ -230,7 +229,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
 
   governanceActionIndex <-
     H.nothingFailM . watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-    pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   voteFiles <- generateVoteFiles execConfig work "vote-files"
@@ -272,7 +271,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
       (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
   proposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
-                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txId
+                                    [ eraName, "query", "proposals", "--governance-action-tx-id", prettyShow txId
                                     , "--governance-action-index", "0"
                                     ]
 
@@ -286,7 +285,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
 
   -- Check TxId returned is the same as the one we used
   proposalsTxId <- H.evalMaybe $ proposal ^? Aeson.key "actionId" . Aeson.key "txId" . Aeson._String
-  proposalsTxId === Text.pack txId
+  proposalsTxId === Text.pack (prettyShow txId)
 
   -- Check that committeeVotes is an empty object
   proposalsCommitteeVotes <- H.evalMaybe $ proposal ^? Aeson.key "committeeVotes" . Aeson._Object

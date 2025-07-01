@@ -12,7 +12,6 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Cardano.Ledger.Conway.Core (ppNOptL)
 import           Cardano.Ledger.Conway.Governance (ConwayGovState, cgsCurPParamsL)
@@ -26,7 +25,6 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import           Data.Default.Class
-import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack)
@@ -183,7 +181,7 @@ desiredPoolNumberProposalTest
   -> Integer -- ^ Minimum number of epochs to wait before checking the result
   -> Maybe Integer -- ^ What the expected result is of the change (if anything)
   -> Integer -- ^ Maximum number of epochs to wait while waiting for the result
-  -> m (String, Word16)
+  -> m (TxId, Word16)
 desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
                               previousProposalInfo votes change minWait mExpected maxWait = do
   let sbe = convert ceo
@@ -225,7 +223,7 @@ makeDesiredPoolNumberChangeProposal
                             -- governance action if any.
   -> Word16 -- ^ What to change the @desiredPoolNumber@ to
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> m (String, Word16)
+  -> m (TxId, Word16)
 makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
                                     prevGovActionInfo desiredPoolNumber wallet = do
 
@@ -290,7 +288,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
 
   governanceActionIndex <-
     H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
 
   pure (governanceActionTxId, governanceActionIndex)
 
@@ -307,7 +305,7 @@ voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraConway).
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
-  -> String -- ^ Transaction id of the governance action to vote.
+  -> TxId -- ^ Transaction id of the governance action to vote.
   -> Word16 -- ^ Index of the governance action to vote in the transaction.
   -> [DefaultDRepVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions

@@ -43,13 +43,11 @@ module Testnet.Components.Query
   , getTxIx
   ) where
 
-import           Cardano.Api as Api
+import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (LedgerProtocolParameters (..), ShelleyLedgerEra)
-import qualified Cardano.Api.Tx.UTxO as Utxo
+import qualified Cardano.Api.UTxO as Utxo
 
-import           Cardano.Crypto.Hash (hashToStringAsHex)
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -609,13 +607,19 @@ getDelegationState epochStateView = do
   pure $ L.toStakeCredentials pools
 
 -- | Returns the transaction index of a transaction with a given amount and ID.
-getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> L.Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
+getTxIx :: forall m era. HasCallStack
+        => MonadTest m
+        => ShelleyBasedEra era
+        -> TxId
+        -> L.Coin
+        -> (AnyNewEpochState, SlotNo, BlockNo)
+        -> m (Maybe TxIx)
 getTxIx sbe txId amount (AnyNewEpochState sbe' _ tbs, _, _) = do
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
   shelleyBasedEraConstraints sbe' $ do
-    return $ Map.foldlWithKey (\acc (TxIn (TxId thisTxId) (TxIx thisTxIx)) (TxOut _ txOutValue _ _) ->
+    return $ Map.foldlWithKey (\acc (TxIn thisTxId thisTxIx) (TxOut _ txOutValue _ _) ->
       case acc of
-        Nothing | hashToStringAsHex thisTxId == txId &&
-                  txOutValueToLovelace txOutValue == amount -> Just $ fromIntegral thisTxIx
+        Nothing | thisTxId == txId &&
+                  txOutValueToLovelace txOutValue == amount -> Just thisTxIx
                 | otherwise -> Nothing
         x -> x) Nothing $ getLedgerTablesUTxOValues sbe' tbs
