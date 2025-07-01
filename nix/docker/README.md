@@ -109,13 +109,13 @@ Optional env variables and cardano-node args which can be used in custom mode
 can also be used in this mode.  Merge mode uses the same default state
 directories as custom mode.
 
-An example:
+An example where prometheus binding is set away from localhost while preserving other defaults:
 ```
 docker run \
   -v node-ipc:/ipc \
   -v mainnet-data:/data \
   -e NETWORK=mainnet \
-  -e CARDANO_CONFIG_JSON_MERGE='{"MaxConcurrencyBulkSync": 2}' \
+  -e CARDANO_CONFIG_JSON_MERGE='{"TraceOptions":{"":{"backends":["EKGBackend","Forwarder","PrometheusSimple suffix 0.0.0.0 12798","Stdout HumanFormatColoured"]}}}' \
   -e CARDANO_TOPOLOGY_JSON_MERGE='{"useLedgerAfterSlot": 147000000}' \
   ghcr.io/intersectmbo/cardano-node:dev
 ```
@@ -207,6 +207,27 @@ docker volume ls
 docker volume inspect opt-cardano
 
 sudo tree /var/lib/docker/volumes/opt-cardano/_data
+```
+
+
+## Legacy Tracing System
+Cardano-node now defaults to using the new tracing system.  The legacy tracing
+system is deprecated and will be removed in a future node version.  While still
+available, the legacy tracing system can be used by following the example
+above in "custom" mode whereby config is passed, and in this case, the config
+passed is the legacy style configuration.
+
+Legacy default configuration files are also available within the image at paths:
+`/opt/cardano/config/$NETWORK/config[-bp]-legacy.json`
+
+An example of legacy tracing system usage is:
+```
+docker run \
+  -v preprod-data:/data \
+  -e CARDANO_CONFIG="/opt/cardano/config/preprod/config-legacy.json" \
+  -e CARDANO_TOPOLOGY="/opt/cardano/config/preprod/topology.json" \
+  ghcr.io/intersectmbo/cardano-node:dev \
+  run
 ```
 
 
@@ -361,15 +382,14 @@ docker run \
 ```
 
 An example for node to use a socket to accept a tracer connection, using merge
-mode to append the extra cli arg:
+mode to set the tracer node name and append the extra cli arg via env variable:
 ```
 docker run \
   -v node-ipc:/ipc \
   -e NETWORK=mainnet \
   -e CARDANO_TRACER_SOCKET_PATH_ACCEPT="/ipc/node-tracer.socket" \
-  -e CARDANO_CONFIG_JSON_MERGE='{}' \
-  ghcr.io/intersectmbo/cardano-node:dev \
-  run
+  -e CARDANO_CONFIG_JSON_MERGE='{"TraceOptionNodeName":"node1"}' \
+  ghcr.io/intersectmbo/cardano-node:dev
 
 docker run \
   -v node-ipc:/ipc \

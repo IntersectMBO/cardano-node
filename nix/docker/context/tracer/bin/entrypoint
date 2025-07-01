@@ -21,8 +21,8 @@ if [[ -n $NETWORK ]]; then
       exit 1
     fi
 
-    # Do a recursive deep merge of iohk-nix NETWORK config and/or topology with
-    # the supplied json merge environment variable(s).
+    # Do a recursive deep merge of iohk-nix NETWORK config with the supplied
+    # json merge environment variable(s).
     #
     # In a jq deep merge, arrays are replaced, primitive values in the second
     # object override the first, different types for the same key result in
