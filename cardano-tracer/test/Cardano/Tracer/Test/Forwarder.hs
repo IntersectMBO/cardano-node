@@ -71,6 +71,7 @@ import           Trace.Forward.Run.DataPoint.Forwarder
 import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
+import Trace.Forward.Utils.ForwardSink (ForwardSink)
 
 data ForwardersMode = Initiator | Responder
 

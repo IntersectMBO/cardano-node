@@ -15,7 +15,7 @@ module Cardano.Tracer.Handlers.ReForwarder
   ( initReForwarder
   ) where
 
-import           Cardano.Logging.Forwarding
+import           Trace.Forward.Forwarding
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Tracer.DataPoint
 import qualified Cardano.Logging.Types as Log
@@ -29,8 +29,8 @@ import           Control.Monad (when)
 import           Data.List (isPrefixOf)
 import qualified Data.Text as Text
 
-import           Trace.Forward.Utils.DataPoint
-import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
+import           Trace.Forward.Utils.TraceObject (writeToSink)
+import Trace.Forward.Utils.ForwardSink (ForwardSink)
 
 -- | Initialize the reforwarding service if configured to be active.
 --   Returns

@@ -18,6 +18,7 @@ import           Trace.Forward.Configuration.TraceObject (ForwarderConfiguration
 import qualified Trace.Forward.Protocol.TraceObject.Codec as Forwarder
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import           Trace.Forward.Utils.TraceObject
+import Trace.Forward.Utils.ForwardSink (ForwardSink)
 
 forwardTraceObjectsInit
   :: (CBOR.Serialise lo,
