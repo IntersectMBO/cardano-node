@@ -48,14 +48,14 @@ import           Cardano.Tracer.MetaTrace hiding (traceWith)
 import           Cardano.Tracer.Types
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
-import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
+import           Control.Concurrent (mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Async (Concurrently(..))
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar_)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', stateTVar, readTVarIO, newTVarIO)
-import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
-                   try, tryJust)
+import           Control.Exception (SomeAsyncException (..), SomeException, finally,
+                   fromException, try, tryJust, throwTo)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
 import           "contra-tracer" Control.Tracer (stdoutTracer, traceWith)
@@ -68,9 +68,10 @@ import           Data.List.Extra (dropPrefix, dropSuffix, replace)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as S
 import qualified Data.Text as T
+import           System.Exit (ExitCode (ExitSuccess))
 import           System.IO (hClose, hFlush, stdout)
 import           System.Mem.Weak (deRefWeak)
-import qualified System.Signal as S
+import qualified System.Signal as Signal
 import           System.Time.Extra (sleep)
 
 #if defined(mingw32_HOST_OS)
@@ -243,16 +244,16 @@ beforeProgramStops :: IO () -> IO ()
 beforeProgramStops action = do
   mainThreadIdWk <- mkWeakThreadId =<< myThreadId
   forM_ signals $ \sig ->
-    S.installHandler sig . const $ do
+    Signal.installHandler sig \_ -> do
       putStrLn " Program is stopping, please wait..."
       hFlush stdout
-      action
-        `finally` whenJustM (deRefWeak mainThreadIdWk) killThread
+      action `finally`
+        whenJustM (deRefWeak mainThreadIdWk) (`throwTo` ExitSuccess)
  where
+  signals :: [Signal.Signal]
   signals =
-    [ S.sigABRT
-    , S.sigINT
-    , S.sigTERM
+    [ Signal.sigINT
+    , Signal.sigTERM
     ]
 
 memberRegistry :: Ord a => a -> Registry a b -> IO Bool

@@ -154,8 +154,8 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
     traceWith tr TracerShutdownInitiated
 #if RTVIEW
     backupAllHistory tracerEnv tracerEnvRTView
-#endif
     traceWith tr TracerShutdownHistBackup
+#endif
     applyBrake (teProtocolsBrake tracerEnv)
     traceWith tr TracerShutdownComplete
 
