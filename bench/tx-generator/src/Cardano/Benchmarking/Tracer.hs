@@ -49,8 +49,8 @@ import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
 
-import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
+import Trace.Forward.Forwarding (initForwardingDelayed)
 
 pattern TracerNameBench     :: Text
 pattern TracerNameBench     = "Benchmark"
@@ -121,7 +121,7 @@ initTxGenTracers mbForwarding = do
   prepareForwardingTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
         let forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
-        (forwardSink :: ForwardSink TraceObject, dpStore, kickoffForwarder) <-
+        (forwardSink, dpStore, kickoffForwarder) <-
             initForwardingDelayed iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (Net.LocalPipe tracerSocket, Initiator)
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
@@ -134,7 +134,7 @@ initTxGenTracers mbForwarding = do
         traceWith nodeInfoTracer genInfo
 
         kickoffForwarder
-        pure $ forwardTracer forwardSink
+        pure $ forwardTracer (writeToSink forwardSink)
 
   prepareGenInfo :: IO NodeInfo
   prepareGenInfo =

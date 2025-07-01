@@ -7,7 +7,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.Forwarding
+module Trace.Forward.Forwarding
   (
     initForwarding
   , initForwardingDelayed
@@ -60,6 +60,7 @@ import           Trace.Forward.Run.DataPoint.Forwarder
 import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
+import Trace.Forward.Utils.ForwardSink (ForwardSink)
 
 initForwarding :: forall m. (MonadIO m)
   => IOManager
@@ -149,13 +150,13 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
 -- It writes an error message on stderr
 handleOverflow :: [TraceObject] -> IO ()
 handleOverflow [] = pure ()
-handleOverflow msgs =
-    let lengthM = length msgs
-        beginning = toTimestamp (head msgs)
-        end = toTimestamp (last msgs)
-        msg = "TraceObject queue overflowed. Dropped " <> show lengthM <>
+handleOverflow (msg : msgs) =
+    let lengthM = 1 + length msgs
+        beginning = toTimestamp msg
+        end = toTimestamp (last (msg : msgs))
+        str = "TraceObject queue overflowed. Dropped " <> show lengthM <>
                 " messages from " <> show beginning <> " to " <> show end
-    in hPutStrLn stderr msg
+    in hPutStrLn stderr str
 
 launchForwarders
   :: IOManager
