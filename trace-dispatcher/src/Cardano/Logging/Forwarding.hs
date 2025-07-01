@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PackageImports #-}
@@ -38,6 +39,7 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Maybe (isNothing)
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
 import qualified Network.Mux as Mux
@@ -75,7 +77,12 @@ initForwardingDelayed :: forall m. (MonadIO m)
   -> Maybe (FilePath, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore, IO ())
 initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
-  forwardSink <- initForwardSink tfConfig handleOverflow
+  let ignoreOverflow, onOverflow :: [TraceObject] -> IO ()
+      ignoreOverflow _ =
+        pure ()
+      onOverflow | isNothing tracerSocketMode = ignoreOverflow
+                 | otherwise                  = handleOverflow
+  forwardSink <- initForwardSink tfConfig onOverflow
   dpStore <- initDataPointStore
   let
     kickoffForwarder = launchForwarders
