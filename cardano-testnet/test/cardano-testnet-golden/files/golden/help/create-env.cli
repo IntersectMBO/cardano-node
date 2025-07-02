@@ -16,6 +16,7 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   --output DIRECTORY
+  [--p2p-topology]
 
   Create a sandbox for Cardano testnet
 
@@ -58,4 +59,6 @@ Available options:
                            Active slots coefficient. Ignored if a custom Shelley
                            genesis file is passed. (default: 5.0e-2)
   --output DIRECTORY       Directory where to create the sandbox environment.
+  --p2p-topology           Use P2P topology files instead of "direct" topology
+                           files
   -h,--help                Show this help text
