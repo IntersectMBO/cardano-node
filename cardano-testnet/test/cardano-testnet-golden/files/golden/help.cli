@@ -39,6 +39,7 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   --output DIRECTORY
+  [--p2p-topology]
 
   Create a sandbox for Cardano testnet
 
