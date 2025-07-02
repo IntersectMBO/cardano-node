@@ -27,6 +27,7 @@ import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
+import qualified Cardano.Testnet.Test.P2PTopology
 import qualified Cardano.Testnet.Test.RunTestnet
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
@@ -110,10 +111,11 @@ tests = do
           , ignoreOnWindows "foldEpochState receives ledger state" Cardano.Testnet.Test.FoldEpochState.prop_foldEpochState
           , ignoreOnMacAndWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
           ]
-        , ignoreOnMacAndWindows "Dumping config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
         ]
         , T.testGroup "Cardano-testnet"
-          [ ignoreOnWindows "Testnet produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
+          [ ignoreOnWindows "Produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
+          , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
+          , ignoreOnMacAndWindows "Can be started with P2P topology file" Cardano.Testnet.Test.P2PTopology.hprop_p2p_topology
           ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
