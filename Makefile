@@ -36,7 +36,7 @@ cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
 
 trace-documentation:
-	cabal run -- exe:cardano-node trace-documentation --config 'configuration/cardano/mainnet-config-new-tracing.yaml' --output-file 'doc/new-tracing/tracers_doc_generated.md'
+	cabal run -- exe:cardano-node trace-documentation --config 'configuration/cardano/mainnet-config.yaml' --output-file 'doc/new-tracing/tracers_doc_generated.md'
 
 ###
 ### Workbench
@@ -83,7 +83,7 @@ $(eval $(call define_profile_targets,           $(LOCAL_PROFILES)))
 $(eval $(call define_profile_targets_nomadcloud,$(CLOUD_PROFILES)))
 
 # Dynamic local/supervisor profile targets.
-playground-%: 
+playground-%:
 	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName $*-${ERA} --argstr backendName supervisor
 
 ###

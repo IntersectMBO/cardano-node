@@ -25,7 +25,7 @@ tests = do
             [ ( []
               -- This file name should reference the current standard config with new tracing
               , configSubdir
-              , "mainnet-config-new-tracing.json"
+              , "mainnet-config.json"
               )
               ,
               (  []
