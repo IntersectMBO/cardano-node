@@ -1,0 +1,937 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679437702"><span id="local-6989586621679437703"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.BuildInfo</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier">BuildInfo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#emptyBuildInfo"><span class="hs-identifier">emptyBuildInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#allLanguages"><span class="hs-identifier">allLanguages</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#allExtensions"><span class="hs-identifier">allExtensions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#usedExtensions"><span class="hs-identifier">usedExtensions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#usesTemplateHaskellOrQQ"><span class="hs-identifier">usesTemplateHaskellOrQQ</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcOptions"><span class="hs-identifier">hcOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcProfOptions"><span class="hs-identifier">hcProfOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcSharedOptions"><span class="hs-identifier">hcSharedOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcStaticOptions"><span class="hs-identifier">hcStaticOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Mixin.html"><span class="hs-identifier">Distribution.Types.Mixin</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Dependency.html"><span class="hs-identifier">Distribution.Types.Dependency</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ExeDependency.html"><span class="hs-identifier">Distribution.Types.ExeDependency</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.LegacyExeDependency.html"><span class="hs-identifier">Distribution.Types.LegacyExeDependency</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html"><span class="hs-identifier">Distribution.Types.PkgconfigDependency</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Path.html"><span class="hs-identifier">Distribution.Utils.Path</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compiler.html"><span class="hs-identifier">Distribution.Compiler</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Language.Haskell.Extension.html"><span class="hs-identifier">Language.Haskell.Extension</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- Consider refactoring into executable and library versions.</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">data</span><span> </span><span id="BuildInfo"><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-var">BuildInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BuildInfo"><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-var">BuildInfo</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><span class="hs-comment">-- | component is buildable here</span></span><span>
+</span><span id="line-36"></span><span>        </span><span id="buildable"><span class="annot"><span class="annottext">BuildInfo -&gt; Bool
+</span><a href="Distribution.Types.BuildInfo.html#buildable"><span class="hs-identifier hs-var hs-var">buildable</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>        </span><span class="hs-comment">-- | Tools needed to build this bit.</span><span>
+</span><span id="line-38"></span><span>        </span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-comment">-- This is a legacy field that 'buildToolDepends' largely supersedes.</span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-comment">-- Unless use are very sure what you are doing, use the functions in</span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-comment">-- &quot;Distribution.Simple.BuildToolDepends&quot; rather than accessing this</span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-comment">-- field directly.</span><span>
+</span><span id="line-44"></span><span>        </span><span id="buildTools"><span class="annot"><span class="annottext">BuildInfo -&gt; [LegacyExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildTools"><span class="hs-identifier hs-var hs-var">buildTools</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.LegacyExeDependency.html#LegacyExeDependency"><span class="hs-identifier hs-type">LegacyExeDependency</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>        </span><span class="hs-comment">-- | Haskell tools needed to build this bit</span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span>        </span><span class="hs-comment">-- This field is better than 'buildTools' because it allows one to</span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-comment">-- precisely specify an executable in a package.</span><span>
+</span><span id="line-49"></span><span>        </span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span>        </span><span class="hs-comment">-- Unless use are very sure what you are doing, use the functions in</span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-comment">-- &quot;Distribution.Simple.BuildToolDepends&quot; rather than accessing this</span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-comment">-- field directly.</span><span>
+</span><span id="line-53"></span><span>        </span><span id="buildToolDepends"><span class="annot"><span class="annottext">BuildInfo -&gt; [ExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildToolDepends"><span class="hs-identifier hs-var hs-var">buildToolDepends</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.ExeDependency.html#ExeDependency"><span class="hs-identifier hs-type">ExeDependency</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>        </span><span id="cppOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cppOptions"><span class="hs-identifier hs-var hs-var">cppOptions</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ options for pre-processing Haskell code</span></span><span>
+</span><span id="line-55"></span><span>        </span><span id="asmOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmOptions"><span class="hs-identifier hs-var hs-var">asmOptions</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ options for assembler</span></span><span>
+</span><span id="line-56"></span><span>        </span><span id="cmmOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmOptions"><span class="hs-identifier hs-var hs-var">cmmOptions</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ options for C-- compiler</span></span><span>
+</span><span id="line-57"></span><span>        </span><span id="ccOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#ccOptions"><span class="hs-identifier hs-var hs-var">ccOptions</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ options for C compiler</span></span><span>
+</span><span id="line-58"></span><span>        </span><span id="cxxOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxOptions"><span class="hs-identifier hs-var hs-var">cxxOptions</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ options for C++ compiler</span></span><span>
+</span><span id="line-59"></span><span>        </span><span id="ldOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#ldOptions"><span class="hs-identifier hs-var hs-var">ldOptions</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ options for linker</span></span><span>
+</span><span id="line-60"></span><span>        </span><span id="hsc2hsOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#hsc2hsOptions"><span class="hs-identifier hs-var hs-var">hsc2hsOptions</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ options for hsc2hs</span></span><span>
+</span><span id="line-61"></span><span>        </span><span id="pkgconfigDepends"><span class="annot"><span class="annottext">BuildInfo -&gt; [PkgconfigDependency]
+</span><a href="Distribution.Types.BuildInfo.html#pkgconfigDepends"><span class="hs-identifier hs-var hs-var">pkgconfigDepends</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ pkg-config packages that are used</span></span><span>
+</span><span id="line-62"></span><span>        </span><span id="frameworks"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#frameworks"><span class="hs-identifier hs-var hs-var">frameworks</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^support frameworks for Mac OS X</span></span><span>
+</span><span id="line-63"></span><span>        </span><span id="extraFrameworkDirs"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraFrameworkDirs"><span class="hs-identifier hs-var hs-var">extraFrameworkDirs</span></a></span></span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ extra locations to find frameworks.</span></span><span>
+</span><span id="line-64"></span><span>        </span><span id="asmSources"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmSources"><span class="hs-identifier hs-var hs-var">asmSources</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Assembly files.</span></span><span>
+</span><span id="line-65"></span><span>        </span><span id="cmmSources"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmSources"><span class="hs-identifier hs-var hs-var">cmmSources</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ C-- files.</span></span><span>
+</span><span id="line-66"></span><span>        </span><span id="cSources"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cSources"><span class="hs-identifier hs-var hs-var">cSources</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>        </span><span id="cxxSources"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxSources"><span class="hs-identifier hs-var hs-var">cxxSources</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>        </span><span id="jsSources"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#jsSources"><span class="hs-identifier hs-var hs-var">jsSources</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>        </span><span id="hsSourceDirs"><span class="annot"><span class="annottext">BuildInfo -&gt; [SymbolicPath PackageDir SourceDir]
+</span><a href="Distribution.Types.BuildInfo.html#hsSourceDirs"><span class="hs-identifier hs-var hs-var">hsSourceDirs</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Utils.Path.html#SymbolicPath"><span class="hs-identifier hs-type">SymbolicPath</span></a></span><span> </span><span class="annot"><a href="Distribution.Utils.Path.html#PackageDir"><span class="hs-identifier hs-type">PackageDir</span></a></span><span> </span><span class="annot"><a href="Distribution.Utils.Path.html#SourceDir"><span class="hs-identifier hs-type">SourceDir</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ where to look for the Haskell module hierarchy</span></span><span>
+</span><span id="line-70"></span><span>        </span><span id="otherModules"><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#otherModules"><span class="hs-identifier hs-var hs-var">otherModules</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ non-exposed or non-main modules</span></span><span>
+</span><span id="line-71"></span><span>        </span><span id="virtualModules"><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#virtualModules"><span class="hs-identifier hs-var hs-var">virtualModules</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ exposed modules that do not have a source file (e.g. @GHC.Prim@ from @ghc-prim@ package)</span></span><span>
+</span><span id="line-72"></span><span>        </span><span id="autogenModules"><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#autogenModules"><span class="hs-identifier hs-var hs-var">autogenModules</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ not present on sdist, Paths_* or user-generated with a custom Setup.hs</span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>        </span><span id="defaultLanguage"><span class="annot"><span class="annottext">BuildInfo -&gt; Maybe Language
+</span><a href="Distribution.Types.BuildInfo.html#defaultLanguage"><span class="hs-identifier hs-var hs-var">defaultLanguage</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Extension.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span class="hs-special">,</span><span class="annot"><span class="hs-comment">-- ^ language used when not explicitly specified</span></span><span>
+</span><span id="line-75"></span><span>        </span><span id="otherLanguages"><span class="annot"><span class="annottext">BuildInfo -&gt; [Language]
+</span><a href="Distribution.Types.BuildInfo.html#otherLanguages"><span class="hs-identifier hs-var hs-var">otherLanguages</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Language.Haskell.Extension.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>    </span><span class="annot"><span class="hs-comment">-- ^ other languages used within the package</span></span><span>
+</span><span id="line-76"></span><span>        </span><span id="defaultExtensions"><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#defaultExtensions"><span class="hs-identifier hs-var hs-var">defaultExtensions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Language.Haskell.Extension.html#Extension"><span class="hs-identifier hs-type">Extension</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>   </span><span class="annot"><span class="hs-comment">-- ^ language extensions used by all modules</span></span><span>
+</span><span id="line-77"></span><span>        </span><span id="otherExtensions"><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#otherExtensions"><span class="hs-identifier hs-var hs-var">otherExtensions</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Language.Haskell.Extension.html#Extension"><span class="hs-identifier hs-type">Extension</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>   </span><span class="annot"><span class="hs-comment">-- ^ other language extensions used within the package</span></span><span>
+</span><span id="line-78"></span><span>        </span><span id="oldExtensions"><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#oldExtensions"><span class="hs-identifier hs-var hs-var">oldExtensions</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Language.Haskell.Extension.html#Extension"><span class="hs-identifier hs-type">Extension</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>   </span><span class="annot"><span class="hs-comment">-- ^ the old extensions field, treated same as 'defaultExtensions'</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>        </span><span id="extraLibs"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibs"><span class="hs-identifier hs-var hs-var">extraLibs</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ what libraries to link with when compiling a program that uses your package</span></span><span>
+</span><span id="line-81"></span><span>        </span><span id="extraLibsStatic"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibsStatic"><span class="hs-identifier hs-var hs-var">extraLibsStatic</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ what libraries to link with when compiling a program fully statically that uses your package</span></span><span>
+</span><span id="line-82"></span><span>        </span><span id="extraGHCiLibs"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraGHCiLibs"><span class="hs-identifier hs-var hs-var">extraGHCiLibs</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ if present, overrides extraLibs when package is loaded with GHCi.</span></span><span>
+</span><span id="line-83"></span><span>        </span><span id="extraBundledLibs"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraBundledLibs"><span class="hs-identifier hs-var hs-var">extraBundledLibs</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- ^ if present, adds libs to hs-libraries, which become part of the package.</span><span>
+</span><span id="line-84"></span><span>                                       </span><span class="hs-comment">--   Example 1: the Cffi library shipping with the rts, alongside the HSrts-1.0.a,.o,...</span><span>
+</span><span id="line-85"></span><span>                                       </span><span class="hs-comment">--   Example 2: a library that is being built by a foreign tool (e.g. rust)</span><span>
+</span><span id="line-86"></span><span>                                       </span><span class="hs-comment">--              and copied and registered together with this library.  The</span><span>
+</span><span id="line-87"></span><span>                                       </span><span class="hs-comment">--              logic on how this library is built will have to be encoded in a</span><span>
+</span><span id="line-88"></span><span>                                       </span><span class="hs-comment">--              custom Setup for now.  Otherwise cabal would need to learn how to</span><span>
+</span><span id="line-89"></span><span>                                       </span><span class="hs-comment">--              call arbitrary library builders.</span><span>
+</span><span id="line-90"></span><span>        </span><span id="extraLibFlavours"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibFlavours"><span class="hs-identifier hs-var hs-var">extraLibFlavours</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- ^ Hidden Flag.  This set of strings, will be appended to all libraries when</span><span>
+</span><span id="line-91"></span><span>                                       </span><span class="hs-comment">--   copying. E.g. [libHS&lt;name&gt;_&lt;flavour&gt; | flavour &lt;- extraLibFlavours]. This</span><span>
+</span><span id="line-92"></span><span>                                       </span><span class="hs-comment">--   should only be needed in very specific cases, e.g. the `rts` package, where</span><span>
+</span><span id="line-93"></span><span>                                       </span><span class="hs-comment">--   there are multiple copies of slightly differently built libs.</span><span>
+</span><span id="line-94"></span><span>        </span><span id="extraDynLibFlavours"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraDynLibFlavours"><span class="hs-identifier hs-var hs-var">extraDynLibFlavours</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- ^ Hidden Flag. This set of strings will be appended to all /dynamic/</span><span>
+</span><span id="line-95"></span><span>                                         </span><span class="hs-comment">--   libraries when copying. This is particularly useful with the `rts` package,</span><span>
+</span><span id="line-96"></span><span>                                         </span><span class="hs-comment">--   where we want different dynamic flavours of the RTS library to be installed.</span><span>
+</span><span id="line-97"></span><span>        </span><span id="extraLibDirs"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirs"><span class="hs-identifier hs-var hs-var">extraLibDirs</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-98"></span><span>        </span><span id="extraLibDirsStatic"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirsStatic"><span class="hs-identifier hs-var hs-var">extraLibDirsStatic</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>        </span><span id="includeDirs"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#includeDirs"><span class="hs-identifier hs-var hs-var">includeDirs</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^directories to find .h files</span></span><span>
+</span><span id="line-100"></span><span>        </span><span id="includes"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#includes"><span class="hs-identifier hs-var hs-var">includes</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ The .h files to be found in includeDirs</span></span><span>
+</span><span id="line-101"></span><span>        </span><span id="autogenIncludes"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#autogenIncludes"><span class="hs-identifier hs-var hs-var">autogenIncludes</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ The .h files to be generated (e.g. by @autoconf@)</span></span><span>
+</span><span id="line-102"></span><span>        </span><span id="installIncludes"><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#installIncludes"><span class="hs-identifier hs-var hs-var">installIncludes</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ .h files to install with the package</span></span><span>
+</span><span id="line-103"></span><span>        </span><span id="options"><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#options"><span class="hs-identifier hs-var hs-var">options</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#PerCompilerFlavor"><span class="hs-identifier hs-type">PerCompilerFlavor</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-104"></span><span>        </span><span id="profOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#profOptions"><span class="hs-identifier hs-var hs-var">profOptions</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#PerCompilerFlavor"><span class="hs-identifier hs-type">PerCompilerFlavor</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-105"></span><span>        </span><span id="sharedOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#sharedOptions"><span class="hs-identifier hs-var hs-var">sharedOptions</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#PerCompilerFlavor"><span class="hs-identifier hs-type">PerCompilerFlavor</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-106"></span><span>        </span><span id="staticOptions"><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#staticOptions"><span class="hs-identifier hs-var hs-var">staticOptions</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#PerCompilerFlavor"><span class="hs-identifier hs-type">PerCompilerFlavor</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-107"></span><span>        </span><span id="customFieldsBI"><span class="annot"><span class="annottext">BuildInfo -&gt; [(String, String)]
+</span><a href="Distribution.Types.BuildInfo.html#customFieldsBI"><span class="hs-identifier hs-var hs-var">customFieldsBI</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- ^Custom fields starting</span><span>
+</span><span id="line-108"></span><span>                                                </span><span class="hs-comment">-- with x-, stored in a</span><span>
+</span><span id="line-109"></span><span>                                                </span><span class="hs-comment">-- simple assoc-list.</span><span>
+</span><span id="line-110"></span><span>        </span><span id="targetBuildDepends"><span class="annot"><span class="annottext">BuildInfo -&gt; [Dependency]
+</span><a href="Distribution.Types.BuildInfo.html#targetBuildDepends"><span class="hs-identifier hs-var hs-var">targetBuildDepends</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Dependencies specific to a library or executable target</span></span><span>
+</span><span id="line-111"></span><span>        </span><span id="mixins"><span class="annot"><span class="annottext">BuildInfo -&gt; [Mixin]
+</span><a href="Distribution.Types.BuildInfo.html#mixins"><span class="hs-identifier hs-var hs-var">mixins</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Mixin.html#Mixin"><span class="hs-identifier hs-type">Mixin</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679437771"><span id="local-6989586621679437773"><span class="annot"><span class="annottext">(forall x. BuildInfo -&gt; Rep BuildInfo x)
+-&gt; (forall x. Rep BuildInfo x -&gt; BuildInfo) -&gt; Generic BuildInfo
+forall x. Rep BuildInfo x -&gt; BuildInfo
+forall x. BuildInfo -&gt; Rep BuildInfo x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. BuildInfo -&gt; Rep BuildInfo x
+from :: forall x. BuildInfo -&gt; Rep BuildInfo x
+$cto :: forall x. Rep BuildInfo x -&gt; BuildInfo
+to :: forall x. Rep BuildInfo x -&gt; BuildInfo
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679437777"><span id="local-6989586621679437842"><span id="local-6989586621679437846"><span class="annot"><span class="annottext">Int -&gt; BuildInfo -&gt; ShowS
+[BuildInfo] -&gt; ShowS
+BuildInfo -&gt; String
+(Int -&gt; BuildInfo -&gt; ShowS)
+-&gt; (BuildInfo -&gt; String)
+-&gt; ([BuildInfo] -&gt; ShowS)
+-&gt; Show BuildInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BuildInfo -&gt; ShowS
+showsPrec :: Int -&gt; BuildInfo -&gt; ShowS
+$cshow :: BuildInfo -&gt; String
+show :: BuildInfo -&gt; String
+$cshowList :: [BuildInfo] -&gt; ShowS
+showList :: [BuildInfo] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679437862"><span id="local-6989586621679437866"><span id="local-6989586621679437869"><span id="local-6989586621679438028"><span class="annot"><span class="annottext">ReadPrec [BuildInfo]
+ReadPrec BuildInfo
+Int -&gt; ReadS BuildInfo
+ReadS [BuildInfo]
+(Int -&gt; ReadS BuildInfo)
+-&gt; ReadS [BuildInfo]
+-&gt; ReadPrec BuildInfo
+-&gt; ReadPrec [BuildInfo]
+-&gt; Read BuildInfo
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS BuildInfo
+readsPrec :: Int -&gt; ReadS BuildInfo
+$creadList :: ReadS [BuildInfo]
+readList :: ReadS [BuildInfo]
+$creadPrec :: ReadPrec BuildInfo
+readPrec :: ReadPrec BuildInfo
+$creadListPrec :: ReadPrec [BuildInfo]
+readListPrec :: ReadPrec [BuildInfo]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679438044"><span id="local-6989586621679438107"><span class="annot"><span class="annottext">BuildInfo -&gt; BuildInfo -&gt; Bool
+(BuildInfo -&gt; BuildInfo -&gt; Bool)
+-&gt; (BuildInfo -&gt; BuildInfo -&gt; Bool) -&gt; Eq BuildInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BuildInfo -&gt; BuildInfo -&gt; Bool
+== :: BuildInfo -&gt; BuildInfo -&gt; Bool
+$c/= :: BuildInfo -&gt; BuildInfo -&gt; Bool
+/= :: BuildInfo -&gt; BuildInfo -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679438126"><span id="local-6989586621679438189"><span id="local-6989586621679438248"><span id="local-6989586621679438252"><span id="local-6989586621679438255"><span id="local-6989586621679438258"><span id="local-6989586621679438261"><span class="annot"><span class="annottext">Eq BuildInfo
+Eq BuildInfo =&gt;
+(BuildInfo -&gt; BuildInfo -&gt; Ordering)
+-&gt; (BuildInfo -&gt; BuildInfo -&gt; Bool)
+-&gt; (BuildInfo -&gt; BuildInfo -&gt; Bool)
+-&gt; (BuildInfo -&gt; BuildInfo -&gt; Bool)
+-&gt; (BuildInfo -&gt; BuildInfo -&gt; Bool)
+-&gt; (BuildInfo -&gt; BuildInfo -&gt; BuildInfo)
+-&gt; (BuildInfo -&gt; BuildInfo -&gt; BuildInfo)
+-&gt; Ord BuildInfo
+BuildInfo -&gt; BuildInfo -&gt; Bool
+BuildInfo -&gt; BuildInfo -&gt; Ordering
+BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: BuildInfo -&gt; BuildInfo -&gt; Ordering
+compare :: BuildInfo -&gt; BuildInfo -&gt; Ordering
+$c&lt; :: BuildInfo -&gt; BuildInfo -&gt; Bool
+&lt; :: BuildInfo -&gt; BuildInfo -&gt; Bool
+$c&lt;= :: BuildInfo -&gt; BuildInfo -&gt; Bool
+&lt;= :: BuildInfo -&gt; BuildInfo -&gt; Bool
+$c&gt; :: BuildInfo -&gt; BuildInfo -&gt; Bool
+&gt; :: BuildInfo -&gt; BuildInfo -&gt; Bool
+$c&gt;= :: BuildInfo -&gt; BuildInfo -&gt; Bool
+&gt;= :: BuildInfo -&gt; BuildInfo -&gt; Bool
+$cmax :: BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+max :: BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+$cmin :: BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+min :: BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679438280"><span id="local-6989586621679438343"><span id="local-6989586621679438402"><span id="local-6989586621679438404"><span id="local-6989586621679438406"><span id="local-6989586621679438412"><span id="local-6989586621679438417"><span id="local-6989586621679438420"><span id="local-6989586621679438423"><span id="local-6989586621679438426"><span id="local-6989586621679438429"><span id="local-6989586621679438432"><span id="local-6989586621679438437"><span id="local-6989586621679438442"><span class="annot"><span class="annottext">Typeable BuildInfo
+Typeable BuildInfo =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; BuildInfo -&gt; c BuildInfo)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BuildInfo)
+-&gt; (BuildInfo -&gt; Constr)
+-&gt; (BuildInfo -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BuildInfo))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BuildInfo))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; BuildInfo -&gt; BuildInfo)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo)
+-&gt; Data BuildInfo
+BuildInfo -&gt; Constr
+BuildInfo -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; BuildInfo -&gt; BuildInfo
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BuildInfo
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BuildInfo -&gt; c BuildInfo
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BuildInfo)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BuildInfo)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BuildInfo -&gt; c BuildInfo
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BuildInfo -&gt; c BuildInfo
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BuildInfo
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BuildInfo
+$ctoConstr :: BuildInfo -&gt; Constr
+toConstr :: BuildInfo -&gt; Constr
+$cdataTypeOf :: BuildInfo -&gt; DataType
+dataTypeOf :: BuildInfo -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BuildInfo)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BuildInfo)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BuildInfo)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BuildInfo)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; BuildInfo -&gt; BuildInfo
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; BuildInfo -&gt; BuildInfo
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BuildInfo -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BuildInfo -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BuildInfo -&gt; m BuildInfo
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679438471"><span id="local-6989586621679438478"><span id="local-6989586621679438484"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span></span></span></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679438775"><span id="local-6989586621679438782"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span></span></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679439156"><span class="annot"><span class="annottext">rnf :: BuildInfo -&gt; ()
+</span><a href="#local-6989586621679439156"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679439165"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-120"></span><span>  </span><span id="local-6989586621679439175"><span class="annot"><span class="annottext">mempty :: BuildInfo
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">buildable :: Bool
+</span><a href="Distribution.Types.BuildInfo.html#buildable"><span class="hs-identifier hs-var">buildable</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">,</span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="annottext">buildTools :: [LegacyExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildTools"><span class="hs-identifier hs-var">buildTools</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">buildToolDepends :: [ExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildToolDepends"><span class="hs-identifier hs-var">buildToolDepends</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">cppOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cppOptions"><span class="hs-identifier hs-var">cppOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">asmOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmOptions"><span class="hs-identifier hs-var">asmOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">cmmOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmOptions"><span class="hs-identifier hs-var">cmmOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="annottext">ccOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#ccOptions"><span class="hs-identifier hs-var">ccOptions</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">cxxOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxOptions"><span class="hs-identifier hs-var">cxxOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><span class="annottext">ldOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#ldOptions"><span class="hs-identifier hs-var">ldOptions</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="annottext">hsc2hsOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#hsc2hsOptions"><span class="hs-identifier hs-var">hsc2hsOptions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">pkgconfigDepends :: [PkgconfigDependency]
+</span><a href="Distribution.Types.BuildInfo.html#pkgconfigDepends"><span class="hs-identifier hs-var">pkgconfigDepends</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><span class="annottext">frameworks :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#frameworks"><span class="hs-identifier hs-var">frameworks</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="annottext">extraFrameworkDirs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraFrameworkDirs"><span class="hs-identifier hs-var">extraFrameworkDirs</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">asmSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmSources"><span class="hs-identifier hs-var">asmSources</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">cmmSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmSources"><span class="hs-identifier hs-var">cmmSources</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">cSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cSources"><span class="hs-identifier hs-var">cSources</span></a></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="annottext">cxxSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxSources"><span class="hs-identifier hs-var">cxxSources</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><span class="annottext">jsSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#jsSources"><span class="hs-identifier hs-var">jsSources</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">hsSourceDirs :: [SymbolicPath PackageDir SourceDir]
+</span><a href="Distribution.Types.BuildInfo.html#hsSourceDirs"><span class="hs-identifier hs-var">hsSourceDirs</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="annottext">otherModules :: [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#otherModules"><span class="hs-identifier hs-var">otherModules</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><span class="annottext">virtualModules :: [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#virtualModules"><span class="hs-identifier hs-var">virtualModules</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="annottext">autogenModules :: [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#autogenModules"><span class="hs-identifier hs-var">autogenModules</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><span class="annottext">defaultLanguage :: Maybe Language
+</span><a href="Distribution.Types.BuildInfo.html#defaultLanguage"><span class="hs-identifier hs-var">defaultLanguage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Language
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="annottext">otherLanguages :: [Language]
+</span><a href="Distribution.Types.BuildInfo.html#otherLanguages"><span class="hs-identifier hs-var">otherLanguages</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="annottext">defaultExtensions :: [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#defaultExtensions"><span class="hs-identifier hs-var">defaultExtensions</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><span class="annottext">otherExtensions :: [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#otherExtensions"><span class="hs-identifier hs-var">otherExtensions</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><span class="annottext">oldExtensions :: [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#oldExtensions"><span class="hs-identifier hs-var">oldExtensions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">extraLibs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibs"><span class="hs-identifier hs-var">extraLibs</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="annottext">extraLibsStatic :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibsStatic"><span class="hs-identifier hs-var">extraLibsStatic</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><span class="annottext">extraGHCiLibs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraGHCiLibs"><span class="hs-identifier hs-var">extraGHCiLibs</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">extraBundledLibs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraBundledLibs"><span class="hs-identifier hs-var">extraBundledLibs</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><span class="annottext">extraLibFlavours :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibFlavours"><span class="hs-identifier hs-var">extraLibFlavours</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="annottext">extraDynLibFlavours :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraDynLibFlavours"><span class="hs-identifier hs-var">extraDynLibFlavours</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><span class="annottext">extraLibDirs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirs"><span class="hs-identifier hs-var">extraLibDirs</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><span class="annottext">extraLibDirsStatic :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirsStatic"><span class="hs-identifier hs-var">extraLibDirsStatic</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="annottext">includeDirs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#includeDirs"><span class="hs-identifier hs-var">includeDirs</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><span class="annottext">includes :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#includes"><span class="hs-identifier hs-var">includes</span></a></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="annottext">autogenIncludes :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#autogenIncludes"><span class="hs-identifier hs-var">autogenIncludes</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-159"></span><span>    </span><span class="annot"><span class="annottext">installIncludes :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#installIncludes"><span class="hs-identifier hs-var">installIncludes</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">options :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#options"><span class="hs-identifier hs-var">options</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PerCompilerFlavor [String]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="annottext">profOptions :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#profOptions"><span class="hs-identifier hs-var">profOptions</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PerCompilerFlavor [String]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><span class="annottext">sharedOptions :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#sharedOptions"><span class="hs-identifier hs-var">sharedOptions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PerCompilerFlavor [String]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><span class="annottext">staticOptions :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#staticOptions"><span class="hs-identifier hs-var">staticOptions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PerCompilerFlavor [String]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">customFieldsBI :: [(String, String)]
+</span><a href="Distribution.Types.BuildInfo.html#customFieldsBI"><span class="hs-identifier hs-var">customFieldsBI</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><span class="annottext">targetBuildDepends :: [Dependency]
+</span><a href="Distribution.Types.BuildInfo.html#targetBuildDepends"><span class="hs-identifier hs-var">targetBuildDepends</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><span class="annottext">mixins :: [Mixin]
+</span><a href="Distribution.Types.BuildInfo.html#mixins"><span class="hs-identifier hs-var">mixins</span></a></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-168"></span><span>  </span><span id="local-6989586621679439177"><span class="annot"><span class="annottext">mappend :: BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679439180"><span id="local-6989586621679439183"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679439236"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439236"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679439237"><span class="annot"><span class="annottext">&lt;&gt; :: BuildInfo -&gt; BuildInfo -&gt; BuildInfo
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679439238"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439238"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">buildable :: Bool
+</span><a href="Distribution.Types.BuildInfo.html#buildable"><span class="hs-identifier hs-var">buildable</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; Bool
+</span><a href="Distribution.Types.BuildInfo.html#buildable"><span class="hs-identifier hs-var">buildable</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439236"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; Bool
+</span><a href="Distribution.Types.BuildInfo.html#buildable"><span class="hs-identifier hs-var">buildable</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439238"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-173"></span><span>    </span><span class="annot"><span class="annottext">buildTools :: [LegacyExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildTools"><span class="hs-identifier hs-var">buildTools</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [LegacyExeDependency]) -&gt; [LegacyExeDependency]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [LegacyExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildTools"><span class="hs-identifier hs-var">buildTools</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><span class="annottext">buildToolDepends :: [ExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildToolDepends"><span class="hs-identifier hs-var">buildToolDepends</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [ExeDependency]) -&gt; [ExeDependency]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ExeDependency]
+</span><a href="Distribution.Types.BuildInfo.html#buildToolDepends"><span class="hs-identifier hs-var">buildToolDepends</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="annottext">cppOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cppOptions"><span class="hs-identifier hs-var">cppOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cppOptions"><span class="hs-identifier hs-var">cppOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">asmOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmOptions"><span class="hs-identifier hs-var">asmOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmOptions"><span class="hs-identifier hs-var">asmOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><span class="annottext">cmmOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmOptions"><span class="hs-identifier hs-var">cmmOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmOptions"><span class="hs-identifier hs-var">cmmOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><span class="annottext">ccOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#ccOptions"><span class="hs-identifier hs-var">ccOptions</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#ccOptions"><span class="hs-identifier hs-var">ccOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><span class="annottext">cxxOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxOptions"><span class="hs-identifier hs-var">cxxOptions</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxOptions"><span class="hs-identifier hs-var">cxxOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><span class="annottext">ldOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#ldOptions"><span class="hs-identifier hs-var">ldOptions</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#ldOptions"><span class="hs-identifier hs-var">ldOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="annottext">hsc2hsOptions :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#hsc2hsOptions"><span class="hs-identifier hs-var">hsc2hsOptions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#hsc2hsOptions"><span class="hs-identifier hs-var">hsc2hsOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">pkgconfigDepends :: [PkgconfigDependency]
+</span><a href="Distribution.Types.BuildInfo.html#pkgconfigDepends"><span class="hs-identifier hs-var">pkgconfigDepends</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [PkgconfigDependency]) -&gt; [PkgconfigDependency]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [PkgconfigDependency]
+</span><a href="Distribution.Types.BuildInfo.html#pkgconfigDepends"><span class="hs-identifier hs-var">pkgconfigDepends</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><span class="annottext">frameworks :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#frameworks"><span class="hs-identifier hs-var">frameworks</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#frameworks"><span class="hs-identifier hs-var">frameworks</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-184"></span><span>    </span><span class="annot"><span class="annottext">extraFrameworkDirs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraFrameworkDirs"><span class="hs-identifier hs-var">extraFrameworkDirs</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraFrameworkDirs"><span class="hs-identifier hs-var">extraFrameworkDirs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><span class="annottext">asmSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmSources"><span class="hs-identifier hs-var">asmSources</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#asmSources"><span class="hs-identifier hs-var">asmSources</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><span class="annottext">cmmSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmSources"><span class="hs-identifier hs-var">cmmSources</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cmmSources"><span class="hs-identifier hs-var">cmmSources</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><span class="annottext">cSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cSources"><span class="hs-identifier hs-var">cSources</span></a></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cSources"><span class="hs-identifier hs-var">cSources</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><span class="annottext">cxxSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxSources"><span class="hs-identifier hs-var">cxxSources</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#cxxSources"><span class="hs-identifier hs-var">cxxSources</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-189"></span><span>    </span><span class="annot"><span class="annottext">jsSources :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#jsSources"><span class="hs-identifier hs-var">jsSources</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#jsSources"><span class="hs-identifier hs-var">jsSources</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><span class="annottext">hsSourceDirs :: [SymbolicPath PackageDir SourceDir]
+</span><a href="Distribution.Types.BuildInfo.html#hsSourceDirs"><span class="hs-identifier hs-var">hsSourceDirs</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [SymbolicPath PackageDir SourceDir])
+-&gt; [SymbolicPath PackageDir SourceDir]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [SymbolicPath PackageDir SourceDir]
+</span><a href="Distribution.Types.BuildInfo.html#hsSourceDirs"><span class="hs-identifier hs-var">hsSourceDirs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="annottext">otherModules :: [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#otherModules"><span class="hs-identifier hs-var">otherModules</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [ModuleName]) -&gt; [ModuleName]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#otherModules"><span class="hs-identifier hs-var">otherModules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><span class="annottext">virtualModules :: [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#virtualModules"><span class="hs-identifier hs-var">virtualModules</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [ModuleName]) -&gt; [ModuleName]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#virtualModules"><span class="hs-identifier hs-var">virtualModules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-193"></span><span>    </span><span class="annot"><span class="annottext">autogenModules :: [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#autogenModules"><span class="hs-identifier hs-var">autogenModules</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [ModuleName]) -&gt; [ModuleName]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#autogenModules"><span class="hs-identifier hs-var">autogenModules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-194"></span><span>    </span><span class="annot"><span class="annottext">defaultLanguage :: Maybe Language
+</span><a href="Distribution.Types.BuildInfo.html#defaultLanguage"><span class="hs-identifier hs-var">defaultLanguage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; Maybe Language) -&gt; Maybe Language
+forall {m :: * -&gt; *} {a}. MonadPlus m =&gt; (BuildInfo -&gt; m a) -&gt; m a
+</span><a href="#local-6989586621679439242"><span class="hs-identifier hs-var">combineMby</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; Maybe Language
+</span><a href="Distribution.Types.BuildInfo.html#defaultLanguage"><span class="hs-identifier hs-var">defaultLanguage</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-195"></span><span>    </span><span class="annot"><span class="annottext">otherLanguages :: [Language]
+</span><a href="Distribution.Types.BuildInfo.html#otherLanguages"><span class="hs-identifier hs-var">otherLanguages</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [Language]) -&gt; [Language]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Language]
+</span><a href="Distribution.Types.BuildInfo.html#otherLanguages"><span class="hs-identifier hs-var">otherLanguages</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><span class="annottext">defaultExtensions :: [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#defaultExtensions"><span class="hs-identifier hs-var">defaultExtensions</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [Extension]) -&gt; [Extension]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#defaultExtensions"><span class="hs-identifier hs-var">defaultExtensions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-197"></span><span>    </span><span class="annot"><span class="annottext">otherExtensions :: [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#otherExtensions"><span class="hs-identifier hs-var">otherExtensions</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [Extension]) -&gt; [Extension]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#otherExtensions"><span class="hs-identifier hs-var">otherExtensions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><span class="annottext">oldExtensions :: [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#oldExtensions"><span class="hs-identifier hs-var">oldExtensions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [Extension]) -&gt; [Extension]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#oldExtensions"><span class="hs-identifier hs-var">oldExtensions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="annottext">extraLibs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibs"><span class="hs-identifier hs-var">extraLibs</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibs"><span class="hs-identifier hs-var">extraLibs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-200"></span><span>    </span><span class="annot"><span class="annottext">extraLibsStatic :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibsStatic"><span class="hs-identifier hs-var">extraLibsStatic</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibsStatic"><span class="hs-identifier hs-var">extraLibsStatic</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><span class="annottext">extraGHCiLibs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraGHCiLibs"><span class="hs-identifier hs-var">extraGHCiLibs</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraGHCiLibs"><span class="hs-identifier hs-var">extraGHCiLibs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><span class="annottext">extraBundledLibs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraBundledLibs"><span class="hs-identifier hs-var">extraBundledLibs</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraBundledLibs"><span class="hs-identifier hs-var">extraBundledLibs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><span class="annottext">extraLibFlavours :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibFlavours"><span class="hs-identifier hs-var">extraLibFlavours</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibFlavours"><span class="hs-identifier hs-var">extraLibFlavours</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><span class="annottext">extraDynLibFlavours :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraDynLibFlavours"><span class="hs-identifier hs-var">extraDynLibFlavours</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraDynLibFlavours"><span class="hs-identifier hs-var">extraDynLibFlavours</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-205"></span><span>    </span><span class="annot"><span class="annottext">extraLibDirs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirs"><span class="hs-identifier hs-var">extraLibDirs</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirs"><span class="hs-identifier hs-var">extraLibDirs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><span class="annottext">extraLibDirsStatic :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirsStatic"><span class="hs-identifier hs-var">extraLibDirsStatic</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#extraLibDirsStatic"><span class="hs-identifier hs-var">extraLibDirsStatic</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-207"></span><span>    </span><span class="annot"><span class="annottext">includeDirs :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#includeDirs"><span class="hs-identifier hs-var">includeDirs</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#includeDirs"><span class="hs-identifier hs-var">includeDirs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-208"></span><span>    </span><span class="annot"><span class="annottext">includes :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#includes"><span class="hs-identifier hs-var">includes</span></a></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#includes"><span class="hs-identifier hs-var">includes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-209"></span><span>    </span><span class="annot"><span class="annottext">autogenIncludes :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#autogenIncludes"><span class="hs-identifier hs-var">autogenIncludes</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#autogenIncludes"><span class="hs-identifier hs-var">autogenIncludes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><span class="annottext">installIncludes :: [String]
+</span><a href="Distribution.Types.BuildInfo.html#installIncludes"><span class="hs-identifier hs-var">installIncludes</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [String]) -&gt; [String]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#installIncludes"><span class="hs-identifier hs-var">installIncludes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-211"></span><span>    </span><span class="annot"><span class="annottext">options :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#options"><span class="hs-identifier hs-var">options</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; PerCompilerFlavor [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#options"><span class="hs-identifier hs-var">options</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><span class="annottext">profOptions :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#profOptions"><span class="hs-identifier hs-var">profOptions</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; PerCompilerFlavor [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#profOptions"><span class="hs-identifier hs-var">profOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><span class="annottext">sharedOptions :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#sharedOptions"><span class="hs-identifier hs-var">sharedOptions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; PerCompilerFlavor [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#sharedOptions"><span class="hs-identifier hs-var">sharedOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-214"></span><span>    </span><span class="annot"><span class="annottext">staticOptions :: PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#staticOptions"><span class="hs-identifier hs-var">staticOptions</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; PerCompilerFlavor [String]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#staticOptions"><span class="hs-identifier hs-var">staticOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><span class="annottext">customFieldsBI :: [(String, String)]
+</span><a href="Distribution.Types.BuildInfo.html#customFieldsBI"><span class="hs-identifier hs-var">customFieldsBI</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [(String, String)]) -&gt; [(String, String)]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [(String, String)]
+</span><a href="Distribution.Types.BuildInfo.html#customFieldsBI"><span class="hs-identifier hs-var">customFieldsBI</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><span class="annottext">targetBuildDepends :: [Dependency]
+</span><a href="Distribution.Types.BuildInfo.html#targetBuildDepends"><span class="hs-identifier hs-var">targetBuildDepends</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [Dependency]) -&gt; [Dependency]
+forall {a}. Eq a =&gt; (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var">combineNub</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Dependency]
+</span><a href="Distribution.Types.BuildInfo.html#targetBuildDepends"><span class="hs-identifier hs-var">targetBuildDepends</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-217"></span><span>    </span><span class="annot"><span class="annottext">mixins :: [Mixin]
+</span><a href="Distribution.Types.BuildInfo.html#mixins"><span class="hs-identifier hs-var">mixins</span></a></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [Mixin]) -&gt; [Mixin]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span>    </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Mixin]
+</span><a href="Distribution.Types.BuildInfo.html#mixins"><span class="hs-identifier hs-var">mixins</span></a></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-220"></span><span>      </span><span id="local-6989586621679439240"><span class="annot"><span class="annottext">combine :: (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var hs-var">combine</span></a></span></span><span>    </span><span id="local-6989586621679439248"><span class="annot"><span class="annottext">BuildInfo -&gt; a
+</span><a href="#local-6989586621679439248"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; a
+</span><a href="#local-6989586621679439248"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439236"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; a
+</span><a href="#local-6989586621679439248"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439238"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-221"></span><span>      </span><span id="local-6989586621679439241"><span class="annot"><span class="annottext">combineNub :: (BuildInfo -&gt; [a]) -&gt; [a]
+</span><a href="#local-6989586621679439241"><span class="hs-identifier hs-var hs-var">combineNub</span></a></span></span><span> </span><span id="local-6989586621679439252"><span class="annot"><span class="annottext">BuildInfo -&gt; [a]
+</span><a href="#local-6989586621679439252"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a]
+forall a. Eq a =&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#nub/Data.OldList.html#nub"><span class="hs-identifier hs-var">nub</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(BuildInfo -&gt; [a]) -&gt; [a]
+forall {a}. Monoid a =&gt; (BuildInfo -&gt; a) -&gt; a
+</span><a href="#local-6989586621679439240"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [a]
+</span><a href="#local-6989586621679439252"><span class="hs-identifier hs-var">field</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>      </span><span id="local-6989586621679439242"><span class="annot"><span class="annottext">combineMby :: (BuildInfo -&gt; m a) -&gt; m a
+</span><a href="#local-6989586621679439242"><span class="hs-identifier hs-var hs-var">combineMby</span></a></span></span><span> </span><span id="local-6989586621679439270"><span class="annot"><span class="annottext">BuildInfo -&gt; m a
+</span><a href="#local-6989586621679439270"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; m a
+</span><a href="#local-6989586621679439270"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439238"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a -&gt; m a
+forall a. m a -&gt; m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a -&gt; m a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mplus/GHC.Base.html#mplus"><span class="hs-operator hs-var">`mplus`</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; m a
+</span><a href="#local-6989586621679439270"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439236"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#emptyBuildInfo"><span class="hs-identifier hs-type">emptyBuildInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span>
+</span><span id="line-225"></span><span id="emptyBuildInfo"><span class="annot"><span class="annottext">emptyBuildInfo :: BuildInfo
+</span><a href="Distribution.Types.BuildInfo.html#emptyBuildInfo"><span class="hs-identifier hs-var hs-var">emptyBuildInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-226"></span><span>
+</span><span id="line-227"></span><span class="hs-comment">-- | The 'Language's used by this component</span><span>
+</span><span id="line-228"></span><span class="hs-comment">--</span><span>
+</span><span id="line-229"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#allLanguages"><span class="hs-identifier hs-type">allLanguages</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Language.Haskell.Extension.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-230"></span><span id="allLanguages"><span class="annot"><span class="annottext">allLanguages :: BuildInfo -&gt; [Language]
+</span><a href="Distribution.Types.BuildInfo.html#allLanguages"><span class="hs-identifier hs-var hs-var">allLanguages</span></a></span></span><span> </span><span id="local-6989586621679439272"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439272"><span class="hs-identifier hs-var">bi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Language -&gt; [Language]
+forall a. Maybe a -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.Maybe.html#maybeToList/Data.Maybe.html#maybeToList"><span class="hs-identifier hs-var">maybeToList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BuildInfo -&gt; Maybe Language
+</span><a href="Distribution.Types.BuildInfo.html#defaultLanguage"><span class="hs-identifier hs-var">defaultLanguage</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439272"><span class="hs-identifier hs-var">bi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-231"></span><span>               </span><span class="annot"><span class="annottext">[Language] -&gt; [Language] -&gt; [Language]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Language]
+</span><a href="Distribution.Types.BuildInfo.html#otherLanguages"><span class="hs-identifier hs-var">otherLanguages</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439272"><span class="hs-identifier hs-var">bi</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- | The 'Extension's that are used somewhere by this component</span><span>
+</span><span id="line-234"></span><span class="hs-comment">--</span><span>
+</span><span id="line-235"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#allExtensions"><span class="hs-identifier hs-type">allExtensions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Language.Haskell.Extension.html#Extension"><span class="hs-identifier hs-type">Extension</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-236"></span><span id="allExtensions"><span class="annot"><span class="annottext">allExtensions :: BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#allExtensions"><span class="hs-identifier hs-var hs-var">allExtensions</span></a></span></span><span> </span><span id="local-6989586621679439274"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439274"><span class="hs-identifier hs-var">bi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#usedExtensions"><span class="hs-identifier hs-var">usedExtensions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439274"><span class="hs-identifier hs-var">bi</span></a></span><span>
+</span><span id="line-237"></span><span>                </span><span class="annot"><span class="annottext">[Extension] -&gt; [Extension] -&gt; [Extension]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#otherExtensions"><span class="hs-identifier hs-var">otherExtensions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439274"><span class="hs-identifier hs-var">bi</span></a></span><span>
+</span><span id="line-238"></span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- | The 'Extensions' that are used by all modules in this component</span><span>
+</span><span id="line-240"></span><span class="hs-comment">--</span><span>
+</span><span id="line-241"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#usedExtensions"><span class="hs-identifier hs-type">usedExtensions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Language.Haskell.Extension.html#Extension"><span class="hs-identifier hs-type">Extension</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-242"></span><span id="usedExtensions"><span class="annot"><span class="annottext">usedExtensions :: BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#usedExtensions"><span class="hs-identifier hs-var hs-var">usedExtensions</span></a></span></span><span> </span><span id="local-6989586621679439275"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439275"><span class="hs-identifier hs-var">bi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#oldExtensions"><span class="hs-identifier hs-var">oldExtensions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439275"><span class="hs-identifier hs-var">bi</span></a></span><span>
+</span><span id="line-243"></span><span>                 </span><span class="annot"><span class="annottext">[Extension] -&gt; [Extension] -&gt; [Extension]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#defaultExtensions"><span class="hs-identifier hs-var">defaultExtensions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439275"><span class="hs-identifier hs-var">bi</span></a></span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- | Whether any modules in this component use Template Haskell or</span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- Quasi Quotes</span><span>
+</span><span id="line-247"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#usesTemplateHaskellOrQQ"><span class="hs-identifier hs-type">usesTemplateHaskellOrQQ</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-248"></span><span id="usesTemplateHaskellOrQQ"><span class="annot"><span class="annottext">usesTemplateHaskellOrQQ :: BuildInfo -&gt; Bool
+</span><a href="Distribution.Types.BuildInfo.html#usesTemplateHaskellOrQQ"><span class="hs-identifier hs-var hs-var">usesTemplateHaskellOrQQ</span></a></span></span><span> </span><span id="local-6989586621679439276"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439276"><span class="hs-identifier hs-var">bi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Extension -&gt; Bool) -&gt; [Extension] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#any/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="annot"><span class="annottext">Extension -&gt; Bool
+</span><a href="#local-6989586621679439278"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BuildInfo -&gt; [Extension]
+</span><a href="Distribution.Types.BuildInfo.html#allExtensions"><span class="hs-identifier hs-var">allExtensions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439276"><span class="hs-identifier hs-var">bi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-250"></span><span>    </span><span id="local-6989586621679439278"><span class="annot"><span class="annottext">p :: Extension -&gt; Bool
+</span><a href="#local-6989586621679439278"><span class="hs-identifier hs-var hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679439281"><span class="annot"><span class="annottext">Extension
+</span><a href="#local-6989586621679439281"><span class="hs-identifier hs-var">ex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Extension
+</span><a href="#local-6989586621679439281"><span class="hs-identifier hs-var">ex</span></a></span><span> </span><span class="annot"><span class="annottext">Extension -&gt; [Extension] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#elem/Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span>
+</span><span id="line-251"></span><span>      </span><span class="hs-special">[</span><span class="annot"><span class="annottext">KnownExtension -&gt; Extension
+</span><a href="Language.Haskell.Extension.html#EnableExtension"><span class="hs-identifier hs-var">EnableExtension</span></a></span><span> </span><span class="annot"><span class="annottext">KnownExtension
+</span><a href="Language.Haskell.Extension.html#TemplateHaskell"><span class="hs-identifier hs-var">TemplateHaskell</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KnownExtension -&gt; Extension
+</span><a href="Language.Haskell.Extension.html#EnableExtension"><span class="hs-identifier hs-var">EnableExtension</span></a></span><span> </span><span class="annot"><span class="annottext">KnownExtension
+</span><a href="Language.Haskell.Extension.html#QuasiQuotes"><span class="hs-identifier hs-var">QuasiQuotes</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-252"></span><span>
+</span><span id="line-253"></span><span class="annot"><span class="hs-comment">-- |Select options for a particular Haskell compiler.</span></span><span>
+</span><span id="line-254"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcOptions"><span class="hs-identifier hs-type">hcOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#CompilerFlavor"><span class="hs-identifier hs-type">CompilerFlavor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-255"></span><span id="hcOptions"><span class="annot"><span class="annottext">hcOptions :: CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#hcOptions"><span class="hs-identifier hs-var hs-var">hcOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#lookupHcOptions"><span class="hs-identifier hs-var">lookupHcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#options"><span class="hs-identifier hs-var">options</span></a></span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcProfOptions"><span class="hs-identifier hs-type">hcProfOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#CompilerFlavor"><span class="hs-identifier hs-type">CompilerFlavor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-258"></span><span id="hcProfOptions"><span class="annot"><span class="annottext">hcProfOptions :: CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#hcProfOptions"><span class="hs-identifier hs-var hs-var">hcProfOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#lookupHcOptions"><span class="hs-identifier hs-var">lookupHcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#profOptions"><span class="hs-identifier hs-var">profOptions</span></a></span><span>
+</span><span id="line-259"></span><span>
+</span><span id="line-260"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcSharedOptions"><span class="hs-identifier hs-type">hcSharedOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#CompilerFlavor"><span class="hs-identifier hs-type">CompilerFlavor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-261"></span><span id="hcSharedOptions"><span class="annot"><span class="annottext">hcSharedOptions :: CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#hcSharedOptions"><span class="hs-identifier hs-var hs-var">hcSharedOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#lookupHcOptions"><span class="hs-identifier hs-var">lookupHcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#sharedOptions"><span class="hs-identifier hs-var">sharedOptions</span></a></span><span>
+</span><span id="line-262"></span><span>
+</span><span id="line-263"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#hcStaticOptions"><span class="hs-identifier hs-type">hcStaticOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#CompilerFlavor"><span class="hs-identifier hs-type">CompilerFlavor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-264"></span><span id="hcStaticOptions"><span class="annot"><span class="annottext">hcStaticOptions :: CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#hcStaticOptions"><span class="hs-identifier hs-var hs-var">hcStaticOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#lookupHcOptions"><span class="hs-identifier hs-var">lookupHcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="Distribution.Types.BuildInfo.html#staticOptions"><span class="hs-identifier hs-var">staticOptions</span></a></span><span>
+</span><span id="line-265"></span><span>
+</span><span id="line-266"></span><span class="annot"><a href="Distribution.Types.BuildInfo.html#lookupHcOptions"><span class="hs-identifier hs-type">lookupHcOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#PerCompilerFlavor"><span class="hs-identifier hs-type">PerCompilerFlavor</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-267"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Compiler.html#CompilerFlavor"><span class="hs-identifier hs-type">CompilerFlavor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-268"></span><span id="lookupHcOptions"><span class="annot"><span class="annottext">lookupHcOptions :: (BuildInfo -&gt; PerCompilerFlavor [String])
+-&gt; CompilerFlavor -&gt; BuildInfo -&gt; [String]
+</span><a href="Distribution.Types.BuildInfo.html#lookupHcOptions"><span class="hs-identifier hs-var hs-var">lookupHcOptions</span></a></span></span><span> </span><span id="local-6989586621679439287"><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="#local-6989586621679439287"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679439288"><span class="annot"><span class="annottext">CompilerFlavor
+</span><a href="#local-6989586621679439288"><span class="hs-identifier hs-var">hc</span></a></span></span><span> </span><span id="local-6989586621679439289"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439289"><span class="hs-identifier hs-var">bi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; PerCompilerFlavor [String]
+</span><a href="#local-6989586621679439287"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679439289"><span class="hs-identifier hs-var">bi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-269"></span><span>    </span><span class="annot"><a href="Distribution.Compiler.html#PerCompilerFlavor"><span class="hs-identifier hs-type">PerCompilerFlavor</span></a></span><span> </span><span id="local-6989586621679439291"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679439291"><span class="hs-identifier hs-var">ghc</span></a></span></span><span> </span><span id="local-6989586621679439292"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679439292"><span class="hs-identifier hs-var">ghcjs</span></a></span></span><span>
+</span><span id="line-270"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CompilerFlavor
+</span><a href="#local-6989586621679439288"><span class="hs-identifier hs-var">hc</span></a></span><span> </span><span class="annot"><span class="annottext">CompilerFlavor -&gt; CompilerFlavor -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">CompilerFlavor
+</span><a href="Distribution.Compiler.html#GHC"><span class="hs-identifier hs-var">GHC</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679439291"><span class="hs-identifier hs-var">ghc</span></a></span><span>
+</span><span id="line-271"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CompilerFlavor
+</span><a href="#local-6989586621679439288"><span class="hs-identifier hs-var">hc</span></a></span><span> </span><span class="annot"><span class="annottext">CompilerFlavor -&gt; CompilerFlavor -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">CompilerFlavor
+</span><a href="Distribution.Compiler.html#GHCJS"><span class="hs-identifier hs-var">GHCJS</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679439292"><span class="hs-identifier hs-var">ghcjs</span></a></span><span>
+</span><span id="line-272"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-273"></span></pre></body></html>
