@@ -10,8 +10,7 @@ with pkgs.lib;
 let
   # For testing the transition from cardano-tracer-service-workbench to
   # cardano-tracer-service.
-  # useWorkbenchTracerService = true;
-  useWorkbenchTracerService = false;
+  useWorkbenchTracerService = true;
 
   ## Given an env config, evaluate it and produce the service.
   ##
