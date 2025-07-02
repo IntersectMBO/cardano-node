@@ -793,7 +793,7 @@ let
                   # Make it easier to download every log
                   {
                       logging = builtins.map
-                        (value: value // { logRoot="./logRoot"; })
+                        (value: value // { logRoot="/dev/null"; })
                         profileBundle.tracer-service.config.logging
                       ;
                   }

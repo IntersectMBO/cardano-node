@@ -18,8 +18,6 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import           System.Directory (makeAbsolute)
-import           System.FilePath ((</>))
 import           System.IO (hFlush)
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
@@ -35,7 +33,7 @@ writeTraceObjectsToFile
   -> Lock
   -> [TraceObject]
   -> IO ()
-writeTraceObjectsToFile registry loggingParams@LoggingParams{logRoot, logFormat} nodeName currentLogLock traceObjects = do
+writeTraceObjectsToFile registry loggingParams@LoggingParams{logFormat} nodeName currentLogLock traceObjects = do
   let converter :: TraceObject -> T.Text
       converter = case logFormat of
         ForHuman   -> traceTextForHuman
@@ -52,10 +50,8 @@ writeTraceObjectsToFile registry loggingParams@LoggingParams{logRoot, logFormat}
       let key = (nodeName, loggingParams)
       case Map.lookup key handleMap of
         Nothing -> do
-          rootDirAbs <- makeAbsolute logRoot
-
           let subDirForLogs :: FilePath
-              subDirForLogs = rootDirAbs </> T.unpack nodeName
+              subDirForLogs = "/dev/null"
 
           createEmptyLogRotation currentLogLock key registry subDirForLogs
           handles <- readRegistry registry

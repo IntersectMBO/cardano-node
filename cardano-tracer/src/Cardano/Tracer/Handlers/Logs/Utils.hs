@@ -21,8 +21,7 @@ import qualified Data.Map as Map
 import           Data.Maybe (isJust)
 import qualified Data.Text as T
 import           Data.Time.Clock (UTCTime)
-import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
-import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import           Data.Time.Format (defaultTimeLocale, parseTimeM)
 import           System.Directory
 import           System.FilePath (takeBaseName, takeExtension, takeFileName, (<.>), (</>))
 import           System.IO (IOMode (WriteMode), hClose, openFile)
@@ -60,16 +59,14 @@ createEmptyLogRotation
   -> FilePath
   -> IO ()
 createEmptyLogRotation currentLogLock key registry subDirForLogs = do
-  -- The root directory (as a parent for subDirForLogs) will be created as well if needed.
-  createDirectoryIfMissing True subDirForLogs
   createOrUpdateEmptyLog currentLogLock key registry subDirForLogs
 
 -- | Create an empty log file (with the current timestamp in the name).
 createOrUpdateEmptyLog :: Lock -> HandleRegistryKey -> HandleRegistry -> FilePath -> IO ()
-createOrUpdateEmptyLog currentLogLock key@(_, LoggingParams{logFormat = format}) registry subDirForLogs = do
+createOrUpdateEmptyLog currentLogLock key@(_, LoggingParams{logFormat = _format}) registry _subDirForLogs = do
   withLock currentLogLock do
-    ts <- formatTime defaultTimeLocale timeStampFormat . systemToUTCTime <$> getSystemTime
-    let pathToLog = subDirForLogs </> logPrefix <> ts <.> logExtension format
+
+    let pathToLog = "/dev/null"
 
     modifyRegistry_ registry \handles -> do
 
@@ -77,14 +74,13 @@ createOrUpdateEmptyLog currentLogLock key@(_, LoggingParams{logFormat = format})
         hClose handle
 
       newHandle <- openFile pathToLog WriteMode
-      updateSymlinkAtomically format subDirForLogs pathToLog
       let newMap = Map.insert key (newHandle, pathToLog) handles
       pure newMap
 
 -- this should be part of the atomical section that opens a new file;
 -- thus, updating the symlink becomes atomical, too.
-updateSymlinkAtomically :: LogFormat -> FilePath -> FilePath -> IO ()
-updateSymlinkAtomically format subDirForLogs pathToLog = do
+_updateSymlinkAtomically :: LogFormat -> FilePath -> FilePath -> IO ()
+_updateSymlinkAtomically format subDirForLogs pathToLog = do
   removeFile symlinkTmp
     `catches` [ Handler $ \(e :: IOException) -> if isDoesNotExistError e then pure () else throwIO e ] -- in case the temp file isn't there, don't rethrow
   createFileLink pathToLog symlinkTmp
