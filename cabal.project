@@ -20,7 +20,6 @@ packages:
   cardano-node
   cardano-node-capi
   cardano-node-chairman
-  cardano-rpc
   cardano-submit-api
   cardano-testnet
   cardano-tracer
@@ -80,3 +79,22 @@ if impl (ghc >= 9.12)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+
+source-repository-package
+    type: git
+    location: https://github.com/intersectmbo/cardano-api
+    -- mgalazyn/feature/add-cardano-rpc
+    tag: 9a2fb9c167d6437d7ccb36daac11ba2c3a22e90c
+    --sha256: sha256-Hljb6pRerQbNXXkMnV42/VnJRNcNsiaYXkvsssoUXas=
+    subdir: cardano-api
+            cardano-api-gen
+            cardano-rpc
+
+source-repository-package
+    type: git
+    location: https://github.com/intersectmbo/cardano-cli
+    -- mgalazyn/chore/remove-upstreamed-instances
+    tag: 386b22edd41820584857537203ca39caca61d158
+    --sha256: sha256-wsP5leh9EIgmG0wVLuaPizHFylvS8LGt7D2erLZbs5s=
+    subdir: cardano-cli

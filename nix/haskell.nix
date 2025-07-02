@@ -325,7 +325,11 @@ let
                   # also needs them to be quoted)
                   export WORKDIR=$TMP/testTracerExt
               '';
-            })
+          })
+          ({pkgs, ...}: {
+              packages.proto-lens-protobuf-types.components.library.build-tools = [ pkgs.protobuf ];
+              packages.cardano-rpc.components.library.build-tools = [ pkgs.protobuf ];
+          })
           ({ lib, pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
             # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
             # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
