@@ -107,14 +107,14 @@ instance ToJSON RemoteAddress where
       , "valency" .= raValency ra
       ]
 
-data NodeSetup a = NodeSetup
+data NodeSetup adr = NodeSetup
   { nodeId :: !Word64
   , nodeIPv4Address :: !(Maybe NodeIPv4Address)
   , nodeIPv6Address :: !(Maybe NodeIPv6Address)
-  , producers :: ![a]
+  , producers :: ![adr]
   } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance (FromJSON a) => FromJSON (NodeSetup a) where
+instance (FromJSON adr) => FromJSON (NodeSetup adr) where
   parseJSON = withObject "NodeSetup" $ \o ->
                 NodeSetup
                   <$> o .: "nodeId"
@@ -122,7 +122,7 @@ instance (FromJSON a) => FromJSON (NodeSetup a) where
                   <*> o .: "nodeIPv6Address"
                   <*> o .: "producers"
 
-instance (ToJSON a) => ToJSON (NodeSetup a) where
+instance (ToJSON adr) => ToJSON (NodeSetup adr) where
   toJSON ns =
     object
       [ "nodeId" .= nodeId ns
@@ -131,18 +131,23 @@ instance (ToJSON a) => ToJSON (NodeSetup a) where
       , "producers" .= producers ns
       ]
 
-data NetworkTopology a
-  = MockNodeTopology ![NodeSetup a]
-  | RealNodeTopology ![a]
+-- | Describes the non-P2P topology of a node. Whenever the node actually runs,
+-- the type parameter `adr` should be `RemoteAddress`. However, we might want to
+-- use and serialize this type with `adr` being `NodeId`, or another placeholder
+-- type, if we want the user to be able to edit the topology without knowing the
+-- actual addresses of the nodes: those might only be knowable at runtime.
+data NetworkTopology adr
+  = MockNodeTopology ![NodeSetup adr]
+  | RealNodeTopology ![adr]
   deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance (FromJSON a) => FromJSON (NetworkTopology a) where
+instance (FromJSON adr) => FromJSON (NetworkTopology adr) where
   parseJSON = withObject "NetworkTopology" $ \o -> asum
                 [ MockNodeTopology <$> o .: "MockProducers"
                 , RealNodeTopology <$> o .: "Producers"
                 ]
 
-instance (ToJSON a) => ToJSON (NetworkTopology a) where
+instance (ToJSON adr) => ToJSON (NetworkTopology adr) where
   toJSON top =
     case top of
       MockNodeTopology nss -> object [ "MockProducers" .= toJSON nss ]
@@ -152,9 +157,9 @@ instance (ToJSON a) => ToJSON (NetworkTopology a) where
 -- While running a real protocol, this gives your node its own address and
 -- other remote peers it will attempt to connect to.
 readTopologyFile :: ()
-  => (FromJSON  a)
+  => (FromJSON  adr)
   => NodeConfiguration
-  -> IO (Either Text (NetworkTopology a))
+  -> IO (Either Text (NetworkTopology adr))
 readTopologyFile nc = do
   eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
@@ -178,9 +183,9 @@ readTopologyFile nc = do
     ]
 
 readTopologyFileOrError :: ()
-  => (FromJSON a)
+  => (FromJSON adr)
   => NodeConfiguration
-  -> IO (NetworkTopology a)
+  -> IO (NetworkTopology adr)
 readTopologyFileOrError nc =
       readTopologyFile nc
   >>= either (\err -> error $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
