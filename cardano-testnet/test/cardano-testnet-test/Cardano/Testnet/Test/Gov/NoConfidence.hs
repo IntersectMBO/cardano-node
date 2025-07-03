@@ -105,7 +105,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   let conwayGenesisWithCommittee = defaultConwayGenesis { L.cgCommittee = committee }
 
   createTestnetEnv
-    fastTestnetOptions genesisOptions
+    fastTestnetOptions genesisOptions def
     NoUserProvidedData NoUserProvidedData (UserProvidedData conwayGenesisWithCommittee)
     conf
 
