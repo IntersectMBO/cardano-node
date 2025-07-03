@@ -9,7 +9,6 @@ module Cardano.Testnet.Test.P2PTopology
 
 import           Cardano.Api (BlockNo (..), ChainTip (..))
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
-import           Cardano.Node.Configuration.Topology (NodeId)
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Testnet hiding (shelleyGenesisFile)
 
@@ -24,7 +23,7 @@ import qualified System.Process as IO
 
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (GenesisOptions (..),
+import           Testnet.Start.Types (GenesisOptions (..), NodeId,
                    UserProvidedData (..), UserProvidedEnv (..), TopologyType (..))
 
 import           Hedgehog ((===))

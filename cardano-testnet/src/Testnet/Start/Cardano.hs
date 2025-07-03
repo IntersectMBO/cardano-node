@@ -30,7 +30,7 @@ import           Cardano.Api
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
-import           Cardano.Node.Configuration.Topology (NodeId(..), RemoteAddress(..))
+import           Cardano.Node.Configuration.Topology (RemoteAddress(..))
 import qualified Cardano.Node.Configuration.Topology as Direct
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
@@ -137,7 +137,7 @@ createTestnetEnv
         let topology = Direct.RealNodeTopology producers
         in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
       P2PTopology ->
-        let topology = P2P.defaultTopology producers
+        let topology = Defaults.defaultP2PTopology producers
         in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
