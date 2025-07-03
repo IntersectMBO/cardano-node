@@ -57,7 +57,8 @@ in pkgs.commonLib.defServiceModule
 
       svcPackageSelector =
         pkgs: ## Local:
-              pkgs.cardanoNodePackages.tx-generator
+              ## Avoid rebuilding on every commit because of `set-git-rev`.
+              pkgs.cardanoNodePackages.tx-generator.passthru.noGitRev
               ## Imported by another repo, that adds an overlay:
                 or pkgs.tx-generator;
               ## TODO:  that's actually a bit ugly and could be improved.

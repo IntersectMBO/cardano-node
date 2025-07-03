@@ -166,9 +166,9 @@ let
       };
       tx-generator = rec {
         # Local reference only used if not "cloud".
-        nix-store-path = pkgs.cardanoNodePackages.tx-generator;
+        nix-store-path = pkgs.cardanoNodePackages.tx-generator.passthru.noGitRev;
         flake-reference = "github:intersectmbo/cardano-node";
-        flake-output = "cardanoNodePackages.tx-generator";
+        flake-output = "cardanoNodePackages.tx-generator.passthru.noGitRev";
       };
     }
   ;

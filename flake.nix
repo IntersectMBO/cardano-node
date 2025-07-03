@@ -129,7 +129,7 @@
         # Add some executables from other relevant packages
         inherit (bech32.components.exes) bech32;
         inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
-        # Add cardano-node and cardano-cli with their git revision stamp.
+        # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
         # Keep available an alternative without the git revision, like the other
         # passthru (profiled and asserted in nix/haskell.nix) that
         # have no git revision but for the same compilation alternative.
@@ -140,10 +140,17 @@
                {passthru = {noGitRev = node;};}
         ;
         cardano-cli =
-          let cli  = cardano-cli.components.exes.cardano-cli;
+          let cli = cardano-cli.components.exes.cardano-cli;
           in lib.recursiveUpdate
                (set-git-rev cli)
                {passthru = {noGitRev = cli;};}
+        ;
+      } // optionalAttrs (project.exes ? tx-generator) {
+        tx-generator =
+          let tx-gen = project.exes.tx-generator;
+          in lib.recursiveUpdate
+               (set-git-rev tx-gen)
+               {passthru = {noGitRev = tx-gen;};}
         ;
       });
 
@@ -323,16 +330,7 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "linux";
-                  exes = lib.collect lib.isDerivation (
-                    # FIXME: restore tx-generator and gen-plutus once
-                    #        plutus-scripts-bench is fixed for musl
-                    #
-                    # It stands to question though, whether or not we want those to be
-                    # in the cardano-node-linux as executables anyway?
-                    #
-                    # Also explicitly excluded from musl in nix/haskell.nix.
-                    removeAttrs projectExes ["tx-generator" "gen-plutus"]
-                  );
+                  exes = lib.collect lib.isDerivation projectExes;
                 };
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
@@ -348,10 +346,7 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "win64";
-                  exes = lib.collect lib.isDerivation (
-                    # FIXME: restore tx-generator once plutus-scripts-bench is fixed for windows:
-                    removeAttrs projectExes ["tx-generator"]
-                  );
+                  exes = lib.collect lib.isDerivation projectExes;
                 };
                 internal.roots.project = windowsProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
@@ -383,11 +378,6 @@
           [
             # FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
             "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
-            # FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
-            "windows\\.(.*\\.)?tx-generator.*"
-            # FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
-            "musl\\.(.*\\.)?tx-generator.*"
-            "musl\\.(.*\\.)?gen-plutus.*"
             # hlint required status is controlled via the github action:
             "native\\.(.*\\.)?checks/hlint"
             # system-tests are build and run separately:
@@ -474,7 +464,7 @@
             customConfig.haskellNix
           ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser tx-generator;
       };
       nixosModules = {
         cardano-node = {
