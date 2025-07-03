@@ -144,7 +144,7 @@ project.shellFor {
        cardano-topology
        cardano-tracer
        locli
-       tx-generator
+       tx-generator.passthru.noGitRev
      ]
   # Include the workbench as a derivation or use the sources directly ?
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
