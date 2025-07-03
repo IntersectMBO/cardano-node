@@ -323,16 +323,7 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "linux";
-                  exes = lib.collect lib.isDerivation (
-                    # FIXME: restore tx-generator and gen-plutus once
-                    #        plutus-scripts-bench is fixed for musl
-                    #
-                    # It stands to question though, whether or not we want those to be
-                    # in the cardano-node-linux as executables anyway?
-                    #
-                    # Also explicitly excluded from musl in nix/haskell.nix.
-                    removeAttrs projectExes ["tx-generator" "gen-plutus"]
-                  );
+                  exes = lib.collect lib.isDerivation projectExes;
                 };
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
@@ -385,9 +376,6 @@
             "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
             # FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
             "windows\\.(.*\\.)?tx-generator.*"
-            # FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
-            "musl\\.(.*\\.)?tx-generator.*"
-            "musl\\.(.*\\.)?gen-plutus.*"
             # hlint required status is controlled via the github action:
             "native\\.(.*\\.)?checks/hlint"
             # system-tests are build and run separately:
