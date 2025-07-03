@@ -28,6 +28,7 @@ in {
               }
             ];
           };
+          tracerSocketPathConnect = i: "/run/cardano-tracer/tracer.socket";
 
           # Default tracing system logging is to stdout and default prometheus
           # metrics are exported to localhost on port 12798.
@@ -39,6 +40,25 @@ in {
           port = 8101;
           network = environment;
           socketPath = config.services.cardano-node.socketPath 0;
+        };
+
+        cardano-tracer = {
+          inherit environment;
+
+          enable = true;
+
+          # Default tracing system logging from nixos tracing service is
+          # journal mode and default prometheus metrics are exported to
+          # localhost on port 12808.
+          #
+          # Switch to file mode for non-zero file size logging check.
+          logging = [
+            {
+              logRoot = config.services.cardano-tracer.stateDir;
+              logMode = "FileMode";
+              logFormat = "ForHuman";
+            }
+          ];
         };
       };
 
@@ -53,6 +73,8 @@ in {
   # Use the generic wait_until_succeeds w/ timeout arg until nixpkgs is bumped.
   testScript = ''
     start_all()
+
+    # Cardano-node tests:
     machine.wait_for_unit("cardano-node.service", timeout=${timeout})
     machine.wait_until_succeeds("[ -S /run/cardano-node/node.socket ]", timeout=${timeout})
     machine.wait_until_succeeds("nc -z localhost 12798", timeout=${timeout})
@@ -62,7 +84,17 @@ in {
       "${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -h 127.0.0.1 -c 1 -q --json | ${jq}/bin/jq -c"
     )
     print("ping:", out)
+
+    # Cardano-submit-api tests:
+    machine.wait_for_unit("cardano-submit-api.service", timeout=${timeout})
     machine.wait_until_succeeds("nc -z localhost 8101", timeout=${timeout})
     machine.succeed("systemctl status cardano-submit-api")
+
+    # Cardano-tracer tests:
+    machine.wait_for_unit("cardano-tracer.service", timeout=${timeout})
+    machine.wait_until_succeeds("[ -S /run/cardano-tracer/tracer.socket ]", timeout=${timeout})
+    machine.wait_until_succeeds("nc -z localhost 12808", timeout=${timeout})
+    machine.succeed("systemctl status cardano-tracer")
+    machine.succeed("[ -s /var/lib/cardano-tracer/machine_3001/node.log ]")
   '';
 }
