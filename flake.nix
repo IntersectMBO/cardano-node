@@ -129,7 +129,7 @@
         # Add some executables from other relevant packages
         inherit (bech32.components.exes) bech32;
         inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
-        # Add cardano-node and cardano-cli with their git revision stamp.
+        # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
         # Keep available an alternative without the git revision, like the other
         # passthru (profiled and asserted in nix/haskell.nix) that
         # have no git revision but for the same compilation alternative.
@@ -140,10 +140,17 @@
                {passthru = {noGitRev = node;};}
         ;
         cardano-cli =
-          let cli  = cardano-cli.components.exes.cardano-cli;
+          let cli = cardano-cli.components.exes.cardano-cli;
           in lib.recursiveUpdate
                (set-git-rev cli)
                {passthru = {noGitRev = cli;};}
+        ;
+      } // optionalAttrs (project.exes ? tx-generator) {
+        tx-generator =
+          let tx-gen = project.exes.tx-generator;
+          in lib.recursiveUpdate
+               (set-git-rev tx-gen)
+               {passthru = {noGitRev = tx-gen;};}
         ;
       });
 
@@ -457,7 +464,7 @@
             customConfig.haskellNix
           ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser tx-generator;
       };
       nixosModules = {
         cardano-node = {
