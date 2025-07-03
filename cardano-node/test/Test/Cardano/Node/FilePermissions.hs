@@ -48,7 +48,7 @@ import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
 import           Hedgehog
-import           Hedgehog.Extras
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
 #endif
 
@@ -135,7 +135,7 @@ prop_sanityCheck_checkVRFFilePermissions =
                         (const . liftIO . runExceptT $ checkVRFFilePermissions capturingTracer vrfPrivateKeyGroup)
     case groupResult of
       Left (GroupPermissionsExist _) -> do
-        note_ "Group permissions check should not fail"
+        H.note_ "Group permissions check should not fail"
         failure
       Left err ->
         failWith Nothing $ "checkVRFFilePermissions should not have failed with error: "

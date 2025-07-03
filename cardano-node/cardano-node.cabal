@@ -258,6 +258,7 @@ test-suite cardano-node-test
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-api
+                      , cardano-rpc
                       , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting

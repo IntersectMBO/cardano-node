@@ -142,6 +142,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
+                      , rio
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
                       , ouroboros-consensus-diffusion >= 0.7.0
