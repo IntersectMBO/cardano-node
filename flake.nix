@@ -331,7 +331,7 @@
                     # in the cardano-node-linux as executables anyway?
                     #
                     # Also explicitly excluded from musl in nix/haskell.nix.
-                    removeAttrs projectExes ["tx-generator" "gen-plutus"]
+                    removeAttrs projectExes ["tx-generator" "gen-plutus" "demo-acceptor" "demo-forwarder"]
                   );
                 };
                 internal.roots.project = muslProject.roots;
@@ -369,7 +369,9 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "macos";
-                  exes = lib.collect lib.isDerivation (collectExes project);
+                  exes = lib.collect lib.isDerivation (
+                    removeAttrs (collectExes project) ["demo-acceptor" "demo-forwarder"]
+                  );
                 };
                 shells = removeAttrs devShells ["profiled"];
                 internal = {
