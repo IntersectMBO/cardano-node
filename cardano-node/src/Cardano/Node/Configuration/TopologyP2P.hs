@@ -19,7 +19,6 @@ module Cardano.Node.Configuration.TopologyP2P
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
   , PeerAdvertise(..)
-  , defaultTopology
   , nodeAddressToSockAddr
   , readTopologyFile
   , readPeerSnapshotFile
@@ -296,34 +295,6 @@ readPeerSnapshotFile  (PeerSnapshotFile peerSnapshotFile) =
     either error pure =<< eitherDecodeFileStrict peerSnapshotFile
   where
     handleException = handleAny $ \e -> error $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> displayException e
-
-defaultTopology :: [adr] -> NetworkTopology adr
-defaultTopology addresses = RealNodeTopology
-  { ntLocalRootPeersGroups = LocalRootPeersGroups
-    { groups = [
-        LocalRootPeersGroup
-          { localRoots = RootConfig
-            { rootAccessPoints = addresses
-            , rootAdvertise = DoNotAdvertisePeer
-            }
-          , hotValency = HotValency 1
-          , warmValency = WarmValency 1
-          , trustable = IsTrustable
-          , rootDiffusionMode = InitiatorAndResponderDiffusionMode
-          }
-      ]
-    }
-  , ntPublicRootPeers =
-    [ PublicRootPeers
-        RootConfig
-        { rootAccessPoints = []
-        , rootAdvertise = DoNotAdvertisePeer
-        }
-    ]
-  , ntUseLedgerPeers = DontUseLedgerPeers
-  , ntUseBootstrapPeers = DontUseBootstrapPeers
-  , ntPeerSnapshotPath = Nothing
-  }
 
 --
 -- Checking for chance of progress in bootstrap phase
