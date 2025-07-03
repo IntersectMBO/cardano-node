@@ -340,10 +340,7 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "win64";
-                  exes = lib.collect lib.isDerivation (
-                    # FIXME: restore tx-generator once plutus-scripts-bench is fixed for windows:
-                    removeAttrs projectExes ["tx-generator"]
-                  );
+                  exes = lib.collect lib.isDerivation projectExes;
                 };
                 internal.roots.project = windowsProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
@@ -375,8 +372,6 @@
           [
             # FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
             "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
-            # FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
-            "windows\\.(.*\\.)?tx-generator.*"
             # hlint required status is controlled via the github action:
             "native\\.(.*\\.)?checks/hlint"
             # system-tests are build and run separately:
