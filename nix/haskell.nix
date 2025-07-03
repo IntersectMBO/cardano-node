@@ -116,7 +116,6 @@ let
           ({ lib, pkgs, ... }: {
             packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
-            packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; !isMusl;
 
             packages.fs-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
