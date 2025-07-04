@@ -46,6 +46,7 @@ module Cardano.Testnet (
   TestnetNode(..),
   isTestnetNodeSpo,
   nodeSocketPath,
+  nodeRpcSocketPath,
   ) where
 
 import           Testnet.Components.Query
