@@ -2223,40 +2223,39 @@ instance MetaTrace V1.BackingStoreValueHandleTrace where
     ]
 
 instance LogFormatting V2.FlavorImplSpecificTrace where
-  forMachine _dtal V2.FlavorImplSpecificTraceInMemory =
-    mconcat [ "kind" .= String "InMemory" ]
-  forMachine _dtal V2.FlavorImplSpecificTraceOnDisk =
-    mconcat [ "kind" .= String "OnDisk" ]
+  forMachine _dtal V2.TraceLedgerTablesHandleCreate =
+    mconcat [ "kind" .= String "LedgerTablesHandleCreate" ]
+  forMachine _dtal V2.TraceLedgerTablesHandleClose =
+    mconcat [ "kind" .= String "LedgerTablesHandleClose" ]
 
-  forHuman V2.FlavorImplSpecificTraceInMemory =
-    "An in-memory backing store event was traced"
-  forHuman V2.FlavorImplSpecificTraceOnDisk =
-    "An on-disk backing store event was traced"
+  forHuman V2.TraceLedgerTablesHandleCreate =
+    "A ledger tables handle was created"
+  forHuman V2.TraceLedgerTablesHandleClose =
+    "A ledger tables handle was closed"
 
 instance MetaTrace V2.FlavorImplSpecificTrace where
-  namespaceFor V2.FlavorImplSpecificTraceInMemory =
-    Namespace [] ["InMemory"]
-  namespaceFor V2.FlavorImplSpecificTraceOnDisk =
-    Namespace [] ["OnDisk"]
+  namespaceFor V2.TraceLedgerTablesHandleCreate =
+    Namespace [] ["LedgerTablesHandleCreate"]
+  namespaceFor V2.TraceLedgerTablesHandleClose =
+    Namespace [] ["LedgerTablesHandleClose"]
 
-  severityFor (Namespace _ ["InMemory"]) _ = Just Info
-  severityFor (Namespace _ ["OnDisk"])   _ = Just Info
-  severityFor _                          _ = Nothing
+  severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandleClose"])  _ = Just Debug
+  severityFor _                                          _ = Nothing
 
-  -- suspicious
-  privacyFor (Namespace _ ["InMemory"]) _ = Just Public
-  privacyFor (Namespace _ ["OnDisk"])   _ = Just Public
-  privacyFor _                          _ = Just Public
+  privacyFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Public
+  privacyFor (Namespace _ ["LedgerTablesHandleClose"])  _ = Just Public
+  privacyFor _                                          _ = Just Public
 
-  documentFor (Namespace _ ["InMemory"]) =
-    Just "An in-memory backing store event"
-  documentFor (Namespace _ ["OnDisk"]) =
-    Just "An on-disk backing store event"
+  documentFor (Namespace _ ["LedgerTablesHandleCreate"]) =
+    Just "A ledger tables handle was created"
+  documentFor (Namespace _ ["LedgerTablesHandleClose"]) =
+    Just "A ledger tables handle was closed"
   documentFor _ = Nothing
 
   allNamespaces =
-    [ Namespace [] ["InMemory"]
-    , Namespace [] ["OnDisk"]
+    [ Namespace [] ["LedgerTablesHandleCreate"]
+    , Namespace [] ["LedgerTablesHandleClose"]
     ]
 
 --------------------------------------------------------------------------------
