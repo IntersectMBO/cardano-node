@@ -35,7 +35,7 @@ baseInternal =
   . composeFiftytwo
   . P.maxBlockSize 88000
   -- All cloud profiles use trace forwarding.
-  . P.traceForwardingOff
+  . P.traceForwardingOn
   . P.initCooldown 45
   . P.analysisStandard
 
