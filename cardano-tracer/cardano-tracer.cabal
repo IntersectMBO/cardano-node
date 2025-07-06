@@ -197,8 +197,8 @@ library
                       , string-qq
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.9.2
-                      , trace-forward ^>= 2.2.11
+                      , trace-dispatcher ^>= 2.10.0
+                      , trace-forward ^>= 2.3.0
                       , trace-resources ^>= 0.2.3
                       , wai ^>= 3.2
                       , warp ^>= 3.4
