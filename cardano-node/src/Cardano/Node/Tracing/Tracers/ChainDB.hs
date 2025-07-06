@@ -60,6 +60,7 @@ import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Data.Aeson (Object, Value (String), object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -1772,6 +1773,14 @@ instance ( StandardHash blk
           LedgerDB.MetadataBackendMismatch ->
              " Snapshot was created for a different backend. Convert it with `snapshot-converter`."
         _ -> ""
+  forHuman (LedgerDB.SnapshotRequestDelayed _snapshotRequestTime delayBeforeSnapshotting slots) =
+    Text.unwords ["Scheduling to take ledger state snapshots at slots "
+                 , showT (NonEmpty.toList slots)
+                 , ", with a randomised delay of"
+                 , showT delayBeforeSnapshotting
+                 ]
+  forHuman (LedgerDB.SnapshotRequestCompleted) = "Completed taking a ledger state snapshot"
+
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
@@ -1786,11 +1795,23 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "InvalidSnapshot"
             , "snapshot" .= forMachine dtals snap
             , "failure" .= show failure ]
+  forMachine _dtals (LedgerDB.SnapshotRequestDelayed snapshotRequestTime delayBeforeSnapshotting slots) =
+    mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestDelayed"
+             , "requestTime" .= show snapshotRequestTime
+             , "delayBeforeSnapshotting " .= show delayBeforeSnapshotting
+             , "slots" .= show slots
+             ]
+  forMachine _dtals (LedgerDB.SnapshotRequestCompleted) =
+    mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestCompleted"
+             ]
+
 
 instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
+    namespaceFor LedgerDB.SnapshotRequestDelayed {}  = Namespace [] ["SnapshotRequestDelayed"]
+    namespaceFor LedgerDB.SnapshotRequestCompleted {} = Namespace [] ["SnapshotRequestCompleted"]
 
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
@@ -1809,6 +1830,10 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
          , " seems to be from an old node or different backend, it will"
          , " be deleted"
          ]
+    documentFor (Namespace _ ["SnapshotRequestDelayed"]) = Just
+        "A delayed snapshot requested was issued. The snapshot will be initiated at the specified timestamp, with the specified delay and for the specified slots"
+    documentFor (Namespace _ ["SnapshotRequestCompleted"]) = Just
+        "The delayed snapshot request was completed"
     documentFor _ = Nothing
 
     allNamespaces =

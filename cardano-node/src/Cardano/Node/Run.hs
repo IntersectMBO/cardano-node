@@ -656,14 +656,10 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
         Just version_ -> Map.takeWhileAntitone (<= version_)
 
   LedgerDbConfiguration
-    snapInterval
-    numSnaps
+    snapshotPolicyArgs
     queryBatchSize
     ldbBackend
     deprecatedOpts = ncLedgerDbConfig nc
-
-  snapshotPolicyArgs :: SnapshotPolicyArgs
-  snapshotPolicyArgs = SnapshotPolicyArgs numSnaps snapInterval
 
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers

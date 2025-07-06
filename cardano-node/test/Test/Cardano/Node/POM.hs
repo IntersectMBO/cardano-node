@@ -24,8 +24,7 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (defaultSnapshotPolicyArgs)
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
@@ -297,7 +296,7 @@ eExpectedConfig = do
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
     , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
-    , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
+    , ncLedgerDbConfig = LedgerDbConfiguration defaultSnapshotPolicyArgs DefaultQueryBatchSize V2InMemory noDeprecatedOptions
     , ncRpcConfig
     , ncTxSubmissionLogicVersion = TxSubmissionLogicV1
     , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
