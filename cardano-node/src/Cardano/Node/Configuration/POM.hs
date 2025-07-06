@@ -28,6 +28,7 @@ module Cardano.Node.Configuration.POM
 where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
+import           Cardano.Ledger.BaseTypes
 import           Cardano.Logging.Types
 import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConsensusMode)
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
@@ -47,8 +48,9 @@ import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (OverrideOrDefault (..),
+                   SnapshotDelayRange (..), SnapshotFrequency (..), SnapshotFrequencyArgs (..),
+                   SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs)
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
@@ -510,8 +512,14 @@ instance FromJSON PartialNodeConfiguration where
               Nothing -> return Nothing
 
       parseLedgerDbConfig v = do
-        let snapInterval x = fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> x .:? "SnapshotInterval"
-            snapNum x      = fmap RequestedNumOfDiskSnapshots <$> x .:? "NumOfDiskSnapshots"
+        -- TODO maybe don't silently convert old format (which was in seconds)
+        -- to new format (which is in slots), despite these being the same on
+        -- mainnet?
+        let snapInterval x = do
+              si <- x .:? "SnapshotInterval"
+              when (any (<= 0) si) $ fail $ "Non-positive SnapshotInterval: " <> show si
+              pure $ Override . SlotNo <$> si
+            snapNum x      = fmap Override <$> x .:? "NumOfDiskSnapshots"
 
         mTopLevelSnapInterval <- snapInterval v
         mTopLevelSnapNum <- snapNum v
@@ -525,12 +533,32 @@ instance FromJSON PartialNodeConfiguration where
         mLedgerDB <- v .:? "LedgerDB"
         case mLedgerDB of
            Nothing -> do
-             let si = fromMaybe DefaultSnapshotInterval mTopLevelSnapInterval
-                 sn = fromMaybe DefaultNumOfDiskSnapshots mTopLevelSnapNum
-             return $ Just $ LedgerDbConfiguration sn si DefaultQueryBatchSize V2InMemory deprecatedOpts
+             let si = fromMaybe UseDefault mTopLevelSnapInterval
+                 sn = fromMaybe UseDefault mTopLevelSnapNum
+                 sf = SnapshotFrequencyArgs {
+                     sfaInterval = unsafeNonZero . unSlotNo <$> si
+                   , sfaOffset = UseDefault
+                   , sfaRateLimit = UseDefault
+                   , sfaDelaySnapshotRange = UseDefault
+                   }
+                 spArgs = SnapshotPolicyArgs (SnapshotFrequency sf) sn
+             return $ Just $ LedgerDbConfiguration spArgs DefaultQueryBatchSize V2InMemory deprecatedOpts
            Just ledgerDB -> flip (withObject "LedgerDB") ledgerDB $ \o -> do
-             ldbSnapInterval <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval o) .!= DefaultSnapshotInterval
-             ldbSnapNum      <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum o)           .!= DefaultNumOfDiskSnapshots
+             ldbSnapInterval <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval o) .!= UseDefault
+             ldbSnapNum      <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum o)           .!= UseDefault
+             ldbSnapOffset   <- (fmap Override <$> o .:? "SlotOffset") .!= UseDefault
+             ldbSnapRateLimit<- (fmap (Override . secondsToDiffTime) <$> o .:? "RateLimit") .!= UseDefault
+             ldbSnapMinDelay <- o .:? "MinDelay"
+             ldbSnapMaxDelay <- o .:? "MaxDelay"
+             ldbSnapDelayRange <-
+                   case (ldbSnapMinDelay, ldbSnapMaxDelay) of
+                     (Just minDelay, Just maxDelay) ->
+                       if minDelay <= maxDelay then
+                         pure (Override (SnapshotDelayRange (secondsToDiffTime minDelay) (secondsToDiffTime maxDelay)))
+                       else fail $ "Invalid ledger snapshot delay range, MinDelay > MaxDelay: "
+                                 <> show minDelay <> " > " <> show maxDelay
+                     -- use the default delay range if either min or max is unspecified
+                     _ -> pure UseDefault
              qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
              backend         <- o .:? "Backend" .!= "V2InMemory"
              selector        <- case backend of
@@ -545,7 +573,14 @@ instance FromJSON PartialNodeConfiguration where
                  lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
                  pure $ V2LSM lsmPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
-             pure $ Just $ LedgerDbConfiguration ldbSnapNum ldbSnapInterval qsize selector deprecatedOpts
+             let sf = SnapshotFrequencyArgs {
+                     sfaInterval = unsafeNonZero . unSlotNo <$> ldbSnapInterval
+                   , sfaOffset = ldbSnapOffset
+                   , sfaRateLimit = ldbSnapRateLimit
+                   , sfaDelaySnapshotRange = ldbSnapDelayRange
+                   }
+                 spArgs = SnapshotPolicyArgs (SnapshotFrequency sf) ldbSnapNum
+             pure $ Just $ LedgerDbConfiguration spArgs qsize selector deprecatedOpts
 
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"
@@ -712,8 +747,7 @@ defaultPartialNodeConfiguration =
     , pncLedgerDbConfig =
         Last $ Just $
           LedgerDbConfiguration
-            DefaultNumOfDiskSnapshots
-            DefaultSnapshotInterval
+            defaultSnapshotPolicyArgs
             DefaultQueryBatchSize
             V2InMemory
             noDeprecatedOptions
