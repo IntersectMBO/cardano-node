@@ -21,7 +21,12 @@ let serviceConfigToJSON =
           logMode   = "FileMode";
           logFormat = "ForMachine";
         }];
-        rotation = null;
+        rotation = {
+          rpFrequencySecs = 15;
+          rpKeepFilesNum  = 10;
+          rpLogLimitBytes = 1000000000;
+          rpMaxAgeHours   = 24;
+        } // (cfg.rotation or {});
 
         hasEKG = {
           epHost  = "127.0.0.1"; 

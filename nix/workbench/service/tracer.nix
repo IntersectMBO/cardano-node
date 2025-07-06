@@ -27,7 +27,7 @@ let
             rtsOpts = [ "-scardano-tracer.gcstats" ];
           };
           configFile     = "config.json";
-          logRoot        = "/dev/null";
+          logRoot        = ".";
           metricsHelp    = "../../../cardano-tracer/configuration/metrics_help.json";
         } // optionalAttrs backend.useCabalRun {
           executable     = "cardano-tracer";
