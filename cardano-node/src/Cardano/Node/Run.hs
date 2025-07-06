@@ -724,14 +724,10 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         Just version_ -> Map.takeWhileAntitone (<= version_)
 
   LedgerDbConfiguration
-    snapInterval
-    numSnaps
+    snapshotPolicyArgs
     queryBatchSize
     ldbBackend
     deprecatedOpts = ncLedgerDbConfig nc
-
-  snapshotPolicyArgs :: SnapshotPolicyArgs
-  snapshotPolicyArgs = SnapshotPolicyArgs numSnaps snapInterval
 
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers
