@@ -55,6 +55,7 @@ library
                       , cardano-ledger-shelley
                       , cardano-node
                       , cardano-ping ^>= 0.8
+                      , cardano-prelude
                       , contra-tracer
                       , containers
                       , data-default-class
