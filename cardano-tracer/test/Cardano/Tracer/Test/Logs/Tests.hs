@@ -1,5 +1,3 @@
-{-# options_ghc -w #-}
-
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 

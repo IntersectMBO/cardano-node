@@ -173,12 +173,12 @@ parseTracerSocketMode =
   asum
     [ fmap (, Responder) $ option parseNodeAddress $ mconcat
       [ long "tracer-socket-network-accept"
-      , help "Accept incoming cardano-tracer connection at local socket"
+      , help "Accept incoming cardano-tracer connection on HOST:PORT"
       , metavar "HOST:PORT"
       ]
     , fmap (, Initiator) $ option parseNodeAddress $ mconcat
       [ long "tracer-socket-network-connect"
-      , help "Connect to incoming cardano-tracer connection at HOST:PORT."
+      , help "Connect to cardano-tracer listening on HOST:PORT"
       , metavar "HOST:PORT"
       ]
     , fmap (\host -> (Net.LocalPipe host, Responder)) $ strOption $ mconcat

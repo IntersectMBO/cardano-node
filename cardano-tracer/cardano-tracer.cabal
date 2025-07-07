@@ -422,7 +422,7 @@ test-suite cardano-tracer-test-ext
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , process
                       , QuickCheck

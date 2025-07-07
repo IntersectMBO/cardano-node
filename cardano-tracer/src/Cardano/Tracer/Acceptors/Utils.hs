@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
 module Cardano.Tracer.Acceptors.Utils
   ( prepareDataPointRequestor
   , prepareMetricsStores
@@ -17,7 +19,6 @@ import           Cardano.Tracer.Handlers.Notifications.Utils
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
-import           Ouroboros.Network.Snocket (LocalAddress)
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
 import           Control.Concurrent.STM (atomically)
@@ -100,8 +101,9 @@ removeDisconnectedNode tracerEnv connId =
   nodeId = connIdToNodeId connId
 
 notifyAboutNodeDisconnected
-  :: TracerEnvRTView
-  -> ConnectionId LocalAddress
+  :: Show addr
+  => TracerEnvRTView
+  -> ConnectionId addr
   -> IO ()
 #if RTVIEW
 notifyAboutNodeDisconnected TracerEnvRTView{teEventsQueues} connId = do

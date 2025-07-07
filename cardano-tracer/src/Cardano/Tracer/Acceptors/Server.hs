@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE LambdaCase #-}
 
 module Cardano.Tracer.Acceptors.Server
   ( runAcceptorsServer
@@ -58,10 +57,6 @@ import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsResp)
 import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsResp)
 
-toAddress :: Net.HowToConnect -> String
-toAddress = \case
-  Net.LocalPipe pipe -> pipe
-  Net.RemoteSocket host port -> Text.unpack host ++ ":" ++ show port
 
 runAcceptorsServer
   :: TracerEnv
@@ -74,7 +69,7 @@ runAcceptorsServer
   -> IO ()
 runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig, dpfConfig) =
   withIOManager \iocp -> do
-  traceWith (teTracer tracerEnv) $ TracerSockListen (toAddress howToConnect)
+  traceWith (teTracer tracerEnv) $ TracerSockListen (Net.howToConnectString howToConnect)
   case howToConnect of
     Net.LocalPipe p ->
       doListenToForwarderLocal

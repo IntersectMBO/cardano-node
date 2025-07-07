@@ -32,8 +32,6 @@ import qualified Cardano.Logging.Types as Log
 import           Control.Applicative ((<|>))
 import           Data.Aeson (FromJSON (..), ToJSON (..), withText, withObject, (.:))
 import           Data.Aeson.Types (Parser, Value)
-import qualified Data.Aeson.Types as Aeson
-import           Data.Char (isDigit)
 import           Data.Fixed (Pico)
 import           Data.Function ((&))
 import           Data.Functor ((<&>))
@@ -47,12 +45,12 @@ import           Data.Maybe (catMaybes)
 import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Read as Text
 import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 import           System.Exit (die)
-import           Text.Read (readMaybe)
 
 import           Cardano.Logging.Types (HowToConnect)
 import qualified Cardano.Logging.Types as Net
@@ -64,34 +62,23 @@ type Address = HowToConnect
 -- string literal and assume it is a localpipe.
 instance FromJSON HowToConnect where
   parseJSON :: Value -> Parser HowToConnect
-  parseJSON = withText "HowToConnect" $ \t -> do
-    let str = Text.unpack t
-    pure case parseHostPort str of
-      Left {} ->
-        Net.LocalPipe str
-      Right (host, port) -> do
-        Net.RemoteSocket host port
+  parseJSON = withText "HowToConnect" $ \t ->
+        (uncurry Net.RemoteSocket <$> parseHostPort t)
+    <|> (        Net.LocalPipe    <$> parseLocalPipe t)
 
 instance ToJSON HowToConnect where
   toJSON :: HowToConnect -> Value
-  toJSON = \case
-    Net.LocalPipe str          -> Aeson.String (Text.pack str)
-    Net.RemoteSocket host port -> Aeson.String (host <> ":" <> Text.pack (show port))
+  toJSON = toJSON . Net.howToConnectString
 
-parseHostPort :: String -> Either String (Text, Word16)
-parseHostPort s
-  | (portRev, ':' : hostRev) <- break (== ':') (reverse s)
-  = if
-    | null hostRev        -> Left "parseHostPort: Empty host."
-    | null portRev        -> Left "parseHostPort: Empty port."
-    | all isDigit portRev
-    , Just port <- readMaybe @Word16 (reverse portRev) -> if
-      | 0 <= port, port <= 65535 -> Right
-        ( Text.pack (reverse hostRev)
-        , port
-        )
-      | otherwise -> Left ("parseHostPort: Numeric port '" ++ show port ++ "' out of range: 0 - 65535)")
-    | otherwise -> Left "parseHostPort: Non-numeric port."
+parseLocalPipe :: Text -> Parser FilePath
+parseLocalPipe t
+  | Text.null t = fail "parseLocalPipe: empty Text"
+  | otherwise   = pure $ Text.unpack t
+
+parseHostPort :: Text -> Parser (Text, Word16)
+parseHostPort t
+  | Text.null t
+  = fail "parseHostPort: empty Text"
   | otherwise
   = let
     (host_, portText) = Text.breakOnEnd ":" t

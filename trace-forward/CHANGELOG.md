@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.3.0 - Jul 2025
+
+* Remove unused `forwarderEndpoint` and `acceptorEndpoint` fields from forwarder / acceptor configuration types.
+
 ## 2.2.11 - Mar 2025
 
 * Updated to `ouroboros-network-framework-0.17`

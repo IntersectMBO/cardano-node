@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors.Run
@@ -19,7 +18,6 @@ import           Control.Concurrent.Async (forConcurrently_)
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe)
-import qualified Data.Text as Text
 import           Data.Time.Clock (secondsToNominalDiffTime)
 import qualified System.Metrics.Configuration as EKGF
 import qualified System.Metrics.ReqResp as EKGF
@@ -28,10 +26,6 @@ import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TOF
 import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
 
-toAddress :: Net.HowToConnect -> String
-toAddress = \case
-  Net.LocalPipe pipe -> pipe
-  Net.RemoteSocket host port -> Text.unpack host ++ ":" ++ show port
 
 -- | Run acceptors for all supported protocols.
 --
@@ -45,18 +39,20 @@ runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
     AcceptAt howToConnect ->
       -- Run one server that accepts connections from the nodes.
       runInLoop
-        (runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (toAddress howToConnect))
+        (runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect))
         verbosity howToConnect initialPauseInSec
     ConnectTo localSocks ->
       -- Run N clients that initiate connections to the nodes.
       forConcurrently_ (NE.nub localSocks) \howToConnect ->
         runInLoop
-          (runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (toAddress howToConnect))
+          (runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect))
           verbosity howToConnect initialPauseInSec
  where
   TracerConfig{network, ekgRequestFreq, verbosity, ekgRequestFull} = teConfig tracerEnv
   ekgUseFullRequests = fromMaybe False ekgRequestFull
 
+  -- NOTE: The forwarderEndpoint fields may now also contain a TCP socket address.
+  --       However, those fields are unused in the context of ouroboros-network mini-protocal application.
   acceptorsConfigs :: FilePath -> (EKGF.AcceptorConfiguration, TOF.AcceptorConfiguration TraceObject, DPF.AcceptorConfiguration)
   acceptorsConfigs p =
     ( EKGF.AcceptorConfiguration

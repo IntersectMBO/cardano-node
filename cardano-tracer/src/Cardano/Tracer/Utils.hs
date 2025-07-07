@@ -1,5 +1,3 @@
-{-# options_ghc -w #-}
-
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}

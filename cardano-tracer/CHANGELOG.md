@@ -1,6 +1,6 @@
 # ChangeLog
 
-## 0.3.4 (June, 2025)
+## 0.3.4 (July, 2025)
 * Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.
 
 ## 0.3.3 (April, 2025)

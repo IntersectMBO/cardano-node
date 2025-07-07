@@ -55,6 +55,7 @@ module Cardano.Logging.Types (
   , TraceObject(..)
   , PreFormatted(..)
   , HowToConnect(..)
+  , howToConnectString
 ) where
 
 
@@ -618,3 +619,8 @@ data HowToConnect
   = LocalPipe    !FilePath    -- ^ Local pipe (UNIX or Windows).
   | RemoteSocket !Host !Port  -- ^ Remote socket (host and port).
   deriving stock (Eq, Show, Generic)
+
+howToConnectString :: HowToConnect -> String
+howToConnectString = \case
+  LocalPipe pipe -> pipe
+  RemoteSocket host port -> T.unpack host ++ ":" ++ show port
