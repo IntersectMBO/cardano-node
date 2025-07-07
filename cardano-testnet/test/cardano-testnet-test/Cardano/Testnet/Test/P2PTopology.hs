@@ -23,7 +23,7 @@ import qualified System.Process as IO
 
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (GenesisOptions (..), NodeId,
+import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..), NodeId,
                    UserProvidedData (..), UserProvidedEnv (..), TopologyType (..))
 
 import           Hedgehog ((===))
@@ -38,12 +38,13 @@ hprop_p2p_topology = integrationRetryWorkspace 2 "p2p-topology" $ \tmpDir -> H.r
 
   let testnetOptions = def { cardanoOutputDir = UserProvidedEnv tmpDir }
       genesisOptions = def { genesisEpochLength = 200 }
+      createEnvOptions = def { ceoTopologyType = P2PTopology }
       someTopologyFile = tmpDir </> "node-data" </> "node1" </> "topology.json"
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
   createTestnetEnv
-    testnetOptions genesisOptions P2PTopology
+    testnetOptions genesisOptions createEnvOptions
     NoUserProvidedData NoUserProvidedData NoUserProvidedData
     conf
 

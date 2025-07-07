@@ -86,7 +86,7 @@ createTestnetEnv :: ()
   => HasCallStack
   => CardanoTestnetOptions
   -> GenesisOptions
-  -> TopologyType
+  -> CreateEnvOptions
   -> UserProvidedData ShelleyGenesis
   -> UserProvidedData AlonzoGenesis
   -> UserProvidedData ConwayGenesis
@@ -98,7 +98,10 @@ createTestnetEnv
     , cardanoNodes
     }
   genesisOptions
-  topologyType
+  CreateEnvOptions
+    { ceoTopologyType=topologyType
+    , ceoUpdateTime=_createEnvUpdateTime
+    }
   mShelley mAlonzo mConway
   Conf
     { genesisHashesPolicy
