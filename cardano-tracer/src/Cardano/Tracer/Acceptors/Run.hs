@@ -68,13 +68,11 @@ runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
         }
     , TOF.AcceptorConfiguration
         { TOF.acceptorTracer    = mkVerbosity verbosity
-        , TOF.forwarderEndpoint = p
         , TOF.whatToRequest     = TOF.NumberOfTraceObjects $ fromMaybe 100 (loRequestNum (teConfig tracerEnv))
         , TOF.shouldWeStop      = teProtocolsBrake tracerEnv
         }
     , DPF.AcceptorConfiguration
         { DPF.acceptorTracer    = mkVerbosity verbosity
-        , DPF.forwarderEndpoint = p
         , DPF.shouldWeStop      = teProtocolsBrake tracerEnv
         }
     )

@@ -165,7 +165,7 @@ launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
     EKGF.ForwarderConfiguration
-      { EKGF.forwarderTracer = nullTracer -- contramap show stdoutTracer -- nullTracer
+      { EKGF.forwarderTracer = nullTracer -- contramap show stdoutTracer
       , EKGF.acceptorEndpoint = case howToConnect of
           Net.LocalPipe localSocket  -> EKGF.LocalPipe localSocket
           Net.RemoteSocket host port -> EKGF.RemoteSocket host port
@@ -177,8 +177,7 @@ launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
   tfConfig :: TOF.ForwarderConfiguration TraceObject
   tfConfig =
     TOF.ForwarderConfiguration
-      { TOF.forwarderTracer = nullTracer -- contramap show stdoutTracer -- nullTracer
-      , TOF.acceptorEndpoint = "<<undefined>>"
+      { TOF.forwarderTracer = nullTracer -- contramap show stdoutTracer
       , TOF.disconnectedQueueSize = disconnSize
       , TOF.connectedQueueSize = connSize
       }
@@ -186,8 +185,7 @@ launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
   dpfConfig :: DPF.ForwarderConfiguration
   dpfConfig =
     DPF.ForwarderConfiguration
-      { DPF.forwarderTracer = nullTracer -- contramap show stdoutTracer -- nullTracer
-      , DPF.acceptorEndpoint = "<<undefined>>"
+      { DPF.forwarderTracer = nullTracer -- contramap show stdoutTracer
       }
 
 doConnectToAcceptor

@@ -14,9 +14,6 @@ import           Trace.Forward.Protocol.TraceObject.Type
 data AcceptorConfiguration lo = AcceptorConfiguration
   { -- | The tracer that will be used by the acceptor in its network layer.
     acceptorTracer :: !(Tracer IO (TraceSendRecv (TraceObjectForward lo)))
-    -- | The endpoint that will be used to listen to the forwarder.
-    --   Only local socket/pipe is supported.
-  , forwarderEndpoint :: !FilePath
     -- | The request specifies how many 'TraceObject's will be requested.
   , whatToRequest :: !NumberOfTraceObjects
     -- | 'TVar' that can be used as a brake: if an external thread sets
@@ -29,9 +26,6 @@ data AcceptorConfiguration lo = AcceptorConfiguration
 data ForwarderConfiguration lo = ForwarderConfiguration
   { -- | The tracer that will be used by the forwarder in its network layer.
     forwarderTracer :: !(Tracer IO (TraceSendRecv (TraceObjectForward lo)))
-    -- | The endpoint that will be used to connect to the acceptor.
-    --   Only local socket/pipe is supported.
-  , acceptorEndpoint :: !FilePath
     -- | The big size of internal queue for tracing items. We use it in
     --   the beginning of the session, to avoid queue overflow, because
     --   initially there is no connection with acceptor yet, and the

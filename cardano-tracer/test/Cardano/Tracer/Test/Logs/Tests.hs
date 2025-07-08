@@ -20,17 +20,13 @@ import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
 
 import           Control.Concurrent.Async (withAsync, link)
-import           Control.Concurrent.MVar
-import           Control.Exception
 import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Traversable (for)
 import           Data.Word (Word64)
-import           Network.Socket
 import           System.Directory
 import           System.Directory.Extra
 import           System.FilePath
-import           System.IO.Error (isAlreadyInUseError)
 import           System.Time.Extra
 
 import           Test.Tasty

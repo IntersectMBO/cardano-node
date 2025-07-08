@@ -93,7 +93,16 @@ parseHostPort s
       | otherwise -> Left ("parseHostPort: Numeric port '" ++ show port ++ "' out of range: 0 - 65535)")
     | otherwise -> Left "parseHostPort: Non-numeric port."
   | otherwise
-  = Left "parseHostPort: No colon found."
+  = let
+    (host_, portText) = Text.breakOnEnd ":" t
+    host              = maybe "" fst (Text.unsnoc host_)
+  in if
+    | Text.null host      -> fail "parseHostPort: Empty host or no colon found."
+    | Text.null portText  -> fail "parseHostPort: Empty port."
+    | Right (port, remainder) <- Text.decimal portText
+    , Text.null remainder
+    , 0 <= port, port <= 65535 -> pure (host, port)
+    | otherwise -> fail "parseHostPort: Non-numeric port or value out of range."
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
