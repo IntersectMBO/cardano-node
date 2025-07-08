@@ -76,8 +76,9 @@
     utils,
     ...
   } @ input: let
+    inherit (builtins) elem match;
     inherit (nixpkgs) lib;
-    inherit (lib) head mapAttrs recursiveUpdate optionalAttrs;
+    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optionals recursiveUpdate ;
     inherit (utils.lib) eachSystem flattenTree;
     inherit (iohkNix.lib) prefixNamesWith;
     removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
@@ -137,20 +138,20 @@
         # have no git revision but for the same compilation alternative.
         cardano-node =
           let node = project.exes.cardano-node;
-          in lib.recursiveUpdate
+          in recursiveUpdate
                (set-git-rev node)
                {passthru = {noGitRev = node;};}
         ;
         cardano-cli =
           let cli = cardano-cli.components.exes.cardano-cli;
-          in lib.recursiveUpdate
+          in recursiveUpdate
                (set-git-rev cli)
                {passthru = {noGitRev = cli;};}
         ;
       } // optionalAttrs (project.exes ? tx-generator) {
         tx-generator =
           let tx-gen = project.exes.tx-generator;
-          in lib.recursiveUpdate
+          in recursiveUpdate
                (set-git-rev tx-gen)
                {passthru = {noGitRev = tx-gen;};}
         ;
@@ -279,7 +280,7 @@
         // (prefixNamesWith "checks/" checks);
 
       apps =
-        lib.mapAttrs (n: p: {
+        mapAttrs (n: p: {
           type = "app";
           program =
             p.exePath
@@ -326,11 +327,11 @@
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
                 };
-                profiled = lib.genAttrs ["cardano-node" "tx-generator" "locli"] (
+                profiled = genAttrs ["cardano-node" "tx-generator" "locli"] (
                   n:
                     packages.${n}.passthru.profiled
                 );
-                asserted = lib.genAttrs ["cardano-node"] (
+                asserted = genAttrs ["cardano-node"] (
                   n:
                     packages.${n}.passthru.asserted
                 );
@@ -346,8 +347,8 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "linux";
-                  exes = lib.collect lib.isDerivation (
-                    lib.filterAttrs (n: _: builtins.elem n releaseBins) projectExes
+                  exes = collect isDerivation (
+                    filterAttrs (n: _: elem n releaseBins) projectExes
                   );
                 };
                 internal.roots.project = muslProject.roots;
@@ -364,8 +365,8 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "win64";
-                  exes = lib.collect lib.isDerivation (
-                    lib.filterAttrs (n: _: builtins.elem n releaseBins) projectExes
+                  exes = collect isDerivation (
+                    filterAttrs (n: _: elem n releaseBins) projectExes
                   );
                 };
                 internal.roots.project = windowsProject.roots;
@@ -374,18 +375,18 @@
           }
           // optionalAttrs (system == "x86_64-darwin") {
             native =
-              lib.filterAttrs
+              filterAttrs
               (n: _:
                 # Only build docker images once on linux:
-                  !(lib.hasPrefix "dockerImage" n))
+                  !(hasPrefix "dockerImage" n))
               packages
               // {
                 cardano-node-macos = import ./nix/binary-release.nix {
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "macos";
-                  exes = lib.collect lib.isDerivation (
-                    lib.filterAttrs (n: _: builtins.elem n releaseBins) (collectExes project)
+                  exes = collect isDerivation (
+                    filterAttrs (n: _: elem n releaseBins) (collectExes project)
                   );
                 };
                 shells = removeAttrs devShells ["profiled"];
@@ -406,7 +407,7 @@
             # system-tests are build and run separately:
             "native\\.(.*\\.)?system-tests"
           ]
-          ++ lib.optionals (system == "x86_64-darwin") [
+          ++ optionals (system == "x86_64-darwin") [
             # FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
             "native\\.variants\\..*"
             "native\\.checks/cardano-testnet/cardano-testnet-test"
@@ -415,7 +416,7 @@
         pkgs.callPackages iohkNix.utils.ciJobsAggregates
         {
           inherit ciJobs;
-          nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
+          nonRequiredPaths = map (r: p: match r p != null) nonRequiredPaths;
         }
         // ciJobs;
     };
@@ -463,7 +464,7 @@
           inherit
             (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
               ciJobs =
-                lib.mapAttrs (_: lib.getAttr "required") flake.ciJobs
+                mapAttrs (_: getAttr "required") flake.ciJobs
                 // {
                   # Ensure hydra notify:
                   gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
