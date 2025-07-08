@@ -27,8 +27,11 @@ import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import           Data.Word (Word32)
-import           Options.Applicative hiding (str)
+import qualified Data.Text as Text
+import           Data.Word (Word16, Word32)
+import           Options.Applicative hiding (str, switch)
+-- Don't use switch.  It will not allow to set an option in a configuration
+-- file.  See `parseStartAsNonProducingNode` and `parseValidateDB`.
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
@@ -60,7 +63,7 @@ nodeRunParser = do
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
-  startAsNonProducingNode <- lastOption parseStartAsNonProducingNode
+  startAsNonProducingNode <- Last <$> parseStartAsNonProducingNode
 
   -- Node Address
   nIPv4Address <- lastOption parseHostIPv4Addr
@@ -266,9 +269,13 @@ parseImmutableDbPath = strOption $
     ]
 
 
+-- | This parser will always override configuration option, even if the
+-- `--validate-db` is not present.  This is fine for `--validate-db` switch,
+-- but might not be for something else.  See `parseStartAsNonProducingNode` for
+-- an alternative solution.
 parseValidateDB :: Parser Bool
 parseValidateDB =
-    switch (
+    Opt.switch (
          long "validate-db"
       <> help "Validate all on-disk database files"
     )
@@ -353,9 +360,12 @@ parseVrfKeyFilePath =
         <> completer (bashCompleter "file")
     )
 
-parseStartAsNonProducingNode :: Parser Bool
+-- | A parser which returns `Nothing` or `Just True`; the default value is set
+-- in `defaultPartialNodeConfiguration`.  This allows to set this option either
+-- in the configuration file or as command line flag.
+parseStartAsNonProducingNode :: Parser (Maybe Bool)
 parseStartAsNonProducingNode =
-  switch $ mconcat
+  flag Nothing (Just True) $ mconcat
     [ long "non-producing-node"
     , help $ mconcat
         [ "Start the node as a non block producing node even if "

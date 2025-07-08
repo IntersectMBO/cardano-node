@@ -314,6 +314,7 @@ instance Semigroup PartialNodeConfiguration where
 instance FromJSON PartialNodeConfiguration where
   parseJSON =
     withObject "PartialNodeConfiguration" $ \v -> do
+      pncStartAsNonProducingNode <- Last <$> v .:? "StartAsNonProducingNode"
 
       -- Node parameters, not protocol-specific
       pncSocketPath <- Last <$> v .:? "SocketPath"
@@ -435,7 +436,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncProtocolFiles = mempty
            , pncValidateDB = mempty
            , pncShutdownConfig = mempty
-           , pncStartAsNonProducingNode = Last $ Just False
+           , pncStartAsNonProducingNode
            , pncMaybeMempoolCapacityOverride
            , pncLedgerDbConfig
            , pncProtocolIdleTimeout
