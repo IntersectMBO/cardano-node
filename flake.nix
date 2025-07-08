@@ -291,12 +291,27 @@
         exes;
 
       ciJobs = let
+        releaseBins = [
+          "bech32"
+          "cardano-cli"
+          "cardano-node"
+          "cardano-submit-api"
+          "cardano-testnet"
+          "cardano-tracer"
+          "db-analyser"
+          "db-synthesizer"
+          "db-truncater"
+          "snapshot-converter"
+          "tx-generator"
+        ];
+
         ciJobsVariants =
           mapAttrs (
             _: p:
               (mkFlakeAttrs (pkgs.extend (prev: final: {cardanoNodeProject = p;}))).ciJobs
           )
           project.projectVariants;
+
         ciJobs =
           {
             cardano-deployment = pkgs.cardanoLib.mkConfigHtml {inherit (pkgs.cardanoLib.environments) mainnet preview preprod;};
@@ -330,7 +345,9 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "linux";
-                  exes = lib.collect lib.isDerivation projectExes;
+                  exes = lib.collect lib.isDerivation (
+                    lib.filterAttrs (n: _: builtins.elem n releaseBins) projectExes
+                  );
                 };
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
@@ -346,7 +363,9 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "win64";
-                  exes = lib.collect lib.isDerivation projectExes;
+                  exes = lib.collect lib.isDerivation (
+                    lib.filterAttrs (n: _: builtins.elem n releaseBins) projectExes
+                  );
                 };
                 internal.roots.project = windowsProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
@@ -364,7 +383,9 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "macos";
-                  exes = lib.collect lib.isDerivation (collectExes project);
+                  exes = lib.collect lib.isDerivation (
+                    lib.filterAttrs (n: _: builtins.elem n releaseBins) (collectExes project)
+                  );
                 };
                 shells = removeAttrs devShells ["profiled"];
                 internal = {
@@ -374,6 +395,7 @@
                 variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
               };
           };
+
         nonRequiredPaths =
           [
             # FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
