@@ -17,6 +17,7 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--active-slots-coeff DOUBLE]
   --output DIRECTORY
   [--p2p-topology]
+  [--update-time]
 
   Create a sandbox for Cardano testnet
 
@@ -61,4 +62,6 @@ Available options:
   --output DIRECTORY       Directory where to create the sandbox environment.
   --p2p-topology           Use P2P topology files instead of "direct" topology
                            files
+  --update-time            Don't create anything, just update the time stamps in
+                           existing files
   -h,--help                Show this help text
