@@ -35,7 +35,10 @@ optsCreateTestnet envCli = CardanoTestnetCreateEnvOptions
   <$> pCardanoTestnetCliOptions envCli
   <*> pGenesisOptions
   <*> pEnvOutputDir
-  <*> pTopologyType
+  <*> ( CreateEnvOptions
+      <$> pTopologyType
+      <*> pCreateEnvUpdateTime
+      )
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
@@ -96,6 +99,13 @@ pTopologyType :: Parser TopologyType
 pTopologyType = OA.flag DirectTopology P2PTopology
   (  OA.long "p2p-topology"
   <> OA.help "Use P2P topology files instead of \"direct\" topology files"
+  <> OA.showDefault
+  )
+
+pCreateEnvUpdateTime :: Parser CreateEnvUpdateTime
+pCreateEnvUpdateTime = OA.flag CreateEnv UpdateTimeAndExit
+  (  OA.long "update-time"
+  <> OA.help "Don't create anything, just update the time stamps in existing files"
   <> OA.showDefault
   )
 

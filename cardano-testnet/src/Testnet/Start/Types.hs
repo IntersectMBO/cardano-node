@@ -21,6 +21,8 @@ module Testnet.Start.Types
   , anyShelleyBasedEraToString
   , eraToString
 
+  , CreateEnvOptions(..)
+  , CreateEnvUpdateTime(..)
   , NodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
@@ -88,6 +90,25 @@ data TopologyType
 instance Default TopologyType where
   def = DirectTopology
 
+data CreateEnvUpdateTime
+  = CreateEnv
+  | UpdateTimeAndExit
+  deriving (Eq, Show)
+
+instance Default CreateEnvUpdateTime where
+  def = CreateEnv
+
+data CreateEnvOptions = CreateEnvOptions
+  { ceoTopologyType :: TopologyType
+  , ceoUpdateTime :: CreateEnvUpdateTime
+  } deriving (Eq, Show)
+
+instance Default CreateEnvOptions where
+  def = CreateEnvOptions
+    { ceoTopologyType = def
+    , ceoUpdateTime = def
+    }
+
 -- | An abstract node id, used as placeholder in topology files
 -- when the actual ports/addresses aren't known yet (i.e. before runtime)
 newtype NodeId = NodeId Int
@@ -107,7 +128,7 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   { createEnvTestnetOptions :: CardanoTestnetOptions
   , createEnvGenesisOptions :: GenesisOptions
   , createEnvOutputDir :: FilePath
-  , createEnvTopologyType :: TopologyType
+  , createEnvCreateEnvOptions :: CreateEnvOptions
   } deriving (Eq, Show)
 
 -- | Options which, contrary to 'GenesisOptions' are not implemented

@@ -31,6 +31,7 @@ import qualified Cardano.Testnet.Test.P2PTopology
 import qualified Cardano.Testnet.Test.RunTestnet
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
+import qualified Cardano.Testnet.Test.UpdateTimeStamps
 
 import           Prelude
 
@@ -116,6 +117,7 @@ tests = do
           [ ignoreOnWindows "Produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
           , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
           , ignoreOnMacAndWindows "Can be started with P2P topology file" Cardano.Testnet.Test.P2PTopology.hprop_p2p_topology
+          , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
