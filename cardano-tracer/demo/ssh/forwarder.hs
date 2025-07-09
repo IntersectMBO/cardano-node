@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup
 
@@ -20,8 +21,8 @@ main = getArgs >>=
              , tsWorkDir      = Identity "."
              }
     in case mode of
-         "Initiator" -> launchForwardersSimple ts Initiator localSock 1000 2000
-         "Responder" -> launchForwardersSimple ts Responder localSock 1000 2000
+         "Initiator" -> launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 1000 2000
+         "Responder" -> launchForwardersSimple ts Responder (Net.LocalPipe localSock) 1000 2000
          _ -> err
   _ -> err
  where err = error "Usage: ./demo-forwarder /path/to/local/sock Initiator|Responder"

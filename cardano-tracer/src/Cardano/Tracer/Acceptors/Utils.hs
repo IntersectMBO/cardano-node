@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
 module Cardano.Tracer.Acceptors.Utils
   ( prepareDataPointRequestor
   , prepareMetricsStores
@@ -17,7 +19,6 @@ import           Cardano.Tracer.Handlers.Notifications.Utils
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
-import           Ouroboros.Network.Snocket (LocalAddress)
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
 import           Control.Concurrent.STM (atomically)
@@ -35,8 +36,9 @@ import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsL
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
 
 prepareDataPointRequestor
-  :: TracerEnv
-  -> ConnectionId LocalAddress
+  :: Show addr
+  => TracerEnv
+  -> ConnectionId addr
   -> IO DataPointRequestor
 prepareDataPointRequestor TracerEnv{teConnectedNodes, teDPRequestors} connId = do
   addConnectedNode teConnectedNodes connId
@@ -46,8 +48,9 @@ prepareDataPointRequestor TracerEnv{teConnectedNodes, teDPRequestors} connId = d
   return dpRequestor
 
 prepareMetricsStores
-  :: TracerEnv
-  -> ConnectionId LocalAddress
+  :: Show addr
+  => TracerEnv
+  -> ConnectionId addr
   -> IO (EKG.Store, TVar MetricsLocalStore)
 prepareMetricsStores TracerEnv{teConnectedNodes, teAcceptedMetrics} connId = do
   addConnectedNode teConnectedNodes connId
@@ -72,8 +75,9 @@ prepareMetricsStores TracerEnv{teConnectedNodes, teAcceptedMetrics} connId = do
     getTimeMs = (round . (* 1000)) `fmap` getPOSIXTime
 
 addConnectedNode
-  :: ConnectedNodes
-  -> ConnectionId LocalAddress
+  :: Show addr
+  => ConnectedNodes
+  -> ConnectionId addr
   -> IO ()
 addConnectedNode connectedNodes connId = atomically $
   modifyTVar' connectedNodes $ S.insert (connIdToNodeId connId)
@@ -81,8 +85,9 @@ addConnectedNode connectedNodes connId = atomically $
 -- | This handler is called when 'runPeer' function throws an exception,
 --   which means that there is a problem with network connection.
 removeDisconnectedNode
-  :: TracerEnv
-  -> ConnectionId LocalAddress
+  :: Show addr
+  => TracerEnv
+  -> ConnectionId addr -- LocalAddress
   -> IO ()
 removeDisconnectedNode tracerEnv connId =
   -- Remove all the stuff related to disconnected node.
@@ -96,8 +101,9 @@ removeDisconnectedNode tracerEnv connId =
   nodeId = connIdToNodeId connId
 
 notifyAboutNodeDisconnected
-  :: TracerEnvRTView
-  -> ConnectionId LocalAddress
+  :: Show addr
+  => TracerEnvRTView
+  -> ConnectionId addr
   -> IO ()
 #if RTVIEW
 notifyAboutNodeDisconnected TracerEnvRTView{teEventsQueues} connId = do

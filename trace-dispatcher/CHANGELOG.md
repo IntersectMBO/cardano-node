@@ -1,5 +1,8 @@
 # Revision history for trace-dispatcher
 
+## 2.10.0 -- July, 2025
+* Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.
+
 ## 2.9.2 -- May 2025
 * New config field `traceOptionLedgerMetricsFrequency`.
 

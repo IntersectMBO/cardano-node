@@ -31,7 +31,6 @@ import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
-import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
@@ -144,7 +143,7 @@ data NodeConfiguration
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
-       , ncTraceForwardSocket :: !(Maybe (SocketPath, ForwarderMode))
+       , ncTraceForwardSocket :: !(Maybe (HowToConnect, ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
 
@@ -250,7 +249,7 @@ data PartialNodeConfiguration
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
        , pncTraceConfig    :: !(Last PartialTraceOptions)
-       , pncTraceForwardSocket :: !(Last (SocketPath, ForwarderMode))
+       , pncTraceForwardSocket :: !(Last (HowToConnect, ForwarderMode))
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)

@@ -86,24 +86,27 @@ import           System.Posix.Types (CPid (..))
 runInLoop
   :: IO ()           -- ^ An IO-action that can throw an exception.
   -> Maybe Verbosity -- ^ Tracer's verbosity.
-  -> FilePath        -- ^ Local socket.
+  -> HowToConnect    -- ^ Means of connecting, by local or remote socket.
   -> Word            -- ^ Current delay, in seconds.
   -> IO ()
-runInLoop action verb localSocket prevDelay =
+runInLoop action verbosity howToConnect prevDelay =
   tryJust excludeAsyncExceptions action >>= \case
-    Left e -> do
-      case verb of
+    Left err -> do
+      case verbosity of
         Just Minimum -> return ()
-        _ -> logTrace $ "cardano-tracer, connection with " <> show localSocket <> " failed: " <> show e
+        _ -> logTrace $ "cardano-tracer, connection with " <> show howToConnect <> " failed: " <> show @SomeException err
       sleep $ fromIntegral currentDelay
-      runInLoop action verb localSocket currentDelay
-    Right _ -> return ()
+      runInLoop action verbosity howToConnect currentDelay
+    Right {} ->
+      pure ()
  where
+  excludeAsyncExceptions :: SomeException -> Maybe SomeException
   excludeAsyncExceptions e =
     case fromException e of
       Just SomeAsyncException {} -> Nothing
       _ -> Just e
 
+  currentDelay :: Word
   !currentDelay =
     if prevDelay < 60
       then prevDelay * 2

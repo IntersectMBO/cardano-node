@@ -1,5 +1,8 @@
 {-# LANGUAGE BlockArguments #-}
+
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,12 +24,12 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                   codecHandshake, noTimeLimitsHandshake)
+                   codecHandshake, noTimeLimitsHandshake, timeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
-                   makeLocalBearer)
+import           Ouroboros.Network.Snocket (MakeBearer, Snocket, LocalAddress, LocalSocket, localAddressFromPath, localSnocket,
+                   socketSnocket, makeLocalBearer, makeSocketBearer)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
                    HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
                    connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
@@ -39,10 +42,13 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe (isNothing)
+import qualified Data.Text as Text
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
 import qualified Network.Mux as Mux
+import qualified Network.Socket as Socket
 import           System.IO (hPutStrLn, stderr)
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
@@ -60,7 +66,7 @@ initForwarding :: forall m. (MonadIO m)
   -> TraceOptionForwarder
   -> NetworkMagic
   -> Maybe EKG.Store
-  -> Maybe (FilePath, ForwarderMode)
+  -> Maybe (HowToConnect, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore)
 initForwarding iomgr config magic ekgStore tracerSocketMode = do
   (a, b, kickoffForwarder) <- initForwardingDelayed iomgr config magic ekgStore tracerSocketMode
@@ -69,12 +75,13 @@ initForwarding iomgr config magic ekgStore tracerSocketMode = do
 
 -- We allow for delayed initialization of the forwarding connection by
 -- returning an IO action to do so.
-initForwardingDelayed :: forall m. (MonadIO m)
+initForwardingDelayed :: forall m. ()
+  => MonadIO m
   => IOManager
   -> TraceOptionForwarder
   -> NetworkMagic
   -> Maybe EKG.Store
-  -> Maybe (FilePath, ForwarderMode)
+  -> Maybe (HowToConnect, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore, IO ())
 initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   let ignoreOverflow, onOverflow :: [TraceObject] -> IO ()
@@ -98,7 +105,12 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       maxReconnectDelay
   pure (forwardSink, dpStore, kickoffForwarder)
  where
-  p = maybe "" fst tracerSocketMode
+  endpoint :: EKGF.HowToConnect
+  endpoint =
+    case tracerSocketMode of
+      Nothing -> EKGF.LocalPipe ""
+      Just (LocalPipe str, _mode) -> EKGF.LocalPipe str
+      Just (RemoteSocket host port, _mode) -> EKGF.RemoteSocket host port
   connSize = tofConnQueueSize config
   disconnSize = tofDisconnQueueSize config
   verbosity = tofVerbosity config
@@ -108,7 +120,7 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   ekgConfig =
     EKGF.ForwarderConfiguration
       { EKGF.forwarderTracer    = mkTracer verbosity
-      , EKGF.acceptorEndpoint   = EKGF.LocalPipe p
+      , EKGF.acceptorEndpoint   = endpoint
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest    = const $ pure ()
       , EKGF.useDummyForwarder  = False
@@ -118,7 +130,6 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   tfConfig =
     TF.ForwarderConfiguration
       { TF.forwarderTracer       = mkTracer verbosity
-      , TF.acceptorEndpoint      = p
       , TF.disconnectedQueueSize = disconnSize
       , TF.connectedQueueSize    = connSize
       }
@@ -127,7 +138,6 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   dpfConfig =
     DPF.ForwarderConfiguration
       { DPF.forwarderTracer  = mkTracer verbosity
-      , DPF.acceptorEndpoint = p
       }
 
   mkTracer :: Show a => Verbosity -> Tracer IO a
@@ -156,7 +166,7 @@ launchForwarders
   -> Maybe EKG.Store
   -> ForwardSink TraceObject
   -> DataPointStore
-  -> Maybe (FilePath, ForwarderMode)
+  -> Maybe (HowToConnect, ForwarderMode)
   -> Word
   -> IO ()
 launchForwarders iomgr magic
@@ -173,14 +183,14 @@ launchForwarders iomgr magic
           (launchForwardersViaLocalSocket
              iomgr
              magic
+             socketPath
+             mode
              ekgConfig
              tfConfig
              dpfConfig
              sink
              ekgStore
-             dpStore
-             socketPath
-             mode)
+             dpStore)
           socketPath
           1
           maxReconnectDelay
@@ -188,25 +198,40 @@ launchForwarders iomgr magic
 launchForwardersViaLocalSocket
   :: IOManager
   -> NetworkMagic
+  -> HowToConnect
+  -> ForwarderMode
   -> EKGF.ForwarderConfiguration
   -> TF.ForwarderConfiguration TraceObject
   -> DPF.ForwarderConfiguration
   -> ForwardSink TraceObject
   -> Maybe EKG.Store
   -> DataPointStore
-  -> FilePath
-  -> ForwarderMode
   -> IO ()
 launchForwardersViaLocalSocket
-  iomgr magic ekgConfig tfConfig dpfConfig sink ekgStore dpStore p mode =
-  (case mode of
-     Initiator -> doConnectToAcceptor magic (localSnocket iomgr) makeLocalBearer mempty
-     Responder -> doListenToAcceptor magic (localSnocket iomgr) makeLocalBearer mempty)
-  (localAddressFromPath p)
-  noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
+  iomgr magic howToConnect mode ekgConfig tfConfig dpfConfig sink ekgStore dpStore =
+  case (mode, howToConnect) of
+    (Initiator, LocalPipe localPipe) -> do
+      doConnectToAcceptor @LocalSocket @LocalAddress
+        magic (localSnocket iomgr) makeLocalBearer mempty (localAddressFromPath localPipe)
+        noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
+    (Initiator, RemoteSocket (Text.unpack -> host) (show -> port)) -> do
+      listenAddress:|_ <- Socket.getAddrInfo Nothing (Just host) (Just port)
+      doConnectToAcceptor @Socket.Socket @Socket.SockAddr
+        magic (socketSnocket iomgr) makeSocketBearer mempty (Socket.addrAddress listenAddress)
+        timeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
+    (Responder, LocalPipe localPipe) -> do
+      doListenToAcceptor @LocalSocket @LocalAddress
+        magic (localSnocket iomgr) makeLocalBearer mempty (localAddressFromPath localPipe)
+        noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
+    (Responder, RemoteSocket (Text.unpack -> host) (show -> port)) -> do
+      listenAddress:_ <- Socket.getAddrInfo Nothing (Just host) (Just port)
+      doListenToAcceptor @Socket.Socket @Socket.SockAddr
+        magic (socketSnocket iomgr) makeSocketBearer mempty (Socket.addrAddress listenAddress)
+        timeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
 
 doConnectToAcceptor
-  :: NetworkMagic
+  :: forall fd addr. ()
+  => NetworkMagic
   -> Snocket IO fd addr
   -> MakeBearer IO fd
   -> (fd -> IO ())
@@ -269,7 +294,8 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
       Nothing -> forwardEKGMetricsDummy
 
 doListenToAcceptor
-  :: Ord addr
+  :: forall fd addr. ()
+  => Ord addr
   => NetworkMagic
   -> Snocket IO fd addr
   -> MakeBearer IO fd
