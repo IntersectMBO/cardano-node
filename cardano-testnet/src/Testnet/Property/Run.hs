@@ -1,3 +1,6 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Testnet.Property.Run
   ( runTestnet
   , testnetRoutine
@@ -22,14 +25,20 @@ import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
 import           System.Directory
 import qualified System.Exit as IO
+import           System.FilePath ((</>), normalise)
 import qualified System.Info as SYS
 import qualified System.IO as IO
+import           Text.Printf (printf)
+
+import           Cardano.Api.IO (unFile)
 
 import           Testnet.Property.Util (integration, integrationWorkspace)
-import           Testnet.Start.Types
+import           Testnet.Start.Types (UserProvidedEnv (..), Conf, mkConf)
+import           Testnet.Types (TestnetNode (..), TestnetRuntime (..), spoNodes)
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import qualified Hedgehog.Extras.Test.Base as H
 import           Test.Tasty.ExpectedFailure (wrapTest)
@@ -37,28 +46,51 @@ import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
 
-runTestnet :: UserProvidedEnv -> (Conf -> H.Integration a) -> IO ()
+runTestnet :: UserProvidedEnv -> (Conf -> H.Integration TestnetRuntime) -> IO ()
 runTestnet env tn = do
-  tvRunning <- STM.newTVarIO False
+  tvRunning <- STM.newTVarIO Nothing
 
   void . H.check $ testnetProperty env $ \c -> do
-    void $ tn c
-    H.evalIO . STM.atomically $ STM.writeTVar tvRunning True
+    runtime <- tn c
+    H.evalIO . STM.atomically $ STM.writeTVar tvRunning (Just runtime)
 
-  running <- STM.readTVarIO tvRunning
-
-  if running
-    then do
+  STM.readTVarIO tvRunning >>= \case
+    Just runtime@TestnetRuntime
+      { configurationFile
+      , testnetMagic
+      } -> do
       ANSI.setSGR [SetColor Foreground Vivid Green]
-      IO.putStr "Testnet is running.  Type CTRL-C to exit."
+      IO.putStrLn $ printf
+        "Please disregard the message above implying a failure.\n\
+        \\n\
+        \Testnet is running with config file %s"
+        (unFile configurationFile)
+      case spoNodes runtime of
+        TestnetNode
+          { nodeSprocket=Sprocket{sprocketBase, sprocketName}
+          , nodeStdout
+          }:_ -> putStrLn $ printf
+            "Logs of the SPO node can be found at %s\n\
+            \\n\
+            \To interact with the testnet using cardano-cli, you might want to set:\n\
+            \\n\
+            \  export CARDANO_NODE_SOCKET_PATH=%s\n\
+            \  export CARDANO_NODE_NETWORK_ID=%d\n"
+            nodeStdout
+            (normalise $ sprocketBase </> sprocketName)
+            testnetMagic
+        [] -> do
+          ANSI.setSGR [SetColor Foreground Vivid Yellow]
+          IO.putStrLn "\nFailed to find any SPO node in the testnet\n"
+          ANSI.setSGR [SetColor Foreground Vivid Green]
+      IO.putStrLn "Type CTRL-C to exit."
+
       ANSI.setSGR [Reset]
-      IO.putStrLn ""
       void . forever $ IO.threadDelay 10000000
-    else do
+    Nothing -> do
       ANSI.setSGR [SetColor Foreground Vivid Red]
-      IO.putStr "Failed to start testnet."
+      IO.putStrLn "Failed to start testnet."
       ANSI.setSGR [Reset]
-      IO.putStrLn ""
       IO.exitFailure
 
 
