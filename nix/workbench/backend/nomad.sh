@@ -895,7 +895,7 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local workload=${1:?$usage}; shift
       local task=${1:?$usage}; shift
-      local task_dir="${dir}"/"${workload}"/"${task}"
+      local task_dir="${dir}"/workloads/"${workload}"/"${task}"
       if test -f "${task_dir}"/started && !(test -f "${task_dir}"/stopped || test -f "${task_dir}"/quit)
       then
         if backend_nomad is-task-program-running "${dir}" "${task}" "${workload}"
