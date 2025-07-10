@@ -38,6 +38,7 @@ let
       "BlockFetch.Server".severity = "Debug";
       "BlockchainTime".severity = "Notice";
       "ChainDB".severity = "Debug";
+      "ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent".severity = "Silence";
       "ChainDB.ReplayBlock.LedgerReplay".severity = "Notice";
       "ChainSync.Client".severity = "Debug";
       "ChainSync.Local".severity = "Notice";
