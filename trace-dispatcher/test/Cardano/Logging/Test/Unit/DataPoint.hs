@@ -20,9 +20,6 @@ import qualified Data.Map.Strict as M
 import           GHC.Conc
 import           GHC.Generics (Generic)
 
-import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
-import           Trace.Forward.Utils.DataPoint (DataPoint (..))
-
 
 data BaseStats = BaseStats {
     bsMeasure :: Double,

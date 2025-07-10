@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module Trace.Forward.Configuration.DataPoint
   ( AcceptorConfiguration (..)
   , ForwarderConfiguration (..)
@@ -6,7 +8,7 @@ module Trace.Forward.Configuration.DataPoint
 import           Ouroboros.Network.Driver (TraceSendRecv)
 
 import           Control.Concurrent.STM.TVar (TVar)
-import           Control.Tracer (Tracer)
+import           "contra-tracer" Control.Tracer (Tracer)
 
 import           Trace.Forward.Protocol.DataPoint.Type
 

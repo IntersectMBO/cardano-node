@@ -1,11 +1,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GADTs #-}
 
 module Cardano.Logging.Tracer.DataPoint
   (
-    dataPointTracer
+    DataPoint (..)
+  , DataPointName
+  , DataPointStore
+  , initDataPointStore
+  , writeToStore
+  , dataPointTracer
   , mkDataPointTracer
   ) where
 
@@ -13,15 +20,45 @@ import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 
-import           Control.DeepSeq (NFData)
+import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TVar
+import           Control.DeepSeq (NFData, deepseq)
 import           Control.Monad.IO.Class
 import qualified Control.Tracer as NT
-import           Data.Aeson.Types (ToJSON)
+import           Data.Aeson
+import qualified Data.Map.Strict as M
 import           Data.Text (Text, intercalate)
 
-import           Trace.Forward.Utils.DataPoint (DataPoint (..), DataPointStore, writeToStore)
-
 ---------------------------------------------------------------------------
+--
+-- | Type wrapper for some value of type 'v'. The only reason we need this
+--   wrapper is an ability to store different values in the same 'DataPointStore'.
+--
+--   Please note that when the acceptor application will read the value of type 'v'
+--   from the store, this value is just as unstructured JSON, but not Haskell
+--   value of type 'v'. That's why 'FromJSON' instance for type 'v' should be
+--   available for the acceptor application, to decode unstructured JSON.
+--
+data DataPoint where
+  DataPoint :: (ToJSON v, NFData v) => v -> DataPoint
+
+type DataPointName   = Text
+type DataPointStore = TVar (M.Map DataPointName DataPoint)
+
+initDataPointStore :: IO DataPointStore
+initDataPointStore = newTVarIO M.empty
+
+-- | Write 'DataPoint' to the store.
+writeToStore
+  :: DataPointStore
+  -> DataPointName
+  -> DataPoint
+  -> IO ()
+writeToStore dpStore dpName (DataPoint obj) = atomically $
+  modifyTVar' dpStore $ \store ->
+    if dpName `M.member` store
+      then M.adjust (const (DataPoint (deepseq obj obj))) dpName store
+      else M.insert dpName (DataPoint (deepseq obj obj)) store
 
 dataPointTracer :: forall m. MonadIO m
   => DataPointStore

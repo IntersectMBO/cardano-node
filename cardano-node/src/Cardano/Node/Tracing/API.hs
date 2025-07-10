@@ -51,6 +51,8 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (HostName)
 import           System.Metrics as EKG
+import Trace.Forward.Forwarding (initForwardingDelayed)
+import Trace.Forward.Utils.TraceObject (writeToSink)
 
 
 initTraceDispatcher ::
@@ -130,7 +132,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
                 forwardingConf :: TraceOptionForwarder
                 forwardingConf = fromMaybe defaultForwarder (tcForwarder trConfig)
             initForwardingDelayed iomgr forwardingConf networkMagic (Just ekgStore) tracerSocketMode
-          pure (forwardTracer forwardSink, dataPointTracer dpStore, kickoffForwarder)
+          pure (forwardTracer (writeToSink forwardSink), dataPointTracer dpStore, kickoffForwarder)
         else
           -- Since 'Forwarder' backend isn't enabled, there is no forwarding.
           -- So we use nullTracers to ignore 'TraceObject's and 'DataPoint's.
