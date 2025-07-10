@@ -227,6 +227,7 @@ data PartialNodeConfiguration
        , pncConfigFile      :: !(Last ConfigYamlFilePath)
        , pncTopologyFile    :: !(Last TopologyFile)
        , pncDatabaseFile    :: !(Last NodeDatabasePaths)
+         -- | pncProtocolFiles can only be supplied with command line arguments.
        , pncProtocolFiles   :: !(Last ProtocolFilepaths)
        , pncValidateDB      :: !(Last Bool)
        , pncShutdownConfig  :: !(Last ShutdownConfig)
@@ -652,7 +653,7 @@ defaultPartialNodeConfiguration =
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
-    , pncProtocolFiles = mempty
+    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just False
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing Nothing
     , pncStartAsNonProducingNode = Last $ Just False
@@ -704,8 +705,8 @@ defaultPartialNodeConfiguration =
     , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
     , pncEnableP2P     = Last (Just EnabledP2PMode)
-    , pncPeerSharing   = Last (Just Ouroboros.defaultPeerSharing)
-      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultPeerSharing 
+    , pncPeerSharing   = mempty
+      -- the default is defined in `makeNodeConfiguration`
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
       -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
@@ -722,6 +723,7 @@ makeNodeConfiguration pnc = do
   validateDB <- lastToEither "Missing ValidateDB" $ pncValidateDB pnc
   startAsNonProducingNode <- lastToEither "Missing StartAsNonProducingNode" $ pncStartAsNonProducingNode pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
+  protocolFiles <- lastToEither "Missing ProtocolFiles" $ pncProtocolFiles pnc
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
@@ -801,9 +803,14 @@ makeNodeConfiguration pnc = do
     $ getLast
     $ pncChainSyncIdleTimeout pnc
 
-  ncPeerSharing <-
-    lastToEither "Missing PeerSharing"
-    $ pncPeerSharing pnc
+  let ncPeerSharing =
+        case pncPeerSharing pnc of
+          Last Nothing ->
+            if    not startAsNonProducingNode
+               || hasProtocolFile protocolFiles
+            then PeerSharingDisabled
+            else PeerSharingEnabled
+          Last (Just peerSharing) -> peerSharing
 
   mGenesisConfigFlags <- case ncConsensusMode of
     PraosMode -> pure Nothing
@@ -848,13 +855,7 @@ makeNodeConfiguration pnc = do
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
              , ncDatabaseFile = databaseFile
-             , ncProtocolFiles =
-                 -- TODO: ncProtocolFiles should be Maybe ProtocolFiles
-                 -- as relay nodes don't need the protocol files because
-                 -- they are not minting blocks.
-                 case getLast $ pncProtocolFiles pnc of
-                   Just pFiles -> pFiles
-                   Nothing -> ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+             , ncProtocolFiles = protocolFiles
              , ncValidateDB = validateDB
              , ncShutdownConfig = shutdownConfig
              , ncStartAsNonProducingNode = startAsNonProducingNode

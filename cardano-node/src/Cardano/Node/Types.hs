@@ -17,6 +17,7 @@ module Cardano.Node.Types
   , PeerSnapshotFile (..)
   , CheckpointsFile(..)
   , ProtocolFilepaths (..)
+  , hasProtocolFile
   , GenesisHash(..)
   , CheckpointsHash(..)
   , MaxConcurrencyBulkSync(..)
@@ -50,6 +51,7 @@ import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 import           Control.Exception
 import           Data.Aeson
 import           Data.ByteString (ByteString)
+import           Data.Maybe (isJust)
 import           Data.Monoid (Last (..))
 import           Data.String (IsString)
 import           Data.Text (Text)
@@ -173,6 +175,25 @@ data ProtocolFilepaths =
      , shelleyCertFile      :: !(Maybe FilePath)
      , shelleyBulkCredsFile :: !(Maybe FilePath)
      } deriving (Eq, Show)
+
+-- | If any of the 'ProtocolFilepath` is given `PeerSharing` option will be
+-- disabled by default.
+--
+hasProtocolFile :: ProtocolFilepaths -> Bool
+hasProtocolFile ProtocolFilepaths {
+    byronCertFile,
+    byronKeyFile,
+    shelleyKESFile,
+    shelleyVRFFile,
+    shelleyCertFile,
+    shelleyBulkCredsFile
+  }
+  =  isJust byronCertFile
+  || isJust byronKeyFile
+  || isJust shelleyKESFile
+  || isJust shelleyVRFFile
+  || isJust shelleyCertFile
+  || isJust shelleyBulkCredsFile
 
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)
