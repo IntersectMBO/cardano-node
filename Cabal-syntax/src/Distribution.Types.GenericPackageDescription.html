@@ -1,0 +1,1025 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679448428"><span id="local-6989586621679448429"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.GenericPackageDescription</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier">GenericPackageDescription</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#emptyGenericPackageDescription"><span class="hs-identifier">emptyGenericPackageDescription</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- lens</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Lens.html"><span class="hs-identifier">Distribution.Compat.Lens</span></a></span><span>                     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html"><span class="hs-identifier">Distribution.Types.BuildInfo.Lens</span></a></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PackageDescription.html"><span class="hs-identifier">Distribution.Types.PackageDescription</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html"><span class="hs-identifier">Distribution.Types.Benchmark</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.CondTree.html"><span class="hs-identifier">Distribution.Types.CondTree</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html"><span class="hs-identifier">Distribution.Types.ConfVar</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Dependency.html"><span class="hs-identifier">Distribution.Types.Dependency</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Executable.html"><span class="hs-identifier">Distribution.Types.Executable</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Flag.html"><span class="hs-identifier">Distribution.Types.Flag</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html"><span class="hs-identifier">Distribution.Types.ForeignLib</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html"><span class="hs-identifier">Distribution.Types.Library</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.TestSuite.html"><span class="hs-identifier">Distribution.Types.TestSuite</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html"><span class="hs-identifier">Distribution.Types.UnqualComponentName</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Package.html"><span class="hs-identifier">Distribution.Package</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- ---------------------------------------------------------------------------</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- The 'GenericPackageDescription' type</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">data</span><span> </span><span id="GenericPackageDescription"><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-var">GenericPackageDescription</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>  </span><span id="GenericPackageDescription"><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-var">GenericPackageDescription</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="packageDescription"><span class="annot"><span class="annottext">GenericPackageDescription -&gt; PackageDescription
+</span><a href="Distribution.Types.GenericPackageDescription.html#packageDescription"><span class="hs-identifier hs-var hs-var">packageDescription</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.PackageDescription.html#PackageDescription"><span class="hs-identifier hs-type">PackageDescription</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="gpdScannedVersion"><span class="annot"><span class="annottext">GenericPackageDescription -&gt; Maybe Version
+</span><a href="Distribution.Types.GenericPackageDescription.html#gpdScannedVersion"><span class="hs-identifier hs-var hs-var">gpdScannedVersion</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- ^ This is a version as specified in source.</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">--   We populate this field in index reading for dummy GPDs,</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">--   only when GPD reading failed, but scanning haven't.</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-comment">--   Cabal-the-library never produces GPDs with Just as gpdScannedVersion.</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-comment">--   Perfectly, PackageIndex should have sum type, so we don't need to</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">--   have dummy GPDs.</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="genPackageFlags"><span class="annot"><span class="annottext">GenericPackageDescription -&gt; [PackageFlag]
+</span><a href="Distribution.Types.GenericPackageDescription.html#genPackageFlags"><span class="hs-identifier hs-var hs-var">genPackageFlags</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Flag.html#PackageFlag"><span class="hs-identifier hs-type">PackageFlag</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="condLibrary"><span class="annot"><span class="annottext">GenericPackageDescription
+-&gt; Maybe (CondTree ConfVar [Dependency] Library)
+</span><a href="Distribution.Types.GenericPackageDescription.html#condLibrary"><span class="hs-identifier hs-var hs-var">condLibrary</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="condSubLibraries"><span class="annot"><span class="annottext">GenericPackageDescription
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+</span><a href="Distribution.Types.GenericPackageDescription.html#condSubLibraries"><span class="hs-identifier hs-var hs-var">condSubLibraries</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-51"></span><span>                           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span> </span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="condForeignLibs"><span class="annot"><span class="annottext">GenericPackageDescription
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] ForeignLib)]
+</span><a href="Distribution.Types.GenericPackageDescription.html#condForeignLibs"><span class="hs-identifier hs-var hs-var">condForeignLibs</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-53"></span><span>                           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="condExecutables"><span class="annot"><span class="annottext">GenericPackageDescription
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] Executable)]
+</span><a href="Distribution.Types.GenericPackageDescription.html#condExecutables"><span class="hs-identifier hs-var hs-var">condExecutables</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-55"></span><span>                           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Distribution.Types.Executable.html#Executable"><span class="hs-identifier hs-type">Executable</span></a></span><span> </span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="condTestSuites"><span class="annot"><span class="annottext">GenericPackageDescription
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+</span><a href="Distribution.Types.GenericPackageDescription.html#condTestSuites"><span class="hs-identifier hs-var hs-var">condTestSuites</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-57"></span><span>                           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Distribution.Types.TestSuite.html#TestSuite"><span class="hs-identifier hs-type">TestSuite</span></a></span><span> </span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="condBenchmarks"><span class="annot"><span class="annottext">GenericPackageDescription
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+</span><a href="Distribution.Types.GenericPackageDescription.html#condBenchmarks"><span class="hs-identifier hs-var hs-var">condBenchmarks</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-59"></span><span>                           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679448442"><span id="local-6989586621679448466"><span id="local-6989586621679448470"><span class="annot"><span class="annottext">Int -&gt; GenericPackageDescription -&gt; ShowS
+[GenericPackageDescription] -&gt; ShowS
+GenericPackageDescription -&gt; String
+(Int -&gt; GenericPackageDescription -&gt; ShowS)
+-&gt; (GenericPackageDescription -&gt; String)
+-&gt; ([GenericPackageDescription] -&gt; ShowS)
+-&gt; Show GenericPackageDescription
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GenericPackageDescription -&gt; ShowS
+showsPrec :: Int -&gt; GenericPackageDescription -&gt; ShowS
+$cshow :: GenericPackageDescription -&gt; String
+show :: GenericPackageDescription -&gt; String
+$cshowList :: [GenericPackageDescription] -&gt; ShowS
+showList :: [GenericPackageDescription] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679448499"><span id="local-6989586621679448521"><span class="annot"><span class="annottext">GenericPackageDescription -&gt; GenericPackageDescription -&gt; Bool
+(GenericPackageDescription -&gt; GenericPackageDescription -&gt; Bool)
+-&gt; (GenericPackageDescription -&gt; GenericPackageDescription -&gt; Bool)
+-&gt; Eq GenericPackageDescription
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GenericPackageDescription -&gt; GenericPackageDescription -&gt; Bool
+== :: GenericPackageDescription -&gt; GenericPackageDescription -&gt; Bool
+$c/= :: GenericPackageDescription -&gt; GenericPackageDescription -&gt; Bool
+/= :: GenericPackageDescription -&gt; GenericPackageDescription -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679448553"><span id="local-6989586621679448575"><span id="local-6989586621679448594"><span id="local-6989586621679448596"><span id="local-6989586621679448598"><span id="local-6989586621679448604"><span id="local-6989586621679448609"><span id="local-6989586621679448612"><span id="local-6989586621679448615"><span id="local-6989586621679448618"><span id="local-6989586621679448621"><span id="local-6989586621679448624"><span id="local-6989586621679448629"><span id="local-6989586621679448634"><span class="annot"><span class="annottext">Typeable GenericPackageDescription
+Typeable GenericPackageDescription =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; GenericPackageDescription
+ -&gt; c GenericPackageDescription)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c GenericPackageDescription)
+-&gt; (GenericPackageDescription -&gt; Constr)
+-&gt; (GenericPackageDescription -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d))
+    -&gt; Maybe (c GenericPackageDescription))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c GenericPackageDescription))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; GenericPackageDescription -&gt; GenericPackageDescription)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; GenericPackageDescription
+    -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; GenericPackageDescription
+    -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; [u])
+-&gt; (forall u.
+    Int
+    -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; GenericPackageDescription -&gt; m GenericPackageDescription)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; GenericPackageDescription -&gt; m GenericPackageDescription)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; GenericPackageDescription -&gt; m GenericPackageDescription)
+-&gt; Data GenericPackageDescription
+GenericPackageDescription -&gt; Constr
+GenericPackageDescription -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; GenericPackageDescription -&gt; GenericPackageDescription
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int
+-&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; GenericPackageDescription
+-&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; GenericPackageDescription
+-&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c GenericPackageDescription
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; GenericPackageDescription
+-&gt; c GenericPackageDescription
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d))
+-&gt; Maybe (c GenericPackageDescription)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c GenericPackageDescription)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; GenericPackageDescription
+-&gt; c GenericPackageDescription
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; GenericPackageDescription
+-&gt; c GenericPackageDescription
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c GenericPackageDescription
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c GenericPackageDescription
+$ctoConstr :: GenericPackageDescription -&gt; Constr
+toConstr :: GenericPackageDescription -&gt; Constr
+$cdataTypeOf :: GenericPackageDescription -&gt; DataType
+dataTypeOf :: GenericPackageDescription -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d))
+-&gt; Maybe (c GenericPackageDescription)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d))
+-&gt; Maybe (c GenericPackageDescription)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c GenericPackageDescription)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c GenericPackageDescription)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; GenericPackageDescription -&gt; GenericPackageDescription
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; GenericPackageDescription -&gt; GenericPackageDescription
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; GenericPackageDescription
+-&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; GenericPackageDescription
+-&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; GenericPackageDescription
+-&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; GenericPackageDescription
+-&gt; r
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; [u]
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; [u]
+$cgmapQi :: forall u.
+Int
+-&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; u
+gmapQi :: forall u.
+Int
+-&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; GenericPackageDescription -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; GenericPackageDescription -&gt; m GenericPackageDescription
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679448678"><span id="local-6989586621679448680"><span class="annot"><span class="annottext">(forall x.
+ GenericPackageDescription -&gt; Rep GenericPackageDescription x)
+-&gt; (forall x.
+    Rep GenericPackageDescription x -&gt; GenericPackageDescription)
+-&gt; Generic GenericPackageDescription
+forall x.
+Rep GenericPackageDescription x -&gt; GenericPackageDescription
+forall x.
+GenericPackageDescription -&gt; Rep GenericPackageDescription x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+GenericPackageDescription -&gt; Rep GenericPackageDescription x
+from :: forall x.
+GenericPackageDescription -&gt; Rep GenericPackageDescription x
+$cto :: forall x.
+Rep GenericPackageDescription x -&gt; GenericPackageDescription
+to :: forall x.
+Rep GenericPackageDescription x -&gt; GenericPackageDescription
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Package.html#Package"><span class="hs-identifier hs-type">Package</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-type">GenericPackageDescription</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679448688"><span class="annot"><span class="annottext">packageId :: GenericPackageDescription -&gt; PackageIdentifier
+</span><a href="#local-6989586621679448688"><span class="hs-identifier hs-var hs-var hs-var hs-var">packageId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PackageDescription -&gt; PackageIdentifier
+forall pkg. Package pkg =&gt; pkg -&gt; PackageIdentifier
+</span><a href="Distribution.Package.html#packageId"><span class="hs-identifier hs-var">packageId</span></a></span><span> </span><span class="annot"><span class="annottext">(PackageDescription -&gt; PackageIdentifier)
+-&gt; (GenericPackageDescription -&gt; PackageDescription)
+-&gt; GenericPackageDescription
+-&gt; PackageIdentifier
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GenericPackageDescription -&gt; PackageDescription
+</span><a href="Distribution.Types.GenericPackageDescription.html#packageDescription"><span class="hs-identifier hs-var">packageDescription</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679448692"><span id="local-6989586621679448699"><span id="local-6989586621679448705"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-type">GenericPackageDescription</span></a></span></span></span></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679448846"><span id="local-6989586621679448853"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-type">GenericPackageDescription</span></a></span></span></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-type">GenericPackageDescription</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679449038"><span class="annot"><span class="annottext">rnf :: GenericPackageDescription -&gt; ()
+</span><a href="#local-6989586621679449038"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenericPackageDescription -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#emptyGenericPackageDescription"><span class="hs-identifier hs-type">emptyGenericPackageDescription</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-type">GenericPackageDescription</span></a></span><span>
+</span><span id="line-71"></span><span id="emptyGenericPackageDescription"><span class="annot"><span class="annottext">emptyGenericPackageDescription :: GenericPackageDescription
+</span><a href="Distribution.Types.GenericPackageDescription.html#emptyGenericPackageDescription"><span class="hs-identifier hs-var hs-var">emptyGenericPackageDescription</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PackageDescription
+-&gt; Maybe Version
+-&gt; [PackageFlag]
+-&gt; Maybe (CondTree ConfVar [Dependency] Library)
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] ForeignLib)]
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] Executable)]
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+-&gt; GenericPackageDescription
+</span><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-var">GenericPackageDescription</span></a></span><span> </span><span class="annot"><span class="annottext">PackageDescription
+</span><a href="Distribution.Types.PackageDescription.html#emptyPackageDescription"><span class="hs-identifier hs-var">emptyPackageDescription</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Maybe (CondTree ConfVar [Dependency] Library)
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- Traversal Instances</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#HasBuildInfos"><span class="hs-identifier hs-type">L.HasBuildInfos</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-type">GenericPackageDescription</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679449098"><span class="annot"><span class="annottext">traverseBuildInfos :: Traversal' GenericPackageDescription BuildInfo
+</span><a href="#local-6989586621679449098"><span class="hs-identifier hs-var hs-var hs-var hs-var">traverseBuildInfos</span></a></span></span><span> </span><span id="local-6989586621679449100"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-type">GenericPackageDescription</span></a></span><span> </span><span id="local-6989586621679449101"><span class="annot"><span class="annottext">PackageDescription
+</span><a href="#local-6989586621679449101"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679449102"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679449102"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679449103"><span class="annot"><span class="annottext">[PackageFlag]
+</span><a href="#local-6989586621679449103"><span class="hs-identifier hs-var">a1</span></a></span></span><span> </span><span id="local-6989586621679449104"><span class="annot"><span class="annottext">Maybe (CondTree ConfVar [Dependency] Library)
+</span><a href="#local-6989586621679449104"><span class="hs-identifier hs-var">x1</span></a></span></span><span> </span><span id="local-6989586621679449105"><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+</span><a href="#local-6989586621679449105"><span class="hs-identifier hs-var">x2</span></a></span></span><span> </span><span id="local-6989586621679449106"><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)]
+</span><a href="#local-6989586621679449106"><span class="hs-identifier hs-var">x3</span></a></span></span><span> </span><span id="local-6989586621679449107"><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] Executable)]
+</span><a href="#local-6989586621679449107"><span class="hs-identifier hs-var">x4</span></a></span></span><span> </span><span id="local-6989586621679449108"><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+</span><a href="#local-6989586621679449108"><span class="hs-identifier hs-var">x5</span></a></span></span><span> </span><span id="local-6989586621679449109"><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+</span><a href="#local-6989586621679449109"><span class="hs-identifier hs-var">x6</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>        </span><span class="annot"><span class="annottext">PackageDescription
+-&gt; Maybe Version
+-&gt; [PackageFlag]
+-&gt; Maybe (CondTree ConfVar [Dependency] Library)
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] ForeignLib)]
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] Executable)]
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+-&gt; GenericPackageDescription
+</span><a href="Distribution.Types.GenericPackageDescription.html#GenericPackageDescription"><span class="hs-identifier hs-var">GenericPackageDescription</span></a></span><span>
+</span><span id="line-79"></span><span>            </span><span class="annot"><span class="annottext">(PackageDescription
+ -&gt; Maybe Version
+ -&gt; [PackageFlag]
+ -&gt; Maybe (CondTree ConfVar [Dependency] Library)
+ -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+ -&gt; [(UnqualComponentName,
+      CondTree ConfVar [Dependency] ForeignLib)]
+ -&gt; [(UnqualComponentName,
+      CondTree ConfVar [Dependency] Executable)]
+ -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+ -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+ -&gt; GenericPackageDescription)
+-&gt; f PackageDescription
+-&gt; f (Maybe Version
+      -&gt; [PackageFlag]
+      -&gt; Maybe (CondTree ConfVar [Dependency] Library)
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] ForeignLib)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] Executable)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f PackageDescription PackageDescription BuildInfo BuildInfo
+forall a. HasBuildInfos a =&gt; Traversal' a BuildInfo
+Traversal' PackageDescription BuildInfo
+</span><a href="Distribution.Types.BuildInfo.Lens.html#traverseBuildInfos"><span class="hs-identifier hs-var">L.traverseBuildInfos</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">PackageDescription
+</span><a href="#local-6989586621679449101"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span class="annot"><span class="annottext">f (Maybe Version
+   -&gt; [PackageFlag]
+   -&gt; Maybe (CondTree ConfVar [Dependency] Library)
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] ForeignLib)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f (Maybe Version)
+-&gt; f ([PackageFlag]
+      -&gt; Maybe (CondTree ConfVar [Dependency] Library)
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] ForeignLib)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] Executable)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version -&gt; f (Maybe Version)
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679449102"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-81"></span><span>            </span><span class="annot"><span class="annottext">f ([PackageFlag]
+   -&gt; Maybe (CondTree ConfVar [Dependency] Library)
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] ForeignLib)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f [PackageFlag]
+-&gt; f (Maybe (CondTree ConfVar [Dependency] Library)
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] ForeignLib)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] Executable)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[PackageFlag] -&gt; f [PackageFlag]
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">[PackageFlag]
+</span><a href="#local-6989586621679449103"><span class="hs-identifier hs-var">a1</span></a></span><span>
+</span><span id="line-82"></span><span>            </span><span class="annot"><span class="annottext">f (Maybe (CondTree ConfVar [Dependency] Library)
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] ForeignLib)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f (Maybe (CondTree ConfVar [Dependency] Library))
+-&gt; f ([(UnqualComponentName,
+        CondTree ConfVar [Dependency] Library)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] ForeignLib)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] Executable)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CondTree ConfVar [Dependency] Library
+ -&gt; f (CondTree ConfVar [Dependency] Library))
+-&gt; Maybe (CondTree ConfVar [Dependency] Library)
+-&gt; f (Maybe (CondTree ConfVar [Dependency] Library))
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">((CondTree ConfVar [Dependency] Library
+  -&gt; f (CondTree ConfVar [Dependency] Library))
+ -&gt; Maybe (CondTree ConfVar [Dependency] Library)
+ -&gt; f (Maybe (CondTree ConfVar [Dependency] Library)))
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; CondTree ConfVar [Dependency] Library
+    -&gt; f (CondTree ConfVar [Dependency] Library))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; Maybe (CondTree ConfVar [Dependency] Library)
+-&gt; f (Maybe (CondTree ConfVar [Dependency] Library))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; f BuildInfo)
+-&gt; CondTree ConfVar [Dependency] Library
+-&gt; f (CondTree ConfVar [Dependency] Library)
+forall (f :: * -&gt; *) comp v.
+(Applicative f, HasBuildInfo comp) =&gt;
+LensLike' f (CondTree v [Dependency] comp) BuildInfo
+</span><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-var">traverseCondTreeBuildInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (CondTree ConfVar [Dependency] Library)
+</span><a href="#local-6989586621679449104"><span class="hs-identifier hs-var">x1</span></a></span><span>
+</span><span id="line-83"></span><span>            </span><span class="annot"><span class="annottext">f ([(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] ForeignLib)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+-&gt; f ([(UnqualComponentName,
+        CondTree ConfVar [Dependency] ForeignLib)]
+      -&gt; [(UnqualComponentName,
+           CondTree ConfVar [Dependency] Executable)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((UnqualComponentName, CondTree ConfVar [Dependency] Library)
+ -&gt; f (UnqualComponentName, CondTree ConfVar [Dependency] Library))
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+-&gt; f [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">(((UnqualComponentName, CondTree ConfVar [Dependency] Library)
+  -&gt; f (UnqualComponentName, CondTree ConfVar [Dependency] Library))
+ -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+ -&gt; f [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Library)])
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; (UnqualComponentName, CondTree ConfVar [Dependency] Library)
+    -&gt; f (UnqualComponentName, CondTree ConfVar [Dependency] Library))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+-&gt; f [(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] Library)
+  (UnqualComponentName, CondTree ConfVar [Dependency] Library)
+  (CondTree ConfVar [Dependency] Library)
+  (CondTree ConfVar [Dependency] Library)
+forall c a b (f :: * -&gt; *).
+Functor f =&gt;
+LensLike f (c, a) (c, b) a b
+</span><a href="Distribution.Compat.Lens.html#_2"><span class="hs-identifier hs-var">L._2</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] Library)
+  (UnqualComponentName, CondTree ConfVar [Dependency] Library)
+  (CondTree ConfVar [Dependency] Library)
+  (CondTree ConfVar [Dependency] Library)
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; CondTree ConfVar [Dependency] Library
+    -&gt; f (CondTree ConfVar [Dependency] Library))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; (UnqualComponentName, CondTree ConfVar [Dependency] Library)
+-&gt; f (UnqualComponentName, CondTree ConfVar [Dependency] Library)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; f BuildInfo)
+-&gt; CondTree ConfVar [Dependency] Library
+-&gt; f (CondTree ConfVar [Dependency] Library)
+forall (f :: * -&gt; *) comp v.
+(Applicative f, HasBuildInfo comp) =&gt;
+LensLike' f (CondTree v [Dependency] comp) BuildInfo
+</span><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-var">traverseCondTreeBuildInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] Library)]
+</span><a href="#local-6989586621679449105"><span class="hs-identifier hs-var">x2</span></a></span><span>
+</span><span id="line-84"></span><span>            </span><span class="annot"><span class="annottext">f ([(UnqualComponentName,
+     CondTree ConfVar [Dependency] ForeignLib)]
+   -&gt; [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] ForeignLib)]
+-&gt; f ([(UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+ -&gt; f (UnqualComponentName,
+       CondTree ConfVar [Dependency] ForeignLib))
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] ForeignLib)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] ForeignLib)]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">(((UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+  -&gt; f (UnqualComponentName,
+        CondTree ConfVar [Dependency] ForeignLib))
+ -&gt; [(UnqualComponentName,
+      CondTree ConfVar [Dependency] ForeignLib)]
+ -&gt; f [(UnqualComponentName,
+        CondTree ConfVar [Dependency] ForeignLib)])
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; (UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+    -&gt; f (UnqualComponentName,
+          CondTree ConfVar [Dependency] ForeignLib))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] ForeignLib)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] ForeignLib)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+  (UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+  (CondTree ConfVar [Dependency] ForeignLib)
+  (CondTree ConfVar [Dependency] ForeignLib)
+forall c a b (f :: * -&gt; *).
+Functor f =&gt;
+LensLike f (c, a) (c, b) a b
+</span><a href="Distribution.Compat.Lens.html#_2"><span class="hs-identifier hs-var">L._2</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+  (UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+  (CondTree ConfVar [Dependency] ForeignLib)
+  (CondTree ConfVar [Dependency] ForeignLib)
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; CondTree ConfVar [Dependency] ForeignLib
+    -&gt; f (CondTree ConfVar [Dependency] ForeignLib))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; (UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)
+-&gt; f (UnqualComponentName,
+      CondTree ConfVar [Dependency] ForeignLib)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; f BuildInfo)
+-&gt; CondTree ConfVar [Dependency] ForeignLib
+-&gt; f (CondTree ConfVar [Dependency] ForeignLib)
+forall (f :: * -&gt; *) comp v.
+(Applicative f, HasBuildInfo comp) =&gt;
+LensLike' f (CondTree v [Dependency] comp) BuildInfo
+</span><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-var">traverseCondTreeBuildInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] ForeignLib)]
+</span><a href="#local-6989586621679449106"><span class="hs-identifier hs-var">x3</span></a></span><span>
+</span><span id="line-85"></span><span>            </span><span class="annot"><span class="annottext">f ([(UnqualComponentName,
+     CondTree ConfVar [Dependency] Executable)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] Executable)]
+-&gt; f ([(UnqualComponentName,
+        CondTree ConfVar [Dependency] TestSuite)]
+      -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+ -&gt; f (UnqualComponentName,
+       CondTree ConfVar [Dependency] Executable))
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] Executable)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] Executable)]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">(((UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+  -&gt; f (UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable))
+ -&gt; [(UnqualComponentName,
+      CondTree ConfVar [Dependency] Executable)]
+ -&gt; f [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Executable)])
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; (UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+    -&gt; f (UnqualComponentName,
+          CondTree ConfVar [Dependency] Executable))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; [(UnqualComponentName,
+     CondTree ConfVar [Dependency] Executable)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] Executable)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+  (UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+  (CondTree ConfVar [Dependency] Executable)
+  (CondTree ConfVar [Dependency] Executable)
+forall c a b (f :: * -&gt; *).
+Functor f =&gt;
+LensLike f (c, a) (c, b) a b
+</span><a href="Distribution.Compat.Lens.html#_2"><span class="hs-identifier hs-var">L._2</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+  (UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+  (CondTree ConfVar [Dependency] Executable)
+  (CondTree ConfVar [Dependency] Executable)
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; CondTree ConfVar [Dependency] Executable
+    -&gt; f (CondTree ConfVar [Dependency] Executable))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; (UnqualComponentName, CondTree ConfVar [Dependency] Executable)
+-&gt; f (UnqualComponentName,
+      CondTree ConfVar [Dependency] Executable)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; f BuildInfo)
+-&gt; CondTree ConfVar [Dependency] Executable
+-&gt; f (CondTree ConfVar [Dependency] Executable)
+forall (f :: * -&gt; *) comp v.
+(Applicative f, HasBuildInfo comp) =&gt;
+LensLike' f (CondTree v [Dependency] comp) BuildInfo
+</span><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-var">traverseCondTreeBuildInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] Executable)]
+</span><a href="#local-6989586621679449107"><span class="hs-identifier hs-var">x4</span></a></span><span>
+</span><span id="line-86"></span><span>            </span><span class="annot"><span class="annottext">f ([(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+   -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] TestSuite)]
+-&gt; f ([(UnqualComponentName,
+        CondTree ConfVar [Dependency] Benchmark)]
+      -&gt; GenericPackageDescription)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+ -&gt; f (UnqualComponentName,
+       CondTree ConfVar [Dependency] TestSuite))
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] TestSuite)]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">(((UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+  -&gt; f (UnqualComponentName,
+        CondTree ConfVar [Dependency] TestSuite))
+ -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+ -&gt; f [(UnqualComponentName,
+        CondTree ConfVar [Dependency] TestSuite)])
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; (UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+    -&gt; f (UnqualComponentName,
+          CondTree ConfVar [Dependency] TestSuite))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] TestSuite)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+  (UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+  (CondTree ConfVar [Dependency] TestSuite)
+  (CondTree ConfVar [Dependency] TestSuite)
+forall c a b (f :: * -&gt; *).
+Functor f =&gt;
+LensLike f (c, a) (c, b) a b
+</span><a href="Distribution.Compat.Lens.html#_2"><span class="hs-identifier hs-var">L._2</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+  (UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+  (CondTree ConfVar [Dependency] TestSuite)
+  (CondTree ConfVar [Dependency] TestSuite)
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; CondTree ConfVar [Dependency] TestSuite
+    -&gt; f (CondTree ConfVar [Dependency] TestSuite))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; (UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+-&gt; f (UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; f BuildInfo)
+-&gt; CondTree ConfVar [Dependency] TestSuite
+-&gt; f (CondTree ConfVar [Dependency] TestSuite)
+forall (f :: * -&gt; *) comp v.
+(Applicative f, HasBuildInfo comp) =&gt;
+LensLike' f (CondTree v [Dependency] comp) BuildInfo
+</span><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-var">traverseCondTreeBuildInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] TestSuite)]
+</span><a href="#local-6989586621679449108"><span class="hs-identifier hs-var">x5</span></a></span><span>
+</span><span id="line-87"></span><span>            </span><span class="annot"><span class="annottext">f ([(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+   -&gt; GenericPackageDescription)
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] Benchmark)]
+-&gt; f GenericPackageDescription
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+ -&gt; f (UnqualComponentName,
+       CondTree ConfVar [Dependency] Benchmark))
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] Benchmark)]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">(((UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+  -&gt; f (UnqualComponentName,
+        CondTree ConfVar [Dependency] Benchmark))
+ -&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+ -&gt; f [(UnqualComponentName,
+        CondTree ConfVar [Dependency] Benchmark)])
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; (UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+    -&gt; f (UnqualComponentName,
+          CondTree ConfVar [Dependency] Benchmark))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; [(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+-&gt; f [(UnqualComponentName,
+       CondTree ConfVar [Dependency] Benchmark)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+  (UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+  (CondTree ConfVar [Dependency] Benchmark)
+  (CondTree ConfVar [Dependency] Benchmark)
+forall c a b (f :: * -&gt; *).
+Functor f =&gt;
+LensLike f (c, a) (c, b) a b
+</span><a href="Distribution.Compat.Lens.html#_2"><span class="hs-identifier hs-var">L._2</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike
+  f
+  (UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+  (UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+  (CondTree ConfVar [Dependency] Benchmark)
+  (CondTree ConfVar [Dependency] Benchmark)
+-&gt; ((BuildInfo -&gt; f BuildInfo)
+    -&gt; CondTree ConfVar [Dependency] Benchmark
+    -&gt; f (CondTree ConfVar [Dependency] Benchmark))
+-&gt; (BuildInfo -&gt; f BuildInfo)
+-&gt; (UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+-&gt; f (UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; f BuildInfo)
+-&gt; CondTree ConfVar [Dependency] Benchmark
+-&gt; f (CondTree ConfVar [Dependency] Benchmark)
+forall (f :: * -&gt; *) comp v.
+(Applicative f, HasBuildInfo comp) =&gt;
+LensLike' f (CondTree v [Dependency] comp) BuildInfo
+</span><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-var">traverseCondTreeBuildInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449100"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[(UnqualComponentName, CondTree ConfVar [Dependency] Benchmark)]
+</span><a href="#local-6989586621679449109"><span class="hs-identifier hs-var">x6</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- We use this traversal to keep [Dependency] field in CondTree up to date.</span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-type">traverseCondTreeBuildInfo</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679448379"><span class="annot"><a href="#local-6989586621679448379"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679448380"><span class="annot"><a href="#local-6989586621679448380"><span class="hs-identifier hs-type">comp</span></a></span></span><span> </span><span id="local-6989586621679448381"><span class="annot"><a href="#local-6989586621679448381"><span class="hs-identifier hs-type">v</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448379"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#HasBuildInfo"><span class="hs-identifier hs-type">L.HasBuildInfo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448380"><span class="hs-identifier hs-type">comp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Compat.Lens.html#LensLike%27"><span class="hs-identifier hs-type">LensLike'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448379"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448381"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621679448380"><span class="hs-identifier hs-type">comp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">L.BuildInfo</span></a></span><span>
+</span><span id="line-93"></span><span id="traverseCondTreeBuildInfo"><span class="annot"><span class="annottext">traverseCondTreeBuildInfo :: forall (f :: * -&gt; *) comp v.
+(Applicative f, HasBuildInfo comp) =&gt;
+LensLike' f (CondTree v [Dependency] comp) BuildInfo
+</span><a href="Distribution.Types.GenericPackageDescription.html#traverseCondTreeBuildInfo"><span class="hs-identifier hs-var hs-var">traverseCondTreeBuildInfo</span></a></span></span><span> </span><span id="local-6989586621679449120"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449120"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CondTree v [Dependency] comp -&gt; f (CondTree v [Dependency] comp)
+forall {c}. CondTree v c comp -&gt; f (CondTree v [Dependency] comp)
+</span><a href="#local-6989586621679449121"><span class="hs-identifier hs-var">node</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><a href="#local-6989586621679449122"><span class="hs-identifier hs-type">mkCondNode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679448380"><span class="hs-identifier hs-type">comp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.CondTree.html#CondBranch"><span class="hs-identifier hs-type">CondBranch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448381"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621679448380"><span class="hs-identifier hs-type">comp</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.CondTree.html#CondTree"><span class="hs-identifier hs-type">CondTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448381"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Dependency.html#Dependency"><span class="hs-identifier hs-type">Dependency</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621679448380"><span class="hs-identifier hs-type">comp</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621679449122"><span class="annot"><span class="annottext">mkCondNode :: comp
+-&gt; [CondBranch v [Dependency] comp] -&gt; CondTree v [Dependency] comp
+</span><a href="#local-6989586621679449122"><span class="hs-identifier hs-var hs-var">mkCondNode</span></a></span></span><span> </span><span id="local-6989586621679449123"><span class="annot"><span class="annottext">comp
+</span><a href="#local-6989586621679449123"><span class="hs-identifier hs-var">comp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">comp
+-&gt; [Dependency]
+-&gt; [CondBranch v [Dependency] comp]
+-&gt; CondTree v [Dependency] comp
+forall v c a. a -&gt; c -&gt; [CondBranch v c a] -&gt; CondTree v c a
+</span><a href="Distribution.Types.CondTree.html#CondNode"><span class="hs-identifier hs-var">CondNode</span></a></span><span> </span><span class="annot"><span class="annottext">comp
+</span><a href="#local-6989586621679449123"><span class="hs-identifier hs-var">comp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Getting [Dependency] comp [Dependency] -&gt; comp -&gt; [Dependency]
+forall a s. Getting a s a -&gt; s -&gt; a
+</span><a href="Distribution.Compat.Lens.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Getting [Dependency] comp [Dependency]
+forall a. HasBuildInfo a =&gt; Lens' a [Dependency]
+Lens' comp [Dependency]
+</span><a href="Distribution.Types.BuildInfo.Lens.html#targetBuildDepends"><span class="hs-identifier hs-var">L.targetBuildDepends</span></a></span><span> </span><span class="annot"><span class="annottext">comp
+</span><a href="#local-6989586621679449123"><span class="hs-identifier hs-var">comp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679449121"><span class="annot"><span class="annottext">node :: CondTree v c comp -&gt; f (CondTree v [Dependency] comp)
+</span><a href="#local-6989586621679449121"><span class="hs-identifier hs-var hs-var">node</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.CondTree.html#CondNode"><span class="hs-identifier hs-type">CondNode</span></a></span><span> </span><span id="local-6989586621679449138"><span class="annot"><span class="annottext">comp
+</span><a href="#local-6989586621679449138"><span class="hs-identifier hs-var">comp</span></a></span></span><span> </span><span class="annot"><span class="annottext">c
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679449139"><span class="annot"><span class="annottext">[CondBranch v c comp]
+</span><a href="#local-6989586621679449139"><span class="hs-identifier hs-var">branches</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">comp
+-&gt; [CondBranch v [Dependency] comp] -&gt; CondTree v [Dependency] comp
+</span><a href="#local-6989586621679449122"><span class="hs-identifier hs-var">mkCondNode</span></a></span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><span class="annottext">(comp
+ -&gt; [CondBranch v [Dependency] comp]
+ -&gt; CondTree v [Dependency] comp)
+-&gt; f comp
+-&gt; f ([CondBranch v [Dependency] comp]
+      -&gt; CondTree v [Dependency] comp)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike f comp comp BuildInfo BuildInfo
+forall a. HasBuildInfo a =&gt; Lens' a BuildInfo
+Lens' comp BuildInfo
+</span><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">L.buildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679449120"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">comp
+</span><a href="#local-6989586621679449138"><span class="hs-identifier hs-var">comp</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">f ([CondBranch v [Dependency] comp]
+   -&gt; CondTree v [Dependency] comp)
+-&gt; f [CondBranch v [Dependency] comp]
+-&gt; f (CondTree v [Dependency] comp)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(CondBranch v c comp -&gt; f (CondBranch v [Dependency] comp))
+-&gt; [CondBranch v c comp] -&gt; f [CondBranch v [Dependency] comp]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">CondBranch v c comp -&gt; f (CondBranch v [Dependency] comp)
+</span><a href="#local-6989586621679449141"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">[CondBranch v c comp]
+</span><a href="#local-6989586621679449139"><span class="hs-identifier hs-var">branches</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>    </span><span id="local-6989586621679449141"><span class="annot"><span class="annottext">branch :: CondBranch v c comp -&gt; f (CondBranch v [Dependency] comp)
+</span><a href="#local-6989586621679449141"><span class="hs-identifier hs-var hs-var">branch</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.CondTree.html#CondBranch"><span class="hs-identifier hs-type">CondBranch</span></a></span><span> </span><span id="local-6989586621679449143"><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679449143"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679449144"><span class="annot"><span class="annottext">CondTree v c comp
+</span><a href="#local-6989586621679449144"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679449145"><span class="annot"><span class="annottext">Maybe (CondTree v c comp)
+</span><a href="#local-6989586621679449145"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition v
+-&gt; CondTree v [Dependency] comp
+-&gt; Maybe (CondTree v [Dependency] comp)
+-&gt; CondBranch v [Dependency] comp
+forall v c a.
+Condition v
+-&gt; CondTree v c a -&gt; Maybe (CondTree v c a) -&gt; CondBranch v c a
+</span><a href="Distribution.Types.CondTree.html#CondBranch"><span class="hs-identifier hs-var">CondBranch</span></a></span><span> </span><span class="annot"><span class="annottext">Condition v
+</span><a href="#local-6989586621679449143"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">(CondTree v [Dependency] comp
+ -&gt; Maybe (CondTree v [Dependency] comp)
+ -&gt; CondBranch v [Dependency] comp)
+-&gt; f (CondTree v [Dependency] comp)
+-&gt; f (Maybe (CondTree v [Dependency] comp)
+      -&gt; CondBranch v [Dependency] comp)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">CondTree v c comp -&gt; f (CondTree v [Dependency] comp)
+</span><a href="#local-6989586621679449121"><span class="hs-identifier hs-var">node</span></a></span><span> </span><span class="annot"><span class="annottext">CondTree v c comp
+</span><a href="#local-6989586621679449144"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">f (Maybe (CondTree v [Dependency] comp)
+   -&gt; CondBranch v [Dependency] comp)
+-&gt; f (Maybe (CondTree v [Dependency] comp))
+-&gt; f (CondBranch v [Dependency] comp)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(CondTree v c comp -&gt; f (CondTree v [Dependency] comp))
+-&gt; Maybe (CondTree v c comp)
+-&gt; f (Maybe (CondTree v [Dependency] comp))
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">CondTree v c comp -&gt; f (CondTree v [Dependency] comp)
+</span><a href="#local-6989586621679449121"><span class="hs-identifier hs-var">node</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (CondTree v c comp)
+</span><a href="#local-6989586621679449145"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-104"></span></pre></body></html>

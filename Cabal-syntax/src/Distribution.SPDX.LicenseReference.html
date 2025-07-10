@@ -1,0 +1,563 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679410015"><span id="local-6989586621679410016"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.SPDX.LicenseReference</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier">LicenseRef</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#licenseRef"><span class="hs-identifier">licenseRef</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#licenseDocumentRef"><span class="hs-identifier">licenseDocumentRef</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#mkLicenseRef"><span class="hs-identifier">mkLicenseRef</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#mkLicenseRef%27"><span class="hs-identifier">mkLicenseRef'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier">isAsciiAlphaNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><span class="hs-comment">-- | A&#160;user&#160;defined&#160;license&#160;reference&#160;denoted&#160;by&#160;@LicenseRef-[idstring]@&#160;(for&#160;a&#160;license&#160;not&#160;on&#160;the&#160;SPDX License&#160;List)&#894;</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="LicenseRef"><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-var">LicenseRef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LicenseRef"><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-var">LicenseRef</span></a></span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="_lrDocument"><span class="annot"><span class="annottext">LicenseRef -&gt; Maybe String
+</span><a href="Distribution.SPDX.LicenseReference.html#_lrDocument"><span class="hs-identifier hs-var hs-var">_lrDocument</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_lrLicense"><span class="annot"><span class="annottext">LicenseRef -&gt; String
+</span><a href="Distribution.SPDX.LicenseReference.html#_lrLicense"><span class="hs-identifier hs-var hs-var">_lrLicense</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679410039"><span id="local-6989586621679410047"><span id="local-6989586621679410051"><span class="annot"><span class="annottext">Int -&gt; LicenseRef -&gt; ShowS
+[LicenseRef] -&gt; ShowS
+LicenseRef -&gt; String
+(Int -&gt; LicenseRef -&gt; ShowS)
+-&gt; (LicenseRef -&gt; String)
+-&gt; ([LicenseRef] -&gt; ShowS)
+-&gt; Show LicenseRef
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LicenseRef -&gt; ShowS
+showsPrec :: Int -&gt; LicenseRef -&gt; ShowS
+$cshow :: LicenseRef -&gt; String
+show :: LicenseRef -&gt; String
+$cshowList :: [LicenseRef] -&gt; ShowS
+showList :: [LicenseRef] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679410058"><span id="local-6989586621679410062"><span id="local-6989586621679410065"><span id="local-6989586621679410079"><span class="annot"><span class="annottext">ReadPrec [LicenseRef]
+ReadPrec LicenseRef
+Int -&gt; ReadS LicenseRef
+ReadS [LicenseRef]
+(Int -&gt; ReadS LicenseRef)
+-&gt; ReadS [LicenseRef]
+-&gt; ReadPrec LicenseRef
+-&gt; ReadPrec [LicenseRef]
+-&gt; Read LicenseRef
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS LicenseRef
+readsPrec :: Int -&gt; ReadS LicenseRef
+$creadList :: ReadS [LicenseRef]
+readList :: ReadS [LicenseRef]
+$creadPrec :: ReadPrec LicenseRef
+readPrec :: ReadPrec LicenseRef
+$creadListPrec :: ReadPrec [LicenseRef]
+readListPrec :: ReadPrec [LicenseRef]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679410086"><span id="local-6989586621679410092"><span class="annot"><span class="annottext">LicenseRef -&gt; LicenseRef -&gt; Bool
+(LicenseRef -&gt; LicenseRef -&gt; Bool)
+-&gt; (LicenseRef -&gt; LicenseRef -&gt; Bool) -&gt; Eq LicenseRef
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LicenseRef -&gt; LicenseRef -&gt; Bool
+== :: LicenseRef -&gt; LicenseRef -&gt; Bool
+$c/= :: LicenseRef -&gt; LicenseRef -&gt; Bool
+/= :: LicenseRef -&gt; LicenseRef -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679410102"><span id="local-6989586621679410108"><span id="local-6989586621679410113"><span id="local-6989586621679410117"><span id="local-6989586621679410120"><span id="local-6989586621679410123"><span id="local-6989586621679410126"><span class="annot"><span class="annottext">Eq LicenseRef
+Eq LicenseRef =&gt;
+(LicenseRef -&gt; LicenseRef -&gt; Ordering)
+-&gt; (LicenseRef -&gt; LicenseRef -&gt; Bool)
+-&gt; (LicenseRef -&gt; LicenseRef -&gt; Bool)
+-&gt; (LicenseRef -&gt; LicenseRef -&gt; Bool)
+-&gt; (LicenseRef -&gt; LicenseRef -&gt; Bool)
+-&gt; (LicenseRef -&gt; LicenseRef -&gt; LicenseRef)
+-&gt; (LicenseRef -&gt; LicenseRef -&gt; LicenseRef)
+-&gt; Ord LicenseRef
+LicenseRef -&gt; LicenseRef -&gt; Bool
+LicenseRef -&gt; LicenseRef -&gt; Ordering
+LicenseRef -&gt; LicenseRef -&gt; LicenseRef
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: LicenseRef -&gt; LicenseRef -&gt; Ordering
+compare :: LicenseRef -&gt; LicenseRef -&gt; Ordering
+$c&lt; :: LicenseRef -&gt; LicenseRef -&gt; Bool
+&lt; :: LicenseRef -&gt; LicenseRef -&gt; Bool
+$c&lt;= :: LicenseRef -&gt; LicenseRef -&gt; Bool
+&lt;= :: LicenseRef -&gt; LicenseRef -&gt; Bool
+$c&gt; :: LicenseRef -&gt; LicenseRef -&gt; Bool
+&gt; :: LicenseRef -&gt; LicenseRef -&gt; Bool
+$c&gt;= :: LicenseRef -&gt; LicenseRef -&gt; Bool
+&gt;= :: LicenseRef -&gt; LicenseRef -&gt; Bool
+$cmax :: LicenseRef -&gt; LicenseRef -&gt; LicenseRef
+max :: LicenseRef -&gt; LicenseRef -&gt; LicenseRef
+$cmin :: LicenseRef -&gt; LicenseRef -&gt; LicenseRef
+min :: LicenseRef -&gt; LicenseRef -&gt; LicenseRef
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679410136"><span id="local-6989586621679410143"><span id="local-6989586621679410148"><span id="local-6989586621679410150"><span id="local-6989586621679410152"><span id="local-6989586621679410158"><span id="local-6989586621679410163"><span id="local-6989586621679410166"><span id="local-6989586621679410169"><span id="local-6989586621679410172"><span id="local-6989586621679410175"><span id="local-6989586621679410178"><span id="local-6989586621679410183"><span id="local-6989586621679410188"><span class="annot"><span class="annottext">Typeable LicenseRef
+Typeable LicenseRef =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; LicenseRef -&gt; c LicenseRef)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseRef)
+-&gt; (LicenseRef -&gt; Constr)
+-&gt; (LicenseRef -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseRef))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c LicenseRef))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; LicenseRef -&gt; LicenseRef)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef)
+-&gt; Data LicenseRef
+LicenseRef -&gt; Constr
+LicenseRef -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; LicenseRef -&gt; LicenseRef
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseRef
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LicenseRef -&gt; c LicenseRef
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseRef)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c LicenseRef)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LicenseRef -&gt; c LicenseRef
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LicenseRef -&gt; c LicenseRef
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseRef
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseRef
+$ctoConstr :: LicenseRef -&gt; Constr
+toConstr :: LicenseRef -&gt; Constr
+$cdataTypeOf :: LicenseRef -&gt; DataType
+dataTypeOf :: LicenseRef -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseRef)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseRef)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c LicenseRef)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c LicenseRef)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LicenseRef -&gt; LicenseRef
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LicenseRef -&gt; LicenseRef
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseRef -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseRef -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LicenseRef -&gt; m LicenseRef
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679410195"><span id="local-6989586621679410197"><span class="annot"><span class="annottext">(forall x. LicenseRef -&gt; Rep LicenseRef x)
+-&gt; (forall x. Rep LicenseRef x -&gt; LicenseRef) -&gt; Generic LicenseRef
+forall x. Rep LicenseRef x -&gt; LicenseRef
+forall x. LicenseRef -&gt; Rep LicenseRef x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. LicenseRef -&gt; Rep LicenseRef x
+from :: forall x. LicenseRef -&gt; Rep LicenseRef x
+$cto :: forall x. Rep LicenseRef x -&gt; LicenseRef
+to :: forall x. Rep LicenseRef x -&gt; LicenseRef
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><span class="hs-comment">-- | License reference.</span></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#licenseRef"><span class="hs-identifier hs-type">licenseRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-30"></span><span id="licenseRef"><span class="annot"><span class="annottext">licenseRef :: LicenseRef -&gt; String
+</span><a href="Distribution.SPDX.LicenseReference.html#licenseRef"><span class="hs-identifier hs-var hs-var">licenseRef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseRef -&gt; String
+</span><a href="Distribution.SPDX.LicenseReference.html#_lrLicense"><span class="hs-identifier hs-var">_lrLicense</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | Document reference.</span></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#licenseDocumentRef"><span class="hs-identifier hs-type">licenseDocumentRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-34"></span><span id="licenseDocumentRef"><span class="annot"><span class="annottext">licenseDocumentRef :: LicenseRef -&gt; Maybe String
+</span><a href="Distribution.SPDX.LicenseReference.html#licenseDocumentRef"><span class="hs-identifier hs-var hs-var">licenseDocumentRef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseRef -&gt; Maybe String
+</span><a href="Distribution.SPDX.LicenseReference.html#_lrDocument"><span class="hs-identifier hs-var">_lrDocument</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679410201"><span id="local-6989586621679410208"><span id="local-6989586621679410214"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span></span></span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679410247"><span id="local-6989586621679410254"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span></span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679410301"><span class="annot"><span class="annottext">rnf :: LicenseRef -&gt; ()
+</span><a href="#local-6989586621679410301"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span> </span><span id="local-6989586621679410303"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410303"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621679410304"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410304"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410303"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410304"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679410307"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679410311"><span class="annot"><span class="annottext">pretty :: LicenseRef -&gt; Doc
+</span><a href="#local-6989586621679410311"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span id="local-6989586621679410313"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410313"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LicenseRef-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410313"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679410316"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410316"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679410317"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410317"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DocumentRef-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410316"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">Disp.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LicenseRef-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410317"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621679410338"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m LicenseRef
+</span><a href="#local-6989586621679410338"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m LicenseRef
+</span><a href="#local-6989586621679410340"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">m LicenseRef -&gt; m LicenseRef -&gt; m LicenseRef
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%7C%3E/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m LicenseRef
+</span><a href="#local-6989586621679410342"><span class="hs-identifier hs-var">doc</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>        </span><span id="local-6989586621679410340"><span class="annot"><span class="annottext">name :: m LicenseRef
+</span><a href="#local-6989586621679410340"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-51"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LicenseRef-&quot;</span></span><span>
+</span><span id="line-52"></span><span>            </span><span id="local-6989586621679410361"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410361"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Char -&gt; m String
+forall a. m a -&gt; m [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#some/GHC.Base.html#some"><span class="hs-identifier hs-var">some</span></a></span><span> </span><span class="annot"><span class="annottext">(m Char -&gt; m String) -&gt; m Char -&gt; m String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#satisfy"><span class="hs-identifier hs-var">P.satisfy</span></a></span><span> </span><span class="annot"><span class="annottext">((Char -&gt; Bool) -&gt; m Char) -&gt; (Char -&gt; Bool) -&gt; m Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679410364"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410364"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier hs-var">isAsciiAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410364"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410364"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410364"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span>
+</span><span id="line-53"></span><span>            </span><span class="annot"><span class="annottext">LicenseRef -&gt; m LicenseRef
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe String -&gt; String -&gt; LicenseRef
+</span><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-var">LicenseRef</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410361"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>        </span><span id="local-6989586621679410342"><span class="annot"><span class="annottext">doc :: m LicenseRef
+</span><a href="#local-6989586621679410342"><span class="hs-identifier hs-var hs-var">doc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DocumentRef-&quot;</span></span><span>
+</span><span id="line-57"></span><span>            </span><span id="local-6989586621679410392"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410392"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Char -&gt; m String
+forall a. m a -&gt; m [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#some/GHC.Base.html#some"><span class="hs-identifier hs-var">some</span></a></span><span> </span><span class="annot"><span class="annottext">(m Char -&gt; m String) -&gt; m Char -&gt; m String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#satisfy"><span class="hs-identifier hs-var">P.satisfy</span></a></span><span> </span><span class="annot"><span class="annottext">((Char -&gt; Bool) -&gt; m Char) -&gt; (Char -&gt; Bool) -&gt; m Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679410393"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410393"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier hs-var">isAsciiAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410393"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410393"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410393"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span>
+</span><span id="line-58"></span><span>            </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span>
+</span><span id="line-59"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LicenseRef-&quot;</span></span><span>
+</span><span id="line-60"></span><span>            </span><span id="local-6989586621679410395"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410395"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Char -&gt; m String
+forall a. m a -&gt; m [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#some/GHC.Base.html#some"><span class="hs-identifier hs-var">some</span></a></span><span> </span><span class="annot"><span class="annottext">(m Char -&gt; m String) -&gt; m Char -&gt; m String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#satisfy"><span class="hs-identifier hs-var">P.satisfy</span></a></span><span> </span><span class="annot"><span class="annottext">((Char -&gt; Bool) -&gt; m Char) -&gt; (Char -&gt; Bool) -&gt; m Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679410396"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410396"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier hs-var">isAsciiAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410396"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410396"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410396"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span>
+</span><span id="line-61"></span><span>            </span><span class="annot"><span class="annottext">LicenseRef -&gt; m LicenseRef
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe String -&gt; String -&gt; LicenseRef
+</span><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-var">LicenseRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410392"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410395"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><span class="hs-comment">-- | Create 'LicenseRef' from optional document ref and name.</span></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#mkLicenseRef"><span class="hs-identifier hs-type">mkLicenseRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span>
+</span><span id="line-65"></span><span id="mkLicenseRef"><span class="annot"><span class="annottext">mkLicenseRef :: Maybe String -&gt; String -&gt; Maybe LicenseRef
+</span><a href="Distribution.SPDX.LicenseReference.html#mkLicenseRef"><span class="hs-identifier hs-var hs-var">mkLicenseRef</span></a></span></span><span> </span><span id="local-6989586621679410397"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410397"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621679410398"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410398"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679410399"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410399"><span class="hs-identifier hs-var">d'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Maybe String) -&gt; Maybe String -&gt; Maybe (Maybe String)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall {t :: * -&gt; *}. Foldable t =&gt; t Char -&gt; Maybe (t Char)
+</span><a href="#local-6989586621679410401"><span class="hs-identifier hs-var">checkIdString</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410397"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679410402"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410402"><span class="hs-identifier hs-var">l'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall {t :: * -&gt; *}. Foldable t =&gt; t Char -&gt; Maybe (t Char)
+</span><a href="#local-6989586621679410401"><span class="hs-identifier hs-var">checkIdString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410398"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">LicenseRef -&gt; Maybe LicenseRef
+forall a. a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe String -&gt; String -&gt; LicenseRef
+</span><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-var">LicenseRef</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410399"><span class="hs-identifier hs-var">d'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410402"><span class="hs-identifier hs-var">l'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679410401"><span class="annot"><span class="annottext">checkIdString :: t Char -&gt; Maybe (t Char)
+</span><a href="#local-6989586621679410401"><span class="hs-identifier hs-var hs-var">checkIdString</span></a></span></span><span> </span><span id="local-6989586621679410407"><span class="annot"><span class="annottext">t Char
+</span><a href="#local-6989586621679410407"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; t Char -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#all/Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679410409"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410409"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier hs-var">isAsciiAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410409"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410409"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410409"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">t Char
+</span><a href="#local-6989586621679410407"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">t Char -&gt; Maybe (t Char)
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">t Char
+</span><a href="#local-6989586621679410407"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (t Char)
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="annot"><span class="hs-comment">-- | Like 'mkLicenseRef' but convert invalid characters into @-@.</span></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#mkLicenseRef%27"><span class="hs-identifier hs-type">mkLicenseRef'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-type">LicenseRef</span></a></span><span>
+</span><span id="line-76"></span><span id="mkLicenseRef%27"><span class="annot"><span class="annottext">mkLicenseRef' :: Maybe String -&gt; String -&gt; LicenseRef
+</span><a href="Distribution.SPDX.LicenseReference.html#mkLicenseRef%27"><span class="hs-identifier hs-var hs-var">mkLicenseRef'</span></a></span></span><span> </span><span id="local-6989586621679410410"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410410"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621679410411"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410411"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; String -&gt; LicenseRef
+</span><a href="Distribution.SPDX.LicenseReference.html#LicenseRef"><span class="hs-identifier hs-var">LicenseRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShowS -&gt; Maybe String -&gt; Maybe String
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="#local-6989586621679410412"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679410410"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShowS
+</span><a href="#local-6989586621679410412"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679410411"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679410412"><span class="annot"><span class="annottext">f :: ShowS
+</span><a href="#local-6989586621679410412"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><a href="#local-6989586621679410413"><span class="hs-identifier hs-var">g</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span id="local-6989586621679410413"><span class="annot"><span class="annottext">g :: Char -&gt; Char
+</span><a href="#local-6989586621679410413"><span class="hs-identifier hs-var hs-var">g</span></a></span></span><span> </span><span id="local-6989586621679410416"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410416"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier hs-var">isAsciiAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410416"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410416"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410416"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679410416"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>                                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span>
+</span><span id="line-81"></span></pre></body></html>

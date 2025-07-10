@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.ExposedModule</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Backpack.html"><span class="hs-identifier">Distribution.Backpack</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">data</span><span> </span><span id="ExposedModule"><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-var">ExposedModule</span></a></span></span><span>
+</span><span id="line-17"></span><span>   </span><span class="hs-glyph">=</span><span> </span><span id="ExposedModule"><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-var">ExposedModule</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-18"></span><span>       </span><span id="exposedName"><span class="annot"><span class="annottext">ExposedModule -&gt; ModuleName
+</span><a href="Distribution.Types.ExposedModule.html#exposedName"><span class="hs-identifier hs-var hs-var">exposedName</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>       </span><span id="exposedReexport"><span class="annot"><span class="annottext">ExposedModule -&gt; Maybe OpenModule
+</span><a href="Distribution.Types.ExposedModule.html#exposedReexport"><span class="hs-identifier hs-var hs-var">exposedReexport</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span>
+</span><span id="line-20"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422897"><span id="local-6989586621679422904"><span class="annot"><span class="annottext">ExposedModule -&gt; ExposedModule -&gt; Bool
+(ExposedModule -&gt; ExposedModule -&gt; Bool)
+-&gt; (ExposedModule -&gt; ExposedModule -&gt; Bool) -&gt; Eq ExposedModule
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ExposedModule -&gt; ExposedModule -&gt; Bool
+== :: ExposedModule -&gt; ExposedModule -&gt; Bool
+$c/= :: ExposedModule -&gt; ExposedModule -&gt; Bool
+/= :: ExposedModule -&gt; ExposedModule -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422910"><span id="local-6989586621679422912"><span class="annot"><span class="annottext">(forall x. ExposedModule -&gt; Rep ExposedModule x)
+-&gt; (forall x. Rep ExposedModule x -&gt; ExposedModule)
+-&gt; Generic ExposedModule
+forall x. Rep ExposedModule x -&gt; ExposedModule
+forall x. ExposedModule -&gt; Rep ExposedModule x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ExposedModule -&gt; Rep ExposedModule x
+from :: forall x. ExposedModule -&gt; Rep ExposedModule x
+$cto :: forall x. Rep ExposedModule x -&gt; ExposedModule
+to :: forall x. Rep ExposedModule x -&gt; ExposedModule
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422916"><span id="local-6989586621679422920"><span id="local-6989586621679422923"><span id="local-6989586621679422938"><span class="annot"><span class="annottext">ReadPrec [ExposedModule]
+ReadPrec ExposedModule
+Int -&gt; ReadS ExposedModule
+ReadS [ExposedModule]
+(Int -&gt; ReadS ExposedModule)
+-&gt; ReadS [ExposedModule]
+-&gt; ReadPrec ExposedModule
+-&gt; ReadPrec [ExposedModule]
+-&gt; Read ExposedModule
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ExposedModule
+readsPrec :: Int -&gt; ReadS ExposedModule
+$creadList :: ReadS [ExposedModule]
+readList :: ReadS [ExposedModule]
+$creadPrec :: ReadPrec ExposedModule
+readPrec :: ReadPrec ExposedModule
+$creadListPrec :: ReadPrec [ExposedModule]
+readListPrec :: ReadPrec [ExposedModule]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422943"><span id="local-6989586621679422952"><span id="local-6989586621679422956"><span class="annot"><span class="annottext">Int -&gt; ExposedModule -&gt; ShowS
+[ExposedModule] -&gt; ShowS
+ExposedModule -&gt; String
+(Int -&gt; ExposedModule -&gt; ShowS)
+-&gt; (ExposedModule -&gt; String)
+-&gt; ([ExposedModule] -&gt; ShowS)
+-&gt; Show ExposedModule
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ExposedModule -&gt; ShowS
+showsPrec :: Int -&gt; ExposedModule -&gt; ShowS
+$cshow :: ExposedModule -&gt; String
+show :: ExposedModule -&gt; String
+$cshowList :: [ExposedModule] -&gt; ShowS
+showList :: [ExposedModule] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679422962"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-type">ExposedModule</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>    </span><span id="local-6989586621679422970"><span class="annot"><span class="annottext">pretty :: ExposedModule -&gt; Doc
+</span><a href="#local-6989586621679422970"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-type">ExposedModule</span></a></span><span> </span><span id="local-6989586621679422972"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422972"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679422973"><span class="annot"><span class="annottext">Maybe OpenModule
+</span><a href="#local-6989586621679422973"><span class="hs-identifier hs-var">reexport</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>        </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hsep/Text.PrettyPrint.HughesPJ.html#hsep"><span class="hs-identifier hs-var">Disp.hsep</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422972"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-26"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe OpenModule
+</span><a href="#local-6989586621679422973"><span class="hs-identifier hs-var">reexport</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-27"></span><span>                     </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679422975"><span class="annot"><span class="annottext">OpenModule
+</span><a href="#local-6989586621679422975"><span class="hs-identifier hs-var">m'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hsep/Text.PrettyPrint.HughesPJ.html#hsep"><span class="hs-identifier hs-var">Disp.hsep</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;from&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OpenModule -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModule
+</span><a href="#local-6989586621679422975"><span class="hs-identifier hs-var">m'</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-28"></span><span>                     </span><span class="annot"><span class="annottext">Maybe OpenModule
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#empty/Text.PrettyPrint.HughesPJ.html#empty"><span class="hs-identifier hs-var">Disp.empty</span></a></span><span>
+</span><span id="line-29"></span><span>                  </span><span class="hs-special">]</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-type">ExposedModule</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>    </span><span id="local-6989586621679423007"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m ExposedModule
+</span><a href="#local-6989586621679423007"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-33"></span><span>        </span><span id="local-6989586621679423009"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679423009"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ModuleName -&gt; m ModuleName
+forall (m :: * -&gt; *) a. CabalParsing m =&gt; m a -&gt; m a
+</span><a href="Distribution.Parsec.html#parsecMaybeQuoted"><span class="hs-identifier hs-var">parsecMaybeQuoted</span></a></span><span> </span><span class="annot"><span class="annottext">m ModuleName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m ModuleName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-34"></span><span>        </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). CharParsing m =&gt; m ()
+</span><a href="Distribution.Compat.CharParsing.html#spaces"><span class="hs-identifier hs-var">P.spaces</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>        </span><span id="local-6989586621679423012"><span class="annot"><span class="annottext">Maybe OpenModule
+</span><a href="#local-6989586621679423012"><span class="hs-identifier hs-var">reexport</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m OpenModule -&gt; m (Maybe OpenModule)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="../../base-4.18.2.1/src/Control.Applicative.html#optional/Control.Applicative.html#optional"><span class="hs-identifier hs-var">P.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(m OpenModule -&gt; m (Maybe OpenModule))
+-&gt; m OpenModule -&gt; m (Maybe OpenModule)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;from&quot;</span></span><span>
+</span><span id="line-38"></span><span>            </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). CharParsing m =&gt; m ()
+</span><a href="Distribution.Compat.CharParsing.html#skipSpaces1"><span class="hs-identifier hs-var">P.skipSpaces1</span></a></span><span>
+</span><span id="line-39"></span><span>            </span><span class="annot"><span class="annottext">m OpenModule
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m OpenModule
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="annottext">ExposedModule -&gt; m ExposedModule
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleName -&gt; Maybe OpenModule -&gt; ExposedModule
+</span><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-var">ExposedModule</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679423009"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe OpenModule
+</span><a href="#local-6989586621679423012"><span class="hs-identifier hs-var">reexport</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423017"><span id="local-6989586621679423024"><span id="local-6989586621679423030"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-type">ExposedModule</span></a></span></span></span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423063"><span id="local-6989586621679423070"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-type">ExposedModule</span></a></span></span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExposedModule.html#ExposedModule"><span class="hs-identifier hs-type">ExposedModule</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679423128"><span class="annot"><span class="annottext">rnf :: ExposedModule -&gt; ()
+</span><a href="#local-6989586621679423128"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExposedModule -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-46"></span></pre></body></html>

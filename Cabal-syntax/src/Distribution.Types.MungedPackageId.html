@@ -1,0 +1,417 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679423775"><span id="local-6989586621679423776"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.MungedPackageId</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier">MungedPackageId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#computeCompatPackageId"><span class="hs-identifier">computeCompatPackageId</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html"><span class="hs-identifier">Distribution.Types.LibraryName</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageName.html"><span class="hs-identifier">Distribution.Types.MungedPackageName</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PackageId.html"><span class="hs-identifier">Distribution.Types.PackageId</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>                 </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#nullVersion"><span class="hs-identifier">nullVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- | A simple pair of a 'MungedPackageName' and 'Version'. 'MungedPackageName' is to</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- 'MungedPackageId' as 'PackageName' is to 'PackageId'. See 'MungedPackageName' for more</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- info.</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">data</span><span> </span><span id="MungedPackageId"><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-var">MungedPackageId</span></a></span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="MungedPackageId"><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-var">MungedPackageId</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-25"></span><span>        </span><span class="hs-comment">-- | The combined package and component name. see documentation for</span><span>
+</span><span id="line-26"></span><span>        </span><span class="hs-comment">-- 'MungedPackageName'.</span><span>
+</span><span id="line-27"></span><span>        </span><span id="mungedName"><span class="annot"><span class="annottext">MungedPackageId -&gt; MungedPackageName
+</span><a href="Distribution.Types.MungedPackageId.html#mungedName"><span class="hs-identifier hs-var hs-var">mungedName</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageName.html#MungedPackageName"><span class="hs-identifier hs-type">MungedPackageName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>        </span><span class="annot"><span class="hs-comment">-- | The version of this package / component, eg 1.2</span></span><span>
+</span><span id="line-29"></span><span>        </span><span id="mungedVersion"><span class="annot"><span class="annottext">MungedPackageId -&gt; Version
+</span><a href="Distribution.Types.MungedPackageId.html#mungedVersion"><span class="hs-identifier hs-var hs-var">mungedVersion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-30"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>     </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423785"><span id="local-6989586621679423787"><span class="annot"><span class="annottext">(forall x. MungedPackageId -&gt; Rep MungedPackageId x)
+-&gt; (forall x. Rep MungedPackageId x -&gt; MungedPackageId)
+-&gt; Generic MungedPackageId
+forall x. Rep MungedPackageId x -&gt; MungedPackageId
+forall x. MungedPackageId -&gt; Rep MungedPackageId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. MungedPackageId -&gt; Rep MungedPackageId x
+from :: forall x. MungedPackageId -&gt; Rep MungedPackageId x
+$cto :: forall x. Rep MungedPackageId x -&gt; MungedPackageId
+to :: forall x. Rep MungedPackageId x -&gt; MungedPackageId
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423791"><span id="local-6989586621679423795"><span id="local-6989586621679423798"><span id="local-6989586621679423812"><span class="annot"><span class="annottext">ReadPrec [MungedPackageId]
+ReadPrec MungedPackageId
+Int -&gt; ReadS MungedPackageId
+ReadS [MungedPackageId]
+(Int -&gt; ReadS MungedPackageId)
+-&gt; ReadS [MungedPackageId]
+-&gt; ReadPrec MungedPackageId
+-&gt; ReadPrec [MungedPackageId]
+-&gt; Read MungedPackageId
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS MungedPackageId
+readsPrec :: Int -&gt; ReadS MungedPackageId
+$creadList :: ReadS [MungedPackageId]
+readList :: ReadS [MungedPackageId]
+$creadPrec :: ReadPrec MungedPackageId
+readPrec :: ReadPrec MungedPackageId
+$creadListPrec :: ReadPrec [MungedPackageId]
+readListPrec :: ReadPrec [MungedPackageId]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423816"><span id="local-6989586621679423824"><span id="local-6989586621679423828"><span class="annot"><span class="annottext">Int -&gt; MungedPackageId -&gt; ShowS
+[MungedPackageId] -&gt; ShowS
+MungedPackageId -&gt; String
+(Int -&gt; MungedPackageId -&gt; ShowS)
+-&gt; (MungedPackageId -&gt; String)
+-&gt; ([MungedPackageId] -&gt; ShowS)
+-&gt; Show MungedPackageId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; MungedPackageId -&gt; ShowS
+showsPrec :: Int -&gt; MungedPackageId -&gt; ShowS
+$cshow :: MungedPackageId -&gt; String
+show :: MungedPackageId -&gt; String
+$cshowList :: [MungedPackageId] -&gt; ShowS
+showList :: [MungedPackageId] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423832"><span id="local-6989586621679423838"><span class="annot"><span class="annottext">MungedPackageId -&gt; MungedPackageId -&gt; Bool
+(MungedPackageId -&gt; MungedPackageId -&gt; Bool)
+-&gt; (MungedPackageId -&gt; MungedPackageId -&gt; Bool)
+-&gt; Eq MungedPackageId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+== :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+$c/= :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+/= :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423845"><span id="local-6989586621679423851"><span id="local-6989586621679423855"><span id="local-6989586621679423859"><span id="local-6989586621679423862"><span id="local-6989586621679423865"><span id="local-6989586621679423868"><span class="annot"><span class="annottext">Eq MungedPackageId
+Eq MungedPackageId =&gt;
+(MungedPackageId -&gt; MungedPackageId -&gt; Ordering)
+-&gt; (MungedPackageId -&gt; MungedPackageId -&gt; Bool)
+-&gt; (MungedPackageId -&gt; MungedPackageId -&gt; Bool)
+-&gt; (MungedPackageId -&gt; MungedPackageId -&gt; Bool)
+-&gt; (MungedPackageId -&gt; MungedPackageId -&gt; Bool)
+-&gt; (MungedPackageId -&gt; MungedPackageId -&gt; MungedPackageId)
+-&gt; (MungedPackageId -&gt; MungedPackageId -&gt; MungedPackageId)
+-&gt; Ord MungedPackageId
+MungedPackageId -&gt; MungedPackageId -&gt; Bool
+MungedPackageId -&gt; MungedPackageId -&gt; Ordering
+MungedPackageId -&gt; MungedPackageId -&gt; MungedPackageId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: MungedPackageId -&gt; MungedPackageId -&gt; Ordering
+compare :: MungedPackageId -&gt; MungedPackageId -&gt; Ordering
+$c&lt; :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+&lt; :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+$c&lt;= :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+&lt;= :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+$c&gt; :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+&gt; :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+$c&gt;= :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+&gt;= :: MungedPackageId -&gt; MungedPackageId -&gt; Bool
+$cmax :: MungedPackageId -&gt; MungedPackageId -&gt; MungedPackageId
+max :: MungedPackageId -&gt; MungedPackageId -&gt; MungedPackageId
+$cmin :: MungedPackageId -&gt; MungedPackageId -&gt; MungedPackageId
+min :: MungedPackageId -&gt; MungedPackageId -&gt; MungedPackageId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423874"><span id="local-6989586621679423880"><span id="local-6989586621679423884"><span id="local-6989586621679423886"><span id="local-6989586621679423888"><span id="local-6989586621679423894"><span id="local-6989586621679423899"><span id="local-6989586621679423902"><span id="local-6989586621679423905"><span id="local-6989586621679423908"><span id="local-6989586621679423911"><span id="local-6989586621679423914"><span id="local-6989586621679423919"><span id="local-6989586621679423924"><span class="annot"><span class="annottext">Typeable MungedPackageId
+Typeable MungedPackageId =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; MungedPackageId -&gt; c MungedPackageId)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c MungedPackageId)
+-&gt; (MungedPackageId -&gt; Constr)
+-&gt; (MungedPackageId -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c MungedPackageId))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c MungedPackageId))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; MungedPackageId -&gt; MungedPackageId)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; MungedPackageId -&gt; m MungedPackageId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; MungedPackageId -&gt; m MungedPackageId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; MungedPackageId -&gt; m MungedPackageId)
+-&gt; Data MungedPackageId
+MungedPackageId -&gt; Constr
+MungedPackageId -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; MungedPackageId -&gt; MungedPackageId
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c MungedPackageId
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; MungedPackageId -&gt; c MungedPackageId
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c MungedPackageId)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c MungedPackageId)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; MungedPackageId -&gt; c MungedPackageId
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; MungedPackageId -&gt; c MungedPackageId
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c MungedPackageId
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c MungedPackageId
+$ctoConstr :: MungedPackageId -&gt; Constr
+toConstr :: MungedPackageId -&gt; Constr
+$cdataTypeOf :: MungedPackageId -&gt; DataType
+dataTypeOf :: MungedPackageId -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c MungedPackageId)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c MungedPackageId)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c MungedPackageId)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c MungedPackageId)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; MungedPackageId -&gt; MungedPackageId
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; MungedPackageId -&gt; MungedPackageId
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; MungedPackageId -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; MungedPackageId -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423930"><span id="local-6989586621679423937"><span id="local-6989586621679423943"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span></span></span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423973"><span id="local-6989586621679423980"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span></span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- &gt;&gt;&gt; prettyShow $ MungedPackageId (MungedPackageName &quot;servant&quot; LMainLibName) (mkVersion [1,2,3])</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- &quot;servant-1.2.3&quot;</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- &gt;&gt;&gt; prettyShow $ MungedPackageId (MungedPackageName &quot;servant&quot; (LSubLibName &quot;lackey&quot;)) (mkVersion [0,1,2])</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- &quot;z-servant-z-lackey-0.1.2&quot;</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679424017"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621679424027"><span class="annot"><span class="annottext">pretty :: MungedPackageId -&gt; Doc
+</span><a href="#local-6989586621679424027"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span><span> </span><span id="local-6989586621679424029"><span class="annot"><span class="annottext">MungedPackageName
+</span><a href="#local-6989586621679424029"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679424030"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424030"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424030"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Version -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Distribution.Types.Version.html#nullVersion"><span class="hs-identifier hs-var">nullVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MungedPackageName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">MungedPackageName
+</span><a href="#local-6989586621679424029"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-comment">-- if no version, don't show version.</span><span>
+</span><span id="line-47"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MungedPackageName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">MungedPackageName
+</span><a href="#local-6989586621679424029"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">Disp.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424030"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;foo-bar-0&quot; :: Maybe MungedPackageId</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- Just (MungedPackageId {mungedName = MungedPackageName (PackageName &quot;foo-bar&quot;) LMainLibName, mungedVersion = mkVersion [0]})</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;foo-bar&quot; :: Maybe MungedPackageId</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- Just (MungedPackageId {mungedName = MungedPackageName (PackageName &quot;foo-bar&quot;) LMainLibName, mungedVersion = mkVersion []})</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;z-foo-bar-z-baz-0&quot; :: Maybe MungedPackageId</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- Just (MungedPackageId {mungedName = MungedPackageName (PackageName &quot;foo-bar&quot;) (LSubLibName (UnqualComponentName &quot;baz&quot;)), mungedVersion = mkVersion [0]})</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;foo-bar-0-0&quot; :: Maybe MungedPackageId</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- Nothing</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;foo-bar.0&quot; :: Maybe MungedPackageId</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- Nothing</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;foo-bar.4-2&quot; :: Maybe MungedPackageId</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- Nothing</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679424046"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m MungedPackageId
+</span><a href="#local-6989586621679424046"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><a href="Distribution.Types.PackageId.html#PackageIdentifier"><span class="hs-identifier hs-type">PackageIdentifier</span></a></span><span> </span><span id="local-6989586621679424049"><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679424049"><span class="hs-identifier hs-var">pn</span></a></span></span><span> </span><span id="local-6989586621679424050"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424050"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m PackageIdentifier
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m PackageIdentifier
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">MungedPackageId -&gt; m MungedPackageId
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(MungedPackageId -&gt; m MungedPackageId)
+-&gt; MungedPackageId -&gt; m MungedPackageId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MungedPackageName -&gt; Version -&gt; MungedPackageId
+</span><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-var">MungedPackageId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PackageName -&gt; MungedPackageName
+</span><a href="Distribution.Types.MungedPackageName.html#decodeCompatPackageName"><span class="hs-identifier hs-var">decodeCompatPackageName</span></a></span><span> </span><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679424049"><span class="hs-identifier hs-var">pn</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424050"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679424059"><span class="annot"><span class="annottext">rnf :: MungedPackageId -&gt; ()
+</span><a href="#local-6989586621679424059"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span><span> </span><span id="local-6989586621679424061"><span class="annot"><span class="annottext">MungedPackageName
+</span><a href="#local-6989586621679424061"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679424062"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424062"><span class="hs-identifier hs-var">version</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MungedPackageName -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">MungedPackageName
+</span><a href="#local-6989586621679424061"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424062"><span class="hs-identifier hs-var">version</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#computeCompatPackageId"><span class="hs-identifier hs-type">computeCompatPackageId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.PackageId.html#PackageId"><span class="hs-identifier hs-type">PackageId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-type">MungedPackageId</span></a></span><span>
+</span><span id="line-78"></span><span id="computeCompatPackageId"><span class="annot"><span class="annottext">computeCompatPackageId :: PackageIdentifier -&gt; LibraryName -&gt; MungedPackageId
+</span><a href="Distribution.Types.MungedPackageId.html#computeCompatPackageId"><span class="hs-identifier hs-var hs-var">computeCompatPackageId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.PackageId.html#PackageIdentifier"><span class="hs-identifier hs-type">PackageIdentifier</span></a></span><span> </span><span id="local-6989586621679424063"><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679424063"><span class="hs-identifier hs-var">pn</span></a></span></span><span> </span><span id="local-6989586621679424064"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424064"><span class="hs-identifier hs-var">vr</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679424065"><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679424065"><span class="hs-identifier hs-var">ln</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">MungedPackageName -&gt; Version -&gt; MungedPackageId
+</span><a href="Distribution.Types.MungedPackageId.html#MungedPackageId"><span class="hs-identifier hs-var">MungedPackageId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PackageName -&gt; LibraryName -&gt; MungedPackageName
+</span><a href="Distribution.Types.MungedPackageName.html#MungedPackageName"><span class="hs-identifier hs-var">MungedPackageName</span></a></span><span> </span><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679424063"><span class="hs-identifier hs-var">pn</span></a></span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679424065"><span class="hs-identifier hs-var">ln</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679424064"><span class="hs-identifier hs-var">vr</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- &gt;&gt;&gt; :seti -XOverloadedStrings</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- &gt;&gt;&gt; import Distribution.Types.Version</span><span>
+</span><span id="line-84"></span></pre></body></html>

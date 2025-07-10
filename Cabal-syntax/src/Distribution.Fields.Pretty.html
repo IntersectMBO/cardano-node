@@ -1,0 +1,877 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveFoldable #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DeriveTraversable #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | Cabal-like file AST types: 'Field', 'Section' etc,</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- This (intermediate) data type is used for pretty-printing.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- @since 3.0.0.0</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Fields.Pretty</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Fields</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentPosition"><span class="hs-identifier">CommentPosition</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier">PrettyField</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#showFields"><span class="hs-identifier">showFields</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#showFields%27"><span class="hs-identifier">showFields'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Transformation from 'P.Field'</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#fromParsecFields"><span class="hs-identifier">fromParsecFields</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#genericFromParsecFields"><span class="hs-identifier">genericFromParsecFields</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#prettyFieldLines"><span class="hs-identifier">prettyFieldLines</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Pretty.html#prettySectionArgs"><span class="hs-identifier">prettySectionArgs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>         </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Pretty.html#showToken"><span class="hs-identifier">showToken</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html"><span class="hs-identifier">Distribution.Fields.Field</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier">FieldName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier">fromUTF8BS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Fields.Parser.html"><span class="hs-identifier">Distribution.Fields.Parser</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PP</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | This type is used to discern when a comment block should go</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   before or after a cabal-like file field, otherwise it would</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--   be hardcoded to a single position. It is often used in</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--   conjunction with @PrettyField@.</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">data</span><span> </span><span id="CommentPosition"><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentPosition"><span class="hs-identifier hs-var">CommentPosition</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CommentBefore"><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentBefore"><span class="hs-identifier hs-var">CommentBefore</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="CommentAfter"><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentAfter"><span class="hs-identifier hs-var">CommentAfter</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="NoComment"><span class="annot"><a href="Distribution.Fields.Pretty.html#NoComment"><span class="hs-identifier hs-var">NoComment</span></a></span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">data</span><span> </span><span id="PrettyField"><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-var">PrettyField</span></a></span></span><span> </span><span id="local-6989586621679390860"><span class="annot"><a href="#local-6989586621679390860"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="PrettyField"><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-var">PrettyField</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679390860"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">PP.Doc</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="PrettySection"><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettySection"><span class="hs-identifier hs-var">PrettySection</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679390860"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">PP.Doc</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390860"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="PrettyEmpty"><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyEmpty"><span class="hs-identifier hs-var">PrettyEmpty</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679390899"><span id="local-6989586621679390905"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; PrettyField a -&gt; PrettyField b)
+-&gt; (forall a b. a -&gt; PrettyField b -&gt; PrettyField a)
+-&gt; Functor PrettyField
+forall a b. a -&gt; PrettyField b -&gt; PrettyField a
+forall a b. (a -&gt; b) -&gt; PrettyField a -&gt; PrettyField b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; PrettyField a -&gt; PrettyField b
+fmap :: forall a b. (a -&gt; b) -&gt; PrettyField a -&gt; PrettyField b
+$c&lt;$ :: forall a b. a -&gt; PrettyField b -&gt; PrettyField a
+&lt;$ :: forall a b. a -&gt; PrettyField b -&gt; PrettyField a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679390910"><span id="local-6989586621679390916"><span id="local-6989586621679390926"><span id="local-6989586621679390931"><span id="local-6989586621679390935"><span id="local-6989586621679390938"><span id="local-6989586621679390941"><span id="local-6989586621679390944"><span id="local-6989586621679390947"><span id="local-6989586621679390950"><span id="local-6989586621679390953"><span id="local-6989586621679390955"><span id="local-6989586621679390958"><span id="local-6989586621679390963"><span id="local-6989586621679390968"><span id="local-6989586621679390973"><span id="local-6989586621679390978"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; PrettyField m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; PrettyField a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; PrettyField a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; PrettyField a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; PrettyField a -&gt; a)
+-&gt; (forall a. PrettyField a -&gt; [a])
+-&gt; (forall a. PrettyField a -&gt; Bool)
+-&gt; (forall a. PrettyField a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; PrettyField a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; PrettyField a -&gt; a)
+-&gt; (forall a. Ord a =&gt; PrettyField a -&gt; a)
+-&gt; (forall a. Num a =&gt; PrettyField a -&gt; a)
+-&gt; (forall a. Num a =&gt; PrettyField a -&gt; a)
+-&gt; Foldable PrettyField
+forall a. Eq a =&gt; a -&gt; PrettyField a -&gt; Bool
+forall a. Num a =&gt; PrettyField a -&gt; a
+forall a. Ord a =&gt; PrettyField a -&gt; a
+forall m. Monoid m =&gt; PrettyField m -&gt; m
+forall a. PrettyField a -&gt; Bool
+forall a. PrettyField a -&gt; Int
+forall a. PrettyField a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; PrettyField a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; PrettyField a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; PrettyField m -&gt; m
+fold :: forall m. Monoid m =&gt; PrettyField m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; PrettyField a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; PrettyField a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; PrettyField a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; PrettyField a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; PrettyField a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; PrettyField a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; PrettyField a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; PrettyField a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; PrettyField a -&gt; a
+$ctoList :: forall a. PrettyField a -&gt; [a]
+toList :: forall a. PrettyField a -&gt; [a]
+$cnull :: forall a. PrettyField a -&gt; Bool
+null :: forall a. PrettyField a -&gt; Bool
+$clength :: forall a. PrettyField a -&gt; Int
+length :: forall a. PrettyField a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; PrettyField a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; PrettyField a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; PrettyField a -&gt; a
+maximum :: forall a. Ord a =&gt; PrettyField a -&gt; a
+$cminimum :: forall a. Ord a =&gt; PrettyField a -&gt; a
+minimum :: forall a. Ord a =&gt; PrettyField a -&gt; a
+$csum :: forall a. Num a =&gt; PrettyField a -&gt; a
+sum :: forall a. Num a =&gt; PrettyField a -&gt; a
+$cproduct :: forall a. Num a =&gt; PrettyField a -&gt; a
+product :: forall a. Num a =&gt; PrettyField a -&gt; a
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#Foldable/Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679390988"><span id="local-6989586621679391001"><span id="local-6989586621679391006"><span id="local-6989586621679391011"><span class="annot"><span class="annottext">Functor PrettyField
+Foldable PrettyField
+(Functor PrettyField, Foldable PrettyField) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; PrettyField a -&gt; f (PrettyField b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    PrettyField (f a) -&gt; f (PrettyField a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; PrettyField a -&gt; m (PrettyField b))
+-&gt; (forall (m :: * -&gt; *) a.
+    Monad m =&gt;
+    PrettyField (m a) -&gt; m (PrettyField a))
+-&gt; Traversable PrettyField
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+PrettyField (m a) -&gt; m (PrettyField a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+PrettyField (f a) -&gt; f (PrettyField a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; PrettyField a -&gt; m (PrettyField b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; PrettyField a -&gt; f (PrettyField b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; PrettyField a -&gt; f (PrettyField b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; PrettyField a -&gt; f (PrettyField b)
+$csequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+PrettyField (f a) -&gt; f (PrettyField a)
+sequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+PrettyField (f a) -&gt; f (PrettyField a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; PrettyField a -&gt; m (PrettyField b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; PrettyField a -&gt; m (PrettyField b)
+$csequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+PrettyField (m a) -&gt; m (PrettyField a)
+sequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+PrettyField (m a) -&gt; m (PrettyField a)
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#Traversable/Data.Traversable.html#Traversable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | Prettyprint a list of fields.</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- Note: the first argument should return 'String's without newlines</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- and properly prefixes (with @--@) to count as comments.</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- This unsafety is left in place so one could generate empty lines</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- between comment lines.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span id="local-6989586621679390809"><span class="annot"><a href="Distribution.Fields.Pretty.html#showFields"><span class="hs-identifier hs-type">showFields</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679390809"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentPosition"><span class="hs-identifier hs-type">CommentPosition</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390809"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-57"></span><span id="showFields"><span class="annot"><span class="annottext">showFields :: forall ann. (ann -&gt; CommentPosition) -&gt; [PrettyField ann] -&gt; String
+</span><a href="Distribution.Fields.Pretty.html#showFields"><span class="hs-identifier hs-var hs-var">showFields</span></a></span></span><span> </span><span id="local-6989586621679391017"><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391017"><span class="hs-identifier hs-var">rann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ann -&gt; CommentPosition)
+-&gt; (ann -&gt; [String] -&gt; [String])
+-&gt; Int
+-&gt; [PrettyField ann]
+-&gt; String
+forall ann.
+(ann -&gt; CommentPosition)
+-&gt; (ann -&gt; [String] -&gt; [String])
+-&gt; Int
+-&gt; [PrettyField ann]
+-&gt; String
+</span><a href="Distribution.Fields.Pretty.html#showFields%27"><span class="hs-identifier hs-var">showFields'</span></a></span><span> </span><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391017"><span class="hs-identifier hs-var">rann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([String] -&gt; [String]) -&gt; ann -&gt; [String] -&gt; [String]
+forall a b. a -&gt; b -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#const/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String]
+forall a. a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#id/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><span class="hs-comment">-- | 'showFields' with user specified indentation.</span></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679390812"><span class="annot"><a href="Distribution.Fields.Pretty.html#showFields%27"><span class="hs-identifier hs-type">showFields'</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679390812"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentPosition"><span class="hs-identifier hs-type">CommentPosition</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Convert an annotation to lined to preceed the field or section.</span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679390812"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Post-process non-annotation produced lines.</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-66"></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Indentation level.</span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390812"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Fields/sections to show.</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-70"></span><span id="showFields%27"><span class="annot"><span class="annottext">showFields' :: forall ann.
+(ann -&gt; CommentPosition)
+-&gt; (ann -&gt; [String] -&gt; [String])
+-&gt; Int
+-&gt; [PrettyField ann]
+-&gt; String
+</span><a href="Distribution.Fields.Pretty.html#showFields%27"><span class="hs-identifier hs-var hs-var">showFields'</span></a></span></span><span> </span><span id="local-6989586621679391020"><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391020"><span class="hs-identifier hs-var">rann</span></a></span></span><span> </span><span id="local-6989586621679391021"><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391021"><span class="hs-identifier hs-var">post</span></a></span></span><span> </span><span id="local-6989586621679391022"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391022"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#unlines/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; String)
+-&gt; ([PrettyField ann] -&gt; [String]) -&gt; [PrettyField ann] -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Opts ann -&gt; [PrettyField ann] -&gt; [String]
+forall ann. Opts ann -&gt; [PrettyField ann] -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#renderFields"><span class="hs-identifier hs-var">renderFields</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ann -&gt; CommentPosition)
+-&gt; (String -&gt; String) -&gt; (ann -&gt; [String] -&gt; [String]) -&gt; Opts ann
+forall ann.
+(ann -&gt; CommentPosition)
+-&gt; (String -&gt; String) -&gt; (ann -&gt; [String] -&gt; [String]) -&gt; Opts ann
+</span><a href="Distribution.Fields.Pretty.html#Opts"><span class="hs-identifier hs-var">Opts</span></a></span><span> </span><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391020"><span class="hs-identifier hs-var">rann</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679391027"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391021"><span class="hs-identifier hs-var">post</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- few hardcoded, &quot;unrolled&quot;  variants.</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679391027"><span class="annot"><span class="annottext">indent :: String -&gt; String
+</span><a href="#local-6989586621679391027"><span class="hs-identifier hs-var hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391022"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679391037"><span class="hs-identifier hs-var">indent4</span></a></span><span>
+</span><span id="line-74"></span><span>           </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391022"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679391038"><span class="hs-identifier hs-var">indent2</span></a></span><span>
+</span><span id="line-75"></span><span>           </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; String
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#replicate/GHC.List.html#replicate"><span class="hs-identifier hs-var">replicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">max</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391022"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><a href="#local-6989586621679391037"><span class="hs-identifier hs-type">indent4</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679391037"><span class="annot"><span class="annottext">indent4 :: String -&gt; String
+</span><a href="#local-6989586621679391037"><span class="hs-identifier hs-var hs-var">indent4</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><a href="#local-6989586621679391037"><span class="hs-identifier hs-var">indent4</span></a></span><span> </span><span id="local-6989586621679391041"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391041"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391041"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><a href="#local-6989586621679391038"><span class="hs-identifier hs-type">indent2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679391038"><span class="annot"><span class="annottext">indent2 :: String -&gt; String
+</span><a href="#local-6989586621679391038"><span class="hs-identifier hs-var hs-var">indent2</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><a href="#local-6989586621679391038"><span class="hs-identifier hs-var">indent2</span></a></span><span> </span><span id="local-6989586621679391042"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391042"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391042"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">data</span><span> </span><span id="Opts"><span class="annot"><a href="Distribution.Fields.Pretty.html#Opts"><span class="hs-identifier hs-var">Opts</span></a></span></span><span> </span><span id="local-6989586621679390822"><span class="annot"><a href="#local-6989586621679390822"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Opts"><span class="annot"><a href="Distribution.Fields.Pretty.html#Opts"><span class="hs-identifier hs-var">Opts</span></a></span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="_optAnnotation"><span class="annot"><span class="annottext">forall ann. Opts ann -&gt; ann -&gt; CommentPosition
+</span><a href="Distribution.Fields.Pretty.html#_optAnnotation"><span class="hs-identifier hs-var hs-var">_optAnnotation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679390822"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentPosition"><span class="hs-identifier hs-type">CommentPosition</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_optIndent"><span class="annot"><span class="annottext">forall ann. Opts ann -&gt; String -&gt; String
+</span><a href="Distribution.Fields.Pretty.html#_optIndent"><span class="hs-identifier hs-var hs-var">_optIndent</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_optPostprocess"><span class="annot"><span class="annottext">forall ann. Opts ann -&gt; ann -&gt; [String] -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#_optPostprocess"><span class="hs-identifier hs-var hs-var">_optPostprocess</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679390822"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span id="local-6989586621679390821"><span class="annot"><a href="Distribution.Fields.Pretty.html#renderFields"><span class="hs-identifier hs-type">renderFields</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#Opts"><span class="hs-identifier hs-type">Opts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390821"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390821"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-92"></span><span id="renderFields"><span class="annot"><span class="annottext">renderFields :: forall ann. Opts ann -&gt; [PrettyField ann] -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#renderFields"><span class="hs-identifier hs-var hs-var">renderFields</span></a></span></span><span> </span><span id="local-6989586621679391046"><span class="annot"><span class="annottext">Opts ann
+</span><a href="#local-6989586621679391046"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679391047"><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391047"><span class="hs-identifier hs-var">fields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Block] -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#flattenBlocks"><span class="hs-identifier hs-var">flattenBlocks</span></a></span><span> </span><span class="annot"><span class="annottext">[Block]
+</span><a href="#local-6989586621679391049"><span class="hs-identifier hs-var">blocks</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>    </span><span id="local-6989586621679391050"><span class="annot"><span class="annottext">len :: Int
+</span><a href="#local-6989586621679391050"><span class="hs-identifier hs-var hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [PrettyField ann] -&gt; Int
+forall {ann}. Int -&gt; [PrettyField ann] -&gt; Int
+</span><a href="#local-6989586621679391051"><span class="hs-identifier hs-var">maxNameLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391047"><span class="hs-identifier hs-var">fields</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621679391049"><span class="annot"><span class="annottext">blocks :: [Block]
+</span><a href="#local-6989586621679391049"><span class="hs-identifier hs-var hs-var">blocks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Block -&gt; Bool) -&gt; [Block] -&gt; [Block]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#filter/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (Block -&gt; Bool) -&gt; Block -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#null/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; Bool) -&gt; (Block -&gt; [String]) -&gt; Block -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#_contentsBlock"><span class="hs-identifier hs-var">_contentsBlock</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- empty blocks cause extra newlines #8236</span><span>
+</span><span id="line-96"></span><span>           </span><span class="annot"><span class="annottext">([Block] -&gt; [Block]) -&gt; [Block] -&gt; [Block]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(PrettyField ann -&gt; Block) -&gt; [PrettyField ann] -&gt; [Block]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Opts ann -&gt; Int -&gt; PrettyField ann -&gt; Block
+forall ann. Opts ann -&gt; Int -&gt; PrettyField ann -&gt; Block
+</span><a href="Distribution.Fields.Pretty.html#renderField"><span class="hs-identifier hs-var">renderField</span></a></span><span> </span><span class="annot"><span class="annottext">Opts ann
+</span><a href="#local-6989586621679391046"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391050"><span class="hs-identifier hs-var">len</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391047"><span class="hs-identifier hs-var">fields</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679391051"><span class="annot"><span class="annottext">maxNameLength :: Int -&gt; [PrettyField ann] -&gt; Int
+</span><a href="#local-6989586621679391051"><span class="hs-identifier hs-var hs-var">maxNameLength</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679391058"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391058"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>                            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391058"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="#local-6989586621679391051"><span class="hs-identifier hs-var">maxNameLength</span></a></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679391059"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391059"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679391060"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391060"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679391061"><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391061"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [PrettyField ann] -&gt; Int
+</span><a href="#local-6989586621679391051"><span class="hs-identifier hs-var">maxNameLength</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">max</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391059"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FieldName -&gt; Int
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#length/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391060"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391061"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><a href="#local-6989586621679391051"><span class="hs-identifier hs-var">maxNameLength</span></a></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679391063"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391063"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettySection"><span class="hs-identifier hs-type">PrettySection</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>   </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679391064"><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391064"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [PrettyField ann] -&gt; Int
+</span><a href="#local-6989586621679391051"><span class="hs-identifier hs-var">maxNameLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391063"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391064"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><a href="#local-6989586621679391051"><span class="hs-identifier hs-var">maxNameLength</span></a></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679391065"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391065"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PrettyField ann
+</span><a href="Distribution.Fields.Pretty.html#PrettyEmpty"><span class="hs-identifier hs-var">PrettyEmpty</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679391066"><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391066"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [PrettyField ann] -&gt; Int
+</span><a href="#local-6989586621679391051"><span class="hs-identifier hs-var">maxNameLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391065"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391066"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="annot"><span class="hs-comment">-- | Block of lines with flags for optional blank lines before and after</span></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">data</span><span> </span><span id="Block"><span class="annot"><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-var">Block</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Block"><span class="annot"><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-var">Block</span></a></span></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="_beforeBlock"><span class="annot"><span class="annottext">Block -&gt; Margin
+</span><a href="Distribution.Fields.Pretty.html#_beforeBlock"><span class="hs-identifier hs-var hs-var">_beforeBlock</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-type">Margin</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_afterBlock"><span class="annot"><span class="annottext">Block -&gt; Margin
+</span><a href="Distribution.Fields.Pretty.html#_afterBlock"><span class="hs-identifier hs-var hs-var">_afterBlock</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-type">Margin</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_contentsBlock"><span class="annot"><span class="annottext">Block -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#_contentsBlock"><span class="hs-identifier hs-var hs-var">_contentsBlock</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">data</span><span> </span><span id="Margin"><span class="annot"><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Margin"><span class="annot"><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="NoMargin"><span class="annot"><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span></span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679391073"><span id="local-6989586621679391075"><span class="annot"><span class="annottext">Margin -&gt; Margin -&gt; Bool
+(Margin -&gt; Margin -&gt; Bool)
+-&gt; (Margin -&gt; Margin -&gt; Bool) -&gt; Eq Margin
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Margin -&gt; Margin -&gt; Bool
+== :: Margin -&gt; Margin -&gt; Bool
+$c/= :: Margin -&gt; Margin -&gt; Bool
+/= :: Margin -&gt; Margin -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-comment">-- | Collapse margins, any margin = margin</span></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679391081"><span id="local-6989586621679391085"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-type">Margin</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span> </span><span id="local-6989586621679391090"><span class="annot"><span class="annottext">&lt;&gt; :: Margin -&gt; Margin -&gt; Margin
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">Margin
+</span><span class="hs-identifier">_</span></span><span>        </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><span class="hs-identifier">_</span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="annot"><a href="Distribution.Fields.Pretty.html#flattenBlocks"><span class="hs-identifier hs-type">flattenBlocks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-type">Block</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-119"></span><span id="flattenBlocks"><span class="annot"><span class="annottext">flattenBlocks :: [Block] -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#flattenBlocks"><span class="hs-identifier hs-var hs-var">flattenBlocks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Block] -&gt; [String]
+</span><a href="#local-6989586621679391091"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679391091"><span class="annot"><span class="annottext">go0 :: [Block] -&gt; [String]
+</span><a href="#local-6989586621679391091"><span class="hs-identifier hs-var hs-var">go0</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><a href="#local-6989586621679391091"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-type">Block</span></a></span><span> </span><span id="local-6989586621679391092"><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391092"><span class="hs-identifier hs-var">_before</span></a></span></span><span> </span><span id="local-6989586621679391093"><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391093"><span class="hs-identifier hs-var">after</span></a></span></span><span> </span><span id="local-6989586621679391094"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391094"><span class="hs-identifier hs-var">strs</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679391095"><span class="annot"><span class="annottext">[Block]
+</span><a href="#local-6989586621679391095"><span class="hs-identifier hs-var">blocks</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391094"><span class="hs-identifier hs-var">strs</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Margin -&gt; [Block] -&gt; [String]
+</span><a href="#local-6989586621679391096"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391093"><span class="hs-identifier hs-var">after</span></a></span><span> </span><span class="annot"><span class="annottext">[Block]
+</span><a href="#local-6989586621679391095"><span class="hs-identifier hs-var">blocks</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679391096"><span class="annot"><span class="annottext">go :: Margin -&gt; [Block] -&gt; [String]
+</span><a href="#local-6989586621679391096"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679391097"><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391097"><span class="hs-identifier hs-var">_surr'</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><a href="#local-6989586621679391096"><span class="hs-identifier hs-var">go</span></a></span><span>  </span><span id="local-6989586621679391098"><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391098"><span class="hs-identifier hs-var">surr'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-type">Block</span></a></span><span> </span><span id="local-6989586621679391099"><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391099"><span class="hs-identifier hs-var">before</span></a></span></span><span> </span><span id="local-6989586621679391100"><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391100"><span class="hs-identifier hs-var">after</span></a></span></span><span> </span><span id="local-6989586621679391101"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391101"><span class="hs-identifier hs-var">strs</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679391102"><span class="annot"><span class="annottext">[Block]
+</span><a href="#local-6989586621679391102"><span class="hs-identifier hs-var">blocks</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String]
+</span><a href="#local-6989586621679391103"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [String]) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391101"><span class="hs-identifier hs-var">strs</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Margin -&gt; [Block] -&gt; [String]
+</span><a href="#local-6989586621679391096"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391100"><span class="hs-identifier hs-var">after</span></a></span><span> </span><span class="annot"><span class="annottext">[Block]
+</span><a href="#local-6989586621679391102"><span class="hs-identifier hs-var">blocks</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>        </span><span id="local-6989586621679391103"><span class="annot"><span class="annottext">ins :: [String] -&gt; [String]
+</span><a href="#local-6989586621679391103"><span class="hs-identifier hs-var hs-var">ins</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391098"><span class="hs-identifier hs-var">surr'</span></a></span><span> </span><span class="annot"><span class="annottext">Margin -&gt; Margin -&gt; Margin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391099"><span class="hs-identifier hs-var">before</span></a></span><span> </span><span class="annot"><span class="annottext">Margin -&gt; Margin -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; [String]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String]
+forall a. a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#id/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span id="local-6989586621679390840"><span class="annot"><a href="Distribution.Fields.Pretty.html#renderField"><span class="hs-identifier hs-type">renderField</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#Opts"><span class="hs-identifier hs-type">Opts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390840"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390840"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-type">Block</span></a></span></span><span>
+</span><span id="line-129"></span><span id="renderField"><span class="annot"><span class="annottext">renderField :: forall ann. Opts ann -&gt; Int -&gt; PrettyField ann -&gt; Block
+</span><a href="Distribution.Fields.Pretty.html#renderField"><span class="hs-identifier hs-var hs-var">renderField</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#Opts"><span class="hs-identifier hs-type">Opts</span></a></span><span> </span><span id="local-6989586621679391109"><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391109"><span class="hs-identifier hs-var">rann</span></a></span></span><span> </span><span id="local-6989586621679391110"><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679391110"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679391111"><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391111"><span class="hs-identifier hs-var">post</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679391112"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391112"><span class="hs-identifier hs-var">fw</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span id="local-6989586621679391113"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391113"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679391114"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391114"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679391115"><span class="annot"><span class="annottext">Doc
+</span><a href="#local-6989586621679391115"><span class="hs-identifier hs-var">doc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="annottext">Margin -&gt; Margin -&gt; [String] -&gt; Block
+</span><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-var">Block</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391116"><span class="hs-identifier hs-var">before</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391117"><span class="hs-identifier hs-var">after</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391118"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-132"></span><span>    </span><span id="local-6989586621679391118"><span class="annot"><span class="annottext">content :: [String]
+</span><a href="#local-6989586621679391118"><span class="hs-identifier hs-var hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">CommentPosition
+</span><a href="#local-6989586621679391119"><span class="hs-identifier hs-var">comments</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentBefore"><span class="hs-identifier hs-type">CommentBefore</span></a></span><span> </span><span id="local-6989586621679391120"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391120"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391120"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391111"><span class="hs-identifier hs-var">post</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391113"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391121"><span class="hs-identifier hs-var">lines'</span></a></span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentAfter"><span class="hs-identifier hs-type">CommentAfter</span></a></span><span>  </span><span id="local-6989586621679391122"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391122"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391111"><span class="hs-identifier hs-var">post</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391113"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391121"><span class="hs-identifier hs-var">lines'</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391122"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-135"></span><span>      </span><span class="annot"><span class="annottext">CommentPosition
+</span><a href="Distribution.Fields.Pretty.html#NoComment"><span class="hs-identifier hs-var">NoComment</span></a></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391111"><span class="hs-identifier hs-var">post</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391113"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391121"><span class="hs-identifier hs-var">lines'</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span id="local-6989586621679391119"><span class="annot"><span class="annottext">comments :: CommentPosition
+</span><a href="#local-6989586621679391119"><span class="hs-identifier hs-var hs-var">comments</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391109"><span class="hs-identifier hs-var">rann</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391113"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621679391116"><span class="annot"><span class="annottext">before :: Margin
+</span><a href="#local-6989586621679391116"><span class="hs-identifier hs-var hs-var">before</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">CommentPosition
+</span><a href="#local-6989586621679391119"><span class="hs-identifier hs-var">comments</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-138"></span><span>      </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentBefore"><span class="hs-identifier hs-type">CommentBefore</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentAfter"><span class="hs-identifier hs-type">CommentAfter</span></a></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">CommentPosition
+</span><a href="Distribution.Fields.Pretty.html#NoComment"><span class="hs-identifier hs-var">NoComment</span></a></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">CommentPosition
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679391121"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391121"><span class="hs-identifier hs-var">lines'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679391117"><span class="annot"><span class="annottext">Margin
+</span><a href="#local-6989586621679391117"><span class="hs-identifier hs-var">after</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String]
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#lines/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391129"><span class="hs-identifier hs-var">narrow</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-144"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391130"><span class="hs-identifier hs-var">name'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;:&quot;</span></span><span> </span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>        </span><span class="hs-special">[</span><span id="local-6989586621679391131"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391131"><span class="hs-identifier hs-var">singleLine</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#length/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391131"><span class="hs-identifier hs-var">singleLine</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">60</span></span><span>
+</span><span id="line-146"></span><span>                     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391130"><span class="hs-identifier hs-var">name'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; String
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#replicate/GHC.List.html#replicate"><span class="hs-identifier hs-var">replicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679391112"><span class="hs-identifier hs-var">fw</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#-/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#length/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391130"><span class="hs-identifier hs-var">name'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391129"><span class="hs-identifier hs-var">narrow</span></a></span><span> </span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>        </span><span class="annot"><span class="annottext">[String]
+</span><span class="hs-identifier">_</span></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679391130"><span class="hs-identifier hs-var">name'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;:&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; [String]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679391110"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; [String]
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#lines/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Doc -&gt; String
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#render/Text.PrettyPrint.HughesPJ.html#render"><span class="hs-identifier hs-var">PP.render</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="#local-6989586621679391115"><span class="hs-identifier hs-var">doc</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span>    </span><span id="local-6989586621679391130"><span class="annot"><span class="annottext">name' :: String
+</span><a href="#local-6989586621679391130"><span class="hs-identifier hs-var hs-var">name'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391114"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-150"></span><span>    </span><span id="local-6989586621679391129"><span class="annot"><span class="annottext">narrow :: String
+</span><a href="#local-6989586621679391129"><span class="hs-identifier hs-var hs-var">narrow</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Style -&gt; Doc -&gt; String
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#renderStyle/Text.PrettyPrint.HughesPJ.html#renderStyle"><span class="hs-identifier hs-var">PP.renderStyle</span></a></span><span> </span><span class="annot"><span class="annottext">Style
+</span><a href="#local-6989586621679391136"><span class="hs-identifier hs-var">narrowStyle</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="#local-6989586621679391115"><span class="hs-identifier hs-var">doc</span></a></span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><a href="#local-6989586621679391136"><span class="hs-identifier hs-type">narrowStyle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.Annotated.HughesPJ.html#Style/Text.PrettyPrint.Annotated.HughesPJ.html#Style"><span class="hs-identifier hs-type">PP.Style</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span id="local-6989586621679391136"><span class="annot"><span class="annottext">narrowStyle :: Style
+</span><a href="#local-6989586621679391136"><span class="hs-identifier hs-var hs-var">narrowStyle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Style
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.Annotated.HughesPJ.html#style/Text.PrettyPrint.Annotated.HughesPJ.html#style"><span class="hs-identifier hs-var">PP.style</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.Annotated.HughesPJ.html#lineLength/Text.PrettyPrint.Annotated.HughesPJ.html#lineLength"><span class="hs-identifier hs-var">PP.lineLength</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.Annotated.HughesPJ.html#lineLength/Text.PrettyPrint.Annotated.HughesPJ.html#lineLength"><span class="hs-identifier hs-var">PP.lineLength</span></a></span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.Annotated.HughesPJ.html#style/Text.PrettyPrint.Annotated.HughesPJ.html#style"><span class="hs-identifier hs-type">PP.style</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Num.html#-/GHC.Num.html#-"><span class="hs-glyph hs-type">-</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679391112"><span class="hs-identifier hs-type">fw</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Distribution.Fields.Pretty.html#renderField"><span class="hs-identifier hs-var">renderField</span></a></span><span> </span><span id="local-6989586621679391139"><span class="annot"><span class="annottext">opts :: Opts ann
+</span><a href="#local-6989586621679391139"><span class="hs-identifier hs-var">opts</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#Opts"><span class="hs-identifier hs-type">Opts</span></a></span><span> </span><span id="local-6989586621679391140"><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391140"><span class="hs-identifier hs-var">rann</span></a></span></span><span> </span><span id="local-6989586621679391141"><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679391141"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679391142"><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391142"><span class="hs-identifier hs-var">post</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettySection"><span class="hs-identifier hs-type">PrettySection</span></a></span><span> </span><span id="local-6989586621679391143"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391143"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679391144"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391144"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679391145"><span class="annot"><span class="annottext">[Doc]
+</span><a href="#local-6989586621679391145"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span id="local-6989586621679391146"><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391146"><span class="hs-identifier hs-var">fields</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Margin -&gt; Margin -&gt; [String] -&gt; Block
+</span><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-var">Block</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#Margin"><span class="hs-identifier hs-var">Margin</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; Block) -&gt; [String] -&gt; Block
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; [String]
+</span><a href="#local-6989586621679391147"><span class="hs-identifier hs-var">attachComments</span></a></span><span>
+</span><span id="line-158"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ann -&gt; [String] -&gt; [String]
+</span><a href="#local-6989586621679391142"><span class="hs-identifier hs-var">post</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391143"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Doc -&gt; String
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#render/Text.PrettyPrint.HughesPJ.html#render"><span class="hs-identifier hs-var">PP.render</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc -&gt; String) -&gt; Doc -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hsep/Text.PrettyPrint.HughesPJ.html#hsep"><span class="hs-identifier hs-var">PP.hsep</span></a></span><span> </span><span class="annot"><span class="annottext">([Doc] -&gt; Doc) -&gt; [Doc] -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">PP.text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FieldName -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391144"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Doc -&gt; [Doc] -&gt; [Doc]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[Doc]
+</span><a href="#local-6989586621679391145"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679391141"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Opts ann -&gt; [PrettyField ann] -&gt; [String]
+forall ann. Opts ann -&gt; [PrettyField ann] -&gt; [String]
+</span><a href="Distribution.Fields.Pretty.html#renderFields"><span class="hs-identifier hs-var">renderFields</span></a></span><span> </span><span class="annot"><span class="annottext">Opts ann
+</span><a href="#local-6989586621679391139"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">[PrettyField ann]
+</span><a href="#local-6989586621679391146"><span class="hs-identifier hs-var">fields</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-162"></span><span>    </span><span id="local-6989586621679391147"><span class="annot"><span class="annottext">attachComments :: [String] -&gt; [String]
+</span><a href="#local-6989586621679391147"><span class="hs-identifier hs-var hs-var">attachComments</span></a></span></span><span> </span><span id="local-6989586621679391150"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391150"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ann -&gt; CommentPosition
+</span><a href="#local-6989586621679391140"><span class="hs-identifier hs-var">rann</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391143"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-163"></span><span>      </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentBefore"><span class="hs-identifier hs-type">CommentBefore</span></a></span><span> </span><span id="local-6989586621679391151"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391151"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391151"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391150"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-164"></span><span>      </span><span class="annot"><a href="Distribution.Fields.Pretty.html#CommentAfter"><span class="hs-identifier hs-type">CommentAfter</span></a></span><span>  </span><span id="local-6989586621679391152"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391152"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391150"><span class="hs-identifier hs-var">content</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391152"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-165"></span><span>      </span><span class="annot"><span class="annottext">CommentPosition
+</span><a href="Distribution.Fields.Pretty.html#NoComment"><span class="hs-identifier hs-var">NoComment</span></a></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679391150"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="annot"><a href="Distribution.Fields.Pretty.html#renderField"><span class="hs-identifier hs-var">renderField</span></a></span><span> </span><span class="annot"><span class="annottext">Opts ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">PrettyField ann
+</span><a href="Distribution.Fields.Pretty.html#PrettyEmpty"><span class="hs-identifier hs-var">PrettyEmpty</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Margin -&gt; Margin -&gt; [String] -&gt; Block
+</span><a href="Distribution.Fields.Pretty.html#Block"><span class="hs-identifier hs-var">Block</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span> </span><span class="annot"><span class="annottext">Margin
+</span><a href="Distribution.Fields.Pretty.html#NoMargin"><span class="hs-identifier hs-var">NoMargin</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- Transform from Parsec.Field</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span id="local-6989586621679390852"><span id="local-6989586621679390853"><span class="annot"><a href="Distribution.Fields.Pretty.html#genericFromParsecFields"><span class="hs-identifier hs-type">genericFromParsecFields</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390852"><span class="hs-identifier hs-type">f</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">P.FieldLine</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390853"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390852"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">PP.Doc</span></a></span><span class="hs-special">)</span><span>     </span><span class="annot"><span class="hs-comment">-- ^ transform field contents</span></span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">P.SectionArg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390853"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390852"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">PP.Doc</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ transform section arguments</span></span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">P.Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390853"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390852"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390853"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-179"></span><span id="genericFromParsecFields"><span class="annot"><span class="annottext">genericFromParsecFields :: forall (f :: * -&gt; *) ann.
+Applicative f =&gt;
+(FieldName -&gt; [FieldLine ann] -&gt; f Doc)
+-&gt; (FieldName -&gt; [SectionArg ann] -&gt; f [Doc])
+-&gt; [Field ann]
+-&gt; f [PrettyField ann]
+</span><a href="Distribution.Fields.Pretty.html#genericFromParsecFields"><span class="hs-identifier hs-var hs-var">genericFromParsecFields</span></a></span></span><span> </span><span id="local-6989586621679391155"><span class="annot"><span class="annottext">FieldName -&gt; [FieldLine ann] -&gt; f Doc
+</span><a href="#local-6989586621679391155"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679391156"><span class="annot"><span class="annottext">FieldName -&gt; [SectionArg ann] -&gt; f [Doc]
+</span><a href="#local-6989586621679391156"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Field ann] -&gt; f [PrettyField ann]
+</span><a href="#local-6989586621679391157"><span class="hs-identifier hs-var">goMany</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-180"></span><span>    </span><span id="local-6989586621679391157"><span class="annot"><span class="annottext">goMany :: [Field ann] -&gt; f [PrettyField ann]
+</span><a href="#local-6989586621679391157"><span class="hs-identifier hs-var hs-var">goMany</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Field ann -&gt; f (PrettyField ann))
+-&gt; [Field ann] -&gt; f [PrettyField ann]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="../../base-4.18.2.1/src/Data.Traversable.html#traverse/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Field ann -&gt; f (PrettyField ann)
+</span><a href="#local-6989586621679391165"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span>    </span><span id="local-6989586621679391165"><span class="annot"><span class="annottext">go :: Field ann -&gt; f (PrettyField ann)
+</span><a href="#local-6989586621679391165"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">P.Field</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">P.Name</span></a></span><span> </span><span id="local-6989586621679391167"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391167"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679391168"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391168"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679391169"><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679391169"><span class="hs-identifier hs-var">fls</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; FieldName -&gt; Doc -&gt; PrettyField ann
+forall ann. ann -&gt; FieldName -&gt; Doc -&gt; PrettyField ann
+</span><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-var">PrettyField</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391167"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391168"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc -&gt; PrettyField ann) -&gt; f Doc -&gt; f (PrettyField ann)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; [FieldLine ann] -&gt; f Doc
+</span><a href="#local-6989586621679391155"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391168"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679391169"><span class="hs-identifier hs-var">fls</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><a href="#local-6989586621679391165"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Section"><span class="hs-identifier hs-type">P.Section</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">P.Name</span></a></span><span> </span><span id="local-6989586621679391172"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391172"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679391173"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391173"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679391174"><span class="annot"><span class="annottext">[SectionArg ann]
+</span><a href="#local-6989586621679391174"><span class="hs-identifier hs-var">secargs</span></a></span></span><span> </span><span id="local-6989586621679391175"><span class="annot"><span class="annottext">[Field ann]
+</span><a href="#local-6989586621679391175"><span class="hs-identifier hs-var">fs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; FieldName -&gt; [Doc] -&gt; [PrettyField ann] -&gt; PrettyField ann
+forall ann.
+ann -&gt; FieldName -&gt; [Doc] -&gt; [PrettyField ann] -&gt; PrettyField ann
+</span><a href="Distribution.Fields.Pretty.html#PrettySection"><span class="hs-identifier hs-var">PrettySection</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679391172"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391173"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">([Doc] -&gt; [PrettyField ann] -&gt; PrettyField ann)
+-&gt; f [Doc] -&gt; f ([PrettyField ann] -&gt; PrettyField ann)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; [SectionArg ann] -&gt; f [Doc]
+</span><a href="#local-6989586621679391156"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391173"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">[SectionArg ann]
+</span><a href="#local-6989586621679391174"><span class="hs-identifier hs-var">secargs</span></a></span><span> </span><span class="annot"><span class="annottext">f ([PrettyField ann] -&gt; PrettyField ann)
+-&gt; f [PrettyField ann] -&gt; f (PrettyField ann)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Field ann] -&gt; f [PrettyField ann]
+</span><a href="#local-6989586621679391157"><span class="hs-identifier hs-var">goMany</span></a></span><span> </span><span class="annot"><span class="annottext">[Field ann]
+</span><a href="#local-6989586621679391175"><span class="hs-identifier hs-var">fs</span></a></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="annot"><span class="hs-comment">-- | Used in 'fromParsecFields'.</span></span><span>
+</span><span id="line-186"></span><span id="local-6989586621679390866"><span class="annot"><a href="Distribution.Fields.Pretty.html#prettyFieldLines"><span class="hs-identifier hs-type">prettyFieldLines</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">P.FieldLine</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390866"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">PP.Doc</span></a></span></span><span>
+</span><span id="line-187"></span><span id="prettyFieldLines"><span class="annot"><span class="annottext">prettyFieldLines :: forall ann. FieldName -&gt; [FieldLine ann] -&gt; Doc
+</span><a href="Distribution.Fields.Pretty.html#prettyFieldLines"><span class="hs-identifier hs-var hs-var">prettyFieldLines</span></a></span></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679391176"><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679391176"><span class="hs-identifier hs-var">fls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#vcat/Text.PrettyPrint.HughesPJ.html#vcat"><span class="hs-identifier hs-var">PP.vcat</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">PP.text</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; String -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391178"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">P.FieldLine</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679391178"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391178"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679391176"><span class="hs-identifier hs-var">fls</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="annot"><span class="hs-comment">-- | Used in 'fromParsecFields'.</span></span><span>
+</span><span id="line-193"></span><span id="local-6989586621679390868"><span class="annot"><a href="Distribution.Fields.Pretty.html#prettySectionArgs"><span class="hs-identifier hs-type">prettySectionArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">P.SectionArg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390868"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">PP.Doc</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-194"></span><span id="prettySectionArgs"><span class="annot"><span class="annottext">prettySectionArgs :: forall ann. FieldName -&gt; [SectionArg ann] -&gt; [Doc]
+</span><a href="Distribution.Fields.Pretty.html#prettySectionArgs"><span class="hs-identifier hs-var hs-var">prettySectionArgs</span></a></span></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SectionArg ann -&gt; Doc) -&gt; [SectionArg ann] -&gt; [Doc]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">((SectionArg ann -&gt; Doc) -&gt; [SectionArg ann] -&gt; [Doc])
+-&gt; (SectionArg ann -&gt; Doc) -&gt; [SectionArg ann] -&gt; [Doc]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-195"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgName"><span class="hs-identifier hs-type">P.SecArgName</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679391181"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391181"><span class="hs-identifier hs-var">bs</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="Distribution.Pretty.html#showToken"><span class="hs-identifier hs-var">showToken</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; String -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391181"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgStr"><span class="hs-identifier hs-type">P.SecArgStr</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679391183"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391183"><span class="hs-identifier hs-var">bs</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="Distribution.Pretty.html#showToken"><span class="hs-identifier hs-var">showToken</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; String -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391183"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-197"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgOther"><span class="hs-identifier hs-type">P.SecArgOther</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679391185"><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391185"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">PP.text</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; String -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName
+</span><a href="#local-6989586621679391185"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span class="annot"><span class="hs-comment">-- | Simple variant of 'genericFromParsecField'</span></span><span>
+</span><span id="line-200"></span><span id="local-6989586621679390870"><span class="annot"><a href="Distribution.Fields.Pretty.html#fromParsecFields"><span class="hs-identifier hs-type">fromParsecFields</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">P.Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390870"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Pretty.html#PrettyField"><span class="hs-identifier hs-type">PrettyField</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679390870"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-201"></span><span id="fromParsecFields"><span class="annot"><span class="annottext">fromParsecFields :: forall ann. [Field ann] -&gt; [PrettyField ann]
+</span><a href="Distribution.Fields.Pretty.html#fromParsecFields"><span class="hs-identifier hs-var hs-var">fromParsecFields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Identity [PrettyField ann] -&gt; [PrettyField ann]
+forall a. Identity a -&gt; a
+</span><a href="../../base-4.18.2.1/src/Data.Functor.Identity.html#runIdentity/Data.Functor.Identity.html#runIdentity"><span class="hs-identifier hs-var">runIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">(Identity [PrettyField ann] -&gt; [PrettyField ann])
+-&gt; ([Field ann] -&gt; Identity [PrettyField ann])
+-&gt; [Field ann]
+-&gt; [PrettyField ann]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(FieldName -&gt; [FieldLine ann] -&gt; Identity Doc)
+-&gt; (FieldName -&gt; [SectionArg ann] -&gt; Identity [Doc])
+-&gt; [Field ann]
+-&gt; Identity [PrettyField ann]
+forall (f :: * -&gt; *) ann.
+Applicative f =&gt;
+(FieldName -&gt; [FieldLine ann] -&gt; f Doc)
+-&gt; (FieldName -&gt; [SectionArg ann] -&gt; f [Doc])
+-&gt; [Field ann]
+-&gt; f [PrettyField ann]
+</span><a href="Distribution.Fields.Pretty.html#genericFromParsecFields"><span class="hs-identifier hs-var">genericFromParsecFields</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Doc -&gt; Identity Doc
+forall a. a -&gt; Identity a
+</span><a href="../../base-4.18.2.1/src/Data.Functor.Identity.html#Identity/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-var">Identity</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc -&gt; Identity Doc)
+-&gt; (FieldName -&gt; [FieldLine ann] -&gt; Doc)
+-&gt; FieldName
+-&gt; [FieldLine ann]
+-&gt; Identity Doc
+forall a b c d. (a -&gt; b) -&gt; (c -&gt; d -&gt; a) -&gt; c -&gt; d -&gt; b
+</span><a href="#local-6989586621679391190"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; [FieldLine ann] -&gt; Doc
+forall ann. FieldName -&gt; [FieldLine ann] -&gt; Doc
+</span><a href="Distribution.Fields.Pretty.html#prettyFieldLines"><span class="hs-identifier hs-var">prettyFieldLines</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Doc] -&gt; Identity [Doc]
+forall a. a -&gt; Identity a
+</span><a href="../../base-4.18.2.1/src/Data.Functor.Identity.html#Identity/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-var">Identity</span></a></span><span> </span><span class="annot"><span class="annottext">([Doc] -&gt; Identity [Doc])
+-&gt; (FieldName -&gt; [SectionArg ann] -&gt; [Doc])
+-&gt; FieldName
+-&gt; [SectionArg ann]
+-&gt; Identity [Doc]
+forall a b c d. (a -&gt; b) -&gt; (c -&gt; d -&gt; a) -&gt; c -&gt; d -&gt; b
+</span><a href="#local-6989586621679391190"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">FieldName -&gt; [SectionArg ann] -&gt; [Doc]
+forall ann. FieldName -&gt; [SectionArg ann] -&gt; [Doc]
+</span><a href="Distribution.Fields.Pretty.html#prettySectionArgs"><span class="hs-identifier hs-var">prettySectionArgs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-205"></span><span>    </span><span id="local-6989586621679390875"><span id="local-6989586621679390876"><span id="local-6989586621679390877"><span id="local-6989586621679390878"><span class="annot"><a href="#local-6989586621679391190"><span class="hs-operator hs-type">(.:)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679390875"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390876"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679390877"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390878"><span class="hs-identifier hs-type">d</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390875"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679390877"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390878"><span class="hs-identifier hs-type">d</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679390876"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679391191"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679391191"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679391190"><span class="annot"><span class="annottext">.: :: forall a b c d. (a -&gt; b) -&gt; (c -&gt; d -&gt; a) -&gt; c -&gt; d -&gt; b
+</span><a href="#local-6989586621679391190"><span class="hs-operator hs-var hs-var">.:</span></a></span></span><span> </span><span id="local-6989586621679391192"><span class="annot"><span class="annottext">c -&gt; d -&gt; a
+</span><a href="#local-6989586621679391192"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679391193"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679391193"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679391194"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679391194"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679391191"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c -&gt; d -&gt; a
+</span><a href="#local-6989586621679391192"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679391193"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679391194"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span></pre></body></html>

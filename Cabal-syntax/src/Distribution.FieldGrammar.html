@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances   #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | This module provides a way to specify a grammar of @.cabal@ -like files.</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.FieldGrammar</span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Field grammar type</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html#FieldGrammar"><span class="hs-identifier">FieldGrammar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html#uniqueField"><span class="hs-identifier">uniqueField</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html#optionalField"><span class="hs-identifier">optionalField</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html#optionalFieldDef"><span class="hs-identifier">optionalFieldDef</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html#monoidalField"><span class="hs-identifier">monoidalField</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Concrete grammar implementations</span></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#ParsecFieldGrammar"><span class="hs-identifier">ParsecFieldGrammar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.html#ParsecFieldGrammar%27"><span class="hs-identifier">ParsecFieldGrammar'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#parseFieldGrammar"><span class="hs-identifier">parseFieldGrammar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#fieldGrammarKnownFieldList"><span class="hs-identifier">fieldGrammarKnownFieldList</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFieldGrammar"><span class="hs-identifier">PrettyFieldGrammar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.html#PrettyFieldGrammar%27"><span class="hs-identifier">PrettyFieldGrammar'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#prettyFieldGrammar"><span class="hs-identifier">prettyFieldGrammar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Auxiliary</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.html#%5E%5E%5E"><span class="hs-operator">(^^^)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Section"><span class="hs-identifier">Section</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Fields"><span class="hs-identifier">Fields</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.html#partitionFields"><span class="hs-identifier">partitionFields</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.html#takeFields"><span class="hs-identifier">takeFields</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#runFieldParser"><span class="hs-identifier">runFieldParser</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#runFieldParser%27"><span class="hs-identifier">runFieldParser'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html#defaultFreeTextFieldDefST"><span class="hs-identifier">defaultFreeTextFieldDefST</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Newtypes</span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Newtypes.html"><span class="hs-identifier">Distribution.FieldGrammar.Newtypes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">)</span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Strict.html#/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Class.html"><span class="hs-identifier">Distribution.FieldGrammar.Class</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Newtypes.html"><span class="hs-identifier">Distribution.FieldGrammar.Newtypes</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html"><span class="hs-identifier">Distribution.FieldGrammar.Parsec</span></a></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html"><span class="hs-identifier">Distribution.FieldGrammar.Pretty</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html"><span class="hs-identifier">Distribution.Fields.Field</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span>         </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#spanMaybe"><span class="hs-identifier">spanMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">type</span><span> </span><span id="ParsecFieldGrammar%27"><span class="annot"><a href="Distribution.FieldGrammar.html#ParsecFieldGrammar%27"><span class="hs-identifier hs-var">ParsecFieldGrammar'</span></a></span></span><span> </span><span id="local-6989586621679454516"><span class="annot"><a href="#local-6989586621679454516"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#ParsecFieldGrammar"><span class="hs-identifier hs-type">ParsecFieldGrammar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454516"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454516"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">type</span><span> </span><span id="PrettyFieldGrammar%27"><span class="annot"><a href="Distribution.FieldGrammar.html#PrettyFieldGrammar%27"><span class="hs-identifier hs-var">PrettyFieldGrammar'</span></a></span></span><span> </span><span id="local-6989586621679454517"><span class="annot"><a href="#local-6989586621679454517"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.Pretty.html#PrettyFieldGrammar"><span class="hs-identifier hs-type">PrettyFieldGrammar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454517"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454517"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.html#%5E%5E%5E"><span class="hs-operator hs-type">^^^</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | Reverse function application which binds tighter than '&lt;$&gt;' and '&lt;*&gt;'.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- Useful for refining grammar specification.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- \&lt;*\&gt; 'monoidalFieldAla' &quot;extensions&quot;           (alaList' FSep MQuoted)       oldExtensions</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--     ^^^ 'deprecatedSince' [1,12] &quot;Please use 'default-extensions' or 'other-extensions' fields.&quot;</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-57"></span><span id="local-6989586621679454444"><span id="local-6989586621679454445"><span class="annot"><a href="Distribution.FieldGrammar.html#%5E%5E%5E"><span class="hs-operator hs-type">(^^^)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679454444"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679454444"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679454445"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679454445"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-58"></span><span id="local-6989586621679454521"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679454521"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="%5E%5E%5E"><span class="annot"><span class="annottext">^^^ :: forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="Distribution.FieldGrammar.html#%5E%5E%5E"><span class="hs-operator hs-var hs-var">^^^</span></a></span></span><span> </span><span id="local-6989586621679454522"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679454522"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679454522"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679454521"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><span class="hs-comment">-- | Partitioning state</span></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">data</span><span> </span><span id="PS"><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-var">PS</span></a></span></span><span> </span><span id="local-6989586621679454467"><span class="annot"><a href="#local-6989586621679454467"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PS"><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-var">PS</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Fields"><span class="hs-identifier hs-type">Fields</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454467"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454467"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454467"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><span class="hs-comment">-- | Partition field list into field map and groups of sections.</span></span><span>
+</span><span id="line-64"></span><span id="local-6989586621679454448"><span class="annot"><a href="Distribution.FieldGrammar.html#partitionFields"><span class="hs-identifier hs-type">partitionFields</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454448"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Fields"><span class="hs-identifier hs-type">Fields</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454448"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454448"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-65"></span><span id="partitionFields"><span class="annot"><span class="annottext">partitionFields :: forall ann. [Field ann] -&gt; (Fields ann, [[Section ann]])
+</span><a href="Distribution.FieldGrammar.html#partitionFields"><span class="hs-identifier hs-var hs-var">partitionFields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PS ann -&gt; (Fields ann, [[Section ann]])
+forall ann. PS ann -&gt; (Fields ann, [[Section ann]])
+</span><a href="#local-6989586621679454533"><span class="hs-identifier hs-var">finalize</span></a></span><span> </span><span class="annot"><span class="annottext">(PS ann -&gt; (Fields ann, [[Section ann]]))
+-&gt; ([Field ann] -&gt; PS ann)
+-&gt; [Field ann]
+-&gt; (Fields ann, [[Section ann]])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(PS ann -&gt; Field ann -&gt; PS ann) -&gt; PS ann -&gt; [Field ann] -&gt; PS ann
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldl%27/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">PS ann -&gt; Field ann -&gt; PS ann
+forall ann. PS ann -&gt; Field ann -&gt; PS ann
+</span><a href="#local-6989586621679454536"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fields ann -&gt; [Section ann] -&gt; [[Section ann]] -&gt; PS ann
+forall ann.
+Fields ann -&gt; [Section ann] -&gt; [[Section ann]] -&gt; PS ann
+</span><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-var">PS</span></a></span><span> </span><span class="annot"><span class="annottext">Fields ann
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">[Section ann]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">[[Section ann]]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679454459"><span class="annot"><a href="#local-6989586621679454533"><span class="hs-identifier hs-type">finalize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-type">PS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454459"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Fields"><span class="hs-identifier hs-type">Fields</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454459"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454459"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679454533"><span class="annot"><span class="annottext">finalize :: forall ann. PS ann -&gt; (Fields ann, [[Section ann]])
+</span><a href="#local-6989586621679454533"><span class="hs-identifier hs-var hs-var">finalize</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-type">PS</span></a></span><span> </span><span id="local-6989586621679454538"><span class="annot"><span class="annottext">Fields ann
+</span><a href="#local-6989586621679454538"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679454539"><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454539"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679454540"><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454540"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">[Section ann] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#null/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454539"><span class="hs-identifier hs-var">s</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fields ann
+</span><a href="#local-6989586621679454538"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[[Section ann]] -&gt; [[Section ann]]
+forall a. [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#reverse/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454540"><span class="hs-identifier hs-var">ss</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fields ann
+</span><a href="#local-6989586621679454538"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[[Section ann]] -&gt; [[Section ann]]
+forall a. [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#reverse/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Section ann] -&gt; [Section ann]
+forall a. [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#reverse/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454539"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">[Section ann] -&gt; [[Section ann]] -&gt; [[Section ann]]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454540"><span class="hs-identifier hs-var">ss</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679454466"><span class="annot"><a href="#local-6989586621679454536"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-type">PS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454466"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454466"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-type">PS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454466"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679454536"><span class="annot"><span class="annottext">f :: forall ann. PS ann -&gt; Field ann -&gt; PS ann
+</span><a href="#local-6989586621679454536"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-type">PS</span></a></span><span> </span><span id="local-6989586621679454544"><span class="annot"><span class="annottext">Fields ann
+</span><a href="#local-6989586621679454544"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679454545"><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454545"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679454546"><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454546"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span id="local-6989586621679454549"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679454549"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679454550"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679454550"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679454551"><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679454551"><span class="hs-identifier hs-var">fss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">Fields ann -&gt; [Section ann] -&gt; [[Section ann]] -&gt; PS ann
+forall ann.
+Fields ann -&gt; [Section ann] -&gt; [[Section ann]] -&gt; PS ann
+</span><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-var">PS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([NamelessField ann] -&gt; [NamelessField ann] -&gt; [NamelessField ann])
+-&gt; ByteString -&gt; [NamelessField ann] -&gt; Fields ann -&gt; Fields ann
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#insertWith/Data.Map.Strict.Internal.html#insertWith"><span class="hs-identifier hs-var">Map.insertWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([NamelessField ann] -&gt; [NamelessField ann] -&gt; [NamelessField ann])
+-&gt; [NamelessField ann]
+-&gt; [NamelessField ann]
+-&gt; [NamelessField ann]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">[NamelessField ann] -&gt; [NamelessField ann] -&gt; [NamelessField ann]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">(++)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679454550"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ann -&gt; [FieldLine ann] -&gt; NamelessField ann
+forall ann. ann -&gt; [FieldLine ann] -&gt; NamelessField ann
+</span><a href="Distribution.FieldGrammar.Parsec.html#MkNamelessField"><span class="hs-identifier hs-var">MkNamelessField</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679454549"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679454551"><span class="hs-identifier hs-var">fss</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Fields ann
+</span><a href="#local-6989586621679454544"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454555"><span class="hs-identifier hs-var">ss'</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>        </span><span id="local-6989586621679454555"><span class="annot"><span class="annottext">ss' :: [[Section ann]]
+</span><a href="#local-6989586621679454555"><span class="hs-identifier hs-var hs-var">ss'</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">[Section ann] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#null/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454545"><span class="hs-identifier hs-var">s</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454546"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Section ann] -&gt; [Section ann]
+forall a. [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#reverse/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454545"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">[Section ann] -&gt; [[Section ann]] -&gt; [[Section ann]]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454546"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><a href="#local-6989586621679454536"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-type">PS</span></a></span><span> </span><span id="local-6989586621679454557"><span class="annot"><span class="annottext">Fields ann
+</span><a href="#local-6989586621679454557"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679454558"><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454558"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679454559"><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454559"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span id="local-6989586621679454561"><span class="annot"><span class="annottext">Name ann
+</span><a href="#local-6989586621679454561"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679454562"><span class="annot"><span class="annottext">[SectionArg ann]
+</span><a href="#local-6989586621679454562"><span class="hs-identifier hs-var">sargs</span></a></span></span><span> </span><span id="local-6989586621679454563"><span class="annot"><span class="annottext">[Field ann]
+</span><a href="#local-6989586621679454563"><span class="hs-identifier hs-var">sfields</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><span class="annottext">Fields ann -&gt; [Section ann] -&gt; [[Section ann]] -&gt; PS ann
+forall ann.
+Fields ann -&gt; [Section ann] -&gt; [[Section ann]] -&gt; PS ann
+</span><a href="Distribution.FieldGrammar.html#PS"><span class="hs-identifier hs-var">PS</span></a></span><span> </span><span class="annot"><span class="annottext">Fields ann
+</span><a href="#local-6989586621679454557"><span class="hs-identifier hs-var">fs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name ann -&gt; [SectionArg ann] -&gt; [Field ann] -&gt; Section ann
+forall ann.
+Name ann -&gt; [SectionArg ann] -&gt; [Field ann] -&gt; Section ann
+</span><a href="Distribution.FieldGrammar.Parsec.html#MkSection"><span class="hs-identifier hs-var">MkSection</span></a></span><span> </span><span class="annot"><span class="annottext">Name ann
+</span><a href="#local-6989586621679454561"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">[SectionArg ann]
+</span><a href="#local-6989586621679454562"><span class="hs-identifier hs-var">sargs</span></a></span><span> </span><span class="annot"><span class="annottext">[Field ann]
+</span><a href="#local-6989586621679454563"><span class="hs-identifier hs-var">sfields</span></a></span><span> </span><span class="annot"><span class="annottext">Section ann -&gt; [Section ann] -&gt; [Section ann]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[Section ann]
+</span><a href="#local-6989586621679454558"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[[Section ann]]
+</span><a href="#local-6989586621679454559"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><span class="hs-comment">-- | Take all fields from the front.</span></span><span>
+</span><span id="line-82"></span><span id="local-6989586621679454486"><span class="annot"><a href="Distribution.FieldGrammar.html#takeFields"><span class="hs-identifier hs-type">takeFields</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454486"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.FieldGrammar.Parsec.html#Fields"><span class="hs-identifier hs-type">Fields</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454486"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679454486"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-83"></span><span id="takeFields"><span class="annot"><span class="annottext">takeFields :: forall ann. [Field ann] -&gt; (Fields ann, [Field ann])
+</span><a href="Distribution.FieldGrammar.html#takeFields"><span class="hs-identifier hs-var hs-var">takeFields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([(ByteString, [NamelessField ann])], [Field ann])
+-&gt; (Map ByteString [NamelessField ann], [Field ann])
+forall {k} {a} {b}. Ord k =&gt; ([(k, [a])], b) -&gt; (Map k [a], b)
+</span><a href="#local-6989586621679454566"><span class="hs-identifier hs-var">finalize</span></a></span><span> </span><span class="annot"><span class="annottext">(([(ByteString, [NamelessField ann])], [Field ann])
+ -&gt; (Map ByteString [NamelessField ann], [Field ann]))
+-&gt; ([Field ann]
+    -&gt; ([(ByteString, [NamelessField ann])], [Field ann]))
+-&gt; [Field ann]
+-&gt; (Map ByteString [NamelessField ann], [Field ann])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Field ann -&gt; Maybe (ByteString, [NamelessField ann]))
+-&gt; [Field ann]
+-&gt; ([(ByteString, [NamelessField ann])], [Field ann])
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; ([b], [a])
+</span><a href="Distribution.Utils.Generic.html#spanMaybe"><span class="hs-identifier hs-var">spanMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Field ann -&gt; Maybe (ByteString, [NamelessField ann])
+forall {ann}. Field ann -&gt; Maybe (ByteString, [NamelessField ann])
+</span><a href="#local-6989586621679454567"><span class="hs-identifier hs-var">match</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679454566"><span class="annot"><span class="annottext">finalize :: ([(k, [a])], b) -&gt; (Map k [a], b)
+</span><a href="#local-6989586621679454566"><span class="hs-identifier hs-var hs-var">finalize</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679454573"><span class="annot"><span class="annottext">[(k, [a])]
+</span><a href="#local-6989586621679454573"><span class="hs-identifier hs-var">fs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679454574"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679454574"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([a] -&gt; [a] -&gt; [a]) -&gt; [(k, [a])] -&gt; Map k [a]
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromListWith/Data.Map.Strict.Internal.html#fromListWith"><span class="hs-identifier hs-var">Map.fromListWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([a] -&gt; [a] -&gt; [a]) -&gt; [a] -&gt; [a] -&gt; [a]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">(++)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(k, [a])]
+</span><a href="#local-6989586621679454573"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679454574"><span class="hs-identifier hs-var">rest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679454567"><span class="annot"><span class="annottext">match :: Field ann -&gt; Maybe (ByteString, [NamelessField ann])
+</span><a href="#local-6989586621679454567"><span class="hs-identifier hs-var hs-var">match</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span id="local-6989586621679454576"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679454576"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679454577"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679454577"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679454578"><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679454578"><span class="hs-identifier hs-var">fs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString, [NamelessField ann])
+-&gt; Maybe (ByteString, [NamelessField ann])
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679454577"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ann -&gt; [FieldLine ann] -&gt; NamelessField ann
+forall ann. ann -&gt; [FieldLine ann] -&gt; NamelessField ann
+</span><a href="Distribution.FieldGrammar.Parsec.html#MkNamelessField"><span class="hs-identifier hs-var">MkNamelessField</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679454576"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">[FieldLine ann]
+</span><a href="#local-6989586621679454578"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="#local-6989586621679454567"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Field ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (ByteString, [NamelessField ann])
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-89"></span></pre></body></html>
