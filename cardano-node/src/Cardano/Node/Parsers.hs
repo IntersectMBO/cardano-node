@@ -27,8 +27,7 @@ import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Word (Word16, Word32)
+import           Data.Word (Word32)
 import           Options.Applicative hiding (str, switch)
 -- Don't use switch.  It will not allow to set an option in a configuration
 -- file.  See `parseStartAsNonProducingNode` and `parseValidateDB`.
