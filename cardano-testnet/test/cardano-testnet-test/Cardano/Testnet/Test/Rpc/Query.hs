@@ -50,7 +50,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       eraName = eraToString sbe
-      options = def{cardanoNodeEra = AnyShelleyBasedEra sbe, cardanoEnableRpc=True}
+      options = def{cardanoNodeEra = AnyShelleyBasedEra sbe, cardanoEnableRpc = True}
 
   TestnetRuntime
     { testnetMagic
@@ -62,7 +62,9 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   execConfig <- mkExecConfig tempAbsPath' nodeSprocket testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)
   pparams <- unLedgerProtocolParameters <$> getProtocolParams epochStateView ceo
-  H.noteShowPretty_ pparams
+  -- H.noteShowPretty_ pparams
+  utxos <- findAllUtxos epochStateView sbe
+  H.noteShowPretty_ utxos
   rpcSocket <- H.note . unFile $ nodeRpcSocketPath node0
 
   ----------
@@ -74,24 +76,30 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     ChainTipAtGenesis -> H.failure
     ChainTip (SlotNo slot) (HeaderHash hash) (BlockNo blockNo) -> pure (slot, SBS.fromShort hash, blockNo)
 
-  ------------
-  -- RPC query
-  ------------
+  --------------
+  -- RPC queries
+  --------------
   let rpcServer = Rpc.ServerUnix rpcSocket
-  response <- H.noteShowM . H.evalIO . Rpc.withConnection def rpcServer $ \conn -> do
-    let req = Rpc.defMessage
-    Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) req
+  (pparamsResponse, utxosResponse) <- H.noteShowM . H.evalIO . Rpc.withConnection def rpcServer $ \conn -> do
+    pparams' <- do
+      let req = Rpc.defMessage
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) req
 
-  ----------------
-  -- Test response
-  ----------------
-  response ^. #ledgerTip . #slot === slot
-  response ^. #ledgerTip . #hash === blockHash
-  response ^. #ledgerTip . #height === blockNo
-  response ^. #ledgerTip . #timestamp === 0 -- not possible to implement at this moment
+    utxos' <- do
+      let req = Rpc.defMessage
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) req
+    pure (pparams', utxos')
+
+  ------------------------
+  -- Test readParams response
+  ------------------------
+  pparamsResponse ^. #ledgerTip . #slot === slot
+  pparamsResponse ^. #ledgerTip . #hash === blockHash
+  pparamsResponse ^. #ledgerTip . #height === blockNo
+  pparamsResponse ^. #ledgerTip . #timestamp === 0 -- not possible to implement at this moment
 
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
-  let chainParams = response ^. #values . #cardano
+  let chainParams = pparamsResponse ^. #values . #cardano
   babbageEraOnwardsConstraints (convert ceo) $ do
     pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.unCoin
       === chainParams ^. #coinsPerUtxoByte . to fromIntegral
@@ -164,3 +172,11 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     pparams ^. L.ppGovActionDepositL === chainParams ^. #governanceActionDeposit . to fromIntegral
     pparams ^. L.ppDRepDepositL === chainParams ^. #drepDeposit . to fromIntegral
     pparams ^. L.ppDRepActivityL . to L.unEpochInterval === chainParams ^. #drepInactivityPeriod . to fromIntegral
+
+  --------------------------
+  -- Test readUtxos response
+  --------------------------
+
+  H.noteShowPretty $ utxos
+  H.noteShowPretty $ utxosResponse
+  H.failure
