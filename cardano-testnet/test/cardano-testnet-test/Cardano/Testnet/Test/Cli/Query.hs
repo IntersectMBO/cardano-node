@@ -68,6 +68,8 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion, readJsonFile)
 import qualified Hedgehog.Extras as H
 
+import           RIO (runRIO)
+
 -- | Test CLI queries
 -- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/CliQueries/"'@
@@ -479,9 +481,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     in slotNo >= minSlotInThisEpochToWaitTo
 
   readVerificationKeyFromFile
-    :: ( HasCallStack
-       , MonadIO m
-       , MonadCatch m
+    :: ( MonadIO m
        , MonadTest m
        , HasTextEnvelope (VerificationKey keyrole)
        , SerialiseAsBech32 (VerificationKey keyrole)
@@ -490,7 +490,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     -> File content direction
     -> m (VerificationKey keyrole)
   readVerificationKeyFromFile work =
-    H.evalEitherM . liftIO . runExceptT . readVerificationKeyOrFile . VerificationKeyFilePath . File . (work </>) . unFile
+    H.evalIO . runRIO () . readVerificationKeyOrFile . VerificationKeyFilePath . File . (work </>) . unFile
 
   _verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
   _verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
