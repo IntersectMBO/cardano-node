@@ -76,8 +76,9 @@
     utils,
     ...
   } @ input: let
+    inherit (builtins) elem match;
     inherit (nixpkgs) lib;
-    inherit (lib) head mapAttrs recursiveUpdate optionalAttrs;
+    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optionals recursiveUpdate ;
     inherit (utils.lib) eachSystem flattenTree;
     inherit (iohkNix.lib) prefixNamesWith;
     removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
@@ -131,21 +132,28 @@
         # Add some executables from other relevant packages
         inherit (bech32.components.exes) bech32;
         inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
-        # Add cardano-node and cardano-cli with their git revision stamp.
+        # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
         # Keep available an alternative without the git revision, like the other
         # passthru (profiled and asserted in nix/haskell.nix) that
         # have no git revision but for the same compilation alternative.
         cardano-node =
           let node = project.exes.cardano-node;
-          in lib.recursiveUpdate
+          in recursiveUpdate
                (set-git-rev node)
                {passthru = {noGitRev = node;};}
         ;
         cardano-cli =
-          let cli  = cardano-cli.components.exes.cardano-cli;
-          in lib.recursiveUpdate
+          let cli = cardano-cli.components.exes.cardano-cli;
+          in recursiveUpdate
                (set-git-rev cli)
                {passthru = {noGitRev = cli;};}
+        ;
+      } // optionalAttrs (project.exes ? tx-generator) {
+        tx-generator =
+          let tx-gen = project.exes.tx-generator;
+          in recursiveUpdate
+               (set-git-rev tx-gen)
+               {passthru = {noGitRev = tx-gen;};}
         ;
       });
 
@@ -272,7 +280,7 @@
         // (prefixNamesWith "checks/" checks);
 
       apps =
-        lib.mapAttrs (n: p: {
+        mapAttrs (n: p: {
           type = "app";
           program =
             p.exePath
@@ -285,12 +293,27 @@
         exes;
 
       ciJobs = let
+        releaseBins = [
+          "bech32"
+          "cardano-cli"
+          "cardano-node"
+          "cardano-submit-api"
+          "cardano-testnet"
+          "cardano-tracer"
+          "db-analyser"
+          "db-synthesizer"
+          "db-truncater"
+          "snapshot-converter"
+          "tx-generator"
+        ];
+
         ciJobsVariants =
           mapAttrs (
             _: p:
               (mkFlakeAttrs (pkgs.extend (prev: final: {cardanoNodeProject = p;}))).ciJobs
           )
           project.projectVariants;
+
         ciJobs =
           {
             cardano-deployment = pkgs.cardanoLib.mkConfigHtml {inherit (pkgs.cardanoLib.environments) mainnet preview preprod;};
@@ -304,11 +327,11 @@
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
                 };
-                profiled = lib.genAttrs ["cardano-node" "tx-generator" "locli"] (
+                profiled = genAttrs ["cardano-node" "tx-generator" "locli"] (
                   n:
                     packages.${n}.passthru.profiled
                 );
-                asserted = lib.genAttrs ["cardano-node"] (
+                asserted = genAttrs ["cardano-node"] (
                   n:
                     packages.${n}.passthru.asserted
                 );
@@ -324,15 +347,8 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "linux";
-                  exes = lib.collect lib.isDerivation (
-                    # FIXME: restore tx-generator and gen-plutus once
-                    #        plutus-scripts-bench is fixed for musl
-                    #
-                    # It stands to question though, whether or not we want those to be
-                    # in the cardano-node-linux as executables anyway?
-                    #
-                    # Also explicitly excluded from musl in nix/haskell.nix.
-                    removeAttrs projectExes ["tx-generator" "gen-plutus"]
+                  exes = collect isDerivation (
+                    filterAttrs (n: _: elem n releaseBins) projectExes
                   );
                 };
                 internal.roots.project = muslProject.roots;
@@ -349,9 +365,8 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "win64";
-                  exes = lib.collect lib.isDerivation (
-                    # FIXME: restore tx-generator once plutus-scripts-bench is fixed for windows:
-                    removeAttrs projectExes ["tx-generator"]
+                  exes = collect isDerivation (
+                    filterAttrs (n: _: elem n releaseBins) projectExes
                   );
                 };
                 internal.roots.project = windowsProject.roots;
@@ -360,17 +375,19 @@
           }
           // optionalAttrs (system == "x86_64-darwin") {
             native =
-              lib.filterAttrs
+              filterAttrs
               (n: _:
                 # Only build docker images once on linux:
-                  !(lib.hasPrefix "dockerImage" n))
+                  !(hasPrefix "dockerImage" n))
               packages
               // {
                 cardano-node-macos = import ./nix/binary-release.nix {
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "macos";
-                  exes = lib.collect lib.isDerivation (collectExes project);
+                  exes = collect isDerivation (
+                    filterAttrs (n: _: elem n releaseBins) (collectExes project)
+                  );
                 };
                 shells = removeAttrs devShells ["profiled"];
                 internal = {
@@ -380,21 +397,17 @@
                 variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
               };
           };
+
         nonRequiredPaths =
           [
             # FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
             "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
-            # FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
-            "windows\\.(.*\\.)?tx-generator.*"
-            # FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
-            "musl\\.(.*\\.)?tx-generator.*"
-            "musl\\.(.*\\.)?gen-plutus.*"
             # hlint required status is controlled via the github action:
             "native\\.(.*\\.)?checks/hlint"
             # system-tests are build and run separately:
             "native\\.(.*\\.)?system-tests"
           ]
-          ++ lib.optionals (system == "x86_64-darwin") [
+          ++ optionals (system == "x86_64-darwin") [
             # FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
             "native\\.variants\\..*"
             "native\\.checks/cardano-testnet/cardano-testnet-test"
@@ -403,7 +416,7 @@
         pkgs.callPackages iohkNix.utils.ciJobsAggregates
         {
           inherit ciJobs;
-          nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
+          nonRequiredPaths = map (r: p: match r p != null) nonRequiredPaths;
         }
         // ciJobs;
     };
@@ -451,7 +464,7 @@
           inherit
             (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
               ciJobs =
-                lib.mapAttrs (_: lib.getAttr "required") flake.ciJobs
+                mapAttrs (_: getAttr "required") flake.ciJobs
                 // {
                   # Ensure hydra notify:
                   gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
@@ -475,7 +488,7 @@
             customConfig.haskellNix
           ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser tx-generator;
       };
       nixosModules = {
         cardano-node = {
