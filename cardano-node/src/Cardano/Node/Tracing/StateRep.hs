@@ -36,8 +36,8 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
-import           Data.Aeson
-import           Data.Text (Text)
+import           Data.Aeson hiding (Result(..))
+import           Data.Text as T (Text, pack)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
@@ -98,6 +98,7 @@ deriving instance (NFData StartupState)
 --   All node states prior to tracing system going online are effectively invisible.
 data NodeState
   = NodeTracingOnlineConfiguring
+  | NodeTracingFailure String
   | NodeOpeningDbs OpeningDbs
   | NodeReplays Replays
   | NodeInitChainSelection InitChainSelection
@@ -125,11 +126,19 @@ instance LogFormatting NodeState where
       [ "kind" .= String "NodeStartup",            "startup"   .= toJSON x]
     NodeShutdown x -> mconcat
       [ "kind" .= String "NodeShutdown",           "shutdown"  .= toJSON x]
+    NodeTracingFailure x -> mconcat
+      [ "kind" .= String "NodeTracingFailure",     "message"   .= toJSON x]
     _ -> mempty
+
+  forHuman (NodeTracingFailure errMsg) = T.pack errMsg
+  forHuman _ = ""
+
 
 instance MetaTrace NodeState where
   namespaceFor NodeTracingOnlineConfiguring {}  =
     Namespace [] ["NodeTracingOnlineConfiguring"]
+  namespaceFor NodeTracingFailure {}  =
+    Namespace [] ["NodeTracingFailure"]
   namespaceFor NodeOpeningDbs {}  =
     Namespace [] ["OpeningDbs"]
   namespaceFor NodeReplays {}  =
@@ -147,6 +156,8 @@ instance MetaTrace NodeState where
 
   severityFor  (Namespace _ ["NodeTracingOnlineConfiguring"]) _ =
     Just Info
+  severityFor  (Namespace _ ["NodeTracingFailure"]) _ =
+    Just Error
   severityFor  (Namespace _ ["OpeningDbs"]) _ =
     Just Info
   severityFor  (Namespace _ ["NodeReplays"]) _ =
@@ -166,6 +177,8 @@ instance MetaTrace NodeState where
 
   documentFor  (Namespace _ ["NodeTracingOnlineConfiguring"]) = Just
     "Tracing system came online, system configuring now"
+  documentFor  (Namespace _ ["NodeTracingFailure"]) = Just
+    "Tracing system experienced a non-fatal failure during startup"
   documentFor  (Namespace _ ["OpeningDbs"]) = Just
     "ChainDB components being opened"
   documentFor  (Namespace _ ["NodeReplays"]) = Just
@@ -184,6 +197,7 @@ instance MetaTrace NodeState where
 
   allNamespaces = [
           Namespace [] ["NodeTracingOnlineConfiguring"]
+        , Namespace [] ["NodeTracingFailure"]
         , Namespace [] ["OpeningDbs"]
         , Namespace [] ["NodeReplays"]
         , Namespace [] ["NodeInitChainSelection"]

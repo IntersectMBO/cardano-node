@@ -73,7 +73,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
                 (unConfigPath $ ncConfigFile nc)
                 defaultCardanoConfig
 
-  (kickoffForwarder, tracers) <- mkTracers trConfig
+  (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig
 
   -- The NodeInfo DataPoint needs to be fully evaluated and stored
   -- before it is queried for the first time by cardano-tracer.
@@ -84,6 +84,11 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
   kickoffForwarder
 
   traceWith (nodeStateTracer tracers) NodeTracingOnlineConfiguring
+
+  mError <- kickoffPrometheusSimple
+  forM_ mError $ \errMsg ->
+    let errMsg' = "PrometheusSimple backend disabled due to initialisation error: " ++ errMsg
+    in traceWith (nodeStateTracer tracers) (NodeTracingFailure errMsg')
 
   startResourceTracer
     (resourcesTracer tracers)
@@ -106,14 +111,16 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
 
   mkTracers
     :: TraceConfig
-    -> IO (IO (), Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO)
+    -> IO ( IO ()
+          , IO (Maybe String)
+          , Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO
+          )
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer trConfig ekgStore
 
-    forM_ prometheusSimple $
-      runPrometheusSimple ekgStore
+    let kickoffPrometheusSimple = maybe (pure Nothing) (runPrometheusSimple ekgStore) prometheusSimple
 
     stdoutTrace <- standardTracer
 
@@ -136,15 +143,16 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
           -- So we use nullTracers to ignore 'TraceObject's and 'DataPoint's.
           pure (Trace nullTracer, Trace nullTracer, pure ())
 
-    (,) kickoffForwarder <$> mkDispatchTracers
-      nodeKernel
-      stdoutTrace
-      fwdTracer
-      (Just ekgTrace)
-      dpTracer
-      trConfig
-      p2pMode
-      p
+    (,,) kickoffForwarder kickoffPrometheusSimple
+      <$> mkDispatchTracers
+        nodeKernel
+        stdoutTrace
+        fwdTracer
+        (Just ekgTrace)
+        dpTracer
+        trConfig
+        p2pMode
+        p
 
    where
     -- This backend can only be used globally, i.e. will always apply to the namespace root.
