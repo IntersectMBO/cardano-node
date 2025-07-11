@@ -4,6 +4,7 @@
 
 * [Fix discrepancy in security parameter between Byron and Shelley genesis files](https://github.com/IntersectMBO/cardano-node/pull/6188)
 * [Add an option to dump/load configuration sandbox](https://github.com/IntersectMBO/cardano-node/pull/6239)
+* [Add flag to support P2P topology](https://github.com/IntersectMBO/cardano-node/pull/6263)
 
 ## 10.0.0
 

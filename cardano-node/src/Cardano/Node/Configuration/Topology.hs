@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.Configuration.Topology
@@ -30,6 +34,7 @@ import           Data.Foldable
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Generics (Generic)
 import           Text.Read (readMaybe)
 
 
@@ -51,7 +56,6 @@ data RemoteAddress = RemoteAddress
   -- if an IP address is given valency is used as
   -- a Boolean value, @0@ means to ignore the address;
   } deriving (Eq, Ord, Show)
-
 
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
 -- non zero return corresponding NodeAddress.
@@ -88,14 +92,14 @@ instance ToJSON RemoteAddress where
       , "valency" .= raValency ra
       ]
 
-data NodeSetup = NodeSetup
+data NodeSetup adr = NodeSetup
   { nodeId :: !Word64
   , nodeIPv4Address :: !(Maybe NodeIPv4Address)
   , nodeIPv6Address :: !(Maybe NodeIPv6Address)
-  , producers :: ![RemoteAddress]
-  } deriving (Eq, Show)
+  , producers :: ![adr]
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance FromJSON NodeSetup where
+instance (FromJSON adr) => FromJSON (NodeSetup adr) where
   parseJSON = withObject "NodeSetup" $ \o ->
                 NodeSetup
                   <$> o .: "nodeId"
@@ -103,7 +107,7 @@ instance FromJSON NodeSetup where
                   <*> o .: "nodeIPv6Address"
                   <*> o .: "producers"
 
-instance ToJSON NodeSetup where
+instance (ToJSON adr) => ToJSON (NodeSetup adr) where
   toJSON ns =
     object
       [ "nodeId" .= nodeId ns
@@ -112,17 +116,23 @@ instance ToJSON NodeSetup where
       , "producers" .= producers ns
       ]
 
-data NetworkTopology = MockNodeTopology ![NodeSetup]
-                     | RealNodeTopology ![RemoteAddress]
-  deriving (Eq, Show)
+-- | Describes the non-P2P topology of a node. Whenever the node actually runs,
+-- the type parameter `adr` should be `RemoteAddress`. However, we might want to
+-- use and serialize this type with `adr` being `NodeId`, or another placeholder
+-- type, if we want the user to be able to edit the topology without knowing the
+-- actual addresses of the nodes: those might only be knowable at runtime.
+data NetworkTopology adr
+  = MockNodeTopology ![NodeSetup adr]
+  | RealNodeTopology ![adr]
+  deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance FromJSON NetworkTopology where
+instance (FromJSON adr) => FromJSON (NetworkTopology adr) where
   parseJSON = withObject "NetworkTopology" $ \o -> asum
                 [ MockNodeTopology <$> o .: "MockProducers"
                 , RealNodeTopology <$> o .: "Producers"
                 ]
 
-instance ToJSON NetworkTopology where
+instance (ToJSON adr) => ToJSON (NetworkTopology adr) where
   toJSON top =
     case top of
       MockNodeTopology nss -> object [ "MockProducers" .= toJSON nss ]
@@ -131,7 +141,10 @@ instance ToJSON NetworkTopology where
 -- | Read the `NetworkTopology` configuration from the specified file.
 -- While running a real protocol, this gives your node its own address and
 -- other remote peers it will attempt to connect to.
-readTopologyFile :: NodeConfiguration -> IO (Either Text NetworkTopology)
+readTopologyFile :: ()
+  => (FromJSON  adr)
+  => NodeConfiguration
+  -> IO (Either Text (NetworkTopology adr))
 readTopologyFile nc = do
   eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
@@ -154,7 +167,10 @@ readTopologyFile nc = do
     , Text.pack err
     ]
 
-readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
+readTopologyFileOrError :: ()
+  => (FromJSON adr)
+  => NodeConfiguration
+  -> IO (NetworkTopology adr)
 readTopologyFileOrError nc =
       readTopologyFile nc
   >>= either (\err -> error $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
