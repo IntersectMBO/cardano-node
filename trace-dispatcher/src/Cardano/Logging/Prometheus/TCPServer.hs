@@ -5,6 +5,7 @@ import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSamp
 import           Cardano.Logging.Prometheus.NetworkRun
 
 import           Control.Concurrent.Async (async)
+import qualified Control.Exception as E
 import           Control.Monad (when)
 import           Control.Monad.Class.MonadAsync (link)
 import           Data.ByteString (ByteString)
@@ -24,13 +25,15 @@ import           System.Posix.Types (EpochTime)
 import           System.PosixCompat.Time (epochTime)
 
 
-runPrometheusSimple :: EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO ()
+-- Will provide a 'Just errormessage' iff creating the Prometheus server failed
+runPrometheusSimple :: EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO (Maybe String)
 runPrometheusSimple ekgStore (noSuffixes, mHost, portNo) =
-  async serveListener >>= link
+  E.try createRunner >>= \case
+    Left (E.SomeException e) -> pure (Just $ E.displayException e)
+    Right runner             -> async runner >>= link >> pure Nothing
   where
     getCurrentExposition = renderExpositionFromSample noSuffixes <$> sampleAll ekgStore
-    serveListener =
-      runTCPServer (defaultRunParams "PrometheusSimple") mHost portNo (serveAccepted getCurrentExposition)
+    createRunner         = mkTCPServerRunner (defaultRunParams "PrometheusSimple") mHost portNo (serveAccepted getCurrentExposition)
 
 -- serves an incoming connection; will release socket upon remote close, inactivity timeout or runRecvMaxSize bytes received
 serveAccepted :: IO Text -> TimeoutServer ()
