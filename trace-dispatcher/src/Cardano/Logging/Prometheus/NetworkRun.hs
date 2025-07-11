@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -10,7 +11,7 @@ module Cardano.Logging.Prometheus.NetworkRun
        ( NetworkRunParams (..)
        , TimeoutServer
        , defaultRunParams
-       , runTCPServer
+       , mkTCPServerRunner
        ) where
 
 import           Cardano.Logging.Utils (threadLabelMe)
@@ -60,19 +61,22 @@ type TimeoutServer a
     -> Socket
     -> IO a
 
--- | Runs a TCP server conforming to the run parameters.
+-- | Returns an IO action that will run a TCP server conforming to the run parameters.
 --   Will bind to localhost / loopback device only if no host name is specified.
-runTCPServer
+--   Will throw an exception when TCP server startup fails - the caller is responsible for appropriately reacting to that.
+mkTCPServerRunner
   :: NetworkRunParams
   -> Maybe HostName
   -> PortNumber
   -> TimeoutServer a
-  -> IO a
-runTCPServer runParams (fromMaybe "127.0.0.1" -> host) portNo server = do
-  threadLabelMe $ runServerName runParams ++ " server"
-  addr <- resolve host portNo
-  E.bracket (openTCPServerSocket addr) close $ \sock ->
-    runTCPServerWithSocket runParams sock server
+  -> IO (IO a)
+mkTCPServerRunner runParams (fromMaybe "127.0.0.1" -> host) portNo server = do
+  !sock <- openTCPServerSocket =<< resolve host portNo
+  let
+    runner = do
+      threadLabelMe $ runServerName runParams ++ " server"
+      runTCPServerWithSocket runParams sock server `E.finally` close sock
+  pure runner
 
 runTCPServerWithSocket
   :: NetworkRunParams
