@@ -9,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Node.Tracing.Documentation
   ( TraceDocumentationCmd (..)
@@ -117,6 +118,11 @@ import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
+import Data.Time (getZonedTime)
+import Data.Text (pack)
+import Cardano.Git.Rev (gitRev)
+import Paths_cardano_node (version)
+import Data.Version (showVersion)
 
 
 data TraceDocumentationCmd
@@ -832,6 +838,7 @@ docTracersFirstPhase condConfigFileName = do
             <> dtAcceptPolicyTrDoc
 -- Internal tracer
             <> internalTrDoc
+
     pure (bl,trConfig)
 
 docTracersSecondPhase ::
@@ -841,8 +848,15 @@ docTracersSecondPhase ::
   -> DocTracer
   -> IO ()
 docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl = do
-    docuResultsToText bl trConfig
-      >>= doWrite outputFileName
+    text <- docuResultsToText bl trConfig
+    time <- getZonedTime
+    let stamp = "Generated at "
+             <> pack (show time)
+             <> ", git commit hash "
+             <> $(gitRev)
+             <> ", node version "
+             <> pack (showVersion version) <> "\n"
+    doWrite outputFileName (text <> stamp)
     forM_ mbMetricsHelpFilename $ \f ->
        doWrite f (docuResultsToMetricsHelptext bl)
   where

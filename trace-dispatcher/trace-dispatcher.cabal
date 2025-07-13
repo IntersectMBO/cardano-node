@@ -35,7 +35,7 @@ common project-config
                         -Wno-incomplete-patterns
 
   if impl(ghc >= 9.8)
-    ghc-options:        -Wno-x-partial  
+    ghc-options:        -Wno-x-partial
 
 
 library
@@ -46,6 +46,8 @@ library
                       Cardano.Logging.ConfigurationParser
                       Cardano.Logging.Consistency
                       Cardano.Logging.DocuGenerator
+                      Cardano.Logging.DocuGenerator.RoseTree
+                      Cardano.Logging.DocuResult
                       Cardano.Logging.Formatter
                       Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
