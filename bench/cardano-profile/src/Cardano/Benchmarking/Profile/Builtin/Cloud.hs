@@ -170,6 +170,8 @@ profilesNoEraCloud =
               . P.workloadAppend C.cgroupMemoryWorkload
   , valueVolt & P.name "value-volt-lmdb-10gb-nomadperf"    . mem 10000 . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
               . P.workloadAppend C.cgroupMemoryWorkload
+  , valueVolt & P.name "value-volt-lmdb-9.5gb-nomadperf"   . mem  9500 . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
+              . P.workloadAppend C.cgroupMemoryWorkload
   , valueVolt & P.name "value-volt-lmdb-9gb-nomadperf"     . mem  9000 . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
               . P.workloadAppend C.cgroupMemoryWorkload
   -- Plutus (pre-Voltaire profiles)
