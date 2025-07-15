@@ -62,7 +62,9 @@ nodeRunParser = do
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
-  startAsNonProducingNode <- Last <$> parseStartAsNonProducingNode
+  startAsNonProducingNode <- (\depr new -> Last depr <> Last new)
+                         <$> parseStartAsNonProducingNodeDeprecated
+                         <*> parseStartAsNonProducingNode
 
   -- Node Address
   nIPv4Address <- lastOption parseHostIPv4Addr
@@ -359,18 +361,30 @@ parseVrfKeyFilePath =
         <> completer (bashCompleter "file")
     )
 
+parseStartAsNonProducingNodeDeprecated :: Parser (Maybe Bool)
+parseStartAsNonProducingNodeDeprecated =
+  flag Nothing (Just True) $ mconcat
+    [ long "non-producing-node"
+    , help $ mconcat
+        [ "DEPRECATED, use --start-as-non-producing-node instead. "
+        , "This option will be removed in one of the future versions of cardano-node."
+        ]
+    , hidden
+    ]
+
 -- | A parser which returns `Nothing` or `Just True`; the default value is set
 -- in `defaultPartialNodeConfiguration`.  This allows to set this option either
 -- in the configuration file or as command line flag.
 parseStartAsNonProducingNode :: Parser (Maybe Bool)
 parseStartAsNonProducingNode =
   flag Nothing (Just True) $ mconcat
-    [ long "non-producing-node"
+    [ long "start-as-non-producing-node"
     , help $ mconcat
         [ "Start the node as a non block producing node even if "
         , "credentials are specified."
         ]
     ]
+
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.
