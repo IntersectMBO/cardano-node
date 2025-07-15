@@ -4,7 +4,6 @@ The `scripts` directory consists of the following directories:
 - benchmarking
 - [lite](#lite)
 - [shelley-from-scratch](#shelley-from-scratch)
-- [byron-to-alonzo](#byron-to-alonzo)
 - [plutus](#plutus)
 
 #### lite
@@ -12,17 +11,6 @@ Contains scripts that can start various clusters and intended to be as simple as
 
 #### shelley-from-scratch
 Contains a script that creates all the necessary keys etc to create a shelley cluster from scratch.
-
-#### byron-to-alonzo
-Contains a script that creates all the necessary keys and configuration files to create an alonzo cluster from scratch.
-
-It can either be used to start cluster in Byron and then gradually transition to Alonzo, or can jumpstart straight into selected era, eg.:
-
-```bash
-./scripts/byron-to-alonzo/mkfiles.sh alonzo
-```
-
-will start the cluster in Alonzo era from epoch 0.
 
 #### plutus
 
