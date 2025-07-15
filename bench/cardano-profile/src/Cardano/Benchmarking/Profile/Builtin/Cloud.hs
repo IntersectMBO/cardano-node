@@ -24,6 +24,7 @@ import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 import qualified Cardano.Benchmarking.Profile.Workload.CGroupMemory as C
+import qualified Cardano.Benchmarking.Profile.Workload.EvictLMDB as EL
 import qualified Cardano.Benchmarking.Profile.Workload.Voting as W
 import qualified Cardano.Benchmarking.Profile.Workload.Latency as L
 
@@ -166,6 +167,9 @@ profilesNoEraCloud =
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"       . memMax    . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
   , valueVolt & P.name "value-volt-lmdb-nomadperf"         . memMax    . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
               . P.workloadAppend C.cgroupMemoryWorkload
+  , valueVolt & P.name "value-volt-lmdb-evict-nomadperf"   . memMax    . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
+              . P.workloadAppend C.cgroupMemoryWorkload
+              . P.workloadAppend EL.evictLMDBWorkload
   , valueVolt & P.name "value-volt-10gb-nomadperf"         . mem 10000 . P.dreps  10000 . P.newTracing . P.p2pOn
               . P.workloadAppend C.cgroupMemoryWorkload
   , valueVolt & P.name "value-volt-lmdb-10gb-nomadperf"    . mem 10000 . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb

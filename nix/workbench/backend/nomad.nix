@@ -115,6 +115,11 @@ let
         flake-reference = "github:intersectmbo/cardano-node";
         flake-output = "legacyPackages.x86_64-linux.jq";
       };
+      vmtouch = {
+        nix-store-path  = pkgs.vmtouch;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.vmtouch";
+      };
     }
     //
     ############################################################################
