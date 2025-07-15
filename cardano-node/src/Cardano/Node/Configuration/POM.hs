@@ -806,8 +806,7 @@ makeNodeConfiguration pnc = do
   let ncPeerSharing =
         case pncPeerSharing pnc of
           Last Nothing ->
-            if    not startAsNonProducingNode
-               || hasProtocolFile protocolFiles
+            if hasProtocolFile protocolFiles
             then PeerSharingDisabled
             else PeerSharingEnabled
           Last (Just peerSharing) -> peerSharing
