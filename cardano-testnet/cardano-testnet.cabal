@@ -55,6 +55,7 @@ library
                       , cardano-ledger-shelley
                       , cardano-node
                       , cardano-ping ^>= 0.8
+                      , cardano-prelude
                       , contra-tracer
                       , containers
                       , data-default-class
@@ -225,6 +226,8 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.RunTestnet
                         Cardano.Testnet.Test.SubmitApi.Transaction
+                        Cardano.Testnet.Test.UpdateTimeStamps
+                        Cardano.Testnet.Test.Utils
 
   type:                 exitcode-stdio-1.0
 

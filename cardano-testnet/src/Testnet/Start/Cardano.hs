@@ -27,12 +27,15 @@ module Testnet.Start.Cardano
 
 
 import           Cardano.Api
+import           Cardano.Api.Byron (GenesisData (..))
+import qualified Cardano.Api.Byron as Byron
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Cardano.Node.Configuration.Topology (RemoteAddress(..))
 import qualified Cardano.Node.Configuration.Topology as Direct
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Prelude (canonicalEncodePretty)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
 
 import           Prelude hiding (lines)
@@ -86,7 +89,7 @@ createTestnetEnv :: ()
   => HasCallStack
   => CardanoTestnetOptions
   -> GenesisOptions
-  -> TopologyType
+  -> CreateEnvOptions
   -> UserProvidedData ShelleyGenesis
   -> UserProvidedData AlonzoGenesis
   -> UserProvidedData ConwayGenesis
@@ -98,47 +101,70 @@ createTestnetEnv
     , cardanoNodes
     }
   genesisOptions
-  topologyType
+  CreateEnvOptions
+    { ceoTopologyType=topologyType
+    , ceoUpdateTime=createEnvUpdateTime
+    }
   mShelley mAlonzo mConway
   Conf
     { genesisHashesPolicy
     , tempAbsPath=TmpAbsolutePath tmpAbsPath
-    } = do
+    } = case createEnvUpdateTime of
 
-  testMinimumConfigurationRequirements testnetOptions
+  CreateEnv -> do
+    testMinimumConfigurationRequirements testnetOptions
 
-  AnyShelleyBasedEra sbe <- pure asbe
-  _ <- createSPOGenesisAndFiles
-    testnetOptions genesisOptions
-    mShelley mAlonzo mConway
-    (TmpAbsolutePath tmpAbsPath)
+    AnyShelleyBasedEra sbe <- pure asbe
+    _ <- createSPOGenesisAndFiles
+      testnetOptions genesisOptions
+      mShelley mAlonzo mConway
+      (TmpAbsolutePath tmpAbsPath)
 
-  configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
-  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  config' <- case genesisHashesPolicy of
-    WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-    WithoutHashes -> pure $ createConfigJsonNoHash sbe
-  -- Setup P2P configuration value
-  let config = A.insert
-        "EnableP2P"
-        (Bool $ topologyType == P2PTopology)
-        config'
-  H.evalIO $ LBS.writeFile configurationFile $ A.encodePretty $ Object config
+    configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
+    -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+    config' <- case genesisHashesPolicy of
+      WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+      WithoutHashes -> pure $ createConfigJsonNoHash sbe
+    -- Setup P2P configuration value
+    let config = A.insert
+          "EnableP2P"
+          (Bool $ topologyType == P2PTopology)
+          config'
+    H.evalIO $ LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
-  -- Create network topology, with abstract IDs in lieu of addresses
-  let nodeIds = fst <$> zip [1..] cardanoNodes
-  forM_ nodeIds $ \i -> do
-    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-    H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
+    -- Create network topology, with abstract IDs in lieu of addresses
+    let nodeIds = fst <$> zip [1..] cardanoNodes
+    forM_ nodeIds $ \i -> do
+      let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
+      H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
 
-    let producers = NodeId <$> filter (/= i) nodeIds
-    case topologyType of
-      DirectTopology ->
-        let topology = Direct.RealNodeTopology producers
-        in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
-      P2PTopology ->
-        let topology = Defaults.defaultP2PTopology producers
-        in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+      let producers = NodeId <$> filter (/= i) nodeIds
+      case topologyType of
+        DirectTopology ->
+          let topology = Direct.RealNodeTopology producers
+          in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+        P2PTopology ->
+          let topology = Defaults.defaultP2PTopology producers
+          in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+
+  UpdateTimeAndExit -> do
+    let byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
+        shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
+
+    currentTime <- H.noteShowIO DTC.getCurrentTime
+    startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+
+    -- Update start time in Byron genesis file
+    eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
+    (byronGenesis', _byronHash) <- H.leftFail eByron
+    let byronGenesis = byronGenesis'{gdStartTime = startTime}
+    H.lbsWriteFile byronGenesisFile $ canonicalEncodePretty byronGenesis
+
+    -- Update start time in Shelley genesis file
+    eShelley <- H.readJsonFile shelleyGenesisFile
+    shelleyGenesis' :: ShelleyGenesis <- H.leftFail eShelley
+    let shelleyGenesis = shelleyGenesis'{sgSystemStart = startTime}
+    H.lbsWriteFile shelleyGenesisFile $ A.encodePretty shelleyGenesis
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:

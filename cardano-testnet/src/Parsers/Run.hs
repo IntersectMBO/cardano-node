@@ -62,11 +62,11 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   { createEnvTestnetOptions=testnetOptions
   , createEnvGenesisOptions=genesisOptions
   , createEnvOutputDir=outputDir
-  , createEnvTopologyType=topologyType
+  , createEnvCreateEnvOptions=ceOptions
   } =
     testnetRoutine (UserProvidedEnv outputDir) $ \conf ->
       createTestnetEnv
-        testnetOptions genesisOptions topologyType
+        testnetOptions genesisOptions ceOptions
         -- The CLI does not provide a way to provide custom genesis data by design:
         -- If the user wants to have custom genesis data, they should manually
         -- modify the files created by this command before running the testnet.
