@@ -177,6 +177,6 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   -- Test readUtxos response
   --------------------------
 
-  H.noteShowPretty $ utxos
-  H.noteShowPretty $ utxosResponse
+  _ <- H.noteShowPretty $ utxos
+  _ <- H.noteShowPretty $ utxosResponse
   H.failure
