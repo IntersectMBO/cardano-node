@@ -50,7 +50,8 @@ import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Gen ()
 import qualified Hedgehog.Range as Range
 
-genNetworkTopology :: Gen NetworkTopology
+-- TODO parameterize generators
+genNetworkTopology :: Gen (NetworkTopology RelayAccessPoint)
 genNetworkTopology =
   Gen.choice
     [ RealNodeTopology <$> genLocalRootPeersGroups
@@ -145,7 +146,7 @@ genNodeIPv4Address = genNodeAddress' genNodeHostIPv4Address
 genNodeIPv6Address :: Gen NodeIPv6Address
 genNodeIPv6Address = genNodeAddress' genNodeHostIPv6Address
 
-genNodeSetup :: Gen NodeSetup
+genNodeSetup :: Gen (NodeSetup RelayAccessPoint)
 genNodeSetup =
   NodeSetup
     <$> Gen.word64 (Range.linear 0 10000)
@@ -172,25 +173,25 @@ genRelayAddress = do
                 ]
           <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
 
-genRootConfig :: Gen RootConfig
+genRootConfig :: Gen (RootConfig RelayAccessPoint)
 genRootConfig = do
   RootConfig
     <$> Gen.list (Range.linear 0 6) genRelayAddress
     <*> Gen.element [DoAdvertisePeer, DoNotAdvertisePeer]
 
-genLocalRootPeersGroup :: Gen LocalRootPeersGroup
+genLocalRootPeersGroup :: Gen (LocalRootPeersGroup RelayAccessPoint)
 genLocalRootPeersGroup = do
     ra <- genRootConfig
     hval <- Gen.int (Range.linear 0 (length (rootAccessPoints ra)))
     wval <- WarmValency <$> Gen.int (Range.linear 0 hval)
     LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable <*> pure InitiatorAndResponderDiffusionMode
 
-genLocalRootPeersGroups :: Gen LocalRootPeersGroups
+genLocalRootPeersGroups :: Gen (LocalRootPeersGroups RelayAccessPoint)
 genLocalRootPeersGroups =
   LocalRootPeersGroups
     <$> Gen.list (Range.linear 0 6) genLocalRootPeersGroup
 
-genPublicRootPeers :: Gen PublicRootPeers
+genPublicRootPeers :: Gen (PublicRootPeers RelayAccessPoint)
 genPublicRootPeers =
   PublicRootPeers
     <$> genRootConfig

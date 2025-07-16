@@ -12,6 +12,7 @@ module Parsers.Run
 
 import           Cardano.CLI.Environment
 
+import           Data.Default.Class (def)
 import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
@@ -61,10 +62,11 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   { createEnvTestnetOptions=testnetOptions
   , createEnvGenesisOptions=genesisOptions
   , createEnvOutputDir=outputDir
+  , createEnvTopologyType=topologyType
   } =
     testnetRoutine (UserProvidedEnv outputDir) $ \conf ->
       createTestnetEnv
-        testnetOptions genesisOptions
+        testnetOptions genesisOptions topologyType
         -- The CLI does not provide a way to provide custom genesis data by design:
         -- If the user wants to have custom genesis data, they should manually
         -- modify the files created by this command before running the testnet.
@@ -84,7 +86,7 @@ runCardanoOptions CardanoTestnetCliOptions
         -- Create the sandbox, then run cardano-testnet
         runTestnet cardanoOutputDir $ \conf -> do
           createTestnetEnv
-            testnetOptions genesisOptions
+            testnetOptions genesisOptions def
             NoUserProvidedData NoUserProvidedData NoUserProvidedData
             conf
           cardanoTestnet testnetOptions genesisOptions conf

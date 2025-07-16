@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
@@ -9,6 +10,7 @@ module Testnet.Start.Types
   , CardanoTestnetCreateEnvOptions (..)
   , CardanoTestnetOptions(..)
   , InputNodeConfigFile(..)
+  , NodeId(..)
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
@@ -23,6 +25,7 @@ module Testnet.Start.Types
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
+  , TopologyType(..)
   , UserProvidedData(..)
   , UserProvidedEnv(..)
 
@@ -38,8 +41,11 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Prelude
 
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
 import           Data.Default.Class
+import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
 import           System.FilePath (addTrailingPathSeparator)
@@ -74,10 +80,34 @@ data UserProvidedEnv
 instance Default UserProvidedEnv where
   def = NoUserProvidedEnv
 
+data TopologyType
+  = DirectTopology
+  | P2PTopology
+  deriving (Eq, Show)
+
+instance Default TopologyType where
+  def = DirectTopology
+
+-- | An abstract node id, used as placeholder in topology files
+-- when the actual ports/addresses aren't known yet (i.e. before runtime)
+newtype NodeId = NodeId Int
+  deriving (Eq, Ord, Show)
+
+instance ToJSON NodeId where
+  toJSON (NodeId i) = Aeson.String $ Text.pack $ "node_" ++ show i
+
+instance FromJSON NodeId where
+  parseJSON = Aeson.withText "NodeId" $ \t -> case Text.breakOn "_" t of
+    ("node", textId) -> case Aeson.eitherDecodeStrictText (Text.drop 1 textId) of
+      Right i -> pure $ NodeId i
+      Left _ -> parseFail $ "Incorrect format for NodeId: " ++ show t
+    _ -> parseFail $ "Incorrect format for NodeId: " ++ show t
+
 data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   { createEnvTestnetOptions :: CardanoTestnetOptions
   , createEnvGenesisOptions :: GenesisOptions
   , createEnvOutputDir :: FilePath
+  , createEnvTopologyType :: TopologyType
   } deriving (Eq, Show)
 
 -- | Options which, contrary to 'GenesisOptions' are not implemented

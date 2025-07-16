@@ -23,6 +23,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as Aeson
 import           Data.Default.Class
 import           Data.Function
 import qualified Data.Map.Strict as Map
@@ -254,7 +255,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- createConfigJson tempAbsPath sbe
+  jsonBS <- Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePortNumber <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $

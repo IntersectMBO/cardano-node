@@ -1,8 +1,11 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Cardano.Node.Configuration.TopologyP2P
   ( TopologyError(..)
@@ -38,7 +41,6 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
                    UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -54,17 +56,18 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Generics (Generic)
 import           System.FilePath (takeDirectory, (</>))
 
-data NodeSetup = NodeSetup
+data NodeSetup adr = NodeSetup
   { nodeId          :: !Word64
   , nodeIPv4Address :: !(Maybe NodeIPv4Address)
   , nodeIPv6Address :: !(Maybe NodeIPv6Address)
-  , producers       :: ![RootConfig]
+  , producers       :: ![RootConfig adr]
   , useLedger       :: !UseLedgerPeers
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance FromJSON NodeSetup where
+instance FromJSON adr => FromJSON (NodeSetup adr) where
   parseJSON = withObject "NodeSetup" $ \o ->
                 NodeSetup
                   <$> o .:  "nodeId"
@@ -73,7 +76,7 @@ instance FromJSON NodeSetup where
                   <*> o .:  "producers"
                   <*> o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers
 
-instance ToJSON NodeSetup where
+instance ToJSON adr => ToJSON (NodeSetup adr) where
   toJSON ns =
     object
       [ "nodeId"             .= nodeId ns
@@ -87,22 +90,22 @@ instance ToJSON NodeSetup where
 -- | Each root peer consists of a list of access points and a shared
 -- 'PeerAdvertise' field.
 --
-data RootConfig = RootConfig
-  { rootAccessPoints :: [RelayAccessPoint]
+data RootConfig adr = RootConfig
+  { rootAccessPoints :: [adr]
     -- ^ a list of relay access points, each of which is either an ip address
     -- or domain name and a port number.
   , rootAdvertise    :: PeerAdvertise
     -- ^ 'advertise' configures whether the root should be advertised through
     -- peer sharing.
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance FromJSON RootConfig where
+instance FromJSON adr => FromJSON (RootConfig adr) where
   parseJSON = withObject "RootConfig" $ \o ->
                 RootConfig
                   <$> o .:  "accessPoints"
                   <*> o .:? "advertise" .!= DoNotAdvertisePeer
 
-instance ToJSON RootConfig where
+instance ToJSON adr => ToJSON (RootConfig adr) where
   toJSON ra =
     object
       [ "accessPoints" .= rootAccessPoints ra
@@ -112,9 +115,9 @@ instance ToJSON RootConfig where
 -- | Transforms a 'RootConfig' into a pair of 'RelayAccessPoint' and its
 -- corresponding 'PeerAdvertise' value.
 --
-rootConfigToRelayAccessPoint
-  :: RootConfig
-  -> [(RelayAccessPoint, PeerAdvertise)]
+rootConfigToRelayAccessPoint :: ()
+  => forall adr. RootConfig adr
+  -> [(adr, PeerAdvertise)]
 rootConfigToRelayAccessPoint RootConfig { rootAccessPoints, rootAdvertise  } =
     [ (accessPoint, rootAdvertise) | accessPoint <- rootAccessPoints ]
 
@@ -125,8 +128,8 @@ rootConfigToRelayAccessPoint RootConfig { rootAccessPoints, rootAdvertise  } =
 -- 'warmValency' value is the value of warm/established connections that the node
 -- will attempt to maintain. By default this value will be equal to 'hotValency'.
 --
-data LocalRootPeersGroup = LocalRootPeersGroup
-  { localRoots :: RootConfig
+data LocalRootPeersGroup adr = LocalRootPeersGroup
+  { localRoots :: RootConfig adr
   , hotValency :: HotValency
   , warmValency :: WarmValency
   , trustable   :: PeerTrustable
@@ -134,12 +137,12 @@ data LocalRootPeersGroup = LocalRootPeersGroup
     -- state.
   , rootDiffusionMode :: DiffusionMode
     -- ^ diffusion mode; used for local root peers.
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
 -- | Does not use the 'FromJSON' instance of 'RootConfig', so that
 -- 'accessPoints', 'advertise', 'valency' and 'warmValency' fields are attached to the
 -- same object.
-instance FromJSON LocalRootPeersGroup where
+instance FromJSON adr => FromJSON (LocalRootPeersGroup adr) where
   parseJSON = withObject "LocalRootPeersGroup" $ \o -> do
                 hv@(HotValency v) <- o .: "valency"
                                  <|> o .: "hotValency"
@@ -152,7 +155,7 @@ instance FromJSON LocalRootPeersGroup where
                   <*> (maybe InitiatorAndResponderDiffusionMode getDiffusionMode
                         <$> o .:? "diffusionMode")
 
-instance ToJSON LocalRootPeersGroup where
+instance ToJSON adr => ToJSON (LocalRootPeersGroup adr) where
   toJSON lrpg =
     object
       [ "accessPoints" .= rootAccessPoints (localRoots lrpg)
@@ -164,39 +167,45 @@ instance ToJSON LocalRootPeersGroup where
       , "diffusionMode" .= NodeDiffusionMode (rootDiffusionMode lrpg)
       ]
 
-newtype LocalRootPeersGroups = LocalRootPeersGroups
-  { groups :: [LocalRootPeersGroup]
-  } deriving (Eq, Show)
+newtype LocalRootPeersGroups adr = LocalRootPeersGroups
+  { groups :: [LocalRootPeersGroup adr]
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance FromJSON LocalRootPeersGroups where
+instance FromJSON adr => FromJSON (LocalRootPeersGroups adr) where
   parseJSON = fmap LocalRootPeersGroups . parseJSONList
 
-instance ToJSON LocalRootPeersGroups where
+instance ToJSON adr => ToJSON (LocalRootPeersGroups adr) where
   toJSON = toJSONList . groups
 
-newtype PublicRootPeers = PublicRootPeers
-  { publicRoots :: RootConfig
-  } deriving (Eq, Show)
+newtype PublicRootPeers adr = PublicRootPeers
+  { publicRoots :: RootConfig adr
+  } deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance FromJSON PublicRootPeers where
+instance FromJSON adr => FromJSON (PublicRootPeers adr) where
   parseJSON = fmap PublicRootPeers . parseJSON
 
-instance ToJSON PublicRootPeers where
+instance ToJSON adr => ToJSON (PublicRootPeers adr) where
   toJSON = toJSON . publicRoots
 
-data NetworkTopology = RealNodeTopology { ntLocalRootPeersGroups :: !LocalRootPeersGroups
-                                        , ntPublicRootPeers      :: ![PublicRootPeers]
-                                        , ntUseLedgerPeers       :: !UseLedgerPeers
-                                        , ntUseBootstrapPeers    :: !UseBootstrapPeers
-                                        , ntPeerSnapshotPath     :: !(Maybe PeerSnapshotFile)
-                                        }
-  deriving (Eq, Show)
+-- | Describes the P2P topology of a node. Whenever the node actually runs,
+-- the type parameter `adr` should be `RelayAccessPoint`. However, we might want to
+-- use and serialize this type with `adr` being `NodeId`, or another placeholder
+-- type, if we want the user to be able to edit the topology without knowing the
+-- actual addresses of the nodes: those might only be knowable at runtime.
+data NetworkTopology adr = RealNodeTopology
+  { ntLocalRootPeersGroups :: !(LocalRootPeersGroups adr)
+  , ntPublicRootPeers      :: ![PublicRootPeers adr]
+  , ntUseLedgerPeers       :: !UseLedgerPeers
+  , ntUseBootstrapPeers    :: !UseBootstrapPeers
+  , ntPeerSnapshotPath     :: !(Maybe PeerSnapshotFile)
+  }
+  deriving (Eq, Show, Generic, Functor, Foldable, Traversable)
 
-instance AdjustFilePaths NetworkTopology where
+instance AdjustFilePaths (NetworkTopology adr) where
   adjustFilePaths f nt@(RealNodeTopology _ _ _ _ mPeerSnapshotPath) =
     nt{ntPeerSnapshotPath = PeerSnapshotFile . f . unPeerSnapshotFile <$> mPeerSnapshotPath}
 
-instance FromJSON NetworkTopology where
+instance FromJSON adr => FromJSON (NetworkTopology adr) where
   parseJSON = withObject "NetworkTopology" $ \o ->
                 RealNodeTopology <$> (o .: "localRoots"                                  )
                                  <*> (o .: "publicRoots"                                 )
@@ -204,7 +213,7 @@ instance FromJSON NetworkTopology where
                                  <*> (o .:? "bootstrapPeers" .!= DontUseBootstrapPeers   )
                                  <*> (o .:? "peerSnapshotFile")
 
-instance ToJSON NetworkTopology where
+instance ToJSON adr => ToJSON (NetworkTopology adr) where
   toJSON top =
     case top of
       RealNodeTopology { ntLocalRootPeersGroups
@@ -220,7 +229,9 @@ instance ToJSON NetworkTopology where
                                    ]
 
 -- | Read the `NetworkTopology` configuration from the specified file.
-readTopologyFile :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text NetworkTopology)
+readTopologyFile :: ()
+  => forall adr. FromJSON adr
+  => NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text (NetworkTopology adr))
 readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode} tracer = runExceptT $ do
   bs <- handleIOExceptionsLiftWith handler $ BS.readFile topologyFilePath
   topology@RealNodeTopology{ntUseBootstrapPeers} <-
@@ -269,7 +280,9 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
     isGenesisCompatible GenesisMode UseBootstrapPeers{} = False
     isGenesisCompatible _ _ = True
 
-readTopologyFileOrError :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO NetworkTopology
+readTopologyFileOrError :: ()
+  => forall adr. FromJSON adr
+  => NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (NetworkTopology adr)
 readTopologyFileOrError nc tr =
       readTopologyFile nc tr
   >>= either (\err -> error $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
@@ -289,7 +302,7 @@ readPeerSnapshotFile  (PeerSnapshotFile peerSnapshotFile) =
 
 -- | This function returns false if non-trustable peers are configured
 --
-isValidTrustedPeerConfiguration :: NetworkTopology -> Bool
+isValidTrustedPeerConfiguration :: NetworkTopology adr -> Bool
 isValidTrustedPeerConfiguration (RealNodeTopology (LocalRootPeersGroups lprgs) _ _ ubp _) =
     case ubp of
       DontUseBootstrapPeers   -> True

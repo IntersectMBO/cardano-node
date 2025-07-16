@@ -78,29 +78,28 @@ createConfigJson :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> m LBS.ByteString
+  -> m (KeyMap Aeson.Value)
 createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron-genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
 
-  pure . A.encodePretty . Object
-    $ mconcat [ byronGenesisHash
-              , shelleyGenesisHash
-              , alonzoGenesisHash
-              , conwayGenesisHash
-              , defaultYamlHardforkViaConfig sbe
-              ]
+  pure $ mconcat
+    [ byronGenesisHash
+    , shelleyGenesisHash
+    , alonzoGenesisHash
+    , conwayGenesisHash
+    , defaultYamlHardforkViaConfig sbe
+    ]
    where
     getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
 
 createConfigJsonNoHash :: ()
   => ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> LBS.ByteString
-createConfigJsonNoHash sbe =
-  A.encodePretty . Object $ defaultYamlHardforkViaConfig sbe
+  -> KeyMap Aeson.Value
+createConfigJsonNoHash = defaultYamlHardforkViaConfig
 
 -- Generate hashes for genesis.json files
 
@@ -295,7 +294,7 @@ ifaceAddress = "127.0.0.1"
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
 mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
   where
-    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P :: NonP2P.NetworkTopology NonP2P.RemoteAddress
     topologyNonP2P =
       NonP2P.RealNodeTopology
         [ NonP2P.RemoteAddress (fromString ifaceAddress)
@@ -305,7 +304,7 @@ mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
         ]
 mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
   where
-    rootConfig :: P2P.RootConfig
+    rootConfig :: P2P.RootConfig RelayAccessPoint
     rootConfig =
       P2P.RootConfig
         [ RelayAccessAddress (fromString ifaceAddress)
@@ -314,7 +313,7 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
         ]
         P2P.DoNotAdvertisePeer
 
-    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups :: P2P.LocalRootPeersGroups RelayAccessPoint
     localRootPeerGroups =
       P2P.LocalRootPeersGroups
         [ P2P.LocalRootPeersGroup rootConfig
@@ -324,7 +323,7 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
                                   InitiatorAndResponderDiffusionMode
         ]
 
-    topologyP2P :: P2P.NetworkTopology
+    topologyP2P :: P2P.NetworkTopology RelayAccessPoint
     topologyP2P =
       P2P.RealNodeTopology
         localRootPeerGroups
