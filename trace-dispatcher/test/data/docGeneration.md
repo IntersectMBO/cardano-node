@@ -4,14 +4,8 @@
 
 ### [Trace Messages](#trace-messages)
 
-1. __Node1ⓣⓢ__
-    1. [BlockFromFuture](#node1blockfromfuture)
-    1. [SlotIsImmutable](#node1slotisimmutable)
-    1. [StartLeadershipCheck](#node1startleadershipcheck)
-1. __Node2ⓣⓢ__
-    1. [BlockFromFuture](#node2blockfromfuture)
-    1. [SlotIsImmutable](#node2slotisimmutable)
-    1. [StartLeadershipCheck](#node2startleadershipcheck)
+1. [Node1ⓣⓢ](#node1blockfromfuture)
+1. [Node2ⓣⓢ](#node2blockfromfuture)
 
 ### [Metrics](#metrics)
 
@@ -184,5 +178,4 @@ Filtered Invisible by config value: `Silence`
 ## Datapoints
 
 
-##
-
+## 
