@@ -20,8 +20,8 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Shelley.State as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
+import qualified Cardano.Ledger.Shelley.State as L
 
 import           Prelude
 
@@ -144,7 +144,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
        left MaxSprocketLengthExceededError
 
     let socketAbsPath = H.sprocketSystemName sprocket
-        completeNodeCmd =  nodeCmd ++
+        completeNodeCmd =  nodeCmd <>
                              [ "--socket-path", H.sprocketArgumentName sprocket
                              , "--port", show port
                              , "--host-addr", showIpv4Address ipv4

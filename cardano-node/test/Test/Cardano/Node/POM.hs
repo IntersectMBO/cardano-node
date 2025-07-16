@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -13,6 +14,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (makeRpcConfig)
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
 import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
@@ -28,7 +30,9 @@ import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
+import           Data.Bifunctor (first)
 import           Data.Monoid (Last (..))
+import           Data.String
 import           Data.Text (Text)
 
 import           Hedgehog (Property, discover, withTests, (===))
@@ -170,6 +174,7 @@ testPartialYamlConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncRpcConfig = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -221,6 +226,7 @@ testPartialCliConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncRpcConfig = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -228,6 +234,7 @@ eExpectedConfig :: Either Text NodeConfiguration
 eExpectedConfig = do
   traceOptions <- partialTraceSelectionToEither
                     (return $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
+  ncRpcConfig <- first fromString $ makeRpcConfig mempty
   return $ NodeConfiguration
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
     , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
@@ -278,6 +285,7 @@ eExpectedConfig = do
     , ncGenesisConfig = disableGenesisConfig
     , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
     , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
+    , ncRpcConfig
     }
 
 -- -----------------------------------------------------------------------------
