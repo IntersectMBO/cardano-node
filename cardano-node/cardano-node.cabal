@@ -197,9 +197,9 @@ library
                       , ouroboros-consensus-cardano ^>= 0.25
                       , ouroboros-consensus-diffusion ^>= 0.23
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.14
-                      , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-framework ^>= 0.18.0.1
+                      , ouroboros-network-api ^>= 0.14.1
+                      , ouroboros-network ^>= 0.21.3
+                      , ouroboros-network-framework ^>= 0.18
                       , ouroboros-network-protocols ^>= 0.14
                       , prettyprinter
                       , prettyprinter-ansi-terminal

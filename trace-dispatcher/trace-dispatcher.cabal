@@ -73,7 +73,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.21.2
+                      , ouroboros-network ^>= 0.21.3
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
