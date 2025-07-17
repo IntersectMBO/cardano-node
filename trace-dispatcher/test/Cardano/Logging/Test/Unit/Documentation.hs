@@ -25,7 +25,7 @@ docTracers = do
   configureTracers confState config1 [t1, t2]
   b1 <- documentTracer (t1 :: Trace IO (TraceForgeEvent LogBlock))
   b2 <- documentTracer (t2 :: Trace IO (TraceForgeEvent LogBlock))
-  docuResultsToText (b1 <> b2) config1
+  pure (docuResultsToText (b1 <> b2) config1)
 
 config1 :: TraceConfig
 config1 = TraceConfig {

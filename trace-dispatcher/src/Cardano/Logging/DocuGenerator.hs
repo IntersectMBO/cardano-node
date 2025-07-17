@@ -26,8 +26,8 @@ module Cardano.Logging.DocuGenerator (
 
 import           Cardano.Logging.ConfigurationParser ()
 import           Cardano.Logging.DocuGenerator.Tree
-import           Cardano.Logging.DocuResult (DocuResult (..))
-import qualified Cardano.Logging.DocuResult as DocuResult
+import           Cardano.Logging.DocuGenerator.Result (DocuResult (..))
+import qualified Cardano.Logging.DocuGenerator.Result as DocuResult
 import           Cardano.Logging.Types
 
 import           Prelude hiding (lines, unlines)
@@ -431,8 +431,8 @@ docItDatapoint _backend (LoggingContext {}, _) = pure ()
 
 
 -- Finally generate a text from all the builders
-docuResultsToText :: DocTracer -> TraceConfig -> IO Text
-docuResultsToText dt@DocTracer {..} configuration = do
+docuResultsToText :: DocTracer -> TraceConfig -> Text
+docuResultsToText dt@DocTracer {..} configuration =
   let traceBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
                           (filter (DocuResult.isTracer . snd) dtBuilderList)
       metricsBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
@@ -464,20 +464,20 @@ docuResultsToText dt@DocTracer {..} configuration = do
 
       legend  = fromText $ utf16CircledT <> "- This is the root of a tracer\n\n" <>
                            utf16CircledS <> "- This is the root of a tracer that is silent because of the current configuration\n\n" <>
-                           utf16CircledM <> "- This is the root of a tracer, that provides metrics\n\n"
-  pure $ toStrict $ toLazyText (
-         header
-      <> header1
-      <> toc
-      <> header2
-      <> contentT
-      <> header3
-      <> contentM
-      <> header4
-      <> contentD
-      <> config
-      <> numbers
-      <> legend)
+                           utf16CircledM <> "- This is the root of a tracer, that provides metrics\n\n" in
+      toStrict $ toLazyText $
+           header
+        <> header1
+        <> toc
+        <> header2
+        <> contentT
+        <> header3
+        <> contentM
+        <> header4
+        <> contentD
+        <> config
+        <> numbers
+        <> legend
 
 generateTOC :: DocTracer -> [[Text]] -> [[Text]] -> [[Text]] -> Builder
 generateTOC DocTracer {..} traces metrics datapoints =

@@ -3,7 +3,6 @@ module Cardano.Logging.Utils
        where
 
 import           Cardano.Logging.Types (HowToConnect)
-
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
 import           Control.Tracer (stdoutTracer, traceWith)

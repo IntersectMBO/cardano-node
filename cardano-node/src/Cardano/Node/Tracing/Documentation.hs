@@ -7,9 +7,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeOperators #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Tracing.Documentation
   ( TraceDocumentationCmd (..)
@@ -19,7 +20,7 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
-import           Cardano.Node.Tracing.NodeStartupInfo () -- MetaTrace NodeVersionTrace
+import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
@@ -30,6 +31,7 @@ import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.NodeInfo ()
+import           Cardano.Node.Tracing.NodeStartupInfo ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
@@ -112,17 +114,17 @@ import           Control.Exception (SomeException)
 import           Control.Monad (forM_)
 import           Data.Aeson.Types (ToJSON)
 import           Data.Proxy (Proxy (..))
+import           Data.Text (pack)
 import qualified Data.Text.IO as T
+import           Data.Time (getZonedTime)
+import           Data.Version (showVersion)
 import           GHC.Generics (Generic)
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
-import Data.Time (getZonedTime)
-import Data.Text (pack)
-import Cardano.Git.Rev (gitRev)
-import Paths_cardano_node (version)
-import Data.Version (showVersion)
+
+import           Paths_cardano_node (version)
 
 
 data TraceDocumentationCmd
@@ -848,7 +850,7 @@ docTracersSecondPhase ::
   -> DocTracer
   -> IO ()
 docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl = do
-    text <- docuResultsToText bl trConfig
+    let text = docuResultsToText bl trConfig
     time <- getZonedTime
     let stamp = "Generated at "
              <> pack (show time)
