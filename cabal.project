@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-06-03T08:07:10Z
-  , cardano-haskell-packages 2025-06-03T08:30:50Z
+  , cardano-haskell-packages 2025-07-17T12:00:21Z
 
 packages:
   cardano-node
@@ -92,9 +92,7 @@ if impl (ghc >= 9.12)
     , servant:base
     , servant-server:base
 
-    , cardano-ping:base
-    , network-mux:base
-    , ouroboros-network:base
-    , ouroboros-network-api:base
-    , ouroboros-network-framework:base
     , ouroboros-network-protocols:base
+
+constraints:
+    hedgehog-extras == 0.7.0.0
