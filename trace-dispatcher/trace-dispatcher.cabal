@@ -46,7 +46,7 @@ library
                       Cardano.Logging.ConfigurationParser
                       Cardano.Logging.Consistency
                       Cardano.Logging.DocuGenerator
-                      Cardano.Logging.DocuGenerator.RoseTree
+                      Cardano.Logging.DocuGenerator.Tree
                       Cardano.Logging.DocuResult
                       Cardano.Logging.Formatter
                       Cardano.Logging.Forwarding

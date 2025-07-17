@@ -1,5 +1,12 @@
-module Cardano.Logging.DocuResult (DocuResult(..), unpackDocu, isTracer, isMetric, isDatapoint) where
-import Data.Text.Internal.Builder
+module Cardano.Logging.DocuResult
+  (DocuResult(..)
+  , unpackDocu
+  , isTracer
+  , isMetric
+  , isDatapoint)
+  where
+
+import           Data.Text.Internal.Builder
 
 data DocuResult =
   DocuTracer Builder

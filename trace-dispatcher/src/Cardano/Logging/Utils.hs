@@ -1,5 +1,6 @@
-module Cardano.Logging.Utils (module Cardano.Logging.Utils)
-where
+module Cardano.Logging.Utils
+       ( module Cardano.Logging.Utils )
+       where
 
 import           Cardano.Logging.Types (HowToConnect)
 
@@ -7,9 +8,8 @@ import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.Text as T
-import           Data.Text.Internal.Builder (Builder)
 import qualified Data.Text.Lazy as TL (toStrict)
-import qualified Data.Text.Lazy.Builder as T (fromText, toLazyText)
+import qualified Data.Text.Lazy.Builder as T (toLazyText)
 import qualified Data.Text.Lazy.Builder.Int as T
 import qualified Data.Text.Lazy.Builder.RealFloat as T (realFloat)
 import           GHC.Conc (labelThread, myThreadId)
@@ -28,7 +28,7 @@ runInLoop action howToConnect prevDelayInSecs maxReconnectDelay =
  where
   excludeAsyncExceptions e =
     case fromException e of
-      Just SomeAsyncException{} -> Nothing
+      Just SomeAsyncException {} -> Nothing
       _ -> Just e
 
   logTrace = traceWith stdoutTracer
@@ -38,24 +38,16 @@ runInLoop action howToConnect prevDelayInSecs maxReconnectDelay =
 
 -- | Convenience function for a Show instance to be converted to text immediately
 {-# INLINE showT #-}
-showT :: (Show a) => a -> T.Text
+showT :: Show a => a -> T.Text
 showT = T.pack . show
 
 {-# INLINE showTHex #-}
-showTHex :: (Integral a) => a -> T.Text
+showTHex :: Integral a => a -> T.Text
 showTHex = TL.toStrict . T.toLazyText . T.hexadecimal
 
 {-# INLINE showTReal #-}
-showTReal :: (RealFloat a) => a -> T.Text
+showTReal :: RealFloat a => a -> T.Text
 showTReal = TL.toStrict . T.toLazyText . T.realFloat
 
 threadLabelMe :: String -> IO ()
 threadLabelMe label = myThreadId >>= flip labelThread label
-
-indent :: Int -> Builder -> Builder
-indent lvl txt
-  | lvl == 0 = txt
-  | lvl /= 0 = T.fromText tab <> indent (lvl - 1) txt
- where
-  tab :: T.Text
-  tab = "\t"

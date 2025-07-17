@@ -25,11 +25,10 @@ module Cardano.Logging.DocuGenerator (
 ) where
 
 import           Cardano.Logging.ConfigurationParser ()
-import           Cardano.Logging.DocuGenerator.RoseTree
+import           Cardano.Logging.DocuGenerator.Tree
 import           Cardano.Logging.DocuResult (DocuResult (..))
 import qualified Cardano.Logging.DocuResult as DocuResult
 import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (indent)
 
 import           Prelude hiding (lines, unlines)
 
@@ -487,9 +486,9 @@ generateTOC DocTracer {..} traces metrics datapoints =
     <> generateTOCDatapoints
     <> generateTOCRest
   where
-    tracesTree = mapMaybe (trim []) (toTree traces)
-    metricsTree = toTree (fmap splitToNS metrics)
-    datapointsTree = toTree datapoints
+    tracesTree = mapMaybe (trim []) (toForest traces)
+    metricsTree = toForest (fmap splitToNS metrics)
+    datapointsTree = toForest datapoints
 
     generateTOCTraces =
       fromText "### [Trace Messages](#trace-messages)\n\n"
@@ -516,24 +515,26 @@ generateTOC DocTracer {..} traces metrics datapoints =
 
     -- Modify the given tracer tree so that the result is a tree where entries which
     -- are not tracers are removed. In case the whole tree doesn't contain a tracer, return Nothing.
-    trim :: [Text] {- accumulated namespace in reverse -} -> RoseTree -> Maybe RoseTree
-    trim ns (RoseTree x nested) =
+    trim :: [Text] {- accumulated namespace in reverse -} -> Tree Text -> Maybe (Tree Text)
+    trim ns (Node x nested) =
       let that = reverse (x : ns)
           -- List of all nested tracers that we shall render
           nestedTrimmed = mapMaybe (trim (x : ns)) nested in
-      mfilter (\_ -> not (null nestedTrimmed) || isTracerSymbol that) (Just (RoseTree x nestedTrimmed))
+      mfilter (\_ -> not (null nestedTrimmed) || isTracerSymbol that) (Just (Node x nestedTrimmed))
 
     namespaceToToc ::
          [[Text]]
       -> Bool
       -> [Text] {- Accumulated namespace in reverse -}
-      -> RoseTree
+      -> Tree Text
       -> Builder
-    namespaceToToc allTracers skipSymbols accns (RoseTree x nested) = text
+    namespaceToToc allTracers skipSymbols accns (Node x nested) = text
       where
         ns = reverse (x : accns)
 
         inner = mconcat (map (namespaceToToc allTracers skipSymbols (x : accns)) nested)
+
+        indent lvl txt = mconcat (replicate lvl "\t") <> txt
 
         text :: Builder
         text =
