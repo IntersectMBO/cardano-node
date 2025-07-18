@@ -1,0 +1,1108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679421967"><span id="local-6989586621679421968"><span id="local-6989586621679421969"><span id="local-6989586621679421970"><span id="local-6989586621679421971"><span id="local-6989586621679421972"></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable         #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric              #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances          #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PatternGuards              #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes                 #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- | This module defines the core data types for Backpack.  For more</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- details, see:</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--  &lt;https://github.com/ezyang/ghc-proposals/blob/backpack/proposals/0000-backpack.rst&gt;</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Backpack</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * OpenUnitId</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier">OpenUnitId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#openUnitIdFreeHoles"><span class="hs-identifier">openUnitIdFreeHoles</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#mkOpenUnitId"><span class="hs-identifier">mkOpenUnitId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="hs-comment">-- * DefUnitId</span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier">DefUnitId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Distribution.Types.UnitId.html#unDefUnitId"><span class="hs-identifier">unDefUnitId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#mkDefUnitId"><span class="hs-identifier">mkDefUnitId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- * OpenModule</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier">OpenModule</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#openModuleFreeHoles"><span class="hs-identifier">openModuleFreeHoles</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="hs-comment">-- * OpenModuleSubst</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleSubst"><span class="hs-identifier">OpenModuleSubst</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#dispOpenModuleSubst"><span class="hs-identifier">dispOpenModuleSubst</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#dispOpenModuleSubstEntry"><span class="hs-identifier">dispOpenModuleSubstEntry</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#parsecOpenModuleSubst"><span class="hs-identifier">parsecOpenModuleSubst</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#parsecOpenModuleSubstEntry"><span class="hs-identifier">parsecOpenModuleSubstEntry</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#openModuleSubstFreeHoles"><span class="hs-identifier">openModuleSubstFreeHoles</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Conversions to 'UnitId'</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#abstractUnitId"><span class="hs-identifier">abstractUnitId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="Distribution.Backpack.html#hashModuleSubst"><span class="hs-identifier">hashModuleSubst</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Real.html#mod/GHC.Real.html#mod"><span class="hs-identifier">mod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>            </span><span class="hs-special">(</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hcat/Text.PrettyPrint.HughesPJ.html#hcat"><span class="hs-identifier">hcat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html"><span class="hs-identifier">Distribution.Types.ComponentId</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Module.html"><span class="hs-identifier">Distribution.Types.Module</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html"><span class="hs-identifier">Distribution.Types.UnitId</span></a></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Base62.html"><span class="hs-identifier">Distribution.Utils.Base62</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.html#/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Set.html#/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-----------------------------------------------------------------------</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- OpenUnitId</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- | An 'OpenUnitId' describes a (possibly partially) instantiated</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- Backpack component, with a description of how the holes are filled</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- in.  Unlike 'OpenUnitId', the 'ModuleSubst' is kept in a structured</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- form that allows for substitution (which fills in holes.) This form</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- of unit cannot be installed. It must first be converted to a</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- 'UnitId'.</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- In the absence of Backpack, there are no holes to fill, so any such</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- component always has an empty module substitution; thus we can lossily</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- represent it as a 'DefiniteUnitId uid'.</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- For a source component using Backpack, however, there is more</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- structure as components may be parametrized over some signatures, and</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- these \&quot;holes\&quot; may be partially or wholly filled.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- OpenUnitId plays an important role when we are mix-in linking,</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- and is recorded to the installed packaged database for indefinite</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- packages; however, for compiled packages that are fully instantiated,</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- we instantiate 'OpenUnitId' into 'UnitId'.</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- For more details see the Backpack spec</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- &lt;https://github.com/ezyang/ghc-proposals/blob/backpack/proposals/0000-backpack.rst&gt;</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">data</span><span> </span><span id="OpenUnitId"><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-var">OpenUnitId</span></a></span></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-comment">-- | Identifies a component which may have some unfilled holes;</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- specifying its 'ComponentId' and its 'OpenModuleSubst'.</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- TODO: Invariant that 'OpenModuleSubst' is non-empty?</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">-- See also the Text instance.</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="IndefFullUnitId"><span class="annot"><a href="Distribution.Backpack.html#IndefFullUnitId"><span class="hs-identifier hs-var">IndefFullUnitId</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleSubst"><span class="hs-identifier hs-type">OpenModuleSubst</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">-- | Identifies a fully instantiated component, which has</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- been compiled and abbreviated as a hash.  The embedded 'UnitId'</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- MUST NOT be for an indefinite component; an 'OpenUnitId'</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- is guaranteed not to have any holes.</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="DefiniteUnitId"><span class="annot"><a href="Distribution.Backpack.html#DefiniteUnitId"><span class="hs-identifier hs-var">DefiniteUnitId</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-type">DefUnitId</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422002"><span id="local-6989586621679422004"><span class="annot"><span class="annottext">(forall x. OpenUnitId -&gt; Rep OpenUnitId x)
+-&gt; (forall x. Rep OpenUnitId x -&gt; OpenUnitId) -&gt; Generic OpenUnitId
+forall x. Rep OpenUnitId x -&gt; OpenUnitId
+forall x. OpenUnitId -&gt; Rep OpenUnitId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. OpenUnitId -&gt; Rep OpenUnitId x
+from :: forall x. OpenUnitId -&gt; Rep OpenUnitId x
+$cto :: forall x. Rep OpenUnitId x -&gt; OpenUnitId
+to :: forall x. Rep OpenUnitId x -&gt; OpenUnitId
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422008"><span id="local-6989586621679422012"><span id="local-6989586621679422015"><span id="local-6989586621679422033"><span class="annot"><span class="annottext">ReadPrec [OpenUnitId]
+ReadPrec OpenUnitId
+Int -&gt; ReadS OpenUnitId
+ReadS [OpenUnitId]
+(Int -&gt; ReadS OpenUnitId)
+-&gt; ReadS [OpenUnitId]
+-&gt; ReadPrec OpenUnitId
+-&gt; ReadPrec [OpenUnitId]
+-&gt; Read OpenUnitId
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS OpenUnitId
+readsPrec :: Int -&gt; ReadS OpenUnitId
+$creadList :: ReadS [OpenUnitId]
+readList :: ReadS [OpenUnitId]
+$creadPrec :: ReadPrec OpenUnitId
+readPrec :: ReadPrec OpenUnitId
+$creadListPrec :: ReadPrec [OpenUnitId]
+readListPrec :: ReadPrec [OpenUnitId]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422039"><span id="local-6989586621679422052"><span id="local-6989586621679422056"><span class="annot"><span class="annottext">Int -&gt; OpenUnitId -&gt; ShowS
+[OpenUnitId] -&gt; ShowS
+OpenUnitId -&gt; String
+(Int -&gt; OpenUnitId -&gt; ShowS)
+-&gt; (OpenUnitId -&gt; String)
+-&gt; ([OpenUnitId] -&gt; ShowS)
+-&gt; Show OpenUnitId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; OpenUnitId -&gt; ShowS
+showsPrec :: Int -&gt; OpenUnitId -&gt; ShowS
+$cshow :: OpenUnitId -&gt; String
+show :: OpenUnitId -&gt; String
+$cshowList :: [OpenUnitId] -&gt; ShowS
+showList :: [OpenUnitId] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422062"><span id="local-6989586621679422072"><span class="annot"><span class="annottext">OpenUnitId -&gt; OpenUnitId -&gt; Bool
+(OpenUnitId -&gt; OpenUnitId -&gt; Bool)
+-&gt; (OpenUnitId -&gt; OpenUnitId -&gt; Bool) -&gt; Eq OpenUnitId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+== :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+$c/= :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+/= :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422081"><span id="local-6989586621679422090"><span id="local-6989586621679422096"><span id="local-6989586621679422100"><span id="local-6989586621679422103"><span id="local-6989586621679422106"><span id="local-6989586621679422109"><span class="annot"><span class="annottext">Eq OpenUnitId
+Eq OpenUnitId =&gt;
+(OpenUnitId -&gt; OpenUnitId -&gt; Ordering)
+-&gt; (OpenUnitId -&gt; OpenUnitId -&gt; Bool)
+-&gt; (OpenUnitId -&gt; OpenUnitId -&gt; Bool)
+-&gt; (OpenUnitId -&gt; OpenUnitId -&gt; Bool)
+-&gt; (OpenUnitId -&gt; OpenUnitId -&gt; Bool)
+-&gt; (OpenUnitId -&gt; OpenUnitId -&gt; OpenUnitId)
+-&gt; (OpenUnitId -&gt; OpenUnitId -&gt; OpenUnitId)
+-&gt; Ord OpenUnitId
+OpenUnitId -&gt; OpenUnitId -&gt; Bool
+OpenUnitId -&gt; OpenUnitId -&gt; Ordering
+OpenUnitId -&gt; OpenUnitId -&gt; OpenUnitId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: OpenUnitId -&gt; OpenUnitId -&gt; Ordering
+compare :: OpenUnitId -&gt; OpenUnitId -&gt; Ordering
+$c&lt; :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+&lt; :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+$c&lt;= :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+&lt;= :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+$c&gt; :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+&gt; :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+$c&gt;= :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+&gt;= :: OpenUnitId -&gt; OpenUnitId -&gt; Bool
+$cmax :: OpenUnitId -&gt; OpenUnitId -&gt; OpenUnitId
+max :: OpenUnitId -&gt; OpenUnitId -&gt; OpenUnitId
+$cmin :: OpenUnitId -&gt; OpenUnitId -&gt; OpenUnitId
+min :: OpenUnitId -&gt; OpenUnitId -&gt; OpenUnitId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422116"><span id="local-6989586621679422126"><span id="local-6989586621679422133"><span id="local-6989586621679422135"><span id="local-6989586621679422137"><span id="local-6989586621679422143"><span id="local-6989586621679422148"><span id="local-6989586621679422151"><span id="local-6989586621679422154"><span id="local-6989586621679422157"><span id="local-6989586621679422160"><span id="local-6989586621679422163"><span id="local-6989586621679422168"><span id="local-6989586621679422173"><span class="annot"><span class="annottext">Typeable OpenUnitId
+Typeable OpenUnitId =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; OpenUnitId -&gt; c OpenUnitId)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenUnitId)
+-&gt; (OpenUnitId -&gt; Constr)
+-&gt; (OpenUnitId -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenUnitId))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c OpenUnitId))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; OpenUnitId -&gt; OpenUnitId)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId)
+-&gt; Data OpenUnitId
+OpenUnitId -&gt; Constr
+OpenUnitId -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; OpenUnitId -&gt; OpenUnitId
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenUnitId
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; OpenUnitId -&gt; c OpenUnitId
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenUnitId)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c OpenUnitId)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; OpenUnitId -&gt; c OpenUnitId
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; OpenUnitId -&gt; c OpenUnitId
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenUnitId
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenUnitId
+$ctoConstr :: OpenUnitId -&gt; Constr
+toConstr :: OpenUnitId -&gt; Constr
+$cdataTypeOf :: OpenUnitId -&gt; DataType
+dataTypeOf :: OpenUnitId -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenUnitId)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenUnitId)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c OpenUnitId)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c OpenUnitId)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; OpenUnitId -&gt; OpenUnitId
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; OpenUnitId -&gt; OpenUnitId
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenUnitId -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenUnitId -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenUnitId -&gt; m OpenUnitId
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- TODO: cache holes?</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679422181"><span id="local-6989586621679422188"><span id="local-6989586621679422194"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span></span></span></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679422250"><span id="local-6989586621679422257"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span></span></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679422319"><span class="annot"><span class="annottext">rnf :: OpenUnitId -&gt; ()
+</span><a href="#local-6989586621679422319"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#IndefFullUnitId"><span class="hs-identifier hs-type">IndefFullUnitId</span></a></span><span> </span><span id="local-6989586621679422321"><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422321"><span class="hs-identifier hs-var">cid</span></a></span></span><span> </span><span id="local-6989586621679422322"><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422322"><span class="hs-identifier hs-var">subst</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422321"><span class="hs-identifier hs-var">cid</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422322"><span class="hs-identifier hs-var">subst</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#DefiniteUnitId"><span class="hs-identifier hs-type">DefiniteUnitId</span></a></span><span> </span><span id="local-6989586621679422323"><span class="annot"><span class="annottext">DefUnitId
+</span><a href="#local-6989586621679422323"><span class="hs-identifier hs-var">uid</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DefUnitId -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">DefUnitId
+</span><a href="#local-6989586621679422323"><span class="hs-identifier hs-var">uid</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679422326"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679422335"><span class="annot"><span class="annottext">pretty :: OpenUnitId -&gt; Doc
+</span><a href="#local-6989586621679422335"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#IndefFullUnitId"><span class="hs-identifier hs-type">IndefFullUnitId</span></a></span><span> </span><span id="local-6989586621679422337"><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422337"><span class="hs-identifier hs-var">cid</span></a></span></span><span> </span><span id="local-6989586621679422338"><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422338"><span class="hs-identifier hs-var">insts</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>        </span><span class="hs-comment">-- TODO: arguably a smart constructor to enforce invariant would be</span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-comment">-- better</span><span>
+</span><span id="line-110"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#null/Data.Map.Internal.html#null"><span class="hs-identifier hs-var">Map.null</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422338"><span class="hs-identifier hs-var">insts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422337"><span class="hs-identifier hs-var">cid</span></a></span><span>
+</span><span id="line-111"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422337"><span class="hs-identifier hs-var">cid</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#brackets/Text.PrettyPrint.HughesPJ.html#brackets"><span class="hs-identifier hs-var">Disp.brackets</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OpenModuleSubst -&gt; Doc
+</span><a href="Distribution.Backpack.html#dispOpenModuleSubst"><span class="hs-identifier hs-var">dispOpenModuleSubst</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422338"><span class="hs-identifier hs-var">insts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#DefiniteUnitId"><span class="hs-identifier hs-type">DefiniteUnitId</span></a></span><span> </span><span id="local-6989586621679422342"><span class="annot"><span class="annottext">DefUnitId
+</span><a href="#local-6989586621679422342"><span class="hs-identifier hs-var">uid</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DefUnitId -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">DefUnitId
+</span><a href="#local-6989586621679422342"><span class="hs-identifier hs-var">uid</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-115"></span><span class="hs-comment">--</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- &gt;&gt;&gt; eitherParsec &quot;foobar&quot; :: Either String OpenUnitId</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--Right (DefiniteUnitId (DefUnitId {unDefUnitId = UnitId &quot;foobar&quot;}))</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- &gt;&gt;&gt; eitherParsec &quot;foo[Str=text-1.2.3:Data.Text.Text]&quot; :: Either String OpenUnitId</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- Right (IndefFullUnitId (ComponentId &quot;foo&quot;) (fromList [(ModuleName &quot;Str&quot;,OpenModule (DefiniteUnitId (DefUnitId {unDefUnitId = UnitId &quot;text-1.2.3&quot;})) (ModuleName &quot;Data.Text.Text&quot;))]))</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679422369"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m OpenUnitId
+</span><a href="#local-6989586621679422369"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m OpenUnitId -&gt; m OpenUnitId
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. Parsing m =&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#try"><span class="hs-identifier hs-var">P.try</span></a></span><span> </span><span class="annot"><span class="annottext">m OpenUnitId
+</span><a href="#local-6989586621679422372"><span class="hs-identifier hs-var">parseOpenUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">m OpenUnitId -&gt; m OpenUnitId -&gt; m OpenUnitId
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%7C%3E/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(DefUnitId -&gt; OpenUnitId) -&gt; m DefUnitId -&gt; m OpenUnitId
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">DefUnitId -&gt; OpenUnitId
+</span><a href="Distribution.Backpack.html#DefiniteUnitId"><span class="hs-identifier hs-var">DefiniteUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">m DefUnitId
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m DefUnitId
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>        </span><span id="local-6989586621679422372"><span class="annot"><span class="annottext">parseOpenUnitId :: m OpenUnitId
+</span><a href="#local-6989586621679422372"><span class="hs-identifier hs-var hs-var">parseOpenUnitId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>            </span><span id="local-6989586621679422407"><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422407"><span class="hs-identifier hs-var">cid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ComponentId
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m ComponentId
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-127"></span><span>            </span><span id="local-6989586621679422408"><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422408"><span class="hs-identifier hs-var">insts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Char -&gt; m Char -&gt; m OpenModuleSubst -&gt; m OpenModuleSubst
+forall (m :: * -&gt; *) bra ket a.
+Applicative m =&gt;
+m bra -&gt; m ket -&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#between"><span class="hs-identifier hs-var">P.between</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'['</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">']'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>                       </span><span class="annot"><span class="annottext">m OpenModuleSubst
+forall (m :: * -&gt; *). CabalParsing m =&gt; m OpenModuleSubst
+</span><a href="Distribution.Backpack.html#parsecOpenModuleSubst"><span class="hs-identifier hs-var">parsecOpenModuleSubst</span></a></span><span>
+</span><span id="line-129"></span><span>            </span><span class="annot"><span class="annottext">OpenUnitId -&gt; m OpenUnitId
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ComponentId -&gt; OpenModuleSubst -&gt; OpenUnitId
+</span><a href="Distribution.Backpack.html#IndefFullUnitId"><span class="hs-identifier hs-var">IndefFullUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422407"><span class="hs-identifier hs-var">cid</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422408"><span class="hs-identifier hs-var">insts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><span class="hs-comment">-- | Get the set of holes ('ModuleVar') embedded in a 'UnitId'.</span></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Distribution.Backpack.html#openUnitIdFreeHoles"><span class="hs-identifier hs-type">openUnitIdFreeHoles</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Set.Internal.html#Set/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-133"></span><span id="openUnitIdFreeHoles"><span class="annot"><span class="annottext">openUnitIdFreeHoles :: OpenUnitId -&gt; Set ModuleName
+</span><a href="Distribution.Backpack.html#openUnitIdFreeHoles"><span class="hs-identifier hs-var hs-var">openUnitIdFreeHoles</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#IndefFullUnitId"><span class="hs-identifier hs-type">IndefFullUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679422411"><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422411"><span class="hs-identifier hs-var">insts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst -&gt; Set ModuleName
+</span><a href="Distribution.Backpack.html#openModuleSubstFreeHoles"><span class="hs-identifier hs-var">openModuleSubstFreeHoles</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422411"><span class="hs-identifier hs-var">insts</span></a></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Distribution.Backpack.html#openUnitIdFreeHoles"><span class="hs-identifier hs-var">openUnitIdFreeHoles</span></a></span><span> </span><span class="annot"><span class="annottext">OpenUnitId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set ModuleName
+forall a. Set a
+</span><a href="../../containers-0.6.7/src/Data.Set.Internal.html#empty/Data.Set.Internal.html#empty"><span class="hs-identifier hs-var">Set.empty</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- | Safe constructor from a UnitId.  The only way to do this safely</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- is if the instantiation is provided.</span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Distribution.Backpack.html#mkOpenUnitId"><span class="hs-identifier hs-type">mkOpenUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleSubst"><span class="hs-identifier hs-type">OpenModuleSubst</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span><span>
+</span><span id="line-139"></span><span id="mkOpenUnitId"><span class="annot"><span class="annottext">mkOpenUnitId :: UnitId -&gt; ComponentId -&gt; OpenModuleSubst -&gt; OpenUnitId
+</span><a href="Distribution.Backpack.html#mkOpenUnitId"><span class="hs-identifier hs-var hs-var">mkOpenUnitId</span></a></span></span><span> </span><span id="local-6989586621679422413"><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621679422413"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span id="local-6989586621679422414"><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422414"><span class="hs-identifier hs-var">cid</span></a></span></span><span> </span><span id="local-6989586621679422415"><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422415"><span class="hs-identifier hs-var">insts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Set ModuleName -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><a href="../../containers-0.6.7/src/Data.Set.Internal.html#null/Data.Set.Internal.html#null"><span class="hs-identifier hs-var">Set.null</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OpenModuleSubst -&gt; Set ModuleName
+</span><a href="Distribution.Backpack.html#openModuleSubstFreeHoles"><span class="hs-identifier hs-var">openModuleSubstFreeHoles</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422415"><span class="hs-identifier hs-var">insts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">DefUnitId -&gt; OpenUnitId
+</span><a href="Distribution.Backpack.html#DefiniteUnitId"><span class="hs-identifier hs-var">DefiniteUnitId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnitId -&gt; DefUnitId
+</span><a href="Distribution.Types.UnitId.html#unsafeMkDefUnitId"><span class="hs-identifier hs-var">unsafeMkDefUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621679422413"><span class="hs-identifier hs-var">uid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- invariant holds!</span><span>
+</span><span id="line-142"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; OpenModuleSubst -&gt; OpenUnitId
+</span><a href="Distribution.Backpack.html#IndefFullUnitId"><span class="hs-identifier hs-var">IndefFullUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422414"><span class="hs-identifier hs-var">cid</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422415"><span class="hs-identifier hs-var">insts</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-comment">-----------------------------------------------------------------------</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- DefUnitId</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- | Create a 'DefUnitId' from a 'ComponentId' and an instantiation</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- with no holes.</span><span>
+</span><span id="line-149"></span><span class="annot"><a href="Distribution.Backpack.html#mkDefUnitId"><span class="hs-identifier hs-type">mkDefUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Module.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#DefUnitId"><span class="hs-identifier hs-type">DefUnitId</span></a></span><span>
+</span><span id="line-150"></span><span id="mkDefUnitId"><span class="annot"><span class="annottext">mkDefUnitId :: ComponentId -&gt; Map ModuleName Module -&gt; DefUnitId
+</span><a href="Distribution.Backpack.html#mkDefUnitId"><span class="hs-identifier hs-var hs-var">mkDefUnitId</span></a></span></span><span> </span><span id="local-6989586621679422418"><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422418"><span class="hs-identifier hs-var">cid</span></a></span></span><span> </span><span id="local-6989586621679422419"><span class="annot"><span class="annottext">Map ModuleName Module
+</span><a href="#local-6989586621679422419"><span class="hs-identifier hs-var">insts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">UnitId -&gt; DefUnitId
+</span><a href="Distribution.Types.UnitId.html#unsafeMkDefUnitId"><span class="hs-identifier hs-var">unsafeMkDefUnitId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#mkUnitId"><span class="hs-identifier hs-var">mkUnitId</span></a></span><span>
+</span><span id="line-152"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ComponentId -&gt; String
+</span><a href="Distribution.Types.ComponentId.html#unComponentId"><span class="hs-identifier hs-var">unComponentId</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422418"><span class="hs-identifier hs-var">cid</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS -&gt; Maybe String -&gt; String
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Maybe.html#maybe/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;+&quot;</span></span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map ModuleName Module -&gt; Maybe String
+</span><a href="Distribution.Backpack.html#hashModuleSubst"><span class="hs-identifier hs-var">hashModuleSubst</span></a></span><span> </span><span class="annot"><span class="annottext">Map ModuleName Module
+</span><a href="#local-6989586621679422419"><span class="hs-identifier hs-var">insts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-comment">-- impose invariant!</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-comment">-----------------------------------------------------------------------</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- OpenModule</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- | Unlike a 'Module', an 'OpenModule' is either an ordinary</span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- module from some unit, OR an 'OpenModuleVar', representing a</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- hole that needs to be filled in.  Substitutions are over</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- module variables.</span><span>
+</span><span id="line-162"></span><span class="hs-keyword">data</span><span> </span><span id="OpenModule"><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-var">OpenModule</span></a></span></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="OpenModule"><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-var">OpenModule</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="OpenModuleVar"><span class="annot"><a href="Distribution.Backpack.html#OpenModuleVar"><span class="hs-identifier hs-var">OpenModuleVar</span></a></span></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422427"><span id="local-6989586621679422429"><span class="annot"><span class="annottext">(forall x. OpenModule -&gt; Rep OpenModule x)
+-&gt; (forall x. Rep OpenModule x -&gt; OpenModule) -&gt; Generic OpenModule
+forall x. Rep OpenModule x -&gt; OpenModule
+forall x. OpenModule -&gt; Rep OpenModule x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. OpenModule -&gt; Rep OpenModule x
+from :: forall x. OpenModule -&gt; Rep OpenModule x
+$cto :: forall x. Rep OpenModule x -&gt; OpenModule
+to :: forall x. Rep OpenModule x -&gt; OpenModule
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422432"><span id="local-6989586621679422435"><span id="local-6989586621679422438"><span id="local-6989586621679422450"><span class="annot"><span class="annottext">ReadPrec [OpenModule]
+ReadPrec OpenModule
+Int -&gt; ReadS OpenModule
+ReadS [OpenModule]
+(Int -&gt; ReadS OpenModule)
+-&gt; ReadS [OpenModule]
+-&gt; ReadPrec OpenModule
+-&gt; ReadPrec [OpenModule]
+-&gt; Read OpenModule
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS OpenModule
+readsPrec :: Int -&gt; ReadS OpenModule
+$creadList :: ReadS [OpenModule]
+readList :: ReadS [OpenModule]
+$creadPrec :: ReadPrec OpenModule
+readPrec :: ReadPrec OpenModule
+$creadListPrec :: ReadPrec [OpenModule]
+readListPrec :: ReadPrec [OpenModule]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422453"><span id="local-6989586621679422460"><span id="local-6989586621679422463"><span class="annot"><span class="annottext">Int -&gt; OpenModule -&gt; ShowS
+[OpenModule] -&gt; ShowS
+OpenModule -&gt; String
+(Int -&gt; OpenModule -&gt; ShowS)
+-&gt; (OpenModule -&gt; String)
+-&gt; ([OpenModule] -&gt; ShowS)
+-&gt; Show OpenModule
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; OpenModule -&gt; ShowS
+showsPrec :: Int -&gt; OpenModule -&gt; ShowS
+$cshow :: OpenModule -&gt; String
+show :: OpenModule -&gt; String
+$cshowList :: [OpenModule] -&gt; ShowS
+showList :: [OpenModule] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422466"><span id="local-6989586621679422471"><span class="annot"><span class="annottext">OpenModule -&gt; OpenModule -&gt; Bool
+(OpenModule -&gt; OpenModule -&gt; Bool)
+-&gt; (OpenModule -&gt; OpenModule -&gt; Bool) -&gt; Eq OpenModule
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: OpenModule -&gt; OpenModule -&gt; Bool
+== :: OpenModule -&gt; OpenModule -&gt; Bool
+$c/= :: OpenModule -&gt; OpenModule -&gt; Bool
+/= :: OpenModule -&gt; OpenModule -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422476"><span id="local-6989586621679422481"><span id="local-6989586621679422486"><span id="local-6989586621679422489"><span id="local-6989586621679422492"><span id="local-6989586621679422495"><span id="local-6989586621679422498"><span class="annot"><span class="annottext">Eq OpenModule
+Eq OpenModule =&gt;
+(OpenModule -&gt; OpenModule -&gt; Ordering)
+-&gt; (OpenModule -&gt; OpenModule -&gt; Bool)
+-&gt; (OpenModule -&gt; OpenModule -&gt; Bool)
+-&gt; (OpenModule -&gt; OpenModule -&gt; Bool)
+-&gt; (OpenModule -&gt; OpenModule -&gt; Bool)
+-&gt; (OpenModule -&gt; OpenModule -&gt; OpenModule)
+-&gt; (OpenModule -&gt; OpenModule -&gt; OpenModule)
+-&gt; Ord OpenModule
+OpenModule -&gt; OpenModule -&gt; Bool
+OpenModule -&gt; OpenModule -&gt; Ordering
+OpenModule -&gt; OpenModule -&gt; OpenModule
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: OpenModule -&gt; OpenModule -&gt; Ordering
+compare :: OpenModule -&gt; OpenModule -&gt; Ordering
+$c&lt; :: OpenModule -&gt; OpenModule -&gt; Bool
+&lt; :: OpenModule -&gt; OpenModule -&gt; Bool
+$c&lt;= :: OpenModule -&gt; OpenModule -&gt; Bool
+&lt;= :: OpenModule -&gt; OpenModule -&gt; Bool
+$c&gt; :: OpenModule -&gt; OpenModule -&gt; Bool
+&gt; :: OpenModule -&gt; OpenModule -&gt; Bool
+$c&gt;= :: OpenModule -&gt; OpenModule -&gt; Bool
+&gt;= :: OpenModule -&gt; OpenModule -&gt; Bool
+$cmax :: OpenModule -&gt; OpenModule -&gt; OpenModule
+max :: OpenModule -&gt; OpenModule -&gt; OpenModule
+$cmin :: OpenModule -&gt; OpenModule -&gt; OpenModule
+min :: OpenModule -&gt; OpenModule -&gt; OpenModule
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422503"><span id="local-6989586621679422508"><span id="local-6989586621679422513"><span id="local-6989586621679422515"><span id="local-6989586621679422517"><span id="local-6989586621679422522"><span id="local-6989586621679422527"><span id="local-6989586621679422530"><span id="local-6989586621679422533"><span id="local-6989586621679422536"><span id="local-6989586621679422539"><span id="local-6989586621679422542"><span id="local-6989586621679422547"><span id="local-6989586621679422552"><span class="annot"><span class="annottext">Typeable OpenModule
+Typeable OpenModule =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; OpenModule -&gt; c OpenModule)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenModule)
+-&gt; (OpenModule -&gt; Constr)
+-&gt; (OpenModule -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenModule))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c OpenModule))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; OpenModule -&gt; OpenModule)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule)
+-&gt; Data OpenModule
+OpenModule -&gt; Constr
+OpenModule -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; OpenModule -&gt; OpenModule
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenModule
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; OpenModule -&gt; c OpenModule
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenModule)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c OpenModule)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; OpenModule -&gt; c OpenModule
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; OpenModule -&gt; c OpenModule
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenModule
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c OpenModule
+$ctoConstr :: OpenModule -&gt; Constr
+toConstr :: OpenModule -&gt; Constr
+$cdataTypeOf :: OpenModule -&gt; DataType
+dataTypeOf :: OpenModule -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenModule)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c OpenModule)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c OpenModule)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c OpenModule)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; OpenModule -&gt; OpenModule
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; OpenModule -&gt; OpenModule
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; OpenModule -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; OpenModule -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; OpenModule -&gt; m OpenModule
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679422557"><span id="local-6989586621679422563"><span id="local-6989586621679422569"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span></span></span></span><span>
+</span><span id="line-168"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679422598"><span id="local-6989586621679422604"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span></span></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-171"></span><span>    </span><span id="local-6989586621679422634"><span class="annot"><span class="annottext">rnf :: OpenModule -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span> </span><span id="local-6989586621679422635"><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422635"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span id="local-6989586621679422636"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422636"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OpenUnitId -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422635"><span class="hs-identifier hs-var">uid</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422636"><span class="hs-identifier hs-var">mod_name</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleVar"><span class="hs-identifier hs-type">OpenModuleVar</span></a></span><span> </span><span id="local-6989586621679422637"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422637"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422637"><span class="hs-identifier hs-var">mod_name</span></a></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679422640"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-175"></span><span>    </span><span id="local-6989586621679422645"><span class="annot"><span class="annottext">pretty :: OpenModule -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span> </span><span id="local-6989586621679422646"><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422646"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span id="local-6989586621679422647"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422647"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-176"></span><span>        </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hcat/Text.PrettyPrint.HughesPJ.html#hcat"><span class="hs-identifier hs-var">hcat</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">OpenUnitId -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422646"><span class="hs-identifier hs-var">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;:&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422647"><span class="hs-identifier hs-var">mod_name</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleVar"><span class="hs-identifier hs-type">OpenModuleVar</span></a></span><span> </span><span id="local-6989586621679422649"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422649"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-178"></span><span>        </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hcat/Text.PrettyPrint.HughesPJ.html#hcat"><span class="hs-identifier hs-var">hcat</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">Disp.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&lt;'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422649"><span class="hs-identifier hs-var">mod_name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">Disp.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&gt;'</span></span><span class="hs-special">]</span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-181"></span><span class="hs-comment">--</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- &gt;&gt;&gt; eitherParsec &quot;Includes2-0.1.0.0-inplace-mysql:Database.MySQL&quot; :: Either String OpenModule</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- Right (OpenModule (DefiniteUnitId (DefUnitId {unDefUnitId = UnitId &quot;Includes2-0.1.0.0-inplace-mysql&quot;})) (ModuleName &quot;Database.MySQL&quot;))</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--</span><span>
+</span><span id="line-185"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-186"></span><span>    </span><span id="local-6989586621679422663"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m OpenModule
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m OpenModule
+</span><a href="#local-6989586621679422664"><span class="hs-identifier hs-var">parsecModuleVar</span></a></span><span> </span><span class="annot"><span class="annottext">m OpenModule -&gt; m OpenModule -&gt; m OpenModule
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%7C%3E/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m OpenModule
+</span><a href="#local-6989586621679422665"><span class="hs-identifier hs-var">parsecOpenModule</span></a></span><span>
+</span><span id="line-187"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-188"></span><span>        </span><span id="local-6989586621679422665"><span class="annot"><span class="annottext">parsecOpenModule :: m OpenModule
+</span><a href="#local-6989586621679422665"><span class="hs-identifier hs-var hs-var">parsecOpenModule</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-189"></span><span>            </span><span id="local-6989586621679422698"><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422698"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m OpenUnitId
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m OpenUnitId
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-190"></span><span>            </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span>
+</span><span id="line-191"></span><span>            </span><span id="local-6989586621679422699"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422699"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ModuleName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m ModuleName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-192"></span><span>            </span><span class="annot"><span class="annottext">OpenModule -&gt; m OpenModule
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OpenUnitId -&gt; ModuleName -&gt; OpenModule
+</span><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-var">OpenModule</span></a></span><span> </span><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422698"><span class="hs-identifier hs-var">uid</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422699"><span class="hs-identifier hs-var">mod_name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span>        </span><span id="local-6989586621679422664"><span class="annot"><span class="annottext">parsecModuleVar :: m OpenModule
+</span><a href="#local-6989586621679422664"><span class="hs-identifier hs-var hs-var">parsecModuleVar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-195"></span><span>            </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&lt;'</span></span><span>
+</span><span id="line-196"></span><span>            </span><span id="local-6989586621679422730"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422730"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ModuleName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m ModuleName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-197"></span><span>            </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&gt;'</span></span><span>
+</span><span id="line-198"></span><span>            </span><span class="annot"><span class="annottext">OpenModule -&gt; m OpenModule
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleName -&gt; OpenModule
+</span><a href="Distribution.Backpack.html#OpenModuleVar"><span class="hs-identifier hs-var">OpenModuleVar</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422730"><span class="hs-identifier hs-var">mod_name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="annot"><span class="hs-comment">-- | Get the set of holes ('ModuleVar') embedded in a 'Module'.</span></span><span>
+</span><span id="line-201"></span><span class="annot"><a href="Distribution.Backpack.html#openModuleFreeHoles"><span class="hs-identifier hs-type">openModuleFreeHoles</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Set.Internal.html#Set/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-202"></span><span id="openModuleFreeHoles"><span class="annot"><span class="annottext">openModuleFreeHoles :: OpenModule -&gt; Set ModuleName
+</span><a href="Distribution.Backpack.html#openModuleFreeHoles"><span class="hs-identifier hs-var hs-var">openModuleFreeHoles</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleVar"><span class="hs-identifier hs-type">OpenModuleVar</span></a></span><span> </span><span id="local-6989586621679422731"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422731"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Set ModuleName
+forall a. a -&gt; Set a
+</span><a href="../../containers-0.6.7/src/Data.Set.Internal.html#singleton/Data.Set.Internal.html#singleton"><span class="hs-identifier hs-var">Set.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422731"><span class="hs-identifier hs-var">mod_name</span></a></span><span>
+</span><span id="line-203"></span><span class="annot"><a href="Distribution.Backpack.html#openModuleFreeHoles"><span class="hs-identifier hs-var">openModuleFreeHoles</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span> </span><span id="local-6989586621679422733"><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422733"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span id="local-6989586621679422734"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422734"><span class="hs-identifier hs-var">_n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OpenUnitId -&gt; Set ModuleName
+</span><a href="Distribution.Backpack.html#openUnitIdFreeHoles"><span class="hs-identifier hs-var">openUnitIdFreeHoles</span></a></span><span> </span><span class="annot"><span class="annottext">OpenUnitId
+</span><a href="#local-6989586621679422733"><span class="hs-identifier hs-var">uid</span></a></span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span class="hs-comment">-----------------------------------------------------------------------</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- OpenModuleSubst</span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- | An explicit substitution on modules.</span><span>
+</span><span id="line-209"></span><span class="hs-comment">--</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- NB: These substitutions are NOT idempotent, for example, a</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- valid substitution is (A -&gt; B, B -&gt; A).</span><span>
+</span><span id="line-212"></span><span class="hs-keyword">type</span><span> </span><span id="OpenModuleSubst"><span class="annot"><a href="Distribution.Backpack.html#OpenModuleSubst"><span class="hs-identifier hs-var">OpenModuleSubst</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- | Pretty-print the entries of a module substitution, suitable</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- for embedding into a 'OpenUnitId' or passing to GHC via @--instantiate-with@.</span><span>
+</span><span id="line-216"></span><span class="annot"><a href="Distribution.Backpack.html#dispOpenModuleSubst"><span class="hs-identifier hs-type">dispOpenModuleSubst</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleSubst"><span class="hs-identifier hs-type">OpenModuleSubst</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">Disp.Doc</span></a></span><span>
+</span><span id="line-217"></span><span id="dispOpenModuleSubst"><span class="annot"><span class="annottext">dispOpenModuleSubst :: OpenModuleSubst -&gt; Doc
+</span><a href="Distribution.Backpack.html#dispOpenModuleSubst"><span class="hs-identifier hs-var hs-var">dispOpenModuleSubst</span></a></span></span><span> </span><span id="local-6989586621679422735"><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422735"><span class="hs-identifier hs-var">subst</span></a></span></span><span>
+</span><span id="line-218"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hcat/Text.PrettyPrint.HughesPJ.html#hcat"><span class="hs-identifier hs-var">Disp.hcat</span></a></span><span>
+</span><span id="line-219"></span><span>    </span><span class="annot"><span class="annottext">([Doc] -&gt; Doc) -&gt; ([Doc] -&gt; [Doc]) -&gt; [Doc] -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; [Doc] -&gt; [Doc]
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#punctuate/Text.PrettyPrint.HughesPJ.html#punctuate"><span class="hs-identifier hs-var">Disp.punctuate</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#comma/Text.PrettyPrint.HughesPJ.html#comma"><span class="hs-identifier hs-var">Disp.comma</span></a></span><span>
+</span><span id="line-220"></span><span>    </span><span class="annot"><span class="annottext">([Doc] -&gt; Doc) -&gt; [Doc] -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((ModuleName, OpenModule) -&gt; Doc)
+-&gt; [(ModuleName, OpenModule)] -&gt; [Doc]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(ModuleName, OpenModule) -&gt; Doc
+</span><a href="Distribution.Backpack.html#dispOpenModuleSubstEntry"><span class="hs-identifier hs-var">dispOpenModuleSubstEntry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OpenModuleSubst -&gt; [(ModuleName, OpenModule)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#toAscList/Data.Map.Internal.html#toAscList"><span class="hs-identifier hs-var">Map.toAscList</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422735"><span class="hs-identifier hs-var">subst</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span class="annot"><span class="hs-comment">-- | Pretty-print a single entry of a module substitution.</span></span><span>
+</span><span id="line-223"></span><span class="annot"><a href="Distribution.Backpack.html#dispOpenModuleSubstEntry"><span class="hs-identifier hs-type">dispOpenModuleSubstEntry</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#Doc/Text.PrettyPrint.HughesPJ.html#Doc"><span class="hs-identifier hs-type">Disp.Doc</span></a></span><span>
+</span><span id="line-224"></span><span id="dispOpenModuleSubstEntry"><span class="annot"><span class="annottext">dispOpenModuleSubstEntry :: (ModuleName, OpenModule) -&gt; Doc
+</span><a href="Distribution.Backpack.html#dispOpenModuleSubstEntry"><span class="hs-identifier hs-var hs-var">dispOpenModuleSubstEntry</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422740"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422740"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422741"><span class="annot"><span class="annottext">OpenModule
+</span><a href="#local-6989586621679422741"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422740"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">Disp.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'='</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModule -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModule
+</span><a href="#local-6989586621679422741"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- | Inverse to 'dispModSubst'.</span><span>
+</span><span id="line-227"></span><span class="hs-comment">--</span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- @since 2.2</span><span>
+</span><span id="line-229"></span><span id="local-6989586621679421878"><span class="annot"><a href="Distribution.Backpack.html#parsecOpenModuleSubst"><span class="hs-identifier hs-type">parsecOpenModuleSubst</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#CabalParsing"><span class="hs-identifier hs-type">CabalParsing</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679421878"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679421878"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleSubst"><span class="hs-identifier hs-type">OpenModuleSubst</span></a></span></span><span>
+</span><span id="line-230"></span><span id="parsecOpenModuleSubst"><span class="annot"><span class="annottext">parsecOpenModuleSubst :: forall (m :: * -&gt; *). CabalParsing m =&gt; m OpenModuleSubst
+</span><a href="Distribution.Backpack.html#parsecOpenModuleSubst"><span class="hs-identifier hs-var hs-var">parsecOpenModuleSubst</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([(ModuleName, OpenModule)] -&gt; OpenModuleSubst)
+-&gt; m [(ModuleName, OpenModule)] -&gt; m OpenModuleSubst
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[(ModuleName, OpenModule)] -&gt; OpenModuleSubst
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#fromList/Data.Map.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span>
+</span><span id="line-231"></span><span>      </span><span class="annot"><span class="annottext">(m [(ModuleName, OpenModule)] -&gt; m OpenModuleSubst)
+-&gt; (m (ModuleName, OpenModule) -&gt; m [(ModuleName, OpenModule)])
+-&gt; m (ModuleName, OpenModule)
+-&gt; m OpenModuleSubst
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(m (ModuleName, OpenModule)
+ -&gt; m Char -&gt; m [(ModuleName, OpenModule)])
+-&gt; m Char
+-&gt; m (ModuleName, OpenModule)
+-&gt; m [(ModuleName, OpenModule)]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">m (ModuleName, OpenModule)
+-&gt; m Char -&gt; m [(ModuleName, OpenModule)]
+forall (m :: * -&gt; *) a sep. Alternative m =&gt; m a -&gt; m sep -&gt; m [a]
+</span><a href="Distribution.Compat.Parsing.html#sepBy"><span class="hs-identifier hs-var">P.sepBy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">','</span></span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span>      </span><span class="annot"><span class="annottext">(m (ModuleName, OpenModule) -&gt; m OpenModuleSubst)
+-&gt; m (ModuleName, OpenModule) -&gt; m OpenModuleSubst
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m (ModuleName, OpenModule)
+forall (m :: * -&gt; *). CabalParsing m =&gt; m (ModuleName, OpenModule)
+</span><a href="Distribution.Backpack.html#parsecOpenModuleSubstEntry"><span class="hs-identifier hs-var">parsecOpenModuleSubstEntry</span></a></span><span>
+</span><span id="line-233"></span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- | Inverse to 'dispModSubstEntry'.</span><span>
+</span><span id="line-235"></span><span class="hs-comment">--</span><span>
+</span><span id="line-236"></span><span class="hs-comment">-- @since 2.2</span><span>
+</span><span id="line-237"></span><span id="local-6989586621679421914"><span class="annot"><a href="Distribution.Backpack.html#parsecOpenModuleSubstEntry"><span class="hs-identifier hs-type">parsecOpenModuleSubstEntry</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#CabalParsing"><span class="hs-identifier hs-type">CabalParsing</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679421914"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679421914"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModule"><span class="hs-identifier hs-type">OpenModule</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-238"></span><span id="parsecOpenModuleSubstEntry"><span class="annot"><span class="annottext">parsecOpenModuleSubstEntry :: forall (m :: * -&gt; *). CabalParsing m =&gt; m (ModuleName, OpenModule)
+</span><a href="Distribution.Backpack.html#parsecOpenModuleSubstEntry"><span class="hs-identifier hs-var hs-var">parsecOpenModuleSubstEntry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-239"></span><span>    </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679422769"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422769"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ModuleName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m ModuleName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-240"></span><span>       </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'='</span></span><span>
+</span><span id="line-241"></span><span>       </span><span id="local-6989586621679422770"><span class="annot"><span class="annottext">OpenModule
+</span><a href="#local-6989586621679422770"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m OpenModule
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m OpenModule
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-242"></span><span>       </span><span class="annot"><span class="annottext">(ModuleName, OpenModule) -&gt; m (ModuleName, OpenModule)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422769"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OpenModule
+</span><a href="#local-6989586621679422770"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- | Get the set of holes ('ModuleVar') embedded in a 'OpenModuleSubst'.</span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- This is NOT the domain of the substitution.</span><span>
+</span><span id="line-246"></span><span class="annot"><a href="Distribution.Backpack.html#openModuleSubstFreeHoles"><span class="hs-identifier hs-type">openModuleSubstFreeHoles</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenModuleSubst"><span class="hs-identifier hs-type">OpenModuleSubst</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Set.Internal.html#Set/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-247"></span><span id="openModuleSubstFreeHoles"><span class="annot"><span class="annottext">openModuleSubstFreeHoles :: OpenModuleSubst -&gt; Set ModuleName
+</span><a href="Distribution.Backpack.html#openModuleSubstFreeHoles"><span class="hs-identifier hs-var hs-var">openModuleSubstFreeHoles</span></a></span></span><span> </span><span id="local-6989586621679422771"><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422771"><span class="hs-identifier hs-var">insts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Set ModuleName] -&gt; Set ModuleName
+forall (f :: * -&gt; *) a. (Foldable f, Ord a) =&gt; f (Set a) -&gt; Set a
+</span><a href="../../containers-0.6.7/src/Data.Set.Internal.html#unions/Data.Set.Internal.html#unions"><span class="hs-identifier hs-var">Set.unions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(OpenModule -&gt; Set ModuleName) -&gt; [OpenModule] -&gt; [Set ModuleName]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModule -&gt; Set ModuleName
+</span><a href="Distribution.Backpack.html#openModuleFreeHoles"><span class="hs-identifier hs-var">openModuleFreeHoles</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OpenModuleSubst -&gt; [OpenModule]
+forall k a. Map k a -&gt; [a]
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#elems/Data.Map.Internal.html#elems"><span class="hs-identifier hs-var">Map.elems</span></a></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><a href="#local-6989586621679422771"><span class="hs-identifier hs-var">insts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span><span>
+</span><span id="line-249"></span><span class="hs-comment">-----------------------------------------------------------------------</span><span>
+</span><span id="line-250"></span><span class="hs-comment">-- Conversions to UnitId</span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- | When typechecking, we don't demand that a freshly instantiated</span><span>
+</span><span id="line-253"></span><span class="hs-comment">-- 'IndefFullUnitId' be compiled; instead, we just depend on the</span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- installed indefinite unit installed at the 'ComponentId'.</span><span>
+</span><span id="line-255"></span><span class="annot"><a href="Distribution.Backpack.html#abstractUnitId"><span class="hs-identifier hs-type">abstractUnitId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Backpack.html#OpenUnitId"><span class="hs-identifier hs-type">OpenUnitId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnitId.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span>
+</span><span id="line-256"></span><span id="abstractUnitId"><span class="annot"><span class="annottext">abstractUnitId :: OpenUnitId -&gt; UnitId
+</span><a href="Distribution.Backpack.html#abstractUnitId"><span class="hs-identifier hs-var hs-var">abstractUnitId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#DefiniteUnitId"><span class="hs-identifier hs-type">DefiniteUnitId</span></a></span><span> </span><span id="local-6989586621679422774"><span class="annot"><span class="annottext">DefUnitId
+</span><a href="#local-6989586621679422774"><span class="hs-identifier hs-var">def_uid</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DefUnitId -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#unDefUnitId"><span class="hs-identifier hs-var">unDefUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">DefUnitId
+</span><a href="#local-6989586621679422774"><span class="hs-identifier hs-var">def_uid</span></a></span><span>
+</span><span id="line-257"></span><span class="annot"><a href="Distribution.Backpack.html#abstractUnitId"><span class="hs-identifier hs-var">abstractUnitId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Backpack.html#IndefFullUnitId"><span class="hs-identifier hs-type">IndefFullUnitId</span></a></span><span> </span><span id="local-6989586621679422775"><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422775"><span class="hs-identifier hs-var">cid</span></a></span></span><span> </span><span class="annot"><span class="annottext">OpenModuleSubst
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; UnitId
+</span><a href="Distribution.Types.UnitId.html#newSimpleUnitId"><span class="hs-identifier hs-var">newSimpleUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId
+</span><a href="#local-6989586621679422775"><span class="hs-identifier hs-var">cid</span></a></span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span class="hs-comment">-- | Take a module substitution and hash it into a string suitable for</span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- 'UnitId'.  Note that since this takes 'Module', not 'OpenModule',</span><span>
+</span><span id="line-261"></span><span class="hs-comment">-- you are responsible for recursively converting 'OpenModule'</span><span>
+</span><span id="line-262"></span><span class="hs-comment">-- into 'Module'.  See also &quot;Distribution.Backpack.ReadyComponent&quot;.</span><span>
+</span><span id="line-263"></span><span class="annot"><a href="Distribution.Backpack.html#hashModuleSubst"><span class="hs-identifier hs-type">hashModuleSubst</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Module.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-264"></span><span id="hashModuleSubst"><span class="annot"><span class="annottext">hashModuleSubst :: Map ModuleName Module -&gt; Maybe String
+</span><a href="Distribution.Backpack.html#hashModuleSubst"><span class="hs-identifier hs-var hs-var">hashModuleSubst</span></a></span></span><span> </span><span id="local-6989586621679422777"><span class="annot"><span class="annottext">Map ModuleName Module
+</span><a href="#local-6989586621679422777"><span class="hs-identifier hs-var">subst</span></a></span></span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Map ModuleName Module -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#null/Data.Map.Internal.html#null"><span class="hs-identifier hs-var">Map.null</span></a></span><span> </span><span class="annot"><span class="annottext">Map ModuleName Module
+</span><a href="#local-6989586621679422777"><span class="hs-identifier hs-var">subst</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-266"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-267"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Maybe String) -&gt; ShowS -&gt; String -&gt; Maybe String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="Distribution.Utils.Base62.html#hashToBase62"><span class="hs-identifier hs-var">hashToBase62</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Maybe String) -&gt; String -&gt; Maybe String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-268"></span><span>        </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#concat/Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422781"><span class="hs-identifier hs-var">mod_name</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;=&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Module -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621679422782"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span>
+</span><span id="line-269"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422781"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679422781"><span class="hs-identifier hs-var">mod_name</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422782"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621679422782"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map ModuleName Module -&gt; [(ModuleName, Module)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#toList/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map ModuleName Module
+</span><a href="#local-6989586621679422777"><span class="hs-identifier hs-var">subst</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-270"></span></pre></body></html>

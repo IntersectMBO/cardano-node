@@ -1,0 +1,86 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span class="hs-comment">-- | Implementation of base-62 encoding, which we use when computing hashes</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- for fully instantiated unit ids.</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Utils.Base62</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Base62.html#hashToBase62"><span class="hs-identifier">hashToBase62</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.html#/GHC.Fingerprint.html"><span class="hs-identifier">GHC.Fingerprint</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier">Fingerprint</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.html#fingerprintString/GHC.Fingerprint.html#fingerprintString"><span class="hs-identifier">fingerprintString</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Numeric.html#/Numeric.html"><span class="hs-identifier">Numeric</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Numeric.html#showIntAtBase/Numeric.html#showIntAtBase"><span class="hs-identifier">showIntAtBase</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Char.html#/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Char.html#chr/GHC.Char.html#chr"><span class="hs-identifier">chr</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- | Hash a string using GHC's fingerprinting algorithm (a 128-bit</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- MD5 hash) and then encode the resulting hash in base 62.</span><span>
+</span><span id="line-12"></span><span class="annot"><a href="Distribution.Utils.Base62.html#hashToBase62"><span class="hs-identifier hs-type">hashToBase62</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-13"></span><span id="hashToBase62"><span class="annot"><span class="annottext">hashToBase62 :: String -&gt; String
+</span><a href="Distribution.Utils.Base62.html#hashToBase62"><span class="hs-identifier hs-var hs-var">hashToBase62</span></a></span></span><span> </span><span id="local-6989586621679376969"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679376969"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fingerprint -&gt; String
+</span><a href="#local-6989586621679376970"><span class="hs-identifier hs-var">showFingerprint</span></a></span><span> </span><span class="annot"><span class="annottext">(Fingerprint -&gt; String) -&gt; Fingerprint -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Fingerprint
+</span><a href="../../base-4.18.2.1/src/GHC.Fingerprint.html#fingerprintString/GHC.Fingerprint.html#fingerprintString"><span class="hs-identifier hs-var">fingerprintString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679376969"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>    </span><span id="local-6989586621679376989"><span class="annot"><span class="annottext">showIntAtBase62 :: a -&gt; String
+</span><a href="#local-6989586621679376989"><span class="hs-identifier hs-var hs-var">showIntAtBase62</span></a></span></span><span> </span><span id="local-6989586621679376990"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679376990"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; (Int -&gt; Char) -&gt; a -&gt; String -&gt; String
+forall a. Integral a =&gt; a -&gt; (Int -&gt; Char) -&gt; a -&gt; String -&gt; String
+</span><a href="../../base-4.18.2.1/src/Numeric.html#showIntAtBase/Numeric.html#showIntAtBase"><span class="hs-identifier hs-var">showIntAtBase</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">62</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char
+</span><a href="#local-6989586621679376991"><span class="hs-identifier hs-var">representBase62</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679376990"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-16"></span><span>    </span><span id="local-6989586621679376991"><span class="annot"><span class="annottext">representBase62 :: Int -&gt; Char
+</span><a href="#local-6989586621679376991"><span class="hs-identifier hs-var hs-var">representBase62</span></a></span></span><span> </span><span id="local-6989586621679377010"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377010"><span class="hs-identifier hs-var">x</span></a></span></span><span>
+</span><span id="line-17"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377010"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char
+</span><a href="../../base-4.18.2.1/src/GHC.Char.html#chr/GHC.Char.html#chr"><span class="hs-identifier hs-var">chr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">48</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#%2B/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377010"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377010"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">36</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char
+</span><a href="../../base-4.18.2.1/src/GHC.Char.html#chr/GHC.Char.html#chr"><span class="hs-identifier hs-var">chr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">65</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#%2B/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377010"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#-/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377010"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">62</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char
+</span><a href="../../base-4.18.2.1/src/GHC.Char.html#chr/GHC.Char.html#chr"><span class="hs-identifier hs-var">chr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">97</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#%2B/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679377010"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#-/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">36</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'@'</span></span><span>
+</span><span id="line-21"></span><span>    </span><span id="local-6989586621679376970"><span class="annot"><span class="annottext">showFingerprint :: Fingerprint -&gt; String
+</span><a href="#local-6989586621679376970"><span class="hs-identifier hs-var hs-var">showFingerprint</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Fingerprint.Type.html#Fingerprint/GHC.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-type">Fingerprint</span></a></span><span> </span><span id="local-6989586621679377016"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377016"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679377017"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377017"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; String
+forall {a}. Integral a =&gt; a -&gt; String
+</span><a href="#local-6989586621679376989"><span class="hs-identifier hs-var">showIntAtBase62</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377016"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; String
+forall {a}. Integral a =&gt; a -&gt; String
+</span><a href="#local-6989586621679376989"><span class="hs-identifier hs-var">showIntAtBase62</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679377017"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span></pre></body></html>

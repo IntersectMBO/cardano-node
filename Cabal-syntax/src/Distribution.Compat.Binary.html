@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Compat.Binary</span><span>
+</span><span id="line-5"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Compat.Binary.html#decodeOrFailIO"><span class="hs-identifier">decodeOrFailIO</span></a></span><span>
+</span><span id="line-6"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Binary.html#decodeFileOrFail%27"><span class="hs-identifier">decodeFileOrFail'</span></a></span><span>
+</span><span id="line-7"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.html#/Data.Binary.html"><span class="hs-identifier">Data.Binary</span></a></span><span>
+</span><span id="line-8"></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Control.Exception.html#/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Exception.html#ErrorCall/GHC.Exception.html#ErrorCall"><span class="hs-identifier">ErrorCall</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#catch/GHC.IO.html#catch"><span class="hs-identifier">catch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#evaluate/GHC.IO.html#evaluate"><span class="hs-identifier">evaluate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.html#/Data.Binary.html"><span class="hs-identifier">Data.Binary</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="annot"><span class="hs-comment">-- | Lazily reconstruct a value previously written to a file.</span></span><span>
+</span><span id="line-16"></span><span id="local-6989586621679376694"><span class="annot"><a href="Distribution.Compat.Binary.html#decodeFileOrFail%27"><span class="hs-identifier hs-type">decodeFileOrFail'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679376694"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Either.html#Either/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679376694"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-17"></span><span id="decodeFileOrFail%27"><span class="annot"><span class="annottext">decodeFileOrFail' :: forall a. Binary a =&gt; FilePath -&gt; IO (Either FilePath a)
+</span><a href="Distribution.Compat.Binary.html#decodeFileOrFail%27"><span class="hs-identifier hs-var hs-var">decodeFileOrFail'</span></a></span></span><span> </span><span id="local-6989586621679376740"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679376740"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((ByteOffset, FilePath) -&gt; Either FilePath a)
+-&gt; (a -&gt; Either FilePath a)
+-&gt; Either (ByteOffset, FilePath) a
+-&gt; Either FilePath a
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#either/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Either FilePath a
+forall a b. a -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Left/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; Either FilePath a)
+-&gt; ((ByteOffset, FilePath) -&gt; FilePath)
+-&gt; (ByteOffset, FilePath)
+-&gt; Either FilePath a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteOffset, FilePath) -&gt; FilePath
+forall a b. (a, b) -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Tuple.html#snd/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; Either FilePath a
+forall a b. b -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Right/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (ByteOffset, FilePath) a -&gt; Either FilePath a)
+-&gt; IO (Either (ByteOffset, FilePath) a) -&gt; IO (Either FilePath a)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Either (ByteOffset, FilePath) a)
+forall a.
+Binary a =&gt;
+FilePath -&gt; IO (Either (ByteOffset, FilePath) a)
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.html#decodeFileOrFail/Data.Binary.html#decodeFileOrFail"><span class="hs-identifier hs-var">decodeFileOrFail</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679376740"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span id="local-6989586621679376713"><span class="annot"><a href="Distribution.Compat.Binary.html#decodeOrFailIO"><span class="hs-identifier hs-type">decodeOrFailIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679376713"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Either.html#Either/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679376713"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-20"></span><span id="decodeOrFailIO"><span class="annot"><span class="annottext">decodeOrFailIO :: forall a. Binary a =&gt; ByteString -&gt; IO (Either FilePath a)
+</span><a href="Distribution.Compat.Binary.html#decodeOrFailIO"><span class="hs-identifier hs-var hs-var">decodeOrFailIO</span></a></span></span><span> </span><span id="local-6989586621679376753"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679376753"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="annottext">IO (Either FilePath a)
+-&gt; (ErrorCall -&gt; IO (Either FilePath a)) -&gt; IO (Either FilePath a)
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><a href="../../base-4.18.2.1/src/GHC.IO.html#catch/GHC.IO.html#catch"><span class="hs-identifier hs-var">catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+</span><a href="../../base-4.18.2.1/src/GHC.IO.html#evaluate/GHC.IO.html#evaluate"><span class="hs-identifier hs-var">evaluate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; a
+forall a. Binary a =&gt; ByteString -&gt; a
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.html#decode/Data.Binary.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679376753"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; (a -&gt; IO (Either FilePath a)) -&gt; IO (Either FilePath a)
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Either FilePath a -&gt; IO (Either FilePath a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either FilePath a -&gt; IO (Either FilePath a))
+-&gt; (a -&gt; Either FilePath a) -&gt; a -&gt; IO (Either FilePath a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either FilePath a
+forall a b. b -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Right/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ErrorCall -&gt; IO (Either FilePath a)
+forall {m :: * -&gt; *} {b}.
+Monad m =&gt;
+ErrorCall -&gt; m (Either FilePath b)
+</span><a href="#local-6989586621679376755"><span class="hs-identifier hs-var">handler</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621679376755"><span class="annot"><span class="annottext">handler :: ErrorCall -&gt; m (Either FilePath b)
+</span><a href="#local-6989586621679376755"><span class="hs-identifier hs-var hs-var">handler</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Exception.html#ErrorCallWithLocation/GHC.Exception.html#ErrorCallWithLocation"><span class="hs-identifier hs-type">ErrorCallWithLocation</span></a></span><span> </span><span id="local-6989586621679376765"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679376765"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either FilePath b -&gt; m (Either FilePath b)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either FilePath b -&gt; m (Either FilePath b))
+-&gt; Either FilePath b -&gt; m (Either FilePath b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Either FilePath b
+forall a b. a -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Left/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679376765"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-24"></span></pre></body></html>

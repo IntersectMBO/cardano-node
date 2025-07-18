@@ -1,0 +1,501 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MagicHash #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE UnboxedTuples #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints -Wno-name-shadowing #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Module      :  GHC.Compact</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Copyright   :  (c) The University of Glasgow 2001-2009</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--                (c) Giovanni Campagna &lt;gcampagn@cs.stanford.edu&gt; 2014</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- License     :  BSD-style (see the file LICENSE)</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- Maintainer  :  libraries@haskell.org</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Stability   :  unstable</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- Portability :  non-portable (GHC Extensions)</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- This module provides a data structure, called a 'Compact', for</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- holding immutable, fully evaluated data in a consecutive block of memory.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- Compact regions are good for two things:</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--  1. Data in a compact region is not traversed during GC; any</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--  incoming pointer to a compact region keeps the entire region</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--  live.  Thus, if you put a long-lived data structure in a compact</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--  region, you may save a lot of cycles during major collections,</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--  since you will no longer be (uselessly) retraversing this</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--  data structure.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--  2. Because the data is stored contiguously, you can easily</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--  dump the memory to disk and/or send it over the network.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--  For applications that are not bandwidth bound (GHC's heap</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--  representation can be as much of a x4 expansion over a</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--  binary serialization), this can lead to substantial speedups.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- For example, suppose you have a function @loadBigStruct :: IO BigStruct@,</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- which loads a large data structure from the file system.  You can &quot;compact&quot;</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- the structure with the following code:</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--      do r &lt;- 'compact' =&lt;&lt; loadBigStruct</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--         let x = 'getCompact' r :: BigStruct</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--         -- Do things with x</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Note that 'compact' will not preserve internal sharing; use</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- 'compactWithSharing' (which is 10x slower) if you have cycles and/or</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- must preserve sharing.  The 'Compact' pointer @r@ can be used</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- to add more data to a compact region; see 'compactAdd' or</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- 'compactAddWithSharing'.</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- The implementation of compact regions is described by:</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--  * Edward Z. Yang, Giovanni Campagna, &#214;mer A&#287;acan, Ahmed El-Hassany, Abhishek</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--    Kulkarni, Ryan Newton. \&quot;/Efficient communication and Collection with Compact</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--    Normal Forms/\&quot;. In Proceedings of the 20th ACM SIGPLAN International</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--    Conference on Functional Programming. September 2015. &lt;http://ezyang.com/compact.html&gt;</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- This library is supported by GHC 8.2 and later.</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">GHC.Compact</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="hs-comment">-- * The Compact type</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier">Compact</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Compacting data</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#compact"><span class="hs-identifier">compact</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#compactWithSharing"><span class="hs-identifier">compactWithSharing</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#compactAdd"><span class="hs-identifier">compactAdd</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#compactAddWithSharing"><span class="hs-identifier">compactAddWithSharing</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Inspecting a Compact</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#getCompact"><span class="hs-identifier">getCompact</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#inCompact"><span class="hs-identifier">inCompact</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#isCompact"><span class="hs-identifier">isCompact</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#compactSize"><span class="hs-identifier">compactSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Other utilities</span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#compactResize"><span class="hs-identifier">compactResize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Internal operations</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#mkCompact"><span class="hs-identifier">mkCompact</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="GHC.Compact.html#compactSized"><span class="hs-identifier">compactSized</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Control.Concurrent.MVar.html#/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#/GHC.Prim.html"><span class="hs-identifier">GHC.Prim</span></a></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#/GHC.Types.html"><span class="hs-identifier">GHC.Types</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | A 'Compact' contains fully evaluated, pure, immutable data.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- 'Compact' serves two purposes:</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- * Data stored in a 'Compact' has no garbage collection overhead.</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--   The garbage collector considers the whole 'Compact' to be alive</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--   if there is a reference to any object within it.</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- * A 'Compact' can be serialized, stored, and deserialized again.</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--   The serialized data can only be deserialized by the exact binary</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--   that created it, but it can be stored indefinitely before</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--   deserialization.</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Compacts are self-contained, so compacting data involves copying</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- it; if you have data that lives in two 'Compact's, each will have a</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- separate copy of the data.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- The cost of compaction is fully evaluating the data + copying it. However,</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- because 'compact' does not stop-the-world, retaining internal sharing during</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- the compaction process is very costly. The user can choose whether to</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- 'compact' or 'compactWithSharing'.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- When you have a @'Compact' a@, you can get a pointer to the actual object</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- in the region using 'getCompact'.  The 'Compact' type</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- serves as handle on the region itself; you can use this handle</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- to add data to a specific 'Compact' with 'compactAdd' or</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- 'compactAddWithSharing' (giving you a new handle which corresponds</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- to the same compact region, but points to the newly added object</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- in the region).  At the moment, due to technical reasons,</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- it's not possible to get the @'Compact' a@ if you only have an @a@,</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- so make sure you hold on to the handle as necessary.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- Data in a compact doesn't ever move, so compacting data is also a</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- way to pin arbitrary data structures in memory.</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- There are some limitations on what can be compacted:</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- * Functions.  Compaction only applies to data.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- * Pinned 'ByteArray#' objects cannot be compacted.  This is for a</span><span>
+</span><span id="line-128"></span><span class="hs-comment">--   good reason: the memory is pinned so that it can be referenced by</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--   address (the address might be stored in a C data structure, for</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--   example), so we can't make a copy of it to store in the 'Compact'.</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- * Objects with mutable pointer fields (e.g. 'Data.IORef.IORef',</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--   'GHC.Array.MutableArray') also cannot be compacted, because subsequent</span><span>
+</span><span id="line-134"></span><span class="hs-comment">--   mutation would destroy the property that a compact is self-contained.</span><span>
+</span><span id="line-135"></span><span class="hs-comment">--</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- If compaction encounters any of the above, a 'Control.Exception.CompactionFailed'</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- exception will be thrown by the compaction operation.</span><span>
+</span><span id="line-138"></span><span class="hs-comment">--</span><span>
+</span><span id="line-139"></span><span class="hs-keyword">data</span><span> </span><span id="Compact"><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-var">Compact</span></a></span></span><span> </span><span id="local-6989586621679036884"><span class="annot"><a href="#local-6989586621679036884"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Compact"><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-var">Compact</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Compact%23/GHC.Prim.html#Compact%23"><span class="hs-identifier hs-type">Compact#</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036884"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.MVar.html#MVar/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-comment">-- we can *read* from a Compact without taking a lock, but only</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-comment">-- one thread can be writing to the compact at any given time.</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">-- The MVar here is to enforce mutual exclusion among writers.</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">-- Note: the MVar protects the Compact# only, not the pure value 'a'</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- | Make a new 'Compact' object, given a pointer to the true</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- underlying region.  You must uphold the invariant that @a@ lives</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- in the compact region.</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--</span><span>
+</span><span id="line-149"></span><span id="local-6989586621679036878"><span class="annot"><a href="GHC.Compact.html#mkCompact"><span class="hs-identifier hs-type">mkCompact</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Compact%23/GHC.Prim.html#Compact%23"><span class="hs-identifier hs-type">Compact#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679036878"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036878"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">#)</span></span><span>
+</span><span id="line-151"></span><span id="mkCompact"><span class="annot"><span class="annottext">mkCompact :: forall a.
+Compact#
+-&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, Compact a #)
+</span><a href="GHC.Compact.html#mkCompact"><span class="hs-identifier hs-var hs-var">mkCompact</span></a></span></span><span> </span><span id="local-6989586621679036928"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036928"><span class="hs-identifier hs-var">compact#</span></a></span></span><span> </span><span id="local-6989586621679036929"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036929"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679036930"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036930"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">IO (MVar ()) -&gt; State# RealWorld -&gt; (# State# RealWorld, MVar () #)
+forall {a}. IO a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="#local-6989586621679036931"><span class="hs-identifier hs-var">unIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; IO (MVar ())
+forall a. a -&gt; IO (MVar a)
+</span><a href="../../base-4.18.2.1/src/GHC.MVar.html#newMVar/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036930"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036933"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036933"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036934"><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036934"><span class="hs-identifier hs-var">lock</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036933"><span class="hs-identifier hs-var">s1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; MVar () -&gt; Compact a
+forall a. Compact# -&gt; a -&gt; MVar () -&gt; Compact a
+</span><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-var">Compact</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036928"><span class="hs-identifier hs-var">compact#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036929"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036934"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-154"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621679036931"><span class="annot"><span class="annottext">unIO :: IO a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="#local-6989586621679036931"><span class="hs-identifier hs-var hs-var">unIO</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span id="local-6989586621679036935"><span class="annot"><span class="annottext">State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="#local-6989586621679036935"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="#local-6989586621679036935"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- | Transfer @a@ into a new compact region, with a preallocated size (in</span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- bytes), possibly preserving sharing or not.  If you know how big the data</span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- structure in question is, you can save time by picking an appropriate block</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- size for the compact region.</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--</span><span>
+</span><span id="line-162"></span><span id="local-6989586621679036885"><span class="annot"><a href="GHC.Compact.html#compactSized"><span class="hs-identifier hs-type">compactSized</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Int/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Size of the compact region, in bytes</span></span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Bool/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Whether to retain internal sharing</span></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679036885"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036885"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-167"></span><span id="compactSized"><span class="annot"><span class="annottext">compactSized :: forall a. Int -&gt; Bool -&gt; a -&gt; IO (Compact a)
+</span><a href="GHC.Compact.html#compactSized"><span class="hs-identifier hs-var hs-var">compactSized</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#I%23/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679036936"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679036936"><span class="hs-identifier hs-var">size</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679036937"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679036937"><span class="hs-identifier hs-var">share</span></a></span></span><span> </span><span id="local-6989586621679036938"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036938"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+-&gt; IO (Compact a)
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="annot"><span class="annottext">((State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+ -&gt; IO (Compact a))
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+-&gt; IO (Compact a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679036939"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036939"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; State# RealWorld -&gt; (# State# RealWorld, Compact# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactNew%23/GHC.Prim.html#compactNew%23"><span class="hs-identifier hs-var">compactNew#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int# -&gt; Word#
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#int2Word%23/GHC.Prim.html#int2Word%23"><span class="hs-identifier hs-var">int2Word#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679036936"><span class="hs-identifier hs-var">size</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036939"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036940"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036940"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036941"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036941"><span class="hs-identifier hs-var">compact#</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+forall {a}.
+Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="#local-6989586621679036942"><span class="hs-identifier hs-var">compactAddPrim</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036941"><span class="hs-identifier hs-var">compact#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036938"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036940"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036943"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036943"><span class="hs-identifier hs-var">s2</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036944"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036944"><span class="hs-identifier hs-var">pk</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><span class="annottext">Compact#
+-&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, Compact a #)
+forall a.
+Compact#
+-&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, Compact a #)
+</span><a href="GHC.Compact.html#mkCompact"><span class="hs-identifier hs-var">mkCompact</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036941"><span class="hs-identifier hs-var">compact#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036944"><span class="hs-identifier hs-var">pk</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036943"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">}</span><span>
+</span><span id="line-171"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-172"></span><span>  </span><span id="local-6989586621679036942"><span class="annot"><span class="annottext">compactAddPrim :: Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="#local-6989586621679036942"><span class="hs-identifier hs-var hs-var">compactAddPrim</span></a></span></span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679036937"><span class="hs-identifier hs-var">share</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+forall {a}.
+Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactAddWithSharing%23/GHC.Prim.html#compactAddWithSharing%23"><span class="hs-identifier hs-var">compactAddWithSharing#</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+forall {a}.
+Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactAdd%23/GHC.Prim.html#compactAdd%23"><span class="hs-identifier hs-var">compactAdd#</span></a></span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- | Retrieve a direct pointer to the value pointed at by a 'Compact' reference.</span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- If you have used 'compactAdd', there may be multiple 'Compact' references</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- into the same compact region. Upholds the property:</span><span>
+</span><span id="line-179"></span><span class="hs-comment">--</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- &gt; inCompact c (getCompact c) == True</span><span>
+</span><span id="line-181"></span><span class="hs-comment">--</span><span>
+</span><span id="line-182"></span><span id="local-6989586621679036892"><span class="annot"><a href="GHC.Compact.html#getCompact"><span class="hs-identifier hs-type">getCompact</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679036892"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-183"></span><span id="getCompact"><span class="annot"><span class="annottext">getCompact :: forall a. Compact a -&gt; a
+</span><a href="GHC.Compact.html#getCompact"><span class="hs-identifier hs-var hs-var">getCompact</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679036945"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036945"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036945"><span class="hs-identifier hs-var">obj</span></a></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- | Compact a value. /O(size of unshared data)/</span><span>
+</span><span id="line-186"></span><span class="hs-comment">--</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- If the structure contains any internal sharing, the shared data</span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- will be duplicated during the compaction process.  This will</span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- not terminate if the structure contains cycles (use 'compactWithSharing'</span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- instead).</span><span>
+</span><span id="line-191"></span><span class="hs-comment">--</span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- The object in question must not contain any functions or data with mutable</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- pointers; if it does, 'compact' will raise an exception. In the future, we</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- may add a type class which will help statically check if this is the case or</span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- not.</span><span>
+</span><span id="line-196"></span><span class="hs-comment">--</span><span>
+</span><span id="line-197"></span><span id="local-6989586621679036894"><span class="annot"><a href="GHC.Compact.html#compact"><span class="hs-identifier hs-type">compact</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679036894"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036894"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-198"></span><span id="compact"><span class="annot"><span class="annottext">compact :: forall a. a -&gt; IO (Compact a)
+</span><a href="GHC.Compact.html#compact"><span class="hs-identifier hs-var hs-var">compact</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Bool -&gt; a -&gt; IO (Compact a)
+forall a. Int -&gt; Bool -&gt; a -&gt; IO (Compact a)
+</span><a href="GHC.Compact.html#compactSized"><span class="hs-identifier hs-var">compactSized</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">31268</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#False/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- | Compact a value, retaining any internal sharing and</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- cycles. /O(size of data)/</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- This is typically about 10x slower than 'compact', because it works</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- by maintaining a hash table mapping uncompacted objects to</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- compacted objects.</span><span>
+</span><span id="line-206"></span><span class="hs-comment">--</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- The object in question must not contain any functions or data with mutable</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- pointers; if it does, 'compact' will raise an exception. In the future, we</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- may add a type class which will help statically check if this is the case or</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- not.</span><span>
+</span><span id="line-211"></span><span class="hs-comment">--</span><span>
+</span><span id="line-212"></span><span id="local-6989586621679036946"><span class="annot"><a href="GHC.Compact.html#compactWithSharing"><span class="hs-identifier hs-type">compactWithSharing</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679036946"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036946"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-213"></span><span id="compactWithSharing"><span class="annot"><span class="annottext">compactWithSharing :: forall a. a -&gt; IO (Compact a)
+</span><a href="GHC.Compact.html#compactWithSharing"><span class="hs-identifier hs-var hs-var">compactWithSharing</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Bool -&gt; a -&gt; IO (Compact a)
+forall a. Int -&gt; Bool -&gt; a -&gt; IO (Compact a)
+</span><a href="GHC.Compact.html#compactSized"><span class="hs-identifier hs-var">compactSized</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">31268</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#True/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- | Add a value to an existing 'Compact'.  This will help you avoid</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- copying when the value contains pointers into the compact region,</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- but remember that after compaction this value will only be deallocated</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- with the entire compact region.</span><span>
+</span><span id="line-219"></span><span class="hs-comment">--</span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- Behaves exactly like 'compact' with respect to sharing and what data</span><span>
+</span><span id="line-221"></span><span class="hs-comment">-- it accepts.</span><span>
+</span><span id="line-222"></span><span class="hs-comment">--</span><span>
+</span><span id="line-223"></span><span id="local-6989586621679036897"><span id="local-6989586621679036898"><span class="annot"><a href="GHC.Compact.html#compactAdd"><span class="hs-identifier hs-type">compactAdd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036897"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679036898"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036898"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-224"></span><span id="compactAdd"><span class="annot"><span class="annottext">compactAdd :: forall b a. Compact b -&gt; a -&gt; IO (Compact a)
+</span><a href="GHC.Compact.html#compactAdd"><span class="hs-identifier hs-var hs-var">compactAdd</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span id="local-6989586621679036947"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036947"><span class="hs-identifier hs-var">compact#</span></a></span></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679036948"><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036948"><span class="hs-identifier hs-var">lock</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679036949"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036949"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar () -&gt; (() -&gt; IO (Compact a)) -&gt; IO (Compact a)
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="../../base-4.18.2.1/src/Control.Concurrent.MVar.html#withMVar/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036948"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="annot"><span class="annottext">((() -&gt; IO (Compact a)) -&gt; IO (Compact a))
+-&gt; (() -&gt; IO (Compact a)) -&gt; IO (Compact a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+-&gt; IO (Compact a)
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="annot"><span class="annottext">((State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+ -&gt; IO (Compact a))
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+-&gt; IO (Compact a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679036951"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036951"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+forall {a}.
+Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactAdd%23/GHC.Prim.html#compactAdd%23"><span class="hs-identifier hs-var">compactAdd#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036947"><span class="hs-identifier hs-var">compact#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036949"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036951"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036952"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036952"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036953"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036953"><span class="hs-identifier hs-var">pk</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036952"><span class="hs-identifier hs-var">s1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; MVar () -&gt; Compact a
+forall a. Compact# -&gt; a -&gt; MVar () -&gt; Compact a
+</span><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-var">Compact</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036947"><span class="hs-identifier hs-var">compact#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036953"><span class="hs-identifier hs-var">pk</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036948"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- | Add a value to an existing 'Compact', like 'compactAdd',</span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- but behaving exactly like 'compactWithSharing' with respect to sharing and</span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- what data it accepts.</span><span>
+</span><span id="line-231"></span><span class="hs-comment">--</span><span>
+</span><span id="line-232"></span><span id="local-6989586621679036954"><span id="local-6989586621679036955"><span class="annot"><a href="GHC.Compact.html#compactAddWithSharing"><span class="hs-identifier hs-type">compactAddWithSharing</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036954"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679036955"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036955"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-233"></span><span id="compactAddWithSharing"><span class="annot"><span class="annottext">compactAddWithSharing :: forall b a. Compact b -&gt; a -&gt; IO (Compact a)
+</span><a href="GHC.Compact.html#compactAddWithSharing"><span class="hs-identifier hs-var hs-var">compactAddWithSharing</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span id="local-6989586621679036956"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036956"><span class="hs-identifier hs-var">compact#</span></a></span></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679036957"><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036957"><span class="hs-identifier hs-var">lock</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679036958"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036958"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-234"></span><span>  </span><span class="annot"><span class="annottext">MVar () -&gt; (() -&gt; IO (Compact a)) -&gt; IO (Compact a)
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="../../base-4.18.2.1/src/Control.Concurrent.MVar.html#withMVar/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036957"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="annot"><span class="annottext">((() -&gt; IO (Compact a)) -&gt; IO (Compact a))
+-&gt; (() -&gt; IO (Compact a)) -&gt; IO (Compact a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+-&gt; IO (Compact a)
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="annot"><span class="annottext">((State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+ -&gt; IO (Compact a))
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, Compact a #))
+-&gt; IO (Compact a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679036959"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036959"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-235"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+forall {a}.
+Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactAddWithSharing%23/GHC.Prim.html#compactAddWithSharing%23"><span class="hs-identifier hs-var">compactAddWithSharing#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036956"><span class="hs-identifier hs-var">compact#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036958"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036959"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036960"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036960"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036961"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036961"><span class="hs-identifier hs-var">pk</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-236"></span><span>    </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036960"><span class="hs-identifier hs-var">s1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; MVar () -&gt; Compact a
+forall a. Compact# -&gt; a -&gt; MVar () -&gt; Compact a
+</span><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-var">Compact</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036956"><span class="hs-identifier hs-var">compact#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036961"><span class="hs-identifier hs-var">pk</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036957"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- | Check if the second argument is inside the passed 'Compact'.</span><span>
+</span><span id="line-239"></span><span class="hs-comment">--</span><span>
+</span><span id="line-240"></span><span id="local-6989586621679036905"><span id="local-6989586621679036906"><span class="annot"><a href="GHC.Compact.html#inCompact"><span class="hs-identifier hs-type">inCompact</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036905"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679036906"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Bool/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span></span><span>
+</span><span id="line-241"></span><span id="inCompact"><span class="annot"><span class="annottext">inCompact :: forall b a. Compact b -&gt; a -&gt; IO Bool
+</span><a href="GHC.Compact.html#inCompact"><span class="hs-identifier hs-var hs-var">inCompact</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span id="local-6989586621679036962"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036962"><span class="hs-identifier hs-var">buffer</span></a></span></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679036963"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036963"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-242"></span><span>  </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Bool #)) -&gt; IO Bool
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679036964"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036964"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, Int# #)
+forall a.
+Compact# -&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, Int# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactContains%23/GHC.Prim.html#compactContains%23"><span class="hs-identifier hs-var">compactContains#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036962"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036963"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036964"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-243"></span><span>         </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036965"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036965"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036966"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679036966"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036965"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#isTrue%23/GHC.Types.html#isTrue%23"><span class="hs-identifier hs-var">isTrue#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679036966"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- | Check if the argument is in any 'Compact'.  If true, the value in question</span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- is also fully evaluated, since any value in a compact region must</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- be fully evaluated.</span><span>
+</span><span id="line-248"></span><span class="hs-comment">--</span><span>
+</span><span id="line-249"></span><span id="local-6989586621679036910"><span class="annot"><a href="GHC.Compact.html#isCompact"><span class="hs-identifier hs-type">isCompact</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679036910"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Bool/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-250"></span><span id="isCompact"><span class="annot"><span class="annottext">isCompact :: forall a. a -&gt; IO Bool
+</span><a href="GHC.Compact.html#isCompact"><span class="hs-identifier hs-var hs-var">isCompact</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679036968"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036968"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-251"></span><span>  </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Bool #)) -&gt; IO Bool
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679036969"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036969"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; State# RealWorld -&gt; (# State# RealWorld, Int# #)
+forall a. a -&gt; State# RealWorld -&gt; (# State# RealWorld, Int# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactContainsAny%23/GHC.Prim.html#compactContainsAny%23"><span class="hs-identifier hs-var">compactContainsAny#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679036968"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036969"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-252"></span><span>         </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036970"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036970"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036971"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679036971"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036970"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#isTrue%23/GHC.Types.html#isTrue%23"><span class="hs-identifier hs-var">isTrue#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679036971"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-253"></span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- | Returns the size in bytes of the compact region.</span><span>
+</span><span id="line-255"></span><span class="hs-comment">--</span><span>
+</span><span id="line-256"></span><span id="local-6989586621679036912"><span class="annot"><a href="GHC.Compact.html#compactSize"><span class="hs-identifier hs-type">compactSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036912"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span></span><span>
+</span><span id="line-257"></span><span id="compactSize"><span class="annot"><span class="annottext">compactSize :: forall a. Compact a -&gt; IO Word
+</span><a href="GHC.Compact.html#compactSize"><span class="hs-identifier hs-var hs-var">compactSize</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span id="local-6989586621679036972"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036972"><span class="hs-identifier hs-var">buffer</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679036973"><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036973"><span class="hs-identifier hs-var">lock</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar () -&gt; (() -&gt; IO Word) -&gt; IO Word
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="../../base-4.18.2.1/src/Control.Concurrent.MVar.html#withMVar/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036973"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="annot"><span class="annottext">((() -&gt; IO Word) -&gt; IO Word) -&gt; (() -&gt; IO Word) -&gt; IO Word
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Word #)) -&gt; IO Word
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="annot"><span class="annottext">((State# RealWorld -&gt; (# State# RealWorld, Word #)) -&gt; IO Word)
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, Word #)) -&gt; IO Word
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679036974"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036974"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-258"></span><span>   </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; State# RealWorld -&gt; (# State# RealWorld, Word# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactSize%23/GHC.Prim.html#compactSize%23"><span class="hs-identifier hs-var">compactSize#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036972"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036974"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679036975"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036975"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679036976"><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679036976"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036975"><span class="hs-identifier hs-var">s1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Word
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#W%23/GHC.Types.html#W%23"><span class="hs-identifier hs-var">W#</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679036976"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-259"></span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- | __Experimental__  This function doesn't actually resize a compact</span><span>
+</span><span id="line-261"></span><span class="hs-comment">-- region; rather, it changes the default block size which we allocate</span><span>
+</span><span id="line-262"></span><span class="hs-comment">-- when the current block runs out of space, and also appends a block</span><span>
+</span><span id="line-263"></span><span class="hs-comment">-- to the compact region.</span><span>
+</span><span id="line-264"></span><span class="hs-comment">--</span><span>
+</span><span id="line-265"></span><span id="local-6989586621679036914"><span class="annot"><a href="GHC.Compact.html#compactResize"><span class="hs-identifier hs-type">compactResize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036914"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-266"></span><span id="compactResize"><span class="annot"><span class="annottext">compactResize :: forall a. Compact a -&gt; Word -&gt; IO ()
+</span><a href="GHC.Compact.html#compactResize"><span class="hs-identifier hs-var hs-var">compactResize</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span id="local-6989586621679036977"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036977"><span class="hs-identifier hs-var">oldBuffer</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679036978"><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036978"><span class="hs-identifier hs-var">lock</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#W%23/GHC.Types.html#W%23"><span class="hs-identifier hs-type">W#</span></a></span><span> </span><span id="local-6989586621679036979"><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679036979"><span class="hs-identifier hs-var">new_size</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-267"></span><span>  </span><span class="annot"><span class="annottext">MVar () -&gt; (() -&gt; IO ()) -&gt; IO ()
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="../../base-4.18.2.1/src/Control.Concurrent.MVar.html#withMVar/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679036978"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="annot"><span class="annottext">((() -&gt; IO ()) -&gt; IO ()) -&gt; (() -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, () #)) -&gt; IO ()
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="annot"><span class="annottext">((State# RealWorld -&gt; (# State# RealWorld, () #)) -&gt; IO ())
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, () #)) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679036980"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036980"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-268"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; Word# -&gt; State# RealWorld -&gt; State# RealWorld
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactResize%23/GHC.Prim.html#compactResize%23"><span class="hs-identifier hs-var">compactResize#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679036977"><span class="hs-identifier hs-var">oldBuffer</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679036979"><span class="hs-identifier hs-var">new_size</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036980"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-269"></span><span>      </span><span id="local-6989586621679036981"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036981"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679036981"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-270"></span></pre></body></html>
