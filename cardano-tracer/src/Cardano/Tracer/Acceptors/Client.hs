@@ -6,8 +6,7 @@ module Cardano.Tracer.Acceptors.Client
 
 import           Cardano.Logging (TraceObject)
 import qualified Cardano.Logging.Types as Net
-import           Cardano.Tracer.Acceptors.Utils (prepareDataPointRequestor, prepareMetricsStores,
-                   removeDisconnectedNode)
+import           Cardano.Tracer.Acceptors.Utils
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (deregisterNodeId, traceObjectsHandler)
