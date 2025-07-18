@@ -1,11 +1,12 @@
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 {-# OPTIONS_GHC -Wno-partial-fields  #-}
 
@@ -66,9 +67,9 @@ import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
 import           Data.Bool (bool)
-import           Data.Kind (Type)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
+import           Data.Kind (Type)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -493,7 +494,6 @@ data TraceOptionForwarder = TraceOptionForwarder {
   , tofVerbosity           :: Verbosity
   , tofMaxReconnectDelay   :: Word
 } deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass AE.ToJSON
 
 -- A word regarding queue sizes:
 -- In case of a missing forwarding service consumer, traces messages will be
@@ -519,6 +519,15 @@ instance AE.FromJSON TraceOptionForwarder where
         <*> obj AE..:? "maxReconnectDelay"  AE..!= 60
     parseJSON _ = mempty
 
+
+instance AE.ToJSON TraceOptionForwarder where
+  toJSON TraceOptionForwarder{..} = AE.object
+    [
+      "connQueueSize"     AE..= tofConnQueueSize,
+      "disconnQueueSize"  AE..= tofDisconnQueueSize,
+      "verbosity"         AE..= tofVerbosity,
+      "maxReconnectDelay" AE..= tofMaxReconnectDelay
+    ]
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
