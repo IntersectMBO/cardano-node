@@ -7,7 +7,7 @@
 {- HLINT ignore "Use map with tuple-section" -}
 
 -- | This module provides means to secure funds that are given in genesis.
---   To secure a fund, the key locking the transaction ouput in genesis has to be provided.
+--   To secure a fund, the key locking the transaction output in genesis has to be provided.
 module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
