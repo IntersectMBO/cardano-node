@@ -23,6 +23,8 @@ module Testnet.Start.Types
 
   , CreateEnvOptions(..)
   , CreateEnvUpdateTime(..)
+  , CustomOnChainParams(..)
+  , OnChainParamsFlavour(..)
   , NodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
@@ -30,6 +32,7 @@ module Testnet.Start.Types
   , TopologyType(..)
   , UserProvidedData(..)
   , UserProvidedEnv(..)
+  , UserProvidedGeneses(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -40,6 +43,8 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import           Prelude
 
@@ -99,15 +104,49 @@ instance Default CreateEnvUpdateTime where
   def = CreateEnv
 
 data CreateEnvOptions = CreateEnvOptions
-  { ceoTopologyType :: TopologyType
+  { ceoOnChainParams :: CustomOnChainParams
+  , ceoTopologyType :: TopologyType
   , ceoUpdateTime :: CreateEnvUpdateTime
   } deriving (Eq, Show)
 
 instance Default CreateEnvOptions where
   def = CreateEnvOptions
-    { ceoTopologyType = def
+    { ceoOnChainParams = def
+    , ceoTopologyType = def
     , ceoUpdateTime = def
     }
+
+data CustomOnChainParams
+  = NoCustomParams
+  -- | A file path to a JSON file containing on-chain params, formatted as:
+  -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest
+  | CustomParamsFile FilePath
+  | CustomParamsFlavour OnChainParamsFlavour
+  | CustomParamsGeneses UserProvidedGeneses
+  deriving (Eq, Show)
+
+instance Default CustomOnChainParams where
+  def = NoCustomParams
+
+data UserProvidedGeneses = UserProvidedGeneses
+  { upgShelleyGenesis :: UserProvidedData ShelleyGenesis
+  , upgAlonzoGenesis :: UserProvidedData AlonzoGenesis
+  , upgConwayGenesis :: UserProvidedData ConwayGenesis
+  } deriving (Eq, Show)
+
+instance Default UserProvidedGeneses where
+  def = UserProvidedGeneses
+    def
+    def
+    def
+
+-- | Hard-coded "flavours" for on-chain parameters
+data OnChainParamsFlavour
+  = FlavourMainNet
+  deriving (Eq, Show)
+
+instance Default OnChainParamsFlavour where
+  def = FlavourMainNet
 
 -- | An abstract node id, used as placeholder in topology files
 -- when the actual ports/addresses aren't known yet (i.e. before runtime)
@@ -208,6 +247,10 @@ data NodeOption
 data UserProvidedData a =
     UserProvidedData a
   | NoUserProvidedData
+  deriving (Eq,Show)
+
+instance Default (UserProvidedData a) where
+  def = NoUserProvidedData
 
 isSpoNodeOptions :: NodeOption -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True

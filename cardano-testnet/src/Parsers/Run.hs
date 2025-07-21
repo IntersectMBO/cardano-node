@@ -64,13 +64,9 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvOutputDir=outputDir
   , createEnvCreateEnvOptions=ceOptions
   } =
-    testnetRoutine (UserProvidedEnv outputDir) $ \conf ->
+    testnetRoutine (UserProvidedEnv outputDir) $ \conf -> do
       createTestnetEnv
         testnetOptions genesisOptions ceOptions
-        -- The CLI does not provide a way to provide custom genesis data by design:
-        -- If the user wants to have custom genesis data, they should manually
-        -- modify the files created by this command before running the testnet.
-        NoUserProvidedData NoUserProvidedData NoUserProvidedData
         -- Do not add hashes to the main config file, so that genesis files
         -- can be modified without having to recompute hashes every time.
         conf{genesisHashesPolicy = WithoutHashes}
@@ -87,7 +83,6 @@ runCardanoOptions CardanoTestnetCliOptions
         runTestnet cardanoOutputDir $ \conf -> do
           createTestnetEnv
             testnetOptions genesisOptions def
-            NoUserProvidedData NoUserProvidedData NoUserProvidedData
             conf
           cardanoTestnet testnetOptions genesisOptions conf
       UserProvidedEnv nodeEnvPath ->
