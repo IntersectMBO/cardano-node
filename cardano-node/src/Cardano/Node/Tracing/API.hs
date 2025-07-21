@@ -9,8 +9,8 @@ module Cardano.Node.Tracing.API
   ) where
 
 import           Cardano.Logging hiding (traceWith)
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
@@ -51,8 +51,9 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (HostName)
 import           System.Metrics as EKG
-import Trace.Forward.Forwarding (initForwardingDelayed)
-import Trace.Forward.Utils.TraceObject (writeToSink)
+
+import           Trace.Forward.Forwarding (initForwardingDelayed)
+import           Trace.Forward.Utils.TraceObject (writeToSink)
 
 
 initTraceDispatcher ::

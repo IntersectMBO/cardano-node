@@ -21,7 +21,7 @@ import           Data.Word (Word16)
 import           Trace.Forward.Configuration.TraceObject
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import           Trace.Forward.Protocol.TraceObject.Type
-import Trace.Forward.Utils.ForwardSink (ForwardSink(..))
+import           Trace.Forward.Utils.ForwardSink (ForwardSink (..))
 
 
 initForwardSink

@@ -60,8 +60,6 @@ module Cardano.Logging.Types (
 ) where
 
 
--- import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
-
 import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE

@@ -14,13 +14,14 @@ module Trace.Forward.Utils.DataPoint
   , askForDataPoints
   ) where
 
+import           Cardano.Logging.Tracer.DataPoint
+
 import           Control.Concurrent.STM (atomically, check, orElse)
 import           Control.Concurrent.STM.TMVar
 import           Control.Concurrent.STM.TVar
 import           Data.Aeson
 import qualified Data.Map.Strict as M
 
-import Cardano.Logging.Tracer.DataPoint
 import           Trace.Forward.Protocol.DataPoint.Forwarder
 import           Trace.Forward.Protocol.DataPoint.Type
 

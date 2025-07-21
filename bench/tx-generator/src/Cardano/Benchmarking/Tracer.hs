@@ -34,7 +34,7 @@ import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
 import qualified Cardano.Logging.Types as Net
 import           Cardano.Node.Startup
-import           Cardano.Node.Tracing.NodeInfo () -- MetaTrace NodeInfo
+import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
 
 import           Control.Monad (forM, guard)
@@ -49,8 +49,8 @@ import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
 
+import           Trace.Forward.Forwarding (initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject
-import Trace.Forward.Forwarding (initForwardingDelayed)
 
 pattern TracerNameBench     :: Text
 pattern TracerNameBench     = "Benchmark"

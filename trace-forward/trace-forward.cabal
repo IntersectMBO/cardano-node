@@ -56,6 +56,7 @@ library
                         Trace.Forward.Utils.DataPoint
                         Trace.Forward.Utils.TraceObject
                         Trace.Forward.Utils.ForwardSink
+                        Trace.Forward.Utils.Version
 
   build-depends:        aeson
                       , async
@@ -65,17 +66,19 @@ library
                       , contra-tracer
                       , extra
                       , io-classes
+                      , network
                       , network-mux
                       , ouroboros-network-api
                       , ekg-core
-                      , ekg-forward
+                      , ekg-forward  >= 0.9
                       , singletons ^>= 3.0
                       , ouroboros-network-framework ^>= 0.18.0.1
                       , serialise
                       , stm
+                      , text
+                      , trace-dispatcher
                       , typed-protocols ^>= 0.3
                       , typed-protocols-cborg
-                      , trace-dispatcher
 
 test-suite test
   import:               project-config
@@ -88,7 +91,6 @@ test-suite test
                         Test.Trace.Forward.Protocol.TraceObject.Examples
                         Test.Trace.Forward.Protocol.TraceObject.Item
                         Test.Trace.Forward.Protocol.TraceObject.Tests
-                        Trace.Forward.Forwaring
 
                         Test.Trace.Forward.Protocol.DataPoint.Codec
                         Test.Trace.Forward.Protocol.DataPoint.Direct
@@ -112,8 +114,6 @@ test-suite test
                       , tasty-quickcheck
                       , typed-protocols
                       , text
-                      , ekg-core
-                      , ekg-forward
 
   ghc-options:          -rtsopts
                         -threaded

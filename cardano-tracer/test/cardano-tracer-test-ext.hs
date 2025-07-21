@@ -29,8 +29,9 @@ import qualified System.Process as Sys
 
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
-import Trace.Forward.Forwarding (initForwarding)
-import Trace.Forward.Utils.TraceObject (writeToSink)
+
+import           Trace.Forward.Forwarding (initForwarding)
+import           Trace.Forward.Utils.TraceObject (writeToSink)
 
 main :: IO ()
 main = do

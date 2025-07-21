@@ -73,7 +73,6 @@ library
                       , aeson-pretty
                       , async
                       , bytestring
-                      , cborg
                       , containers
                       , contra-tracer
                       , deepseq
@@ -83,8 +82,6 @@ library
                       , http-date
                       , io-classes
                       , network
-                      , network-mux
-                      , optparse-applicative-fork
                       , serialise
                       , stm
                       , text
@@ -126,14 +123,11 @@ test-suite trace-dispatcher-test
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
-                      , cardano-prelude
                       , containers
                       , deepseq
                       , ekg-core
                       , generic-data
                       , hostname
-                      , optparse-applicative
-                      , ouroboros-network
                       , text
                       , stm
                       , tasty
@@ -141,9 +135,6 @@ test-suite trace-dispatcher-test
                       , tasty-quickcheck
                       , time
                       , trace-dispatcher
-                      , unagi-chan
-                      , unliftio
-                      , unliftio-core
                       , unordered-containers
                       , utf8-string
                       , yaml
