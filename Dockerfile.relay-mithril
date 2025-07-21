@@ -1,0 +1,51 @@
+FROM debian:stable-slim as build
+RUN apt-get update -y \
+    && apt-get install -y automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev curl python3 htop nload \
+    && apt-get clean
+RUN mkdir secp256k1-sources && cd secp256k1-sources && git clone https://github.com/bitcoin-core/secp256k1.git && cd secp256k1 && git reset --hard ac83be33d0956faf6b7f61a60ab524ef7d6a473a && ./autogen.sh && ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental && make && make check && make install
+RUN git clone https://github.com/input-output-hk/libsodium && cd libsodium && git checkout $(curl -L https://github.com/input-output-hk/iohk-nix/releases/latest/download/INFO | awk '$1 == "debian.libsodium-vrf.deb" { rev = gensub(/.*-(.*)\.deb/, "\\1", "g", $2); print rev }') && ./autogen.sh && ./configure && make && make check && make install
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_GHC_VERSION=9.6.5 BOOTSTRAP_HASKELL_CABAL_VERSION=3.10.3.0 BOOTSTRAP_HASKELL_INSTALL_STACK=1 BOOTSTRAP_HASKELL_INSTALL_HLS=1 BOOTSTRAP_HASKELL_ADJUST_BASHRC=P sh
+
+ENV PATH="/root/.cabal/bin:/root/.ghcup/bin:/root/.local/bin:$PATH"
+RUN git clone https://github.com/supranational/blst && cd blst && git checkout v0.3.10 && ./build.sh && echo cHJlZml4PS91c3IKZXhlY19wcmVmaXg9JHtwcmVmaXh9CmxpYmRpcj0ke2V4ZWNfcHJlZml4fS9saWIKaW5jbHVkZWRpcj0ke3ByZWZpeH0vaW5jbHVkZQoKTmFtZTogbGliYmxzdApEZXNjcmlwdGlvbjogTXVsdGlsaW5ndWFsIEJMUzEyLTM4MSBzaWduYXR1cmUgbGlicmFyeQpVUkw6IGh0dHBzOi8vZ2l0aHViLmNvbS9zdXByYW5hdGlvbmFsL2Jsc3QKVmVyc2lvbjogMC4zLjEwCkNmbGFnczogLUkke2luY2x1ZGVkaXJ9CkxpYnM6IC1MJHtsaWJkaXJ9IC1sYmxzdA== | base64 --decode >> libblst.pc && cp libblst.pc /usr/lib/pkgconfig/ && cp bindings/blst_aux.h bindings/blst.h bindings/blst.hpp  /usr/include/ && cp libblst.a /usr/lib && chmod u=rw,go=r /usr/lib/libblst.a && chmod u=rw,go=r /usr/lib/pkgconfig/libblst.pc && chmod u=rw,go=r /usr/include/blst.h && chmod u=rw,go=r /usr/include/blst.hpp && chmod u=rw,go=r /usr/include/blst_aux.h
+
+ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" \
+    PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+RUN echo "Building tags/$VERSION..."
+COPY . .
+RUN cabal update \
+    && cabal configure --with-compiler=ghc-9.6.5 \
+    && echo "package cardano-crypto-praos" >>  cabal.project.local \
+    && echo "  flags: -external-libsodium-vrf" >>  cabal.project.local \
+    && cabal build all \
+    && mkdir -p /root/.local/bin/ \
+    && cp -p dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-*/x/cardano-node/build/cardano-node/cardano-node /root/.local/bin/
+
+FROM debian:stable-slim
+COPY --from=build /root/.local/bin/ /bin/
+COPY --from=build /usr/local/lib/ /lib/
+RUN apt-get update && apt-get install git  -y
+RUN apt-get -y install libsodium23 libsodium-dev
+RUN apt-get install -y automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev
+RUN mkdir secp256k1-sources && cd secp256k1-sources && git clone https://github.com/bitcoin-core/secp256k1.git && cd secp256k1 && git reset --hard ac83be33d0956faf6b7f61a60ab524ef7d6a473a && ./autogen.sh && ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental && make && make check && make install
+RUN groupadd -g 1001 cardano
+RUN useradd -rm -d /home/cardano -s /bin/bash -g 1001 -G sudo -u 1001 cardano
+RUN mkdir -p /home/cardano/data/db
+RUN mkdir /home/cardano/ipc
+RUN cd /home/cardano && git clone https://github.com/Emurgo/cardano-configurations.git
+RUN cd /home/cardano/cardano-configurations/network/mainnet/cardano-node/ && sed -i -e 's/127.0.0.1/0.0.0.0/g' config.json
+RUN chown -R cardano:cardano /home/cardano
+RUN apt-get install supervisor squid vim -y
+RUN echo "W3N1cGVydmlzb3JkXQpub2RhZW1vbj10cnVlCmxvZ2ZpbGU9L2hvbWUvY2FyZGFuby9zdXBlcnZpc29yZC5sb2cKCltwcm9ncmFtOmNhcmRhbm8tbm9kZV0KY29tbWFuZD0vYmluL2NhcmRhbm8tbm9kZSBydW4gLS1kYXRhYmFzZS1wYXRoIC9ob21lL2NhcmRhbm8vZGF0YS9kYiAtLXRvcG9sb2d5ICUoRU5WX1RPUE9MT0dZX0xPQ0FUSU9OKXMgLS1zb2NrZXQtcGF0aCAvaG9tZS9jYXJkYW5vL2lwYy9ub2RlLnNvY2tldCAtLWhvc3QtYWRkciAlKEVOVl9QVUJMSUNfSVApcyAtLXBvcnQgJShFTlZfUE9SVClzIC0tY29uZmlnIC9ob21lL2NhcmRhbm8vY2FyZGFuby1jb25maWd1cmF0aW9ucy9uZXR3b3JrLyUoRU5WX05FVFdPUkspcy9jYXJkYW5vLW5vZGUvY29uZmlnLmpzb24Kc3Rkb3V0X2xvZ2ZpbGU9L2Rldi9zdGRvdXQKc3Rkb3V0X2xvZ2ZpbGVfbWF4Ynl0ZXM9MApzdGRlcnJfbG9nZmlsZT0vZGV2L3N0ZGVycgphdXRvcmVzdGFydD10cnVlCnN0ZG91dF9sb2dmaWxlX21heGJ5dGVzPTAKc3RkZXJyX2xvZ2ZpbGVfbWF4Ynl0ZXM9MAoKW3Byb2dyYW06c3F1aWRfcHJveHldCmNvbW1hbmQ9L3Vzci9zYmluL3NxdWlkIC1OIC1mIC9ldGMvc3F1aWQvc3F1aWQuY29uZiAtZDUKc3Rkb3V0X2xvZ2ZpbGU9L2Rldi9zdGRvdXQKc3RkZXJyX2xvZ2ZpbGU9L2Rldi9zdGRlcnIKYXV0b3Jlc3RhcnQ9dHJ1ZQpzdGRvdXRfbG9nZmlsZV9tYXhieXRlcz0wCnN0ZGVycl9sb2dmaWxlX21heGJ5dGVzPTAK" | base64 -d > /etc/supervisor/conf.d/supervisord.conf
+RUN mkdir -p /var/spool/squid /var/log/squid && \
+    chown -R 1001:1001 /etc/squid /var/spool/squid /var/log/squid
+RUN chown cardano:cardano /etc/supervisor/conf.d/supervisord.conf
+RUN chown -R cardano:cardano /var/log/supervisor/
+RUN chown -R cardano:cardano /var/run/
+
+EXPOSE 6000 3132
+USER 1001:1001
+RUN squid -N -z -f /etc/squid/squid.conf || true
+WORKDIR /home/cardano
+ENTRYPOINT ["/usr/bin/supervisord"]
