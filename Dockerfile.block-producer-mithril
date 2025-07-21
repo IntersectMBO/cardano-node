@@ -1,7 +1,7 @@
 FROM debian:stable-slim as build
 
 RUN apt-get update -y \
-    && apt-get install -y automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev curl python3 htop nload
+    && apt-get install -y automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev curl python3 htop nload liblmdb-dev pkg-config
 RUN mkdir secp256k1-sources && cd secp256k1-sources \
     && git clone https://github.com/bitcoin-core/secp256k1.git \
     && cd secp256k1 && git reset --hard ac83be33d0956faf6b7f61a60ab524ef7d6a473a \
@@ -23,13 +23,25 @@ ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" \
 ARG VERSION
 COPY . .
 
+RUN apt-get update && apt-get install -y locales \
+ && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+ && locale-gen \
+ && update-locale LANG=en_US.UTF-8
+
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
 RUN cabal update \
     && cabal configure --with-compiler=ghc-9.6.5 \
     && echo "package cardano-crypto-praos" >> cabal.project.local \
     && echo "  flags: -external-libsodium-vrf" >> cabal.project.local \
     && cabal build all --minimize-conflict-set \
     && mkdir -p /root/.local/bin/ \
-    && cp -p dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-*/x/cardano-node/build/cardano-node/cardano-node /root/.local/bin/
+    && cp -p dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-*/x/cardano-node/build/cardano-node/cardano-node /root/.local/bin/ 
+RUN git clone https://github.com/intersectmbo/cardano-cli.git
+RUN cd cardano-cli && git fetch --tags && git checkout $(git describe --tags `git rev-list --tags --max-count=1`) && cabal update && cabal build cardano-cli && cp $(find dist-newstyle -type f -name cardano-cli | head -n 1) /root/.local/bin/
+
 
 FROM debian:stable-slim
 COPY --from=build /root/.local/bin/ /bin/
@@ -43,7 +55,7 @@ RUN mkdir secp256k1-sources && cd secp256k1-sources \
     && make && make check && make install
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-RUN git clone https://github.com/input-output-hk/mithril.git && cd mithril && git checkout stable && cargo build --release --bin mithril-signer
+RUN git clone https://github.com/input-output-hk/mithril && cd mithril && git checkout 2524.0 && cargo build --release --bin mithril-signer
 RUN cp mithril/target/release/mithril-signer /bin/
 RUN groupadd -g 1001 cardano && useradd -rm -d /home/cardano -s /bin/bash -g 1001 -G sudo -u 1001 cardano
 RUN mkdir -p /home/cardano/data/db /home/cardano/ipc /home/cardano/mithril && chown -R 1001:1001 /home/cardano
@@ -53,7 +65,7 @@ RUN cd /home/cardano && git clone https://github.com/Emurgo/cardano-configuratio
 RUN curl -s -o gLiveView.sh https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/gLiveView.sh && chmod 755 gLiveView.sh && mkdir /home/cardano/bin && mv gLiveView.sh /home/cardano/bin/gLiveView && chown cardano /home/cardano/bin
 COPY env /home/cardano/bin/env
 RUN echo "export PATH=$PATH:/home/cardano/bin" >> /root/.bashrc && echo "export PATH=$PATH:/home/cardano/bin" >> /home/cardano/.bashrc
-RUN echo "W3N1cGVydmlzb3JkXQpub2RhbW9uPXRydWUKCltwcm9ncmFtOmJsb2NrcHJvZHVjZXJdCmNvbW1hbmQ9L2Jpbi9jYXJkYW5vLW5vZGUgcnVuIC0tdG9wb2xvZ3kgJShFTlZfVE9QT0xPR1lfTE9DQVRJT04pIC0tZGF0YWJhc2UtcGF0aCAvaG9tZS9jYXJkYW5vL2RhdGEvZGIgLS1zb2NrZXQtcGF0aCAvaG9tZS9jYXJkYW5vL2lwYy9ub2RlLnNvY2tldCAtLWhvc3QtYWRkciAlKEVOVl9QVUJMSUNfSVApIC0tcG9ydCAlKEVOVl9QT1JUKSAtLWNvbmZpZyAvaG9tZS9jYXJkYW5vL2NhcmRhbm8tY29uZmlndXJhdGlvbnMvbmV0d29yay8lKEVOVl9ORVRXT1JLKS9jYXJkYW5vLW5vZGUvY29uZmlnLmpzb24gLS1zaGVsbGV5LWtlcy1rZXkgJShFTlZfS0VTX0tFWV9MT0NBVElPTikgLS1zaGVsbGV5LXZyZi1rZXkgJShFTlZfVlJGX0tFWV9MT0NBVElPTikgLS1zaGVsbGV5LW9wZXJhdGlvbmFsLWNlcnRpZmljYXRlICUoRU5WX05PREVfQ0VSVF9MT0NBVElPTikKc3Rkb3V0X2xvZ2ZpbGU9L2Rldi9zdGRvdXQKc3RkZXJyX2xvZ2ZpbGU9L2Rldi9zdGRlcnIKYXV0b3Jlc3RhcnQ9dHJ1ZQoKW3Byb2dyYW06bWl0aHJpbC1zaWduZXJdCmNvbW1hbmQ9L2Jpbi9taXRocmlsLXNpZ25lciAtLWNvbmZpZy1maWxlIC9ob21lL2NhcmRhbm8vbWl0aHJpbC9zaWduZXIueWFtbCAtLXNpZ25pbmcta2V5LXBhdGggL2hvbWUvY2FyZGFuby9taXRocmlsL3NpZ25lcl9wcml2YXRlX2tleS5zawoKc3Rkb3V0X2xvZ2ZpbGU9L2Rldi9zdGRvdXQKc3RkZXJyX2xvZ2ZpbGU9L2Rldi9zdGRlcnIKYXV0b3Jlc3RhcnQ9dHJ1ZQ==" | base64 -d > /etc/supervisor/conf.d/supervisord.conf
+RUN echo "W3N1cGVydmlzb3JkXQpub2RhZW1vbj10cnVlCmxvZ2ZpbGU9L2hvbWUvY2FyZGFuby9zdXBlcnZpc29yZC5sb2cKCltwcm9ncmFtOmJsb2NrcHJvZHVjZXJdCmNvbW1hbmQ9L2Jpbi9jYXJkYW5vLW5vZGUgcnVuICtSVFMgLU4gLUExNm0gLXFnIC1xYiAtUlRTIFwKICAtLXRvcG9sb2d5ICUoRU5WX1RPUE9MT0dZX0xPQ0FUSU9OKXMgXAogIC0tZGF0YWJhc2UtcGF0aCAvaG9tZS9jYXJkYW5vL2RhdGEvZGIgXAogIC0tc29ja2V0LXBhdGggL2hvbWUvY2FyZGFuby9pcGMvbm9kZS5zb2NrZXQgXAogIC0taG9zdC1hZGRyICUoRU5WX1BVQkxJQ19JUClzIFwKICAtLXBvcnQgJShFTlZfUE9SVClzIFwKICAtLWNvbmZpZyAvaG9tZS9jYXJkYW5vL2NhcmRhbm8tY29uZmlndXJhdGlvbnMvbmV0d29yay8lKEVOVl9ORVRXT1JLKXMvY2FyZGFuby1ub2RlL2NvbmZpZy5qc29uIFwKICAtLXNoZWxsZXkta2VzLWtleSAlKEVOVl9LRVNfS0VZX0xPQ0FUSU9OKXMgXAogIC0tc2hlbGxleS12cmYta2V5ICUoRU5WX1ZSRl9LRVlfTE9DQVRJT04pcyBcCiAgLS1zaGVsbGV5LW9wZXJhdGlvbmFsLWNlcnRpZmljYXRlICUoRU5WX05PREVfQ0VSVF9MT0NBVElPTilzCnN0ZG91dF9sb2dmaWxlPS9kZXYvc3Rkb3V0CnN0ZGVycl9sb2dmaWxlPS9kZXYvc3RkZXJyCmF1dG9yZXN0YXJ0PXRydWUKCltwcm9ncmFtOm1pdGhyaWwtc2lnbmVyXQpjb21tYW5kPS9iaW4vbWl0aHJpbC1zaWduZXIgLXZ2dgpzdGRvdXRfbG9nZmlsZT0vZGV2L3N0ZG91dApzdGRlcnJfbG9nZmlsZT0vZGV2L3N0ZGVycgphdXRvcmVzdGFydD10cnVlCg==" | base64 -d > /etc/supervisor/conf.d/supervisord.conf
 USER 1001:1001
 WORKDIR /home/cardano
 EXPOSE 8080
