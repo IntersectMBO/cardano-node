@@ -26,7 +26,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..),
-                   UserProvidedData (..), UserProvidedEnv (..))
+                   UserProvidedEnv (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -45,7 +45,6 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   conf <- mkConf tmpDir
   createTestnetEnv
     testnetOptions genesisOptions def
-    NoUserProvidedData NoUserProvidedData NoUserProvidedData
     -- Do not add hashes to the main config file, so that genesis files
     -- can be modified without having to recompute hashes every time.
     conf{genesisHashesPolicy = WithoutHashes}

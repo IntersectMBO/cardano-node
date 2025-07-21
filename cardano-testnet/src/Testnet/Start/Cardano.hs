@@ -30,8 +30,6 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Cardano.Node.Configuration.Topology (RemoteAddress(..))
 import qualified Cardano.Node.Configuration.Topology as Direct
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -90,9 +88,6 @@ createTestnetEnv :: ()
   => CardanoTestnetOptions
   -> GenesisOptions
   -> CreateEnvOptions
-  -> UserProvidedData ShelleyGenesis
-  -> UserProvidedData AlonzoGenesis
-  -> UserProvidedData ConwayGenesis
   -> Conf
   -> H.Integration ()
 createTestnetEnv
@@ -102,10 +97,10 @@ createTestnetEnv
     }
   genesisOptions
   CreateEnvOptions
-    { ceoTopologyType=topologyType
+    { ceoOnChainParams=onChainParams
+    , ceoTopologyType=topologyType
     , ceoUpdateTime=createEnvUpdateTime
     }
-  mShelley mAlonzo mConway
   Conf
     { genesisHashesPolicy
     , tempAbsPath=TmpAbsolutePath tmpAbsPath
@@ -116,8 +111,7 @@ createTestnetEnv
 
     AnyShelleyBasedEra sbe <- pure asbe
     _ <- createSPOGenesisAndFiles
-      testnetOptions genesisOptions
-      mShelley mAlonzo mConway
+      testnetOptions genesisOptions onChainParams
       (TmpAbsolutePath tmpAbsPath)
 
     configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
@@ -427,7 +421,6 @@ createAndRunTestnet :: ()
 createAndRunTestnet testnetOptions genesisOptions conf = do
   createTestnetEnv
     testnetOptions genesisOptions def
-    NoUserProvidedData NoUserProvidedData NoUserProvidedData
     conf
   cardanoTestnet testnetOptions genesisOptions conf
 
