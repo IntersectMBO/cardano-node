@@ -16,6 +16,7 @@ import           Control.Applicative
 import           Data.Default.Class
 import           Data.Functor
 import qualified Data.List as L
+import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
@@ -35,10 +36,15 @@ optsCreateTestnet envCli = CardanoTestnetCreateEnvOptions
   <$> pCardanoTestnetCliOptions envCli
   <*> pGenesisOptions
   <*> pEnvOutputDir
-  <*> ( CreateEnvOptions
-      <$> pTopologyType
-      <*> pCreateEnvUpdateTime
-      )
+  <*> pCreateEnvOptions
+
+-- We can't fill in the optional Genesis files at parse time, because we want to be in a monad
+-- to properly parse JSON. We delegate this task to the caller.
+pCreateEnvOptions :: Parser CreateEnvOptions
+pCreateEnvOptions = CreateEnvOptions
+  <$> pOnChainParams
+  <*> pTopologyType
+  <*> pCreateEnvUpdateTime
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
@@ -94,6 +100,23 @@ pNodeEnvironment = fmap (maybe NoUserProvidedEnv UserProvidedEnv) <$>
     <> OA.metavar "FILEPATH"
     <> OA.help "Path to the node's environment (which is generated otherwise). You can generate a default environment with the 'create-env' command, then modify it and pass it with this argument."
     )
+
+pOnChainParams :: Parser TestnetOnChainParams
+pOnChainParams = fmap (fromMaybe DefaultParams) <$> optional $
+  pCustomParamsFile <|> pMainnetParams
+
+pCustomParamsFile :: Parser TestnetOnChainParams
+pCustomParamsFile = OnChainParamsFile <$> OA.strOption
+  (  OA.long "params-file"
+  <> OA.help "File containing custom on-chain parameters in Blockfrost format:\nhttps://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters"
+  <> OA.metavar "FILEPATH"
+  )
+
+pMainnetParams :: Parser TestnetOnChainParams
+pMainnetParams = OA.flag' OnChainParamsMainnet
+  (  OA.long "mainnet"
+  <> OA.help "Use mainnet on-chain parameters"
+  )
 
 pTopologyType :: Parser TopologyType
 pTopologyType = OA.flag DirectTopology P2PTopology

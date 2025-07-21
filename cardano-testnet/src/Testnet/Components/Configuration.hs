@@ -24,7 +24,7 @@ module Testnet.Components.Configuration
   ) where
 
 import           Cardano.Api hiding (Value, cardanoEra)
-import           Cardano.Api.Ledger (AlonzoGenesis, ConwayGenesis)
+import           Cardano.Api.Ledger (AlonzoGenesis)
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
@@ -49,6 +49,7 @@ import qualified Data.Aeson.Lens as L
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Default.Class (def)
 import qualified Data.List as List
 import           Data.String
 import           Data.Text (Text)
@@ -158,14 +159,12 @@ createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => CardanoTestnetOptions -- ^ The options to use
   -> GenesisOptions
-  -> UserProvidedData ShelleyGenesis
-  -> UserProvidedData AlonzoGenesis
-  -> UserProvidedData ConwayGenesis
+  -> TestnetOnChainParams
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
 createSPOGenesisAndFiles
   testnetOptions genesisOptions@GenesisOptions{genesisTestnetMagic}
-  mShelleyGenesis mAlonzoGenesis mConwayGenesis
+  onChainParams
   (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
 
@@ -174,6 +173,12 @@ createSPOGenesisAndFiles
   let -- At least there should be a delegator per DRep
       -- otherwise some won't be representing anybody
       numStakeDelegators = max 3 (fromIntegral cardanoNumDReps) :: Int
+
+  UserProvidedGeneses
+    { upgShelleyGenesis = mShelleyGenesis
+    , upgAlonzoGenesis = mAlonzoGenesis
+    , upgConwayGenesis = mConwayGenesis
+    } <- resolveOnChainParams onChainParams
 
   -- When the user did not specify a genesis file, we write a default one to disk,
   -- and then pass it to create-testnet-data (which will amend it).
@@ -331,3 +336,19 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
         DontUseLedgerPeers
         DontUseBootstrapPeers
         Nothing
+
+-- | Resolves different kinds of user-provided on-chain parameters
+-- into a unified, consistent set of Genesis files
+resolveOnChainParams :: ()
+ => (MonadTest m, MonadCatch m, MonadIO m)
+ => HasCallStack
+ => TestnetOnChainParams
+ -> m UserProvidedGeneses
+resolveOnChainParams = \case
+  DefaultParams -> pure def
+  OnChainParamsGeneses gens -> pure gens
+  -- TODO: complete the following
+  OnChainParamsFile _file -> do
+    pure def
+  OnChainParamsMainnet -> do
+    pure def
