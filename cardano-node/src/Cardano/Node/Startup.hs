@@ -158,7 +158,7 @@ data BasicInfoCommon = BasicInfoCommon {
 data BasicInfoShelleyBased = BasicInfoShelleyBased {
     bisEra               :: Text
   , bisSystemStartTime   :: UTCTime
-  , bisSlotLength        :: NominalDiffTime
+  , bisSlotLength        :: !NominalDiffTime
   , bisEpochLength       :: Word64
   , bisSlotsPerKESPeriod :: Word64
   }
