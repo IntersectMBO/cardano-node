@@ -4,6 +4,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Node.Protocol.Shelley
   ( mkSomeConsensusProtocolShelley
 
@@ -43,11 +45,15 @@ import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
 
+import           Codec.Serialise (Serialise (..), deserialiseOrFail)
 import           Control.Exception (IOException)
 import           Control.Monad
 import qualified Data.Aeson as Aeson
+import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL (fromStrict)
 import qualified Data.Text as T
+import           System.FilePath (isExtensionOf)
 
 ------------------------------------------------------------------------------
 -- Shelley protocol
@@ -84,15 +90,18 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
       }
       (ProtVer (natVersion @2) 0)
 
-
 genesisHashToPraosNonce :: GenesisHash -> Nonce
 genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
+
+instance Serialise ShelleyGenesis where
+  encode = toCBOR
+  decode = fromCBOR
 
 readGenesis :: GenesisFile
             -> Maybe GenesisHash
             -> ExceptT GenesisReadError IO
                        (ShelleyGenesis, GenesisHash)
-readGenesis = readGenesisAny
+readGenesis = readGenesisAnyCBOR
 
 readGenesisAny :: FromJSON genesis
                => GenesisFile
@@ -102,7 +111,20 @@ readGenesisAny (GenesisFile file) mExpectedGenesisHash = do
     content <- handleIOExceptT (GenesisReadFileError file) $ BS.readFile file
     genesisHash <- checkExpectedGenesisHash content mExpectedGenesisHash
     genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
-                 Aeson.eitherDecodeStrict' content
+            Aeson.eitherDecodeStrict' content
+    return (genesis, genesisHash)
+
+readGenesisAnyCBOR :: (FromJSON genesis, Serialise genesis)
+               => GenesisFile
+               -> Maybe GenesisHash
+               -> ExceptT GenesisReadError IO (genesis, GenesisHash)
+readGenesisAnyCBOR (GenesisFile file) mExpectedGenesisHash = do
+    content <- handleIOExceptT (GenesisReadFileError file) $ BS.readFile file
+    genesisHash <- checkExpectedGenesisHash content mExpectedGenesisHash
+    genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
+            if ".cbor" `isExtensionOf` file
+              then first show $ deserialiseOrFail (BL.fromStrict content)
+              else Aeson.eitherDecodeStrict' content
     return (genesis, genesisHash)
 
 checkExpectedGenesisHash

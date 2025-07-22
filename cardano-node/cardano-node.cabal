@@ -201,6 +201,7 @@ library
                       , resource-registry
                       , safe-exceptions
                       , scientific
+                      , serialise
                       , si-timers
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76

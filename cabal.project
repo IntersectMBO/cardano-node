@@ -25,6 +25,7 @@ packages:
   cardano-tracer
   bench/cardano-profile
   bench/cardano-topology
+  bench/genesis-to-cbor
   bench/locli
   bench/plutus-scripts-bench
   bench/tx-generator
