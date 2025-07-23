@@ -26,6 +26,10 @@ executable genesis-to-cbor
                       , bytestring
                       , cardano-api
                       , cardano-crypto-class
+                      , mmap
                       , serialise
+    ghc-options:       -Wall
+                       -rtsopts
+                       "-with-rtsopts=-T -M1G"
     hs-source-dirs:   app
     default-language: Haskell2010
