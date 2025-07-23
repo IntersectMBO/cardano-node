@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-forward
-version:                2.2.11
+version:                2.3.0
 synopsis:               The forwarding protocols library for cardano node.
 description:            The library providing typed protocols for forwarding different
                         information from the cardano node to an external application.
@@ -43,6 +43,7 @@ library
                         Trace.Forward.Protocol.TraceObject.Codec
                         Trace.Forward.Protocol.TraceObject.Forwarder
                         Trace.Forward.Protocol.TraceObject.Type
+                        Trace.Forward.Forwarding
 
                         Trace.Forward.Run.DataPoint.Acceptor
                         Trace.Forward.Run.DataPoint.Forwarder
@@ -54,6 +55,8 @@ library
 
                         Trace.Forward.Utils.DataPoint
                         Trace.Forward.Utils.TraceObject
+                        Trace.Forward.Utils.ForwardSink
+                        Trace.Forward.Utils.Version
 
   build-depends:        aeson
                       , async
@@ -61,16 +64,19 @@ library
                       , cborg
                       , containers
                       , contra-tracer
-                      , deepseq
                       , extra
                       , io-classes
+                      , network
                       , network-mux
                       , ouroboros-network-api
+                      , ekg-core
+                      , ekg-forward  >= 0.9
                       , singletons ^>= 3.0
                       , ouroboros-network-framework ^>= 0.18.0.1
                       , serialise
                       , stm
                       , text
+                      , trace-dispatcher
                       , typed-protocols ^>= 0.3
                       , typed-protocols-cborg
 

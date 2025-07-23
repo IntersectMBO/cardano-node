@@ -18,8 +18,6 @@ module Cardano.Tracer.Test.Forwarder
 import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
 import           Cardano.Logging.Types (HowToConnect)
 import qualified Cardano.Logging.Types as Net
-import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
-                   forwardingCodecCBORTerm, forwardingVersionCodec)
 import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -36,7 +34,7 @@ import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
-                   makeLocalBearer, socketSnocket, makeSocketBearer)
+                   makeLocalBearer, makeSocketBearer, socketSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
                    HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
                    connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
@@ -52,7 +50,7 @@ import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTr
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_)
-import           Data.List.NonEmpty (NonEmpty((:|)))
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Text as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Void (Void, absurd)
@@ -70,7 +68,10 @@ import qualified Trace.Forward.Configuration.TraceObject as TOF
 import           Trace.Forward.Run.DataPoint.Forwarder
 import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
+import           Trace.Forward.Utils.ForwardSink (ForwardSink)
 import           Trace.Forward.Utils.TraceObject
+import           Trace.Forward.Utils.Version (ForwardingVersion (..), ForwardingVersionData (..),
+                   forwardingCodecCBORTerm, forwardingVersionCodec)
 
 data ForwardersMode = Initiator | Responder
 

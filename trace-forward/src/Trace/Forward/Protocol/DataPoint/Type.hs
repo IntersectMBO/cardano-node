@@ -18,13 +18,13 @@ module Trace.Forward.Protocol.DataPoint.Type
   , SingDataPointForward (..)
   ) where
 
-import           Data.Singletons
-import           Network.TypedProtocol.Core
+import           Cardano.Logging.Tracer.DataPoint (DataPointName)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Kind (Type)
-import           Data.Text (Text)
+import           Data.Singletons
+import           Network.TypedProtocol.Core
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.
@@ -41,7 +41,6 @@ import           Data.Text (Text)
 --    After the connection is established, the acceptor asks for 'DataPoint's,
 --    the forwarder replies to it.
 
-type DataPointName   = Text
 type DataPointValue  = LBS.ByteString
 type DataPointValues = [(DataPointName, Maybe DataPointValue)]
 

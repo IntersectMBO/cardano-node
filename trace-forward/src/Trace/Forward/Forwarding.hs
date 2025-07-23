@@ -1,13 +1,13 @@
 {-# LANGUAGE BlockArguments #-}
 
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
-module Cardano.Logging.Forwarding
+module Trace.Forward.Forwarding
   (
     initForwarding
   , initForwardingDelayed
@@ -15,7 +15,6 @@ module Cardano.Logging.Forwarding
 
 import           Cardano.Logging.Types
 import           Cardano.Logging.Utils (runInLoop)
-import           Cardano.Logging.Version
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager)
@@ -28,8 +27,9 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (MakeBearer, Snocket, LocalAddress, LocalSocket, localAddressFromPath, localSnocket,
-                   socketSnocket, makeLocalBearer, makeSocketBearer)
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, MakeBearer, Snocket,
+                   localAddressFromPath, localSnocket, makeLocalBearer, makeSocketBearer,
+                   socketSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
                    HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
                    connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
@@ -59,7 +59,9 @@ import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Forwarder
 import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
+import           Trace.Forward.Utils.ForwardSink (ForwardSink)
 import           Trace.Forward.Utils.TraceObject
+import           Trace.Forward.Utils.Version
 
 initForwarding :: forall m. (MonadIO m)
   => IOManager
@@ -149,13 +151,13 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
 -- It writes an error message on stderr
 handleOverflow :: [TraceObject] -> IO ()
 handleOverflow [] = pure ()
-handleOverflow msgs =
-    let lengthM = length msgs
-        beginning = toTimestamp (head msgs)
-        end = toTimestamp (last msgs)
-        msg = "TraceObject queue overflowed. Dropped " <> show lengthM <>
+handleOverflow (msg : msgs) =
+    let lengthM = 1 + length msgs
+        beginning = toTimestamp msg
+        end = toTimestamp (last (msg : msgs))
+        str = "TraceObject queue overflowed. Dropped " <> show lengthM <>
                 " messages from " <> show beginning <> " to " <> show end
-    in hPutStrLn stderr msg
+    in hPutStrLn stderr str
 
 launchForwarders
   :: IOManager

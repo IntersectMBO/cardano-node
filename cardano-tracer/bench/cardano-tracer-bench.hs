@@ -14,6 +14,7 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
+
 import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO)
@@ -55,7 +56,7 @@ main = do
   currentLogLock <- newLock
   currentDPLock  <- newLock
 #if RTVIEW
-  eventsQueues   <- initEventsQueues Nothing connectedNodesNames dpRequestors currentDPLock
+  eventsQueues   <- initEventsQueues mempty Nothing connectedNodesNames dpRequestors currentDPLock
 
   rtViewPageOpened <- newTVarIO False
 #endif

@@ -34,7 +34,7 @@ import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
 import qualified Cardano.Logging.Types as Net
 import           Cardano.Node.Startup
-import           Cardano.Node.Tracing.NodeInfo () -- MetaTrace NodeInfo
+import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
 
 import           Control.Monad (forM, guard)
@@ -49,7 +49,7 @@ import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
 
-import           Trace.Forward.Utils.DataPoint
+import           Trace.Forward.Forwarding (initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject
 
 pattern TracerNameBench     :: Text
@@ -121,7 +121,7 @@ initTxGenTracers mbForwarding = do
   prepareForwardingTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
         let forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
-        (forwardSink :: ForwardSink TraceObject, dpStore, kickoffForwarder) <-
+        (forwardSink, dpStore, kickoffForwarder) <-
             initForwardingDelayed iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (Net.LocalPipe tracerSocket, Initiator)
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
@@ -134,7 +134,7 @@ initTxGenTracers mbForwarding = do
         traceWith nodeInfoTracer genInfo
 
         kickoffForwarder
-        pure $ forwardTracer forwardSink
+        pure $ forwardTracer (writeToSink forwardSink)
 
   prepareGenInfo :: IO NodeInfo
   prepareGenInfo =

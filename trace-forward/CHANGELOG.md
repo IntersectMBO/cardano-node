@@ -3,6 +3,7 @@
 ## 2.3.0 - Jul 2025
 
 * Remove unused `forwarderEndpoint` and `acceptorEndpoint` fields from forwarder / acceptor configuration types.
+* `trace-forward` now depends on `trace-dispatcher`, and not the other way round.
 
 ## 2.2.11 - Mar 2025
 

@@ -3,6 +3,8 @@
 ## 2.10.0 -- July, 2025
 * Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.
 * Failure to initialise the `PrometheusSimple` backend is now lenient - i.e., won't result in an exception being propagated.
+* `trace-forward` now depends on `trace-dispatcher`, and not the other way round.
+* Improves the structure and metadata of generated tracer documentation.
 
 ## 2.9.2 -- May 2025
 * New config field `traceOptionLedgerMetricsFrequency`.

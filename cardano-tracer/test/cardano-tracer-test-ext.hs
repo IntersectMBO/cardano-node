@@ -30,6 +30,9 @@ import qualified System.Process as Sys
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
+import           Trace.Forward.Forwarding (initForwarding)
+import           Trace.Forward.Utils.TraceObject (writeToSink)
+
 main :: IO ()
 main = do
     setEnv "TASTY_NUM_THREADS" "1" -- For sequential running of tests (because of Windows).
@@ -137,4 +140,4 @@ getExternalTracerState TestSetup{..} ref = do
        let tracerSocketMode = Just (Net.LocalPipe (unI tsSockExternal), Initiator)
            forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
        initForwarding iomgr forwardingConf (unI tsNetworkMagic) Nothing tracerSocketMode
-     pure (externalTracerHdl, forwardTracer forwardSink)
+     pure (externalTracerHdl, forwardTracer (writeToSink forwardSink))

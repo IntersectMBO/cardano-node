@@ -4,8 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Trace.Forward.Utils.TraceObject
-  ( ForwardSink (..)
-  , initForwardSink
+  ( initForwardSink
   , writeToSink
   , readFromSink
   , getTraceObjectsFromReply
@@ -22,15 +21,8 @@ import           Data.Word (Word16)
 import           Trace.Forward.Configuration.TraceObject
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import           Trace.Forward.Protocol.TraceObject.Type
+import           Trace.Forward.Utils.ForwardSink (ForwardSink (..))
 
-
-data ForwardSink lo = ForwardSink
-  { forwardQueue     :: !(TVar (TBQueue lo))
-  , disconnectedSize :: !Word
-  , connectedSize    :: !Word
-  , wasUsed          :: !(TVar Bool)
-  , overflowCallback :: !([lo] -> IO ())
-  }
 
 initForwardSink
   :: ForwarderConfiguration lo

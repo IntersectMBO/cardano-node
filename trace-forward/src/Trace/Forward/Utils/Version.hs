@@ -1,4 +1,6 @@
-module Cardano.Logging.Version
+{-# LANGUAGE NamedFieldPuns #-}
+
+module Trace.Forward.Utils.Version
   ( ForwardingVersion (..)
   , ForwardingVersionData (..)
   , forwardingVersionCodec

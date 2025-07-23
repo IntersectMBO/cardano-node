@@ -48,8 +48,6 @@ import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
 
-import           Trace.Forward.Utils.DataPoint (DataPoint (..))
-
 type InconsistencyWarning = Text
 
 utf16CircledT :: Text
@@ -331,7 +329,7 @@ docTracer backendConfig = Trace $ TR.arrow $ TR.emit output
 
 docTracerDatapoint :: MonadIO m =>
      BackendConfig
-  -> Trace m DataPoint
+  -> Trace m a
 docTracerDatapoint backendConfig = Trace $ TR.arrow $ TR.emit output
   where
     output p@(_, Left TCDocument {}) =

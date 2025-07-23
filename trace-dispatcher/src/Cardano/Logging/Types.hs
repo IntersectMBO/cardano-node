@@ -60,8 +60,6 @@ module Cardano.Logging.Types (
 ) where
 
 
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
-
 import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
@@ -387,7 +385,7 @@ data TraceObject = TraceObject {
     (Eq, Show, Generic)
   -- ^ Instances for 'TraceObject' to forward it using 'trace-forward' library.
   deriving anyclass
-    (Serialise, ShowProxy)
+    (Serialise)
 
 -- |
 data BackendConfig =

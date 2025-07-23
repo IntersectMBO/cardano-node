@@ -12,8 +12,8 @@
 - [Build and run](#build-and-run)
 - [Configuration](#configuration)
   - [Distributed Scenario](#distributed-scenario)
-    - [Important](#important)
   - [Local Scenario](#local-scenario)
+  - [Forwarding over TCP](#forwarding-over-tcp)
   - [Network Magic](#network-magic)
   - [Requests](#requests)
   - [Logging](#logging)
@@ -27,7 +27,7 @@
 
 ## Motivation
 
-Previously, the node handled all the logging by itself. Moreover, it provided monitoring tools as well: two web-servers, for Prometheus and for EKG monitoring page. `cardano-tracer` is a result of _moving_ all the logging/monitoring-related stuff from the node to a separate service. As a result, the node became smaller, faster, and simpler.
+Previously, the node handled all the logging by itself. Moreover, it provided monitoring tools as well: two web-servers, for Prometheus and for EKG monitoring page. `cardano-tracer` is a result of _moving_ all logging and monitoring related functionality from the node to a separate service. As a result, the node becomes smaller, more efficient, and simpler.
 
 ## Overview
 
@@ -81,8 +81,6 @@ The way how to configure `cardano-tracer` depends on your requirements. There ar
 Distributed scenario is for real-life case: for example, you have `N` nodes working on `N` different AWS-instances, and you want to collect all the logging/monitoring information from these nodes using one `cardano-tracer` process working on your machine.
 
 Local scenario is for testing case: for example, you want to try your new infrastructure from scratch, so you run `N` nodes and one `cardano-tracer` process on your machine.
-
-**IMPORTANT NOTICE**: Please note that `cardano-tracer` **does not** support connection via IP-address and port, to avoid unauthorized connections. The **only** way to establish connection with the node is the local socket (Unix sockets or Windows named pipes).
 
 ## Distributed Scenario
 
@@ -251,7 +249,35 @@ There is another way to connect `cardano-tracer` to your nodes: the `cardano-tra
 
 As you see, the tag in `network` field is `ConnectTo` now, which means that `cardano-tracer` works as a client: it _establishes_ network connections with your local nodes via the local sockets `/tmp/cardano-node-*.sock`. In this case each socket is used by a particular node.
 
+`AcceptTo` and `ConnectTo` are mirrored by the reciprocal CLI option on the node `--tracer-socket-path-connect` / `--tracer-socket-path-accept`. If you choose one on the node, you choose the opposite on the tracer. This only makes a difference to which entity initiates the handshake; after the handshake the configuration is identical
+
 Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario. The reason is easier maintainance. Suppose you have 3 working nodes, and they are connected to the same `cardano-tracer`. And then you want to connect 4-th node to it. If `cardano-tracer` is configured using `AcceptAt`, you shouldn't change its configuration - you just connect your 4-th node to it. But if `cardano-tracer` is configured using `ConnectTo`, you should add path to 4-th socket in its configuration file and then restart `cardano-tracer` process.
+
+## Forwarding over TCP
+
+In addition to forwarding over sockets, forwarding over TCP/IP is supported. In both cases, the 'forwarding protocol' is identical. For TCP forwarding, adjust the following (only showing the `AcceptAt` scenario here):
+
+Change node CLI option:
+```bash
+--tracer-socket-network-connect 10.0.0.2:34567
+```
+
+Adjust value for `network` in `cardano-tracer`'s configuration:
+```yaml
+network:
+  tag: AcceptAt
+  contents: "0.0.0.0:34567"
+```
+
+In this example, `cardano-tracer` listens on port 34567. Nodes can connect via IPv4 for forwarding, with `10.0.0.2` being `cardano-tracer`'s IP in that example.
+
+### Important
+
+On same-host setups sockets are always preferrable due to **less overhead and better performance**. On multi-host setups, socket connection via SSH tunnels is always preferrable due to **increased security**.
+
+Use TCP forwarding **if and only if** you control each and every aspect of the environment, such as port mapping or firewalls, or virtual network setup - the 'forwarding protocol' does not implement encrypting traffic nor authentication methods.
+
+
 
 ## Network Magic
 
