@@ -25,6 +25,7 @@ module Testnet.Start.Types
   , CreateEnvOptions(..)
   , CreateEnvUpdateTime(..)
   , TestnetOnChainParams(..)
+  , mainnetParamsRequest
   , NodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
@@ -52,9 +53,11 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
 import           Data.Default.Class
+import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
+import qualified Network.HTTP.Simple as HTTP
 import           System.FilePath (addTrailingPathSeparator)
 
 import           Testnet.Filepath
@@ -143,6 +146,13 @@ instance Default UserProvidedGeneses where
     def
     def
     def
+
+-- | An HTTP request to get a file containing up-to-date mainnet on-chain parameters.
+-- The file should be formatted with Blockfrost format:
+-- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
+mainnetParamsRequest :: HTTP.Request
+mainnetParamsRequest = fromJust $ HTTP.parseRequest
+  "https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json"
 
 -- | An abstract node id, used as placeholder in topology files
 -- when the actual ports/addresses aren't known yet (i.e. before runtime)
