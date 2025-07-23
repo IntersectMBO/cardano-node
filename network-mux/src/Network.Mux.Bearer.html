@@ -1,0 +1,346 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP                    #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs                  #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores     #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables    #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances   #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.Bearer</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier">Bearer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier">MakeBearer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#makeSocketBearer"><span class="hs-identifier">makeSocketBearer</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#makeSocketBearer%27"><span class="hs-identifier">makeSocketBearer'</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#makePipeChannelBearer"><span class="hs-identifier">makePipeChannelBearer</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#makeQueueChannelBearer"><span class="hs-identifier">makeQueueChannelBearer</span></a></span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">makeNamedPipeBearer</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#withReadBufferIO"><span class="hs-identifier">withReadBufferIO</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadSTM</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.Strict</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadThrow</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTime.SI</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Tracer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Tracer</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.Socket</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Socket</span></span><span class="hs-special">)</span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">System.Win32</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">HANDLE</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Foreign.Marshal.Alloc.html"><span class="hs-identifier">Foreign.Marshal.Alloc</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html"><span class="hs-identifier">Network.Mux.Bearer.Pipe</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.Mux.Bearer.Queues.html"><span class="hs-identifier">Network.Mux.Bearer.Queues</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.Mux.Bearer.Socket.html"><span class="hs-identifier">Network.Mux.Bearer.Socket</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.Mux.Trace.html"><span class="hs-identifier">Network.Mux.Trace</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.Mux.Types.html"><span class="hs-identifier">Network.Mux.Types</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#sduSize"><span class="hs-identifier">sduSize</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Network.Mux.Bearer.NamedPipe</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">newtype</span><span> </span><span id="MakeBearer"><span class="annot"><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-var">MakeBearer</span></a></span></span><span> </span><span id="local-6989586621679124062"><span class="annot"><a href="#local-6989586621679124062"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679124063"><span class="annot"><a href="#local-6989586621679124063"><span class="hs-identifier hs-type">fd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MakeBearer"><span class="annot"><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-var">MakeBearer</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-45"></span><span>    </span><span id="getBearer"><span class="annot"><span class="annottext">forall (m :: * -&gt; *) fd.
+MakeBearer m fd
+-&gt; DiffTime
+-&gt; Tracer m Trace
+-&gt; fd
+-&gt; Maybe (ReadBuffer m)
+-&gt; m (Bearer m)
+</span><a href="Network.Mux.Bearer.html#getBearer"><span class="hs-identifier hs-var hs-var">getBearer</span></a></span></span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="hs-comment">-- timeout for reading an SDU segment, if negative no</span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-comment">-- timeout is applied.</span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="#local-6989586621679124062"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-comment">-- tracer</span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679124063"><span class="hs-identifier hs-type">fd</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-comment">-- file descriptor</span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#ReadBuffer"><span class="hs-identifier hs-type">ReadBuffer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124062"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-comment">-- Optional Readbuffer</span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679124062"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier hs-type">Bearer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124062"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span id="local-6989586621679124071"><span id="local-6989586621679124072"><span class="annot"><a href="Network.Mux.Bearer.html#pureBearer"><span class="hs-identifier hs-type">pureBearer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-59"></span><span>           </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679124072"><span class="hs-identifier hs-type">fd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#ReadBuffer"><span class="hs-identifier hs-type">ReadBuffer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>   </span><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier hs-type">Bearer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>           </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679124072"><span class="hs-identifier hs-type">fd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#ReadBuffer"><span class="hs-identifier hs-type">ReadBuffer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#Bearer"><span class="hs-identifier hs-type">Bearer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124071"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-61"></span><span id="pureBearer"><span class="annot"><span class="annottext">pureBearer :: forall (m :: * -&gt; *) fd.
+Applicative m =&gt;
+(DiffTime
+ -&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; Bearer m)
+-&gt; DiffTime
+-&gt; Tracer m Trace
+-&gt; fd
+-&gt; Maybe (ReadBuffer m)
+-&gt; m (Bearer m)
+</span><a href="Network.Mux.Bearer.html#pureBearer"><span class="hs-identifier hs-var hs-var">pureBearer</span></a></span></span><span> </span><span id="local-6989586621679124123"><span class="annot"><span class="annottext">DiffTime
+-&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; Bearer m
+</span><a href="#local-6989586621679124123"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679124124"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679124124"><span class="hs-identifier hs-var">sduTimeout</span></a></span></span><span> </span><span id="local-6989586621679124125"><span class="annot"><span class="annottext">Tracer m Trace
+</span><a href="#local-6989586621679124125"><span class="hs-identifier hs-var">rb</span></a></span></span><span> </span><span id="local-6989586621679124126"><span class="annot"><span class="annottext">fd
+</span><a href="#local-6989586621679124126"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span id="local-6989586621679124127"><span class="annot"><span class="annottext">Maybe (ReadBuffer m)
+</span><a href="#local-6989586621679124127"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bearer m -&gt; m (Bearer m)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime
+-&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; Bearer m
+</span><a href="#local-6989586621679124123"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679124124"><span class="hs-identifier hs-var">sduTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer m Trace
+</span><a href="#local-6989586621679124125"><span class="hs-identifier hs-var">rb</span></a></span><span> </span><span class="annot"><span class="annottext">fd
+</span><a href="#local-6989586621679124126"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ReadBuffer m)
+</span><a href="#local-6989586621679124127"><span class="hs-identifier hs-var">fd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Network.Mux.Bearer.html#makeSocketBearer"><span class="hs-identifier hs-type">makeSocketBearer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-type">MakeBearer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span>
+</span><span id="line-65"></span><span id="makeSocketBearer"><span class="annot"><span class="annottext">makeSocketBearer :: MakeBearer IO Socket
+</span><a href="Network.Mux.Bearer.html#makeSocketBearer"><span class="hs-identifier hs-var hs-var">makeSocketBearer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; MakeBearer IO Socket
+</span><a href="Network.Mux.Bearer.html#makeSocketBearer%27"><span class="hs-identifier hs-var">makeSocketBearer'</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Network.Mux.Bearer.html#makeSocketBearer%27"><span class="hs-identifier hs-type">makeSocketBearer'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-type">MakeBearer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span>
+</span><span id="line-68"></span><span id="makeSocketBearer%27"><span class="annot"><span class="annottext">makeSocketBearer' :: DiffTime -&gt; MakeBearer IO Socket
+</span><a href="Network.Mux.Bearer.html#makeSocketBearer%27"><span class="hs-identifier hs-var hs-var">makeSocketBearer'</span></a></span></span><span> </span><span id="local-6989586621679124128"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679124128"><span class="hs-identifier hs-var">pt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DiffTime
+ -&gt; Tracer IO Trace
+ -&gt; Socket
+ -&gt; Maybe (ReadBuffer IO)
+ -&gt; IO (Bearer IO))
+-&gt; MakeBearer IO Socket
+forall (m :: * -&gt; *) fd.
+(DiffTime
+ -&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; m (Bearer m))
+-&gt; MakeBearer m fd
+</span><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-var">MakeBearer</span></a></span><span> </span><span class="annot"><span class="annottext">((DiffTime
+  -&gt; Tracer IO Trace
+  -&gt; Socket
+  -&gt; Maybe (ReadBuffer IO)
+  -&gt; IO (Bearer IO))
+ -&gt; MakeBearer IO Socket)
+-&gt; (DiffTime
+    -&gt; Tracer IO Trace
+    -&gt; Socket
+    -&gt; Maybe (ReadBuffer IO)
+    -&gt; IO (Bearer IO))
+-&gt; MakeBearer IO Socket
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679124129"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679124129"><span class="hs-identifier hs-var">sduTimeout</span></a></span></span><span> </span><span id="local-6989586621679124130"><span class="annot"><span class="annottext">Tracer IO Trace
+</span><a href="#local-6989586621679124130"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span id="local-6989586621679124131"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679124131"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span id="local-6989586621679124132"><span class="annot"><span class="annottext">Maybe (ReadBuffer IO)
+</span><a href="#local-6989586621679124132"><span class="hs-identifier hs-var">rb</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">Bearer IO -&gt; IO (Bearer IO)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Bearer IO -&gt; IO (Bearer IO)) -&gt; Bearer IO -&gt; IO (Bearer IO)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SDUSize
+-&gt; Int
+-&gt; Maybe (ReadBuffer IO)
+-&gt; DiffTime
+-&gt; DiffTime
+-&gt; Tracer IO Trace
+-&gt; Socket
+-&gt; Bearer IO
+</span><a href="Network.Mux.Bearer.Socket.html#socketAsBearer"><span class="hs-identifier hs-var">socketAsBearer</span></a></span><span> </span><span class="annot"><span class="annottext">SDUSize
+</span><a href="#local-6989586621679124134"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679124135"><span class="hs-identifier hs-var">batch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ReadBuffer IO)
+</span><a href="#local-6989586621679124132"><span class="hs-identifier hs-var">rb</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679124129"><span class="hs-identifier hs-var">sduTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679124128"><span class="hs-identifier hs-var">pt</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer IO Trace
+</span><a href="#local-6989586621679124130"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679124131"><span class="hs-identifier hs-var">fd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679124134"><span class="annot"><span class="annottext">size :: SDUSize
+</span><a href="#local-6989586621679124134"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; SDUSize
+</span><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-var">SDUSize</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">12_288</span></span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679124135"><span class="annot"><span class="annottext">batch :: Int
+</span><a href="#local-6989586621679124135"><span class="hs-identifier hs-var hs-var">batch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">131_072</span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span id="local-6989586621679124084"><span class="annot"><a href="Network.Mux.Bearer.html#withReadBufferIO"><span class="hs-identifier hs-type">withReadBufferIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#ReadBuffer"><span class="hs-identifier hs-type">ReadBuffer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124084"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124084"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-76"></span><span id="withReadBufferIO"><span class="annot"><span class="annottext">withReadBufferIO :: forall b. (Maybe (ReadBuffer IO) -&gt; IO b) -&gt; IO b
+</span><a href="Network.Mux.Bearer.html#withReadBufferIO"><span class="hs-identifier hs-var hs-var">withReadBufferIO</span></a></span></span><span> </span><span id="local-6989586621679124147"><span class="annot"><span class="annottext">Maybe (ReadBuffer IO) -&gt; IO b
+</span><a href="#local-6989586621679124147"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; (Ptr Word8 -&gt; IO b) -&gt; IO b
+forall a b. Int -&gt; Int -&gt; (Ptr a -&gt; IO b) -&gt; IO b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Foreign.Marshal.Alloc.html#allocaBytesAligned"><span class="hs-identifier hs-var">allocaBytesAligned</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679124149"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span> </span><span class="annot"><span class="annottext">((Ptr Word8 -&gt; IO b) -&gt; IO b) -&gt; (Ptr Word8 -&gt; IO b) -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679124150"><span class="annot"><span class="annottext">Ptr Word8
+</span><a href="#local-6989586621679124150"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679124151"><span class="annot"><span class="annottext">StrictTVar IO ByteString
+</span><a href="#local-6989586621679124151"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM IO (StrictTVar IO ByteString) -&gt; IO (StrictTVar IO ByteString)
+forall a. HasCallStack =&gt; STM IO a -&gt; IO a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM IO (StrictTVar IO ByteString)
+ -&gt; IO (StrictTVar IO ByteString))
+-&gt; STM IO (StrictTVar IO ByteString)
+-&gt; IO (StrictTVar IO ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; STM IO (StrictTVar IO ByteString)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; STM m (StrictTVar m a)
+</span><span class="hs-identifier hs-var">newTVar</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#empty"><span class="hs-identifier hs-var">BL.empty</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">Maybe (ReadBuffer IO) -&gt; IO b
+</span><a href="#local-6989586621679124147"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (ReadBuffer IO) -&gt; IO b) -&gt; Maybe (ReadBuffer IO) -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ReadBuffer IO -&gt; Maybe (ReadBuffer IO)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(ReadBuffer IO -&gt; Maybe (ReadBuffer IO))
+-&gt; ReadBuffer IO -&gt; Maybe (ReadBuffer IO)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StrictTVar IO ByteString -&gt; Ptr Word8 -&gt; Int -&gt; ReadBuffer IO
+forall (m :: * -&gt; *).
+StrictTVar m ByteString -&gt; Ptr Word8 -&gt; Int -&gt; ReadBuffer m
+</span><a href="Network.Mux.Types.html#ReadBuffer"><span class="hs-identifier hs-var">ReadBuffer</span></a></span><span> </span><span class="annot"><span class="annottext">StrictTVar IO ByteString
+</span><a href="#local-6989586621679124151"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr Word8
+</span><a href="#local-6989586621679124150"><span class="hs-identifier hs-var">ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679124149"><span class="hs-identifier hs-var">size</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- Maximum amount of data read in one call.</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- Corresponds to the default readbuffer size on Linux.</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- We want it larger than 64Kbyte, but not too large since</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- it is a memory overhead per mux bearer in an application.</span><span>
+</span><span id="line-84"></span><span>    </span><span id="local-6989586621679124149"><span class="annot"><span class="annottext">size :: Int
+</span><a href="#local-6989586621679124149"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">131_072</span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Network.Mux.Bearer.html#makePipeChannelBearer"><span class="hs-identifier hs-type">makePipeChannelBearer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-type">MakeBearer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#PipeChannel"><span class="hs-identifier hs-type">PipeChannel</span></a></span><span>
+</span><span id="line-87"></span><span id="makePipeChannelBearer"><span class="annot"><span class="annottext">makePipeChannelBearer :: MakeBearer IO PipeChannel
+</span><a href="Network.Mux.Bearer.html#makePipeChannelBearer"><span class="hs-identifier hs-var hs-var">makePipeChannelBearer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DiffTime
+ -&gt; Tracer IO Trace
+ -&gt; PipeChannel
+ -&gt; Maybe (ReadBuffer IO)
+ -&gt; IO (Bearer IO))
+-&gt; MakeBearer IO PipeChannel
+forall (m :: * -&gt; *) fd.
+(DiffTime
+ -&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; m (Bearer m))
+-&gt; MakeBearer m fd
+</span><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-var">MakeBearer</span></a></span><span> </span><span class="annot"><span class="annottext">((DiffTime
+  -&gt; Tracer IO Trace
+  -&gt; PipeChannel
+  -&gt; Maybe (ReadBuffer IO)
+  -&gt; IO (Bearer IO))
+ -&gt; MakeBearer IO PipeChannel)
+-&gt; (DiffTime
+    -&gt; Tracer IO Trace
+    -&gt; PipeChannel
+    -&gt; Maybe (ReadBuffer IO)
+    -&gt; IO (Bearer IO))
+-&gt; MakeBearer IO PipeChannel
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(DiffTime
+ -&gt; Tracer IO Trace
+ -&gt; PipeChannel
+ -&gt; Maybe (ReadBuffer IO)
+ -&gt; Bearer IO)
+-&gt; DiffTime
+-&gt; Tracer IO Trace
+-&gt; PipeChannel
+-&gt; Maybe (ReadBuffer IO)
+-&gt; IO (Bearer IO)
+forall (m :: * -&gt; *) fd.
+Applicative m =&gt;
+(DiffTime
+ -&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; Bearer m)
+-&gt; DiffTime
+-&gt; Tracer m Trace
+-&gt; fd
+-&gt; Maybe (ReadBuffer m)
+-&gt; m (Bearer m)
+</span><a href="Network.Mux.Bearer.html#pureBearer"><span class="hs-identifier hs-var">pureBearer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679124157"><span class="annot"><span class="annottext">Tracer IO Trace
+</span><a href="#local-6989586621679124157"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span id="local-6989586621679124158"><span class="annot"><span class="annottext">PipeChannel
+</span><a href="#local-6989586621679124158"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe (ReadBuffer IO)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SDUSize -&gt; Tracer IO Trace -&gt; PipeChannel -&gt; Bearer IO
+</span><a href="Network.Mux.Bearer.Pipe.html#pipeAsBearer"><span class="hs-identifier hs-var">pipeAsBearer</span></a></span><span> </span><span class="annot"><span class="annottext">SDUSize
+</span><a href="#local-6989586621679124160"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer IO Trace
+</span><a href="#local-6989586621679124157"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">PipeChannel
+</span><a href="#local-6989586621679124158"><span class="hs-identifier hs-var">fd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>    </span><span id="local-6989586621679124160"><span class="annot"><span class="annottext">size :: SDUSize
+</span><a href="#local-6989586621679124160"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; SDUSize
+</span><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-var">SDUSize</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">32_768</span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span id="local-6989586621679124100"><span class="annot"><a href="Network.Mux.Bearer.html#makeQueueChannelBearer"><span class="hs-identifier hs-type">makeQueueChannelBearer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span>   </span><span class="annot"><a href="#local-6989586621679124100"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-92"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadMonotonicTime</span></span><span> </span><span class="annot"><a href="#local-6989586621679124100"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-93"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="annot"><a href="#local-6989586621679124100"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-94"></span><span>                          </span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>                       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-type">MakeBearer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124100"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Bearer.Queues.html#QueueChannel"><span class="hs-identifier hs-type">QueueChannel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679124100"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-96"></span><span id="makeQueueChannelBearer"><span class="annot"><span class="annottext">makeQueueChannelBearer :: forall (m :: * -&gt; *).
+(MonadSTM m, MonadMonotonicTime m, MonadThrow m) =&gt;
+MakeBearer m (QueueChannel m)
+</span><a href="Network.Mux.Bearer.html#makeQueueChannelBearer"><span class="hs-identifier hs-var hs-var">makeQueueChannelBearer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DiffTime
+ -&gt; Tracer m Trace
+ -&gt; QueueChannel m
+ -&gt; Maybe (ReadBuffer m)
+ -&gt; m (Bearer m))
+-&gt; MakeBearer m (QueueChannel m)
+forall (m :: * -&gt; *) fd.
+(DiffTime
+ -&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; m (Bearer m))
+-&gt; MakeBearer m fd
+</span><a href="Network.Mux.Bearer.html#MakeBearer"><span class="hs-identifier hs-var">MakeBearer</span></a></span><span> </span><span class="annot"><span class="annottext">((DiffTime
+  -&gt; Tracer m Trace
+  -&gt; QueueChannel m
+  -&gt; Maybe (ReadBuffer m)
+  -&gt; m (Bearer m))
+ -&gt; MakeBearer m (QueueChannel m))
+-&gt; (DiffTime
+    -&gt; Tracer m Trace
+    -&gt; QueueChannel m
+    -&gt; Maybe (ReadBuffer m)
+    -&gt; m (Bearer m))
+-&gt; MakeBearer m (QueueChannel m)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(DiffTime
+ -&gt; Tracer m Trace
+ -&gt; QueueChannel m
+ -&gt; Maybe (ReadBuffer m)
+ -&gt; Bearer m)
+-&gt; DiffTime
+-&gt; Tracer m Trace
+-&gt; QueueChannel m
+-&gt; Maybe (ReadBuffer m)
+-&gt; m (Bearer m)
+forall (m :: * -&gt; *) fd.
+Applicative m =&gt;
+(DiffTime
+ -&gt; Tracer m Trace -&gt; fd -&gt; Maybe (ReadBuffer m) -&gt; Bearer m)
+-&gt; DiffTime
+-&gt; Tracer m Trace
+-&gt; fd
+-&gt; Maybe (ReadBuffer m)
+-&gt; m (Bearer m)
+</span><a href="Network.Mux.Bearer.html#pureBearer"><span class="hs-identifier hs-var">pureBearer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679124173"><span class="annot"><span class="annottext">Tracer m Trace
+</span><a href="#local-6989586621679124173"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span id="local-6989586621679124174"><span class="annot"><span class="annottext">QueueChannel m
+</span><a href="#local-6989586621679124174"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe (ReadBuffer m)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SDUSize -&gt; Tracer m Trace -&gt; QueueChannel m -&gt; Bearer m
+forall (m :: * -&gt; *).
+(MonadSTM m, MonadMonotonicTime m, MonadThrow m) =&gt;
+SDUSize -&gt; Tracer m Trace -&gt; QueueChannel m -&gt; Bearer m
+</span><a href="Network.Mux.Bearer.Queues.html#queueChannelAsBearer"><span class="hs-identifier hs-var">queueChannelAsBearer</span></a></span><span> </span><span class="annot"><span class="annottext">SDUSize
+</span><a href="#local-6989586621679124176"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer m Trace
+</span><a href="#local-6989586621679124173"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">QueueChannel m
+</span><a href="#local-6989586621679124174"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679124176"><span class="annot"><span class="annottext">size :: SDUSize
+</span><a href="#local-6989586621679124176"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; SDUSize
+</span><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-var">SDUSize</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">1_280</span></span><span class="hs-cpp">
+
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-identifier">makeNamedPipeBearer</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">MakeBearer</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-identifier">HANDLE</span><span>
+</span><span id="line-102"></span><span class="hs-identifier">makeNamedPipeBearer</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">MakeBearer</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">pureBearer</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-identifier">_</span><span> </span><span class="hs-identifier">tr</span><span> </span><span class="hs-identifier">fd</span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">namedPipeAsBearer</span><span> </span><span class="hs-identifier">size</span><span> </span><span class="hs-identifier">tr</span><span> </span><span class="hs-identifier">fd</span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-identifier">size</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">SDUSize</span><span> </span><span class="hs-number">24_576</span><span class="hs-cpp">
+#endif
+</span></pre></body></html>

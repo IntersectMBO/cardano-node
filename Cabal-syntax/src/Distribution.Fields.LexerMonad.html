@@ -1,0 +1,523 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module      :  Distribution.Fields.LexerMonad</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- License     :  BSD3</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- Maintainer  :  cabal-devel@haskell.org</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Portability :  portable</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Fields.LexerMonad</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#InputStream"><span class="hs-identifier">InputStream</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier">LexState</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier">LexResult</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier">Lex</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#execLexer"><span class="hs-identifier">execLexer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#getPos"><span class="hs-identifier">getPos</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#setPos"><span class="hs-identifier">setPos</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#adjustPos"><span class="hs-identifier">adjustPos</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#getInput"><span class="hs-identifier">getInput</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#setInput"><span class="hs-identifier">setInput</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#getStartCode"><span class="hs-identifier">getStartCode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#setStartCode"><span class="hs-identifier">setStartCode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier">LexWarning</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningType"><span class="hs-identifier">LexWarningType</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#addWarning"><span class="hs-identifier">addWarning</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#addWarningAt"><span class="hs-identifier">addWarningAt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#toPWarnings"><span class="hs-identifier">toPWarnings</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>              </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.List.NonEmpty.html#/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span>           </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Parsec.Position.html"><span class="hs-identifier">Distribution.Parsec.Position</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier">Position</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#showPos"><span class="hs-identifier">showPos</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Parsec.Warning.html"><span class="hs-identifier">Distribution.Parsec.Warning</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarnType"><span class="hs-identifier">PWarnType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier">PWarning</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Strict.html#/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-cpp">
+
+#ifdef CABAL_PARSEC_DEBUG
+</span><span class="hs-comment">-- testing only:</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.Text</span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">T</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.Text.Encoding</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">T</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.Vector</span><span>        </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">V</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- simple state monad</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">newtype</span><span> </span><span id="Lex"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span></span><span> </span><span id="local-6989586621679384105"><span class="annot"><a href="#local-6989586621679384105"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Lex"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unLex"><span class="annot"><span class="annottext">forall a. Lex a -&gt; LexState -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#unLex"><span class="hs-identifier hs-var hs-var">unLex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-type">LexResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384105"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679384204"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679384210"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Lex a -&gt; Lex b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Lex a -&gt; Lex b
+forall (m :: * -&gt; *) a1 r. Monad m =&gt; (a1 -&gt; r) -&gt; m a1 -&gt; m r
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#liftM/GHC.Base.html#liftM"><span class="hs-identifier hs-var">liftM</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679384217"><span id="local-6989586621679384221"><span id="local-6989586621679384224"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679384227"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; Lex a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Lex a
+forall a. a -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#returnLex"><span class="hs-identifier hs-var">returnLex</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679384230"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. Lex (a -&gt; b) -&gt; Lex a -&gt; Lex b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;*&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lex (a -&gt; b) -&gt; Lex a -&gt; Lex b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#ap/GHC.Base.html#ap"><span class="hs-identifier hs-var">ap</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679384236"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monad/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679384241"><span class="annot"><span class="annottext">return :: forall a. a -&gt; Lex a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Lex a
+forall a. a -&gt; Lex a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679384242"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. Lex a -&gt; (a -&gt; Lex b) -&gt; Lex b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">(&gt;&gt;=)</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lex a -&gt; (a -&gt; Lex b) -&gt; Lex b
+forall a b. Lex a -&gt; (a -&gt; Lex b) -&gt; Lex b
+</span><a href="Distribution.Fields.LexerMonad.html#thenLex"><span class="hs-identifier hs-var">thenLex</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">data</span><span> </span><span id="LexResult"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span></span><span> </span><span id="local-6989586621679384179"><span class="annot"><a href="#local-6989586621679384179"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LexResult"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span></span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384179"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">data</span><span> </span><span id="LexWarningType"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningType"><span class="hs-identifier hs-var">LexWarningType</span></a></span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="LexWarningNBSP"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningNBSP"><span class="hs-identifier hs-var">LexWarningNBSP</span></a></span></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Encountered non breaking space</span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LexWarningBOM"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningBOM"><span class="hs-identifier hs-var">LexWarningBOM</span></a></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ BOM at the start of the cabal file</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LexWarningTab"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningTab"><span class="hs-identifier hs-var">LexWarningTab</span></a></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Leading tags</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679384249"><span id="local-6989586621679384251"><span class="annot"><span class="annottext">LexWarningType -&gt; LexWarningType -&gt; Bool
+(LexWarningType -&gt; LexWarningType -&gt; Bool)
+-&gt; (LexWarningType -&gt; LexWarningType -&gt; Bool) -&gt; Eq LexWarningType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LexWarningType -&gt; LexWarningType -&gt; Bool
+== :: LexWarningType -&gt; LexWarningType -&gt; Bool
+$c/= :: LexWarningType -&gt; LexWarningType -&gt; Bool
+/= :: LexWarningType -&gt; LexWarningType -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679384258"><span id="local-6989586621679384260"><span id="local-6989586621679384262"><span id="local-6989586621679384265"><span id="local-6989586621679384268"><span id="local-6989586621679384271"><span id="local-6989586621679384274"><span class="annot"><span class="annottext">Eq LexWarningType
+Eq LexWarningType =&gt;
+(LexWarningType -&gt; LexWarningType -&gt; Ordering)
+-&gt; (LexWarningType -&gt; LexWarningType -&gt; Bool)
+-&gt; (LexWarningType -&gt; LexWarningType -&gt; Bool)
+-&gt; (LexWarningType -&gt; LexWarningType -&gt; Bool)
+-&gt; (LexWarningType -&gt; LexWarningType -&gt; Bool)
+-&gt; (LexWarningType -&gt; LexWarningType -&gt; LexWarningType)
+-&gt; (LexWarningType -&gt; LexWarningType -&gt; LexWarningType)
+-&gt; Ord LexWarningType
+LexWarningType -&gt; LexWarningType -&gt; Bool
+LexWarningType -&gt; LexWarningType -&gt; Ordering
+LexWarningType -&gt; LexWarningType -&gt; LexWarningType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: LexWarningType -&gt; LexWarningType -&gt; Ordering
+compare :: LexWarningType -&gt; LexWarningType -&gt; Ordering
+$c&lt; :: LexWarningType -&gt; LexWarningType -&gt; Bool
+&lt; :: LexWarningType -&gt; LexWarningType -&gt; Bool
+$c&lt;= :: LexWarningType -&gt; LexWarningType -&gt; Bool
+&lt;= :: LexWarningType -&gt; LexWarningType -&gt; Bool
+$c&gt; :: LexWarningType -&gt; LexWarningType -&gt; Bool
+&gt; :: LexWarningType -&gt; LexWarningType -&gt; Bool
+$c&gt;= :: LexWarningType -&gt; LexWarningType -&gt; Bool
+&gt;= :: LexWarningType -&gt; LexWarningType -&gt; Bool
+$cmax :: LexWarningType -&gt; LexWarningType -&gt; LexWarningType
+max :: LexWarningType -&gt; LexWarningType -&gt; LexWarningType
+$cmin :: LexWarningType -&gt; LexWarningType -&gt; LexWarningType
+min :: LexWarningType -&gt; LexWarningType -&gt; LexWarningType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679384278"><span id="local-6989586621679384280"><span id="local-6989586621679384284"><span class="annot"><span class="annottext">Int -&gt; LexWarningType -&gt; ShowS
+[LexWarningType] -&gt; ShowS
+LexWarningType -&gt; String
+(Int -&gt; LexWarningType -&gt; ShowS)
+-&gt; (LexWarningType -&gt; String)
+-&gt; ([LexWarningType] -&gt; ShowS)
+-&gt; Show LexWarningType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LexWarningType -&gt; ShowS
+showsPrec :: Int -&gt; LexWarningType -&gt; ShowS
+$cshow :: LexWarningType -&gt; String
+show :: LexWarningType -&gt; String
+$cshowList :: [LexWarningType] -&gt; ShowS
+showList :: [LexWarningType] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">data</span><span> </span><span id="LexWarning"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-var">LexWarning</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LexWarning"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-var">LexWarning</span></a></span></span><span>                </span><span class="hs-glyph">!</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningType"><span class="hs-identifier hs-type">LexWarningType</span></a></span><span>
+</span><span id="line-74"></span><span>                             </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679384289"><span id="local-6989586621679384296"><span id="local-6989586621679384300"><span class="annot"><span class="annottext">Int -&gt; LexWarning -&gt; ShowS
+[LexWarning] -&gt; ShowS
+LexWarning -&gt; String
+(Int -&gt; LexWarning -&gt; ShowS)
+-&gt; (LexWarning -&gt; String)
+-&gt; ([LexWarning] -&gt; ShowS)
+-&gt; Show LexWarning
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LexWarning -&gt; ShowS
+showsPrec :: Int -&gt; LexWarning -&gt; ShowS
+$cshow :: LexWarning -&gt; String
+show :: LexWarning -&gt; String
+$cshowList :: [LexWarning] -&gt; ShowS
+showList :: [LexWarning] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#toPWarnings"><span class="hs-identifier hs-type">toPWarnings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-type">LexWarning</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-type">PWarning</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span id="toPWarnings"><span class="annot"><span class="annottext">toPWarnings :: [LexWarning] -&gt; [PWarning]
+</span><a href="Distribution.Fields.LexerMonad.html#toPWarnings"><span class="hs-identifier hs-var hs-var">toPWarnings</span></a></span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((LexWarningType, NonEmpty Position) -&gt; PWarning)
+-&gt; [(LexWarningType, NonEmpty Position)] -&gt; [PWarning]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(LexWarningType -&gt; NonEmpty Position -&gt; PWarning)
+-&gt; (LexWarningType, NonEmpty Position) -&gt; PWarning
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="../../base-4.18.2.1/src/Data.Tuple.html#uncurry/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">LexWarningType -&gt; NonEmpty Position -&gt; PWarning
+</span><a href="#local-6989586621679384303"><span class="hs-identifier hs-var">toWarning</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">([(LexWarningType, NonEmpty Position)] -&gt; [PWarning])
+-&gt; ([LexWarning] -&gt; [(LexWarningType, NonEmpty Position)])
+-&gt; [LexWarning]
+-&gt; [PWarning]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map LexWarningType (NonEmpty Position)
+-&gt; [(LexWarningType, NonEmpty Position)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#toList/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">(Map LexWarningType (NonEmpty Position)
+ -&gt; [(LexWarningType, NonEmpty Position)])
+-&gt; ([LexWarning] -&gt; Map LexWarningType (NonEmpty Position))
+-&gt; [LexWarning]
+-&gt; [(LexWarningType, NonEmpty Position)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty Position -&gt; NonEmpty Position -&gt; NonEmpty Position)
+-&gt; [(LexWarningType, NonEmpty Position)]
+-&gt; Map LexWarningType (NonEmpty Position)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromListWith/Data.Map.Strict.Internal.html#fromListWith"><span class="hs-identifier hs-var">Map.fromListWith</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Position -&gt; NonEmpty Position -&gt; NonEmpty Position
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">([(LexWarningType, NonEmpty Position)]
+ -&gt; Map LexWarningType (NonEmpty Position))
+-&gt; ([LexWarning] -&gt; [(LexWarningType, NonEmpty Position)])
+-&gt; [LexWarning]
+-&gt; Map LexWarningType (NonEmpty Position)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(LexWarning -&gt; (LexWarningType, NonEmpty Position))
+-&gt; [LexWarning] -&gt; [(LexWarningType, NonEmpty Position)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-type">LexWarning</span></a></span><span> </span><span id="local-6989586621679384307"><span class="annot"><span class="annottext">LexWarningType
+</span><a href="#local-6989586621679384307"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679384308"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384308"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LexWarningType
+</span><a href="#local-6989586621679384307"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Position -&gt; NonEmpty Position
+forall a. a -&gt; NonEmpty a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384308"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>    </span><span id="local-6989586621679384303"><span class="annot"><span class="annottext">toWarning :: LexWarningType -&gt; NonEmpty Position -&gt; PWarning
+</span><a href="#local-6989586621679384303"><span class="hs-identifier hs-var hs-var">toWarning</span></a></span></span><span> </span><span class="annot"><span class="annottext">LexWarningType
+</span><a href="Distribution.Fields.LexerMonad.html#LexWarningBOM"><span class="hs-identifier hs-var">LexWarningBOM</span></a></span><span> </span><span id="local-6989586621679384312"><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384312"><span class="hs-identifier hs-var">poss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">PWarnType -&gt; Position -&gt; String -&gt; PWarning
+</span><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-var">PWarning</span></a></span><span> </span><span class="annot"><span class="annottext">PWarnType
+</span><a href="Distribution.Parsec.Warning.html#PWTLexBOM"><span class="hs-identifier hs-var">PWTLexBOM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty Position -&gt; Position
+forall a. NonEmpty a -&gt; a
+</span><a href="../../base-4.18.2.1/src/Data.List.NonEmpty.html#head/Data.List.NonEmpty.html#head"><span class="hs-identifier hs-var">NE.head</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384312"><span class="hs-identifier hs-var">poss</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Byte-order mark found at the beginning of the file&quot;</span></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><a href="#local-6989586621679384303"><span class="hs-identifier hs-var">toWarning</span></a></span><span> </span><span class="annot"><span class="annottext">LexWarningType
+</span><a href="Distribution.Fields.LexerMonad.html#LexWarningNBSP"><span class="hs-identifier hs-var">LexWarningNBSP</span></a></span><span> </span><span id="local-6989586621679384316"><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384316"><span class="hs-identifier hs-var">poss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><span class="annottext">PWarnType -&gt; Position -&gt; String -&gt; PWarning
+</span><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-var">PWarning</span></a></span><span> </span><span class="annot"><span class="annottext">PWarnType
+</span><a href="Distribution.Parsec.Warning.html#PWTLexNBSP"><span class="hs-identifier hs-var">PWTLexNBSP</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty Position -&gt; Position
+forall a. NonEmpty a -&gt; a
+</span><a href="../../base-4.18.2.1/src/Data.List.NonEmpty.html#head/Data.List.NonEmpty.html#head"><span class="hs-identifier hs-var">NE.head</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384316"><span class="hs-identifier hs-var">poss</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; PWarning) -&gt; String -&gt; PWarning
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Non breaking spaces at &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; String
+forall a. [a] -&gt; [[a]] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#intercalate/Data.OldList.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty String -&gt; [String]
+forall a. NonEmpty a -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.List.NonEmpty.html#toList/Data.List.NonEmpty.html#toList"><span class="hs-identifier hs-var">NE.toList</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty String -&gt; [String]) -&gt; NonEmpty String -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Position -&gt; String) -&gt; NonEmpty Position -&gt; NonEmpty String
+forall a b. (a -&gt; b) -&gt; NonEmpty a -&gt; NonEmpty b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Position -&gt; String
+</span><a href="Distribution.Parsec.Position.html#showPos"><span class="hs-identifier hs-var">showPos</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384316"><span class="hs-identifier hs-var">poss</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="#local-6989586621679384303"><span class="hs-identifier hs-var">toWarning</span></a></span><span> </span><span class="annot"><span class="annottext">LexWarningType
+</span><a href="Distribution.Fields.LexerMonad.html#LexWarningTab"><span class="hs-identifier hs-var">LexWarningTab</span></a></span><span> </span><span id="local-6989586621679384320"><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384320"><span class="hs-identifier hs-var">poss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>        </span><span class="annot"><span class="annottext">PWarnType -&gt; Position -&gt; String -&gt; PWarning
+</span><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-var">PWarning</span></a></span><span> </span><span class="annot"><span class="annottext">PWarnType
+</span><a href="Distribution.Parsec.Warning.html#PWTLexTab"><span class="hs-identifier hs-var">PWTLexTab</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty Position -&gt; Position
+forall a. NonEmpty a -&gt; a
+</span><a href="../../base-4.18.2.1/src/Data.List.NonEmpty.html#head/Data.List.NonEmpty.html#head"><span class="hs-identifier hs-var">NE.head</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384320"><span class="hs-identifier hs-var">poss</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; PWarning) -&gt; String -&gt; PWarning
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Tabs used as indentation at &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; String
+forall a. [a] -&gt; [[a]] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.OldList.html#intercalate/Data.OldList.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty String -&gt; [String]
+forall a. NonEmpty a -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/Data.List.NonEmpty.html#toList/Data.List.NonEmpty.html#toList"><span class="hs-identifier hs-var">NE.toList</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty String -&gt; [String]) -&gt; NonEmpty String -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Position -&gt; String) -&gt; NonEmpty Position -&gt; NonEmpty String
+forall a b. (a -&gt; b) -&gt; NonEmpty a -&gt; NonEmpty b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Position -&gt; String
+</span><a href="Distribution.Parsec.Position.html#showPos"><span class="hs-identifier hs-var">showPos</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Position
+</span><a href="#local-6989586621679384320"><span class="hs-identifier hs-var">poss</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">data</span><span> </span><span id="LexState"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-var">LexState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LexState"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-var">LexState</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-92"></span><span>        </span><span id="curPos"><span class="annot"><span class="annottext">LexState -&gt; Position
+</span><a href="Distribution.Fields.LexerMonad.html#curPos"><span class="hs-identifier hs-var hs-var">curPos</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span class="hs-special">,</span><span>        </span><span class="annot"><span class="hs-comment">-- ^ position at current input location</span></span><span>
+</span><span id="line-93"></span><span>        </span><span id="curInput"><span class="annot"><span class="annottext">LexState -&gt; InputStream
+</span><a href="Distribution.Fields.LexerMonad.html#curInput"><span class="hs-identifier hs-var hs-var">curInput</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#InputStream"><span class="hs-identifier hs-type">InputStream</span></a></span><span class="hs-special">,</span><span>     </span><span class="annot"><span class="hs-comment">-- ^ the current input</span></span><span>
+</span><span id="line-94"></span><span>        </span><span id="curCode"><span class="annot"><span class="annottext">LexState -&gt; Int
+</span><a href="Distribution.Fields.LexerMonad.html#curCode"><span class="hs-identifier hs-var hs-var">curCode</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#StartCode"><span class="hs-identifier hs-type">StartCode</span></a></span><span class="hs-special">,</span><span>       </span><span class="annot"><span class="hs-comment">-- ^ lexer code</span></span><span>
+</span><span id="line-95"></span><span>        </span><span id="warnings"><span class="annot"><span class="annottext">LexState -&gt; [LexWarning]
+</span><a href="Distribution.Fields.LexerMonad.html#warnings"><span class="hs-identifier hs-var hs-var">warnings</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-type">LexWarning</span></a></span><span class="hs-special">]</span><span class="hs-cpp">
+#ifdef CABAL_PARSEC_DEBUG
+</span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">dbgText</span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">V.Vector</span><span> </span><span class="hs-identifier">T.Text</span><span>                </span><span class="hs-comment">-- ^ input lines, to print pretty debug info</span><span class="hs-cpp">
+#endif
+</span><span>     </span><span class="hs-special">}</span><span> </span><span class="hs-comment">--TODO: check if we should cache the first token</span><span>
+</span><span id="line-100"></span><span>       </span><span class="hs-comment">-- since it looks like parsec's uncons can be called many times on the same input</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">type</span><span> </span><span id="StartCode"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#StartCode"><span class="hs-identifier hs-var">StartCode</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ An @alex@ lexer start code</span></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">type</span><span> </span><span id="InputStream"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#InputStream"><span class="hs-identifier hs-var">InputStream</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">B.ByteString</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="annot"><span class="hs-comment">-- | Execute the given lexer on the supplied input stream.</span></span><span>
+</span><span id="line-108"></span><span id="local-6989586621679384175"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#execLexer"><span class="hs-identifier hs-type">execLexer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384175"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#InputStream"><span class="hs-identifier hs-type">InputStream</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-type">LexWarning</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679384175"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-109"></span><span id="execLexer"><span class="annot"><span class="annottext">execLexer :: forall a. Lex a -&gt; InputStream -&gt; ([LexWarning], a)
+</span><a href="Distribution.Fields.LexerMonad.html#execLexer"><span class="hs-identifier hs-var hs-var">execLexer</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span id="local-6989586621679384329"><span class="annot"><span class="annottext">LexState -&gt; LexResult a
+</span><a href="#local-6989586621679384329"><span class="hs-identifier hs-var">lexer</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679384330"><span class="annot"><span class="annottext">InputStream
+</span><a href="#local-6989586621679384330"><span class="hs-identifier hs-var">input</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; LexResult a
+</span><a href="#local-6989586621679384329"><span class="hs-identifier hs-var">lexer</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384331"><span class="hs-identifier hs-var">initialState</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-type">LexResult</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">warnings :: LexState -&gt; [LexWarning]
+</span><a href="Distribution.Fields.LexerMonad.html#warnings"><span class="hs-identifier hs-var">warnings</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384332"><span class="annot"><span class="annottext">[LexWarning]
+</span><a href="#local-6989586621679384332"><span class="hs-identifier hs-var">ws</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621679384333"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679384333"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[LexWarning]
+</span><a href="#local-6989586621679384332"><span class="hs-identifier hs-var">ws</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679384333"><span class="hs-identifier hs-var">result</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679384331"><span class="annot"><span class="annottext">initialState :: LexState
+</span><a href="#local-6989586621679384331"><span class="hs-identifier hs-var hs-var">initialState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-comment">-- TODO: add 'startPosition'</span><span>
+</span><span id="line-115"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">curPos :: Position
+</span><a href="Distribution.Fields.LexerMonad.html#curPos"><span class="hs-identifier hs-var">curPos</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Position
+</span><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-var">Position</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-116"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">curInput :: InputStream
+</span><a href="Distribution.Fields.LexerMonad.html#curInput"><span class="hs-identifier hs-var">curInput</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InputStream
+</span><a href="#local-6989586621679384330"><span class="hs-identifier hs-var">input</span></a></span><span>
+</span><span id="line-117"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">curCode :: Int
+</span><a href="Distribution.Fields.LexerMonad.html#curCode"><span class="hs-identifier hs-var">curCode</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">warnings :: [LexWarning]
+</span><a href="Distribution.Fields.LexerMonad.html#warnings"><span class="hs-identifier hs-var">warnings</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-cpp">
+#ifdef CABAL_PARSEC_DEBUG
+</span><span>      </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">dbgText</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">V.fromList</span><span> </span><span class="hs-operator">.</span><span> </span><span class="hs-identifier">T.lines</span><span> </span><span class="hs-operator">.</span><span> </span><span class="hs-identifier">T.decodeUtf8</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">input</span><span class="hs-cpp">
+#endif
+</span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#returnLex"><span class="hs-pragma hs-type">returnLex</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-125"></span><span id="local-6989586621679384335"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#returnLex"><span class="hs-identifier hs-type">returnLex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679384335"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384335"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-126"></span><span id="returnLex"><span class="annot"><span class="annottext">returnLex :: forall a. a -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#returnLex"><span class="hs-identifier hs-var hs-var">returnLex</span></a></span></span><span> </span><span id="local-6989586621679384336"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679384336"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult a) -&gt; Lex a
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult a) -&gt; Lex a)
+-&gt; (LexState -&gt; LexResult a) -&gt; Lex a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384337"><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384337"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; a -&gt; LexResult a
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384337"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679384336"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#thenLex"><span class="hs-pragma hs-type">thenLex</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-129"></span><span id="local-6989586621679384338"><span id="local-6989586621679384339"><span class="annot"><a href="Distribution.Fields.LexerMonad.html#thenLex"><span class="hs-identifier hs-type">thenLex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384338"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679384338"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384339"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384339"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-130"></span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span id="local-6989586621679384340"><span class="annot"><span class="annottext">LexState -&gt; LexResult a
+</span><a href="#local-6989586621679384340"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span id="thenLex"><span class="annot"><span class="annottext">thenLex :: forall a b. Lex a -&gt; (a -&gt; Lex b) -&gt; Lex b
+</span><a href="Distribution.Fields.LexerMonad.html#thenLex"><span class="hs-operator hs-var hs-var">`thenLex`</span></a></span></span><span> </span><span id="local-6989586621679384341"><span class="annot"><span class="annottext">a -&gt; Lex b
+</span><a href="#local-6989586621679384341"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult b) -&gt; Lex b
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult b) -&gt; Lex b)
+-&gt; (LexState -&gt; LexResult b) -&gt; Lex b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384342"><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384342"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; LexResult a
+</span><a href="#local-6989586621679384340"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384342"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-type">LexResult</span></a></span><span> </span><span id="local-6989586621679384343"><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384343"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span id="local-6989586621679384344"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679384344"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Lex b -&gt; LexState -&gt; LexResult b
+forall a. Lex a -&gt; LexState -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#unLex"><span class="hs-identifier hs-var">unLex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Lex b
+</span><a href="#local-6989586621679384341"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679384344"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384343"><span class="hs-identifier hs-var">s'</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#setPos"><span class="hs-identifier hs-type">setPos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span id="setPos"><span class="annot"><span class="annottext">setPos :: Position -&gt; Lex ()
+</span><a href="Distribution.Fields.LexerMonad.html#setPos"><span class="hs-identifier hs-var hs-var">setPos</span></a></span></span><span> </span><span id="local-6989586621679384345"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384345"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult ()) -&gt; Lex ())
+-&gt; (LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384346"><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384346"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; () -&gt; LexResult ()
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384346"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#curPos"><span class="hs-identifier hs-var">curPos</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679384345"><span class="hs-identifier hs-type">pos</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#getPos"><span class="hs-identifier hs-type">getPos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span>
+</span><span id="line-136"></span><span id="getPos"><span class="annot"><span class="annottext">getPos :: Lex Position
+</span><a href="Distribution.Fields.LexerMonad.html#getPos"><span class="hs-identifier hs-var hs-var">getPos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult Position) -&gt; Lex Position
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult Position) -&gt; Lex Position)
+-&gt; (LexState -&gt; LexResult Position) -&gt; Lex Position
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384347"><span class="annot"><span class="annottext">s :: LexState
+</span><a href="#local-6989586621679384347"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">curPos :: LexState -&gt; Position
+</span><a href="Distribution.Fields.LexerMonad.html#curPos"><span class="hs-identifier hs-var">curPos</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384348"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384348"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; Position -&gt; LexResult Position
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384347"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384348"><span class="hs-identifier hs-var">pos</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#adjustPos"><span class="hs-identifier hs-type">adjustPos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span id="adjustPos"><span class="annot"><span class="annottext">adjustPos :: (Position -&gt; Position) -&gt; Lex ()
+</span><a href="Distribution.Fields.LexerMonad.html#adjustPos"><span class="hs-identifier hs-var hs-var">adjustPos</span></a></span></span><span> </span><span id="local-6989586621679384349"><span class="annot"><span class="annottext">Position -&gt; Position
+</span><a href="#local-6989586621679384349"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult ()) -&gt; Lex ())
+-&gt; (LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384350"><span class="annot"><span class="annottext">s :: LexState
+</span><a href="#local-6989586621679384350"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">curPos :: LexState -&gt; Position
+</span><a href="Distribution.Fields.LexerMonad.html#curPos"><span class="hs-identifier hs-var">curPos</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384351"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384351"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; () -&gt; LexResult ()
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384350"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#curPos"><span class="hs-identifier hs-var">curPos</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679384349"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384351"><span class="hs-identifier hs-type">pos</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#getInput"><span class="hs-identifier hs-type">getInput</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#InputStream"><span class="hs-identifier hs-type">InputStream</span></a></span><span>
+</span><span id="line-142"></span><span id="getInput"><span class="annot"><span class="annottext">getInput :: Lex InputStream
+</span><a href="Distribution.Fields.LexerMonad.html#getInput"><span class="hs-identifier hs-var hs-var">getInput</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult InputStream) -&gt; Lex InputStream
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult InputStream) -&gt; Lex InputStream)
+-&gt; (LexState -&gt; LexResult InputStream) -&gt; Lex InputStream
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384352"><span class="annot"><span class="annottext">s :: LexState
+</span><a href="#local-6989586621679384352"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">curInput :: LexState -&gt; InputStream
+</span><a href="Distribution.Fields.LexerMonad.html#curInput"><span class="hs-identifier hs-var">curInput</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384353"><span class="annot"><span class="annottext">InputStream
+</span><a href="#local-6989586621679384353"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; InputStream -&gt; LexResult InputStream
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384352"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">InputStream
+</span><a href="#local-6989586621679384353"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#setInput"><span class="hs-identifier hs-type">setInput</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#InputStream"><span class="hs-identifier hs-type">InputStream</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span id="setInput"><span class="annot"><span class="annottext">setInput :: InputStream -&gt; Lex ()
+</span><a href="Distribution.Fields.LexerMonad.html#setInput"><span class="hs-identifier hs-var hs-var">setInput</span></a></span></span><span> </span><span id="local-6989586621679384354"><span class="annot"><span class="annottext">InputStream
+</span><a href="#local-6989586621679384354"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult ()) -&gt; Lex ())
+-&gt; (LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384355"><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384355"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; () -&gt; LexResult ()
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384355"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#curInput"><span class="hs-identifier hs-var">curInput</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679384354"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#getStartCode"><span class="hs-identifier hs-type">getStartCode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-148"></span><span id="getStartCode"><span class="annot"><span class="annottext">getStartCode :: Lex Int
+</span><a href="Distribution.Fields.LexerMonad.html#getStartCode"><span class="hs-identifier hs-var hs-var">getStartCode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult Int) -&gt; Lex Int
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult Int) -&gt; Lex Int)
+-&gt; (LexState -&gt; LexResult Int) -&gt; Lex Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384356"><span class="annot"><span class="annottext">s :: LexState
+</span><a href="#local-6989586621679384356"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">curCode :: LexState -&gt; Int
+</span><a href="Distribution.Fields.LexerMonad.html#curCode"><span class="hs-identifier hs-var">curCode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384357"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679384357"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; Int -&gt; LexResult Int
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384356"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679384357"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#setStartCode"><span class="hs-identifier hs-type">setStartCode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span id="setStartCode"><span class="annot"><span class="annottext">setStartCode :: Int -&gt; Lex ()
+</span><a href="Distribution.Fields.LexerMonad.html#setStartCode"><span class="hs-identifier hs-var hs-var">setStartCode</span></a></span></span><span> </span><span id="local-6989586621679384358"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679384358"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult ()) -&gt; Lex ())
+-&gt; (LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384359"><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384359"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LexState -&gt; () -&gt; LexResult ()
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384359"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#curCode"><span class="hs-identifier hs-var">curCode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679384358"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="annot"><span class="hs-comment">-- | Add warning at the current position</span></span><span>
+</span><span id="line-154"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#addWarning"><span class="hs-identifier hs-type">addWarning</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningType"><span class="hs-identifier hs-type">LexWarningType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span id="addWarning"><span class="annot"><span class="annottext">addWarning :: LexWarningType -&gt; Lex ()
+</span><a href="Distribution.Fields.LexerMonad.html#addWarning"><span class="hs-identifier hs-var hs-var">addWarning</span></a></span></span><span> </span><span id="local-6989586621679384360"><span class="annot"><span class="annottext">LexWarningType
+</span><a href="#local-6989586621679384360"><span class="hs-identifier hs-var">wt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult ()) -&gt; Lex ())
+-&gt; (LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384361"><span class="annot"><span class="annottext">s :: LexState
+</span><a href="#local-6989586621679384361"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">curPos :: LexState -&gt; Position
+</span><a href="Distribution.Fields.LexerMonad.html#curPos"><span class="hs-identifier hs-var">curPos</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384362"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384362"><span class="hs-identifier hs-var">pos</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">warnings :: LexState -&gt; [LexWarning]
+</span><a href="Distribution.Fields.LexerMonad.html#warnings"><span class="hs-identifier hs-var">warnings</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384363"><span class="annot"><span class="annottext">[LexWarning]
+</span><a href="#local-6989586621679384363"><span class="hs-identifier hs-var">ws</span></a></span></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="annottext">LexState -&gt; () -&gt; LexResult ()
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384361"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#warnings"><span class="hs-identifier hs-var">warnings</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-type">LexWarning</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384360"><span class="hs-identifier hs-type">wt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384362"><span class="hs-identifier hs-type">pos</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><a href="#local-6989586621679384363"><span class="hs-identifier hs-type">ws</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><span class="hs-comment">-- | Add warning at specific position</span></span><span>
+</span><span id="line-159"></span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#addWarningAt"><span class="hs-identifier hs-type">addWarningAt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarningType"><span class="hs-identifier hs-type">LexWarningType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-type">Lex</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span id="addWarningAt"><span class="annot"><span class="annottext">addWarningAt :: Position -&gt; LexWarningType -&gt; Lex ()
+</span><a href="Distribution.Fields.LexerMonad.html#addWarningAt"><span class="hs-identifier hs-var hs-var">addWarningAt</span></a></span></span><span> </span><span id="local-6989586621679384364"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679384364"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span id="local-6989586621679384365"><span class="annot"><span class="annottext">LexWarningType
+</span><a href="#local-6989586621679384365"><span class="hs-identifier hs-var">wt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a. (LexState -&gt; LexResult a) -&gt; Lex a
+</span><a href="Distribution.Fields.LexerMonad.html#Lex"><span class="hs-identifier hs-var">Lex</span></a></span><span> </span><span class="annot"><span class="annottext">((LexState -&gt; LexResult ()) -&gt; Lex ())
+-&gt; (LexState -&gt; LexResult ()) -&gt; Lex ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679384366"><span class="annot"><span class="annottext">s :: LexState
+</span><a href="#local-6989586621679384366"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexState"><span class="hs-identifier hs-type">LexState</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">warnings :: LexState -&gt; [LexWarning]
+</span><a href="Distribution.Fields.LexerMonad.html#warnings"><span class="hs-identifier hs-var">warnings</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679384367"><span class="annot"><span class="annottext">[LexWarning]
+</span><a href="#local-6989586621679384367"><span class="hs-identifier hs-var">ws</span></a></span></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="annottext">LexState -&gt; () -&gt; LexResult ()
+forall a. LexState -&gt; a -&gt; LexResult a
+</span><a href="Distribution.Fields.LexerMonad.html#LexResult"><span class="hs-identifier hs-var">LexResult</span></a></span><span> </span><span class="annot"><span class="annottext">LexState
+</span><a href="#local-6989586621679384366"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#warnings"><span class="hs-identifier hs-var">warnings</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Fields.LexerMonad.html#LexWarning"><span class="hs-identifier hs-type">LexWarning</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384365"><span class="hs-identifier hs-type">wt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679384364"><span class="hs-identifier hs-type">pos</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><a href="#local-6989586621679384367"><span class="hs-identifier hs-type">ws</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span></pre></body></html>
