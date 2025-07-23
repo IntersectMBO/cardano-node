@@ -854,9 +854,11 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
               TraceLabelPeer _ TraceTxInboundTerminated -> return ()
               TraceLabelPeer _ TraceTxInboundCanRequestMoreTxs {} -> return ()
               TraceLabelPeer _ TraceTxInboundCannotRequestMoreTxs {} -> return ()
+              TraceLabelPeer _ (TraceTxInboundAddedToMempool [] _delay) -> return ()
               TraceLabelPeer _ (TraceTxInboundAddedToMempool txids delay) -> do
                 traceI trmet meta "submissions.mempoolDelayPerAcceptedTx" =<<
                   STM.modifyReadTVarIO tSubmissionsDelay (+ diffTimeToMicrosecondsAsInt (delay / fromIntegral (length txids)))
+              TraceLabelPeer _ (TraceTxInboundRejectedFromMempool [] _delay) -> return ()
               TraceLabelPeer _ (TraceTxInboundRejectedFromMempool txids delay) -> do
                 traceI trmet meta "submissions.mempoolDelayPerRejectedTx" =<<
                   STM.modifyReadTVarIO tSubmissionsDelay (+ diffTimeToMicrosecondsAsInt (delay / fromIntegral (length txids)))
