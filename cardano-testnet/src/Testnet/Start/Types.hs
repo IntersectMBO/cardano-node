@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -25,6 +26,7 @@ module Testnet.Start.Types
   , CreateEnvUpdateTime(..)
   , CustomOnChainParams(..)
   , OnChainParamsFlavour(..)
+  , flavourRequest
   , NodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
@@ -48,6 +50,7 @@ import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import           Prelude
 
+import           Data.Aeson ((.:), withObject)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
@@ -55,7 +58,9 @@ import           Data.Default.Class
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
+import qualified Network.HTTP.Simple as HTTP
 import           System.FilePath (addTrailingPathSeparator)
+import           System.IO.Unsafe (unsafePerformIO)
 
 import           Testnet.Filepath
 
@@ -147,6 +152,16 @@ data OnChainParamsFlavour
 
 instance Default OnChainParamsFlavour where
   def = FlavourMainNet
+
+mainnetParamsRequest :: HTTP.Request
+mainnetParamsRequest = unsafePerformIO $ HTTP.parseRequest
+  "https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json"
+{-# NOINLINE mainnetParamsRequest #-}
+
+-- The URLs for the parameter files of hard-coed flavours
+flavourRequest :: OnChainParamsFlavour -> HTTP.Request
+flavourRequest = \case
+  FlavourMainNet -> mainnetParamsRequest
 
 -- | An abstract node id, used as placeholder in topology files
 -- when the actual ports/addresses aren't known yet (i.e. before runtime)
