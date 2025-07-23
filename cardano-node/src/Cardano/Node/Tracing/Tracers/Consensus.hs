@@ -1115,23 +1115,33 @@ instance (ToJSON txid, Aeson.ToJSONKey txid, ToObject tx) => LogFormatting (Trac
       , "error" .= String (Text.pack . show $ err)
       ]
 
+  asMetrics (TraceTxSubmissionCollected txids)=
+    [CounterM "submissions.submitted" (Just $ length txids)]
   asMetrics (TraceTxSubmissionProcessed processed) =
     [ CounterM "submissions.accepted"
         (Just (ptxcAccepted processed))
     , CounterM "submissions.rejected"
         (Just (ptxcRejected processed))
     ]
-  asMetrics (TraceTxInboundAddedToMempool txids delay) =
+  asMetrics (TraceTxInboundAddedToMempool [] _delay) =
+    []
+  asMetrics (TraceTxInboundAddedToMempool txids@(_:_) delay) =
     [ -- this counter makes the most sense for the new tx logic, in which we
       -- submit each tx to mempool separately (e.g. `txids` is of length 1)
-      CounterM "submission.mempoolDelayPerAcceptedTxs"
-        (Just $ diffTimeToMicrosecondsAsInt (delay / fromIntegral (length txids)))
+      IntM "submission.mempoolDelayPerAcceptedTxs"
+        ( fromIntegral . diffTimeToMicrosecondsAsInt
+        $ delay / fromIntegral (length txids)
+        )
     ]
-  asMetrics (TraceTxInboundRejectedFromMempool txids delay) =
+  asMetrics (TraceTxInboundRejectedFromMempool [] _delay) =
+    []
+  asMetrics (TraceTxInboundRejectedFromMempool txids@(_:_) delay) =
     [ -- this counter makes the most sense for the new tx logic, in which we
       -- submit each tx to mempool separately (e.g. `txids` is of length 1)
-      CounterM "submission.mempoolDelayPerRejectedTxs"
-        (Just $ diffTimeToMicrosecondsAsInt (delay / fromIntegral (length txids)))
+      IntM "submission.mempoolDelayPerRejectedTxs"
+        ( fromIntegral . diffTimeToMicrosecondsAsInt
+        $ delay / fromIntegral (length txids)
+        )
     ]
   asMetrics _ = []
 
