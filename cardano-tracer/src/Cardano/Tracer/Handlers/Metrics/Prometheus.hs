@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,6 +15,10 @@ import           Cardano.Tracer.MetaTrace
 
 import           Prelude hiding (head)
 
+import           Control.Concurrent (myThreadId)
+import           Control.Concurrent.Async (race_)
+import           Control.Concurrent.Chan.Unagi (OutChan, readChan, dupChan)
+import           Control.Exception (AsyncException(ThreadKilled), throwTo)
 import qualified Data.ByteString as ByteString
 import           Data.ByteString.Builder (stringUtf8)
 import           Data.Functor ((<&>))
@@ -67,26 +72,35 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   -- If everything is okay, the function 'simpleHttpServe' never returns.
   -- But if there is some problem, it never throws an exception, but just stops.
   -- So if it stopped - it will be re-started.
-  traceWith teTracer TracerStartedPrometheus
+  traceWith tracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
-  runSettings (setEndpoint endpoint defaultSettings) do
-    renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp
+  outChan <- dupChan inChan
+  let run :: IO ()
+      run = runSettings (setEndpoint endpoint defaultSettings) $
+        renderPrometheus computeRoutes_autoUpdate outChan noSuffix metricsHelp
+  race_ run (delayUntilShutdown outChan)
   where
     TracerEnv
-      { teTracer
-      , teConfig = TracerConfig { metricsNoSuffix }
-      , teMetricsHelp
+      { teTracer      = tracer
+      , teConfig      = TracerConfig { metricsNoSuffix }
+      , teMetricsHelp = metricsHelp
+      , teInChan      = inChan
       } = tracerEnv
 
     noSuffix = or @Maybe metricsNoSuffix
 
 renderPrometheus
   :: IO RouteDictionary
+  -> OutChan (CardanoTracerMessage ())
   -> Bool
   -> [(Text, Builder)]
   -> Application
-renderPrometheus computeRoutes_autoUpdate noSuffix helpTextDict request send = do
+renderPrometheus computeRoutes_autoUpdate outChan noSuffix helpTextDict request send = do
+  readChan outChan >>= \case
+    Shutdown -> myThreadId >>= (`throwTo` ThreadKilled)
+    _ -> pure ()
+
   routeDictionary :: RouteDictionary <-
     computeRoutes_autoUpdate
 

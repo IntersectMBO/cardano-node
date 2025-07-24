@@ -110,3 +110,5 @@ mkTimerOnFailure onFailure tracer io state callPeriod_sec = do
     , startTimer    = modifyIORef' isRunning (const True)
     , stopTimer     = modifyIORef' isRunning (const False)
     }
+
+    -- TODO: Store last timestamp
