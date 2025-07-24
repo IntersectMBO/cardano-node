@@ -175,6 +175,7 @@ library
                       , io-classes >= 1.5
                       , iohk-monitoring ^>= 0.2
                       , microlens
+                      , mmap
                       , network-mux
                       , iproute
                       , lobemo-backend-aggregation
