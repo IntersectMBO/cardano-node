@@ -266,6 +266,7 @@ test-suite cardano-testnet-test
                       , mtl
                       , process
                       , regex-compat
+                      , rio
                       , tasty ^>= 1.5
                       , text
                       , time
