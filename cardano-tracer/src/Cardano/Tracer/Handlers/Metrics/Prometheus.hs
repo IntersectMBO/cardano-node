@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,6 +15,8 @@ import           Cardano.Tracer.MetaTrace
 
 import           Prelude hiding (head)
 
+import           Control.Concurrent.Async (race_)
+import           Control.Concurrent.Chan.Unagi (dupChan)
 import qualified Data.ByteString as ByteString
 import           Data.ByteString.Builder (stringUtf8)
 import           Data.Functor ((<&>))
@@ -67,16 +70,20 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   -- If everything is okay, the function 'simpleHttpServe' never returns.
   -- But if there is some problem, it never throws an exception, but just stops.
   -- So if it stopped - it will be re-started.
-  traceWith teTracer TracerStartedPrometheus
+  traceWith tracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
-  runSettings (setEndpoint endpoint defaultSettings) do
-    renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp
+  outChan <- dupChan inChan
+  let run :: IO ()
+      run = runSettings (setEndpoint endpoint defaultSettings) $
+        renderPrometheus computeRoutes_autoUpdate noSuffix metricsHelp
+  race_ run (blockUntilShutdown outChan)
   where
     TracerEnv
-      { teTracer
-      , teConfig = TracerConfig { metricsNoSuffix }
-      , teMetricsHelp
+      { teTracer      = tracer
+      , teConfig      = TracerConfig { metricsNoSuffix }
+      , teMetricsHelp = metricsHelp
+      , teInChan      = inChan
       } = tracerEnv
 
     noSuffix = or @Maybe metricsNoSuffix

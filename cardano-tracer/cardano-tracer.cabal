@@ -200,6 +200,7 @@ library
                       , trace-dispatcher ^>= 2.10.0
                       , trace-forward ^>= 2.3.0
                       , trace-resources ^>= 0.2.4
+                      , unagi-chan
                       , wai ^>= 3.2
                       , warp ^>= 3.4
                       , yaml
@@ -294,6 +295,7 @@ library demo-acceptor-lib
   exposed-modules:      Cardano.Tracer.Test.Acceptor
 
   build-depends:        bytestring
+                      , QuickCheck
                       , cardano-tracer
                       , containers
                       , extra
@@ -306,9 +308,9 @@ library demo-acceptor-lib
                       , text
                       , trace-dispatcher
                       , trace-forward
+                      , unagi-chan
                       , vector
                       , vector-algorithms
-                      , QuickCheck
 
 executable demo-acceptor
   import:               project-config
@@ -452,12 +454,13 @@ benchmark cardano-tracer-bench
     build-depends:      stm <2.5.2 || >=2.5.3
   build-depends:        cardano-tracer
                       , criterion
-                      , directory
                       , deepseq
+                      , directory
                       , extra
                       , filepath
                       , time
                       , trace-dispatcher
+                      , unagi-chan
 
   ghc-options:          -threaded
                         -rtsopts
