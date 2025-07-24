@@ -18,7 +18,7 @@ module Cardano.Tracer.Test.Forwarder
 import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
 import           Cardano.Logging.Types (HowToConnect)
 import qualified Cardano.Logging.Types as Net
-import           Cardano.Logging.Utils (runInLoop)
+import           Cardano.Logging.Utils (RunInLoopTermination(TerminateNever), runInLoop)
 import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -95,7 +95,7 @@ launchForwardersSimple
   -> Word
   -> IO ()
 launchForwardersSimple ts mode howToConnect queueSize = withIOManager \iomgr ->
-  runInLoop (launchForwardersSimple' ts iomgr mode howToConnect queueSize) handleInterruption 1 60
+  runInLoop (launchForwardersSimple' ts iomgr mode howToConnect queueSize) TerminateNever handleInterruption 1 60
   where
     handleInterruption = const $ pure ()
 
