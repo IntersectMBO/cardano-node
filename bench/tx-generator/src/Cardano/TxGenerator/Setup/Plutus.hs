@@ -20,6 +20,7 @@ import           Data.ByteString.Short (ShortByteString)
 import           Data.Int (Int64)
 import           Data.Map.Strict as Map (lookup)
 
+import           Control.Exception (displayException)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Writer (runWriter)
@@ -72,8 +73,8 @@ readPlutusScript (Left s)
     doLoad fp  = second (second (const $ ResolvedToFallback asFileName)) <$> readPlutusScript (Right fp)
 readPlutusScript (Right fp)
   = runExceptT $ do
-    script <- firstExceptT (ApiError @ScriptDecodeError) $
-      readFileScriptInAnyLang fp
+    script <-
+       handleExceptT (\(e :: SomeException) -> ApiError $ displayException e) (readFileScriptInAnyLang fp)
     case script of
       ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure (script, ResolvedToFileName fp)
       ScriptInAnyLang lang _ -> throwE $ TxGenError $ "readPlutusScript: only PlutusScript supported, found: " ++ show lang

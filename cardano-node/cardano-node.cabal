@@ -191,10 +191,10 @@ library
                       , ouroboros-consensus-cardano ^>= 0.25
                       , ouroboros-consensus-diffusion ^>= 0.23
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.14
-                      , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-framework ^>= 0.18.0.1
-                      , ouroboros-network-protocols ^>= 0.14
+                      , ouroboros-network-api ^>= 0.16
+                      , ouroboros-network ^>= 0.22
+                      , ouroboros-network-framework 
+                      , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -202,12 +202,11 @@ library
                       , resource-registry
                       , safe-exceptions
                       , scientific
-                      , si-timers
+                      , io-classes
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
                       , strict-sop-core
-                      , strict-stm
                       , sop-core
                       , sop-extras
                       , text >= 2.0
@@ -218,8 +217,7 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 0.3
-                      , typed-protocols-stateful >= 0.3
+                      , typed-protocols:{typed-protocols, stateful} >= 1.0
                       , yaml
 
 executable cardano-node
