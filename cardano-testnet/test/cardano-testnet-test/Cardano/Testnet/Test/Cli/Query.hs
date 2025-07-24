@@ -48,6 +48,7 @@ import qualified Data.Vector as Vector
 import           GHC.Exts (IsList (..))
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import qualified GHC.Stack as GHC
+import           RIO (runRIO)
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
