@@ -48,6 +48,7 @@ import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import qualified System.IO.MMap as MMap
 
 ------------------------------------------------------------------------------
 -- Shelley protocol
@@ -88,12 +89,21 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
 genesisHashToPraosNonce :: GenesisHash -> Nonce
 genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
 
+-- The Shelley genesis is used in testing and benchmarking to create testnets
+-- with arbitrary number of "stuffed UTxO" (the `intialFunds` key), so it is
+-- intentionally kept lazy, as it can otherwise cause out-of-memory problems.
 readGenesis :: GenesisFile
             -> Maybe GenesisHash
             -> ExceptT GenesisReadError IO
                        (ShelleyGenesis, GenesisHash)
-readGenesis = readGenesisAny
+readGenesis (GenesisFile file) mExpectedGenesisHash = do
+    content <- handleIOExceptT (GenesisReadFileError file) $ MMap.mmapFileByteString file Nothing
+    genesisHash <- checkExpectedGenesisHash content mExpectedGenesisHash
+    genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
+                 Aeson.eitherDecodeStrict' content
+    return (genesis, genesisHash)
 
+-- Non-lazy version also used by Byron, Alonzo and Conway.
 readGenesisAny :: FromJSON genesis
                => GenesisFile
                -> Maybe GenesisHash
