@@ -14,6 +14,7 @@ import           Cardano.Tracer.Utils
 import           Cardano.Logging.Types (TraceObject)
 import qualified Cardano.Logging.Types as Net
 
+import           Control.Concurrent.Chan.Unagi (dupChan)
 import           Control.Concurrent.Async (forConcurrently_)
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.List.NonEmpty as NE
@@ -33,20 +34,28 @@ import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
 --   1. Server mode, when the tracer accepts connections from any number of nodes.
 --   2. Client mode, when the tracer initiates connections to specified number of nodes.
 runAcceptors :: TracerEnv -> TracerEnvRTView -> IO ()
-runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
+runAcceptors tracerEnv@TracerEnv{teTracer, teInChan = inChan} tracerEnvRTView = do
   traceWith teTracer $ TracerStartedAcceptors network
   case network of
-    AcceptAt howToConnect ->
+    AcceptAt howToConnect -> let
       -- Run one server that accepts connections from the nodes.
-      runInLoop
-        (runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect))
-        verbosity howToConnect initialPauseInSec
-    ConnectTo localSocks ->
+
+      action :: IO ()
+      action = do
+        dieOnShutdown =<< dupChan inChan
+        runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect)
+
+      in runInLoop action verbosity howToConnect initialPauseInSec
+    ConnectTo localSocks -> do
       -- Run N clients that initiate connections to the nodes.
-      forConcurrently_ (NE.nub localSocks) \howToConnect ->
-        runInLoop
-          (runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect))
-          verbosity howToConnect initialPauseInSec
+      forConcurrently_ (NE.nub localSocks) \howToConnect -> let
+
+        action :: IO ()
+        action = runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect)
+
+        in do
+          dieOnShutdown =<< dupChan inChan
+          runInLoop action verbosity howToConnect initialPauseInSec
  where
   TracerConfig{network, ekgRequestFreq, verbosity, ekgRequestFull} = teConfig tracerEnv
   ekgUseFullRequests = fromMaybe False ekgRequestFull
