@@ -23,6 +23,7 @@ import qualified Cardano.Benchmarking.Profile.Playground as Pl (calibrateLoopBlo
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
+import qualified Cardano.Benchmarking.Profile.Workload.CGroupMemory as C
 import qualified Cardano.Benchmarking.Profile.Workload.Voting as W
 import qualified Cardano.Benchmarking.Profile.Workload.Latency as L
 
@@ -150,6 +151,13 @@ profilesNoEraCloud =
                , Types.explorer = Nothing
                })
              . P.ssdDirectory "/ephemeral"
+      -- Helper adding workload that takes periodic snapshots of cgroup's `memory.stat`.
+      cgmem = -- Require the cgroup fs mounted by default.
+               P.appendNomadHostVolume (Types.ByNodeType {
+                 Types.producer = [Types.HostVolume "/sys/fs/cgroup" True "cgroup"]
+               , Types.explorer = Nothing
+               })
+             . P.workloadAppend C.cgroupMemoryWorkload
   in [
   -- Value (pre-Voltaire profiles)
     value     & P.name "value-nomadperf"                                   . P.dreps      0 . P.newTracing . P.p2pOn
@@ -163,6 +171,8 @@ profilesNoEraCloud =
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing . P.p2pOn
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
   , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
+  , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn        . cgmem
+  , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb . cgmem
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
   , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
