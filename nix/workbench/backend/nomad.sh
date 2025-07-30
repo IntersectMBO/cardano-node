@@ -2991,9 +2991,9 @@ backend_nomad() {
           if test -n "${strikes}"
           then
             # A strike parameter was given
-            msg "$(yellow "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            msg "$(yellow "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})")"
             strikes=$(( strikes - 1 ))
-            msg "$(yellow "Strikes for \"is-task-program-running\" left: ${strikes}")"
+            msg "$(yellow "Strikes for \"is-task-program-running ${task} ${program}\" left: ${strikes}")"
             if test "${strikes}" -gt 0
             then
               # Strikes still available, sleep/retry!
@@ -3008,11 +3008,11 @@ backend_nomad() {
               backend_nomad is-task-program-running "${dir}" "${task}" "${program}" "${strikes}"
             else
               # Fails everything only if using strikes!
-              fatal "Function \"is-task-program-running\" failed: $(cat ${stderr_file})"
+              fatal "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})"
             fi
           else
             # No strike parameter was given, don't use "fatal"!
-            msg "$(red "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            msg "$(red "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})")"
             false
           fi
         else
@@ -3024,7 +3024,7 @@ backend_nomad() {
         if test -s "${stderr_file}"
         then
           # Don't supress possible error messages!
-          msg "$(yellow "WARNING: \"is-task-program-running\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
+          msg "$(yellow "WARNING: \"is-task-program-running ${task} ${program}\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
         fi
         true # Program is running!
       fi
@@ -3051,7 +3051,7 @@ backend_nomad() {
         if test -n "${strikes}"
         then
           # A strike parameter was given
-          msg "$(yellow "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          msg "$(yellow "Function \"is-task-program-failed ${task} ${program}\" failed: $(cat ${stderr_file})")"
           strikes=$(( strikes - 1 ))
           msg "$(yellow "Strikes for \"is-task-program-failed\" left: ${strikes}")"
           if test "${strikes}" -gt 0
@@ -3068,11 +3068,11 @@ backend_nomad() {
             backend_nomad is-task-program-failed "${dir}" "${task}" "${program}" $(( strikes - 1 ))
           else
             # Fails everything only if using strikes!
-            fatal "Function \"is-task-program-failed\" failed"
+            fatal "Function \"is-task-program-failed ${task} ${program}\" failed"
           fi
         else
           # No strike parameter was given, don't use "fatal"!
-          msg "$(red "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          msg "$(red "Function \"is-task-program-failed ${task} ${program}\" failed: $(cat ${stderr_file})")"
           true # Assuming program failed due to Nomad command error!
         fi
       else
@@ -3080,7 +3080,7 @@ backend_nomad() {
         if test -s "${stderr_file}"
         then
           # Don't supress possible error messages!
-          msg "$(yellow "WARNING: \"is-task-program-failed\" is returning a non-empty stderr: $(cat ${stderr_file})")"
+          msg "$(yellow "WARNING: \"is-task-program-failed ${task} ${program}\" is returning a non-empty stderr: $(cat ${stderr_file})")"
         fi
         test "${exit_code}" != "0"
       fi
