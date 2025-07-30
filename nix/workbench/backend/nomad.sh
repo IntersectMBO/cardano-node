@@ -2113,7 +2113,6 @@ backend_nomad() {
 
       local nomad_environment=$(envjqr   'nomad_environment')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "${dir}/profile.json")
       local socket_name
       if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
       then
@@ -2122,16 +2121,21 @@ backend_nomad() {
         socket_name=$(jq -r '.network.contents' "${dir}/tracer/config.json")
       fi
       # Wait for tracer socket
+      local patience start elapsed=0
+      patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "${dir}/profile.json")
+      start="$(date +"%s")"
       msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
-      local i=0
       # Always keep checking that the supervisord program is still running!
       while \
             backend_nomad is-task-program-running "${dir}" "${task}" tracer  \
         &&                                                                   \
           ! backend_nomad task-file-stat "${dir}" "${task}" run/current/tracer/"${socket_name}" | grep --quiet "application/octet-stream"
-      do printf "%3d" $i; sleep 1
-        i=$((i+1))
-        if test "${i}" -ge "${patience}"
+      do
+        local now
+        now="$(date +"%s")"
+        elapsed=$((now-start))
+        printf "%3d" $elapsed; sleep 1
+        if test "${elapsed}" -ge "${patience}"
         then
           msg "$(red "Patience ran out for Task \"${task}\"'s tracer after ${patience}s")"
           if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
@@ -2144,7 +2148,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" up (${i}s)!")"
+      msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" up (${elapsed}s)!")"
       return 0
     ;;
 
@@ -2169,19 +2173,22 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
 
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
+      local patience start elapsed=0
+      patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
+      start="$(date +"%s")"
       msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
-      local i=0
       # Always keep checking that the supervisord program is still running!
       while \
             backend_nomad is-task-program-running "${dir}" "${node}" "${node}" \
         &&                                                                     \
           ! backend_nomad task-file-stat "${dir}" "${node}" run/current/"${node}"/node.socket 2>/dev/null | grep --quiet "application/octet-stream"
-      # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
+      # TODO: Add the "timer" `printf "%3d" $elapsed;` but for concurrent processes!
       do
         sleep 1
-        i=$((i+1))
-        if test "${i}" -ge "${patience}"
+        local now elapsed
+        now="$(date +"%s")"
+        elapsed=$((now-start))
+        if test "${elapsed}" -ge "${patience}"
         then
           msg "$(red "Patience ran out for \"${node}\" after ${patience}s")"
           msg "$(yellow "check logs in ${dir}/${node}/[stdout & stderr]")"
@@ -2189,7 +2196,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${i}s)!")"
+      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${elapsed}s)!")"
       return 0
     ;;
 
