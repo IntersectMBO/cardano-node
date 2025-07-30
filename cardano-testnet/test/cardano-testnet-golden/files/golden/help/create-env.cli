@@ -16,6 +16,7 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   --output DIRECTORY
+  [--params-file FILEPATH | --mainnet]
   [--p2p-topology]
   [--update-time]
 
@@ -60,6 +61,10 @@ Available options:
                            Active slots coefficient. Ignored if a custom Shelley
                            genesis file is passed. (default: 5.0e-2)
   --output DIRECTORY       Directory where to create the sandbox environment.
+  --params-file FILEPATH   File containing custom on-chain parameters in
+                           Blockfrost format:
+                           https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
+  --mainnet                Use mainnet on-chain parameters
   --p2p-topology           Use P2P topology files instead of "direct" topology
                            files
   --update-time            Don't create anything, just update the time stamps in
