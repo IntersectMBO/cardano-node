@@ -11,7 +11,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
   [--output-dir DIRECTORY]
-  --testnet-magic INT
+  [--testnet-magic INT]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
@@ -49,7 +49,7 @@ Available options:
   --output-dir DIRECTORY   Directory where to store files, sockets, and so on.
                            It is created if it doesn't exist. If unset, a
                            temporary directory is used.
-  --testnet-magic INT      Specify a testnet magic id.
+  --testnet-magic INT      Specify a testnet magic id. (default: 42)
   --epoch-length SLOTS     Epoch length, in number of slots. Ignored if a custom
                            Shelley genesis file is passed. (default: 500)
   --slot-length SECONDS    Slot length. Ignored if a custom Shelley genesis file

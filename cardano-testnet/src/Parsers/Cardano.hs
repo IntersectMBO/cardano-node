@@ -164,6 +164,8 @@ pNetworkId =
     [ OA.long "testnet-magic"
     , OA.metavar "INT"
     , OA.help "Specify a testnet magic id."
+    , OA.showDefault
+    , OA.value defaultTestnetMagic
     ]
 
 pMaxLovelaceSupply :: Parser Word64

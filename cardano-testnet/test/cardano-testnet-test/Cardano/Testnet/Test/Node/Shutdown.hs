@@ -67,7 +67,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
       tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       logDir' = makeLogDir $ tempAbsPath conf
       socketDir' = makeSocketDir $ tempAbsPath conf
-      testnetMagic' = 42
+      testnetMagic' = defaultTestnetMagic
       sbe = ShelleyBasedEraConway
 
   -- TODO: We need to uniformly create these directories

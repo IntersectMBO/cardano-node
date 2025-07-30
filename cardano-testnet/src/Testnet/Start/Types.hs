@@ -19,6 +19,7 @@ module Testnet.Start.Types
 
   , anyEraToString
   , anyShelleyBasedEraToString
+  , defaultTestnetMagic
   , eraToString
 
   , CreateEnvOptions(..)
@@ -56,6 +57,10 @@ import           Testnet.Filepath
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
+
+-- | The default value for the --testnet-magic option for `cardano-testnet`
+defaultTestnetMagic :: Int
+defaultTestnetMagic = 42
 
 -- | Command line options for the @cardano-testnet@ executable. They are used
 -- in the parser, and then get split into 'CardanoTestnetOptions' and
@@ -190,7 +195,7 @@ data GenesisOptions = GenesisOptions
 
 instance Default GenesisOptions where
   def = GenesisOptions
-    { genesisTestnetMagic = 42
+    { genesisTestnetMagic = defaultTestnetMagic
     , genesisEpochLength = 500
     , genesisSlotLength = 0.1
     , genesisActiveSlotsCoeff = 0.05
