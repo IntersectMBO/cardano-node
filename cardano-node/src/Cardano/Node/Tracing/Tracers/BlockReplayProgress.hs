@@ -9,7 +9,7 @@ module Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Api (textShow)
 
 import           Cardano.Logging
-import           Ouroboros.Consensus.Block (Point, SlotNo, realPointSlot)
+import           Ouroboros.Consensus.Block (SlotNo, realPointSlot)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Network.Block (pointSlot, unSlotNo)
@@ -95,27 +95,24 @@ withReplayedBlock tr = do
     process :: MVar ReplayBlockState
             -> (LoggingContext, Either TraceControl (ChainDB.TraceEvent blk))
             -> IO (Maybe (LoggingContext, Either TraceControl ReplayBlockStats))
-    process _ (ctx, Left control) = pure (Just (ctx, Left control))
     process var (ctx, Right msg) = modifyMVar var $ \st -> do
-      let (st', mbStats) = mbProduceBlockStats st msg
+      let (st', mbStats) = mbProduceBlockStats msg st
       pure (st', fmap ((ctx,) . Right) mbStats)
+    process _ (ctx, Left control) = pure (Just (ctx, Left control))
 
-    mbProduceBlockStats :: ReplayBlockState -> ChainDB.TraceEvent blk -> (ReplayBlockState, Maybe ReplayBlockStats)
-    mbProduceBlockStats st@(ReplayBlockState (Just lastSlot))
+    mbProduceBlockStats :: ChainDB.TraceEvent blk -> ReplayBlockState -> (ReplayBlockState, Maybe ReplayBlockStats)
+    mbProduceBlockStats
       (ChainDB.TraceLedgerDBEvent
-       (LedgerDB.LedgerReplayEvent
-        (LedgerDB.TraceReplayProgressEvent
-         (LedgerDB.ReplayedBlock curSlot [] _ (LedgerDB.ReplayGoal replayToSlot)))))
-            | progressFor (realPointSlot curSlot) replayToSlot - progressFor lastSlot replayToSlot >= 0.1 =
-                 (ReplayBlockState (Just (realPointSlot curSlot)), Just (ReplayBlockStats (realPointSlot curSlot) (withOrigin 0 id $ pointSlot replayToSlot)))
-            | otherwise = (st, Nothing)
-      where
-        progressFor :: SlotNo -> Point blk -> Double
-        progressFor soFar goal = progressForHuman (ReplayBlockStats soFar (withOrigin 0 id $ pointSlot goal))
-    mbProduceBlockStats (ReplayBlockState Nothing)
-      (ChainDB.TraceLedgerDBEvent
-       (LedgerDB.LedgerReplayEvent
-        (LedgerDB.TraceReplayProgressEvent
-         (LedgerDB.ReplayedBlock curSlot [] _ (LedgerDB.ReplayGoal replayToSlot))))) =
-           (ReplayBlockState (Just (realPointSlot curSlot)), Just (ReplayBlockStats (realPointSlot curSlot) (withOrigin 0 id $ pointSlot replayToSlot)))
-    mbProduceBlockStats st _ = (st, Nothing)
+        (LedgerDB.LedgerReplayEvent
+          (LedgerDB.TraceReplayProgressEvent
+            (LedgerDB.ReplayedBlock curSlot [] _ (LedgerDB.ReplayGoal replayToSlot)))))
+      st@(ReplayBlockState mLastSlot) =
+        let curSlotNo = realPointSlot curSlot
+            goalSlotNo = withOrigin 0 id $ pointSlot replayToSlot
+            stats = ReplayBlockStats curSlotNo goalSlotNo
+            progressFor soFar goal = progressForHuman (ReplayBlockStats soFar goal)
+            shouldEmit = maybe True (\lastSlot -> progressFor curSlotNo goalSlotNo - progressFor lastSlot goalSlotNo >= 0.01) mLastSlot
+        in if shouldEmit
+             then (ReplayBlockState (Just curSlotNo), Just stats)
+             else (st, Nothing)
+    mbProduceBlockStats _ st = (st, Nothing)
