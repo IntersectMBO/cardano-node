@@ -90,7 +90,7 @@ function cgroup_memory_deployed() {
   do
       ${coreutils}/bin/cat /sys/fs/cgroup"''${cgroup}"/memory.stat \
     > "./memory.stat_''${node}-''$(${coreutils}/bin/date +"%Y-%m-%d-%H-%M-%S-%3N")"
-    ${coreutils}/bin/sleep 60
+    ${coreutils}/bin/sleep 1
   done
 }
 

@@ -84,7 +84,7 @@ $(eval $(call define_profile_targets_nomadcloud,$(CLOUD_PROFILES)))
 
 # Dynamic local/supervisor profile targets.
 playground-%: 
-	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName $*-${ERA} --argstr backendName supervisor
+	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName $*-${ERA} --argstr backendName nomadexec
 
 ###
 ### Misc

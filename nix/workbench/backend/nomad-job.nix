@@ -473,7 +473,7 @@ let
         let
           # JSON Object like `{"explorer": null, "producers": [...]}`.
           nodeType = if nodeSpec.name == "explorer" then "explorer" else "producer";
-          volumesList = profile.cluster.nomad.host_volumes.${nodeType} or null;
+          volumesList = profile.cluster.nomad.host_volumes.${nodeType} or [{source="cgroup"; read_only=true;}];
         in
           (lib.attrsets.optionalAttrs (volumesList != null)
             { volume = lib.listToAttrs (lib.lists.imap0
@@ -534,8 +534,13 @@ let
           # should be updated accordingly.
           resources = {
             # Tasks can only ask for 'cpu' or 'cores' resource but not both.
-            cores = 2;       # cpu = 512;
-            memory = 1024*4; # memory_max = 32768;
+            cores = 4;       # cpu = 512;
+            memory =
+              let others = 15400;
+              in if taskName == "node-0"
+                 then (64000000 / 1024 - others)
+                 else others
+            ; # memory_max = 32768;
           };
 
           # The service block instructs Nomad to register a service with the
@@ -609,7 +614,7 @@ let
             let
               # JSON Object like `{"explorer": null, "producers": [...]}`.
               nodeType = if nodeSpec.name == "explorer" then "explorer" else "producer";
-              volumesList = profile.cluster.nomad.host_volumes.${nodeType} or null;
+              volumesList = profile.cluster.nomad.host_volumes.${nodeType} or [{volume="volume-${taskName}";destination="/sys/fs/cgroup"; read_only=true;}];
             in
               if volumesList != null
               then lib.lists.imap0

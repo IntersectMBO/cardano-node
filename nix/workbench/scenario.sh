@@ -65,7 +65,6 @@ case "$op" in
 
     fixed-loaded )
         backend start-tracers        "$dir"
-
         scenario_setup_exit_trap     "$dir"
         # Trap start
         ############
@@ -75,7 +74,7 @@ case "$op" in
             backend start-workload-by-name "$dir" "$workload"
         done
         backend start-nodes          "$dir"
-        backend start-generator      "$dir"
+####### backend start-generator      "$dir"
         # Workloads that request that the nodes have already started.
         for workload in $(jq -r '.workloads[] | select(.before_nodes == false) | .name' "$dir"/profile.json)
         do

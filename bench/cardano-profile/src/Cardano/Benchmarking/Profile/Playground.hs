@@ -21,6 +21,7 @@ import qualified Cardano.Benchmarking.Profile.Builtin.Miniature as M
 import qualified Cardano.Benchmarking.Profile.Primitives        as P
 import qualified Cardano.Benchmarking.Profile.Types             as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary        as V
+import qualified Cardano.Benchmarking.Profile.Workload.CGroupMemory as C
 import qualified Cardano.Benchmarking.Profile.Workload.Voting   as W
 
 --------------------------------------------------------------------------------
@@ -76,7 +77,17 @@ profilesNoEraPlayground =
   ------------------------------------------------------------------------------
   -- ci-bench like: 2 nodes, FixedLoaded and "--shutdown-on-block-synced 15"
   ------------------------------------------------------------------------------
-  let ciBenchLike =
+  let baseVoltaire =
+          P.empty
+        -- From `baseVoltaire` in `Cardano.Benchmarking.Profile.Builtin.Cloud`.
+        & P.fixedLoaded
+        . P.maxBlockSize 88000
+        -- All cloud profiles use trace forwarding.
+        . P.traceForwardingOn
+        . P.initCooldown 45
+        . P.analysisStandard
+        . V.genesisVariantVoltaire
+      ciBenchLike =
           P.empty & M.base . P.dreps 0
         . P.uniCircle . P.loopback . V.hosts 2
         . M.benchDuration
@@ -99,8 +110,29 @@ profilesNoEraPlayground =
         . V.plutusDoublePlusSaturation . P.txFee 1000000
         . P.analysisStandard
   in [
+  -- Value nomadperf in a single local node.
+    baseVoltaire & P.name "value-volt-lite"
+                 . P.uniCircle . V.hosts 2 . P.loopback
+                 . V.valueCloud . V.datasetOct2021 . V.fundsDouble
+                 . V.timescaleModel
+                 -- From eight epochs to 30 minutes.
+                 . P.shutdownOnSlot 1800 -- . P.generatorEpochs 8
+                 . P.analysisSizeFull
+                 . P.dreps  10000 . P.newTracing . P.p2pOn
+                 . P.workloadAppend C.cgroupMemoryWorkload
+  , baseVoltaire & P.name "value-volt-lmdb-lite"
+                 . P.uniCircle . V.hosts 2 . P.loopback
+                 . V.valueCloud . V.datasetOct2021 . V.fundsDouble
+                 . V.timescaleModel
+                 -- From eight epochs to 30 minutes.
+                 . P.shutdownOnSlot 1800 -- . P.generatorEpochs 8
+                 . P.analysisSizeFull
+                 . P.dreps  10000 . P.newTracing . P.p2pOn
+                 . P.workloadAppend C.cgroupMemoryWorkload
+                 . P.lmdb . P.ssdDirectory "/tmp/lmdb"
+                 -- . P.rtsHeapLimit 4000 . P.heapLimit 4000
   -- Budget profiles.
-    ciBenchLike & P.name "calibrate-volt"
+  , ciBenchLike & P.name "calibrate-volt"
   , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt"      . mem15x
   , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt-fill" . mem15x . P.overlay calibrateLoopBlockMemx15
   , ciBenchLike & P.name "calibrate-blockmem-x2-volt"        . mem2x
