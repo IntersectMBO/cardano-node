@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 
 module Cardano.Node.Tracing.Tracers.BlockReplayProgress
   (  withReplayedBlock
@@ -14,42 +15,58 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Network.Block (pointSlot, unSlotNo)
 import           Ouroboros.Network.Point (withOrigin)
 
-import           Control.Monad.IO.Class (MonadIO)
+import           Control.Concurrent.MVar
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 
-data ReplayBlockStats = ReplayBlockStats
-  { rpsDisplay      :: Bool
-  , rpsCurSlot      :: SlotNo
-  , rpsGoalSlot     :: SlotNo
-  , rpsProgress     :: Double
-  , rpsLastProgress :: Double
+newtype ReplayBlockState = ReplayBlockState
+  { -- | Last slot for which a `ReplayBlockStats` message has been issued.
+    rpsLastSlot      :: Maybe SlotNo
   }
 
-emptyReplayBlockStats :: ReplayBlockStats
-emptyReplayBlockStats = ReplayBlockStats False 0 0 0.0 0.0
+data ReplayBlockStats = ReplayBlockStats
+  { rpsCurSlot      :: SlotNo
+  , rpsGoalSlot     :: SlotNo
+  }
+
+initialReplayBlockState :: ReplayBlockState
+initialReplayBlockState = ReplayBlockState {rpsLastSlot = Nothing}
+
+progressForMachine ::  ReplayBlockStats -> Double
+progressForMachine (ReplayBlockStats curSlot goalSlot) =
+  (fromIntegral (unSlotNo curSlot) * 100.0) / fromIntegral (unSlotNo $ max curSlot goalSlot)
+
+progressForHuman ::  ReplayBlockStats -> Double
+progressForHuman = round2 . progressForMachine where
+  round2 :: Double -> Double
+  round2 num =
+    let
+      f :: Int
+      f = round $ num * 100
+    in fromIntegral f / 100
 
 --------------------------------------------------------------------------------
 -- ReplayBlockStats Tracer
 --------------------------------------------------------------------------------
 
 instance LogFormatting ReplayBlockStats where
-  forMachine _dtal ReplayBlockStats {..} =
+  forMachine _ stats =
     mconcat
       [ "kind" .= String "ReplayBlockStats"
-      , "progress" .= String (pack $ show rpsProgress)
+      , "progress" .= String (pack $ show $ progressForMachine stats)
       ]
-  forHuman ReplayBlockStats {..} = "Replayed block: slot " <> textShow (unSlotNo rpsCurSlot) <> " out of " <> textShow (unSlotNo rpsGoalSlot) <> ". Progress: " <> textShow (round2 rpsProgress) <> "%"
-    where
-      round2 :: Double -> Double
-      round2 num =
-        let
-          f :: Int
-          f = round $ num * 100
-        in fromIntegral f / 100
 
-  asMetrics ReplayBlockStats {..} =
-     [DoubleM "blockReplayProgress" rpsProgress]
+  forHuman stats@ReplayBlockStats {..} =
+         "Replayed block: slot "
+      <> textShow (unSlotNo rpsCurSlot)
+      <> " out of "
+      <> textShow (unSlotNo rpsGoalSlot)
+      <> ". Progress: "
+      <> textShow (progressForHuman stats)
+      <> "%"
+
+  asMetrics stats =
+     [DoubleM "blockReplayProgress" (progressForMachine stats)]
 
 instance MetaTrace ReplayBlockStats where
   namespaceFor ReplayBlockStats {} = Namespace [] ["LedgerReplay"]
@@ -71,28 +88,31 @@ instance MetaTrace ReplayBlockStats where
 
 withReplayedBlock :: Trace IO ReplayBlockStats
     -> IO (Trace IO (ChainDB.TraceEvent blk))
-withReplayedBlock tr =
-    let tr' = filterTrace filterFunction tr
-        tr'' = contramap unfold tr'
-    in foldTraceM replayBlockStats emptyReplayBlockStats tr''
+withReplayedBlock tr = do
+  var <- newMVar initialReplayBlockState
+  contramapMCond tr (process var)
   where
-    filterFunction(_, ReplayBlockStats {..}) = rpsDisplay
+    process :: MVar ReplayBlockState
+            -> (LoggingContext, Either TraceControl (ChainDB.TraceEvent blk))
+            -> IO (Maybe (LoggingContext, Either TraceControl ReplayBlockStats))
+    process var (ctx, Right msg) = modifyMVar var $ \st -> do
+      let (st', mbStats) = mbProduceBlockStats msg st
+      pure (st', fmap ((ctx,) . Right) mbStats)
+    process _ (ctx, Left control) = pure (Just (ctx, Left control))
 
-replayBlockStats :: MonadIO m
-  => ReplayBlockStats
-  -> LoggingContext
-  -> ChainDB.TraceEvent blk
-  -> m ReplayBlockStats
-replayBlockStats ReplayBlockStats {..} _context
-    (ChainDB.TraceLedgerDBEvent
-     (LedgerDB.LedgerReplayEvent
-      (LedgerDB.TraceReplayProgressEvent
-       (LedgerDB.ReplayedBlock pt [] _ (LedgerDB.ReplayGoal replayTo))))) = do
-      let slotno = realPointSlot pt
-          endslot = withOrigin 0 id $ pointSlot replayTo
-          progress' = (fromIntegral (unSlotNo slotno) * 100.0) / fromIntegral (unSlotNo $ max slotno endslot)
-      pure $ if (progress' == 0.0 && not rpsDisplay)
-                || ((progress' - rpsLastProgress) > 0.1)
-                then ReplayBlockStats True slotno endslot progress' progress'
-                else ReplayBlockStats False slotno endslot progress' rpsLastProgress
-replayBlockStats st@ReplayBlockStats {} _context _ = pure st
+    mbProduceBlockStats :: ChainDB.TraceEvent blk -> ReplayBlockState -> (ReplayBlockState, Maybe ReplayBlockStats)
+    mbProduceBlockStats
+      (ChainDB.TraceLedgerDBEvent
+        (LedgerDB.LedgerReplayEvent
+          (LedgerDB.TraceReplayProgressEvent
+            (LedgerDB.ReplayedBlock curSlot [] _ (LedgerDB.ReplayGoal replayToSlot)))))
+      st@(ReplayBlockState mLastSlot) =
+        let curSlotNo = realPointSlot curSlot
+            goalSlotNo = withOrigin 0 id $ pointSlot replayToSlot
+            stats = ReplayBlockStats curSlotNo goalSlotNo
+            progressFor soFar goal = progressForHuman (ReplayBlockStats soFar goal)
+            shouldEmit = maybe True (\lastSlot -> progressFor curSlotNo goalSlotNo - progressFor lastSlot goalSlotNo >= 0.01) mLastSlot
+        in if shouldEmit
+             then (ReplayBlockState (Just curSlotNo), Just stats)
+             else (st, Nothing)
+    mbProduceBlockStats _ st = (st, Nothing)
