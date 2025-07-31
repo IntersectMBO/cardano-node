@@ -1,0 +1,29 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ExplicitNamespaces #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | This module corresponds to `Control.Concurrent.STM.TVar` in &quot;stm&quot; package</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.TBQueue</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * MonadSTM</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#TBQueue"><span class="hs-identifier">TBQueue</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newTBQueue"><span class="hs-identifier">newTBQueue</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newTBQueueIO"><span class="hs-identifier">newTBQueueIO</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#readTBQueue"><span class="hs-identifier">readTBQueue</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#tryReadTBQueue"><span class="hs-identifier">tryReadTBQueue</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#peekTBQueue"><span class="hs-identifier">peekTBQueue</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#tryPeekTBQueue"><span class="hs-identifier">tryPeekTBQueue</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#flushTBQueue"><span class="hs-identifier">flushTBQueue</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#writeTBQueue"><span class="hs-identifier">writeTBQueue</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#lengthTBQueue"><span class="hs-identifier">lengthTBQueue</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#isEmptyTBQueue"><span class="hs-identifier">isEmptyTBQueue</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#isFullTBQueue"><span class="hs-identifier">isFullTBQueue</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#unGetTBQueue"><span class="hs-identifier">unGetTBQueue</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * MonadLabelledSTM</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#labelTBQueue"><span class="hs-identifier">labelTBQueue</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#labelTBQueueIO"><span class="hs-identifier">labelTBQueueIO</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-comment">-- * MonadTraceSTM</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#traceTBQueue"><span class="hs-identifier">traceTBQueue</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#traceTBQueueIO"><span class="hs-identifier">traceTBQueueIO</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html"><span class="hs-identifier">Control.Monad.Class.MonadSTM.Internal</span></a></span><span>
+</span><span id="line-29"></span></pre></body></html>

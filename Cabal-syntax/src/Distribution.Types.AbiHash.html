@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.AbiHash</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier">AbiHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#unAbiHash"><span class="hs-identifier">unAbiHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#mkAbiHash"><span class="hs-identifier">mkAbiHash</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html"><span class="hs-identifier">Distribution.Utils.ShortText</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier">text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | ABI Hashes</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- Use 'mkAbiHash' and 'unAbiHash' to convert from/to a</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- 'String'.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- This type is opaque since @Cabal-2.0@</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">newtype</span><span> </span><span id="AbiHash"><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-var">AbiHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AbiHash"><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-var">AbiHash</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html#ShortText"><span class="hs-identifier hs-type">ShortText</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679407806"><span id="local-6989586621679407811"><span class="annot"><span class="annottext">AbiHash -&gt; AbiHash -&gt; Bool
+(AbiHash -&gt; AbiHash -&gt; Bool)
+-&gt; (AbiHash -&gt; AbiHash -&gt; Bool) -&gt; Eq AbiHash
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: AbiHash -&gt; AbiHash -&gt; Bool
+== :: AbiHash -&gt; AbiHash -&gt; Bool
+$c/= :: AbiHash -&gt; AbiHash -&gt; Bool
+/= :: AbiHash -&gt; AbiHash -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679407817"><span id="local-6989586621679407823"><span id="local-6989586621679407827"><span class="annot"><span class="annottext">Int -&gt; AbiHash -&gt; ShowS
+[AbiHash] -&gt; ShowS
+AbiHash -&gt; String
+(Int -&gt; AbiHash -&gt; ShowS)
+-&gt; (AbiHash -&gt; String) -&gt; ([AbiHash] -&gt; ShowS) -&gt; Show AbiHash
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AbiHash -&gt; ShowS
+showsPrec :: Int -&gt; AbiHash -&gt; ShowS
+$cshow :: AbiHash -&gt; String
+show :: AbiHash -&gt; String
+$cshowList :: [AbiHash] -&gt; ShowS
+showList :: [AbiHash] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679407831"><span id="local-6989586621679407835"><span id="local-6989586621679407838"><span id="local-6989586621679407846"><span class="annot"><span class="annottext">ReadPrec [AbiHash]
+ReadPrec AbiHash
+Int -&gt; ReadS AbiHash
+ReadS [AbiHash]
+(Int -&gt; ReadS AbiHash)
+-&gt; ReadS [AbiHash]
+-&gt; ReadPrec AbiHash
+-&gt; ReadPrec [AbiHash]
+-&gt; Read AbiHash
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS AbiHash
+readsPrec :: Int -&gt; ReadS AbiHash
+$creadList :: ReadS [AbiHash]
+readList :: ReadS [AbiHash]
+$creadPrec :: ReadPrec AbiHash
+readPrec :: ReadPrec AbiHash
+$creadListPrec :: ReadPrec [AbiHash]
+readListPrec :: ReadPrec [AbiHash]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679407850"><span id="local-6989586621679407852"><span class="annot"><span class="annottext">(forall x. AbiHash -&gt; Rep AbiHash x)
+-&gt; (forall x. Rep AbiHash x -&gt; AbiHash) -&gt; Generic AbiHash
+forall x. Rep AbiHash x -&gt; AbiHash
+forall x. AbiHash -&gt; Rep AbiHash x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. AbiHash -&gt; Rep AbiHash x
+from :: forall x. AbiHash -&gt; Rep AbiHash x
+$cto :: forall x. Rep AbiHash x -&gt; AbiHash
+to :: forall x. Rep AbiHash x -&gt; AbiHash
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Convert 'AbiHash' to 'String'</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Distribution.Types.AbiHash.html#unAbiHash"><span class="hs-identifier hs-type">unAbiHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-34"></span><span id="unAbiHash"><span class="annot"><span class="annottext">unAbiHash :: AbiHash -&gt; String
+</span><a href="Distribution.Types.AbiHash.html#unAbiHash"><span class="hs-identifier hs-var hs-var">unAbiHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span><span> </span><span id="local-6989586621679407855"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679407855"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; String
+</span><a href="Distribution.Utils.ShortText.html#fromShortText"><span class="hs-identifier hs-var">fromShortText</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679407855"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | Construct a 'AbiHash' from a 'String'</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- 'mkAbiHash' is the inverse to 'unAbiHash'</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- Note: No validations are performed to ensure that the resulting</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- 'AbiHash' is valid</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Distribution.Types.AbiHash.html#mkAbiHash"><span class="hs-identifier hs-type">mkAbiHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span><span>
+</span><span id="line-45"></span><span id="mkAbiHash"><span class="annot"><span class="annottext">mkAbiHash :: String -&gt; AbiHash
+</span><a href="Distribution.Types.AbiHash.html#mkAbiHash"><span class="hs-identifier hs-var hs-var">mkAbiHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; AbiHash
+</span><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-var">AbiHash</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortText -&gt; AbiHash)
+-&gt; (String -&gt; ShortText) -&gt; String -&gt; AbiHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShortText
+</span><a href="Distribution.Utils.ShortText.html#toShortText"><span class="hs-identifier hs-var">toShortText</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | 'mkAbiHash'</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.String.html#IsString/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621679407862"><span class="annot"><span class="annottext">fromString :: String -&gt; AbiHash
+</span><a href="../../base-4.18.2.1/src/Data.String.html#fromString/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; AbiHash
+</span><a href="Distribution.Types.AbiHash.html#mkAbiHash"><span class="hs-identifier hs-var">mkAbiHash</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679407864"><span id="local-6989586621679407871"><span id="local-6989586621679407877"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span></span></span></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679407896"><span id="local-6989586621679407903"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span></span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679407944"><span class="annot"><span class="annottext">rnf :: AbiHash -&gt; ()
+</span><a href="#local-6989586621679407944"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AbiHash -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679407949"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>    </span><span id="local-6989586621679407953"><span class="annot"><span class="annottext">pretty :: AbiHash -&gt; Doc
+</span><a href="#local-6989586621679407953"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; (AbiHash -&gt; String) -&gt; AbiHash -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AbiHash -&gt; String
+</span><a href="Distribution.Types.AbiHash.html#unAbiHash"><span class="hs-identifier hs-var">unAbiHash</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.AbiHash.html#AbiHash"><span class="hs-identifier hs-type">AbiHash</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679407971"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m AbiHash
+</span><a href="#local-6989586621679407971"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; AbiHash) -&gt; m String -&gt; m AbiHash
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; AbiHash
+</span><a href="Distribution.Types.AbiHash.html#mkAbiHash"><span class="hs-identifier hs-var">mkAbiHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch"><span class="hs-identifier hs-var">P.munch</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Unicode.html#isAlphaNum/GHC.Unicode.html#isAlphaNum"><span class="hs-identifier hs-var">isAlphaNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span></pre></body></html>

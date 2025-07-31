@@ -1,0 +1,1011 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Fields.ConfVar</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ConfVar.html#parseConditionConfVar"><span class="hs-identifier">parseConditionConfVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.ConfVar.html#parseConditionConfVarFromClause"><span class="hs-identifier">parseConditionConfVarFromClause</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span>     </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier">char</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html#integral"><span class="hs-identifier">integral</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html"><span class="hs-identifier">Distribution.Fields.Field</span></a></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier">SectionArg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier">Field</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html"><span class="hs-identifier">Distribution.Fields.ParseResult</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>                 </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier">Parsec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier">Position</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#runParsecParser"><span class="hs-identifier">runParsecParser</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.FieldLineStream.html"><span class="hs-identifier">Distribution.Parsec.FieldLineStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.FieldLineStream.html#fieldLineStreamFromBS"><span class="hs-identifier">fieldLineStreamFromBS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Condition.html"><span class="hs-identifier">Distribution.Types.Condition</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html"><span class="hs-identifier">Distribution.Types.ConfVar</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier">ConfVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Fields.Parser.html"><span class="hs-identifier">Distribution.Fields.Parser</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Parser.html#readFields"><span class="hs-identifier">readFields</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>
+</span><span id="line-14"></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#anyVersion"><span class="hs-identifier">anyVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#earlierVersion"><span class="hs-identifier">earlierVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#intersectVersionRanges"><span class="hs-identifier">intersectVersionRanges</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#laterVersion"><span class="hs-identifier">laterVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#majorBoundVersion"><span class="hs-identifier">majorBoundVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>       </span><span class="annot"><a href="Distribution.Types.Version.html#mkVersion"><span class="hs-identifier">mkVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#noVersion"><span class="hs-identifier">noVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#orEarlierVersion"><span class="hs-identifier">orEarlierVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#orLaterVersion"><span class="hs-identifier">orLaterVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#thisVersion"><span class="hs-identifier">thisVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#unionVersionRanges"><span class="hs-identifier">unionVersionRanges</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>       </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#withinVersion"><span class="hs-identifier">withinVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../parsec-3.1.16.1/src/Text.Parsec.html#/Text.Parsec.html"><span class="hs-identifier">Text.Parsec</span></a></span><span>       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../parsec-3.1.16.1/src/Text.Parsec.Pos.html#/Text.Parsec.Pos.html"><span class="hs-identifier">Text.Parsec.Pos</span></a></span><span>   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../parsec-3.1.16.1/src/Text.Parsec.Error.html#/Text.Parsec.Error.html"><span class="hs-identifier">Text.Parsec.Error</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Char8.html#/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B8</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Distribution.Fields.ConfVar.html#parseConditionConfVarFromClause"><span class="hs-identifier hs-type">parseConditionConfVarFromClause</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">B8.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Either.html#Either/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../../parsec-3.1.16.1/src/Text.Parsec.Error.html#ParseError/Text.Parsec.Error.html#ParseError"><span class="hs-identifier hs-type">P.ParseError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span id="parseConditionConfVarFromClause"><span class="annot"><span class="annottext">parseConditionConfVarFromClause :: ByteString -&gt; Either ParseError (Condition ConfVar)
+</span><a href="Distribution.Fields.ConfVar.html#parseConditionConfVarFromClause"><span class="hs-identifier hs-var hs-var">parseConditionConfVarFromClause</span></a></span></span><span> </span><span id="local-6989586621679437226"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437226"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either ParseError [Field Position]
+</span><a href="Distribution.Fields.Parser.html#readFields"><span class="hs-identifier hs-var">readFields</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437226"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Either ParseError [Field Position]
+-&gt; ([Field Position] -&gt; Either ParseError (Condition ConfVar))
+-&gt; Either ParseError (Condition ConfVar)
+forall a b.
+Either ParseError a
+-&gt; (a -&gt; Either ParseError b) -&gt; Either ParseError b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679437227"><span class="annot"><span class="annottext">[Field Position]
+</span><a href="#local-6989586621679437227"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Field Position]
+</span><a href="#local-6989586621679437227"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-26"></span><span>                                       </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span class="annot"><span class="annottext">Name Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679437229"><span class="annot"><span class="annottext">[SectionArg Position]
+</span><a href="#local-6989586621679437229"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="annot"><span class="annottext">[Field Position]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[Field Position]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; ()
+-&gt; SourceName
+-&gt; [SectionArg Position]
+-&gt; Either ParseError (Condition ConfVar)
+forall s t u a.
+Stream s Identity t =&gt;
+Parsec s u a -&gt; u -&gt; SourceName -&gt; s -&gt; Either ParseError a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Prim.html#runParser/Text.Parsec.Prim.html#runParser"><span class="hs-identifier hs-var">P.runParser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="Distribution.Fields.ConfVar.html#parser"><span class="hs-identifier hs-var">parser</span></a></span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A/GHC.Base.html#%3C%2A"><span class="hs-operator hs-var">&lt;*</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity ()
+forall s (m :: * -&gt; *) t u.
+(Stream s m t, Show t) =&gt;
+ParsecT s u m ()
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Combinator.html#eof/Text.Parsec.Combinator.html#eof"><span class="hs-identifier hs-var">P.eof</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;&lt;condition&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">[SectionArg Position]
+</span><a href="#local-6989586621679437229"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-27"></span><span>                                       </span><span class="annot"><span class="annottext">[Field Position]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ParseError -&gt; Either ParseError (Condition ConfVar)
+forall a b. a -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Left/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(ParseError -&gt; Either ParseError (Condition ConfVar))
+-&gt; ParseError -&gt; Either ParseError (Condition ConfVar)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Message -&gt; SourcePos -&gt; ParseError
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Error.html#newErrorMessage/Text.Parsec.Error.html#newErrorMessage"><span class="hs-identifier hs-var">P.newErrorMessage</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SourceName -&gt; Message
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Error.html#Message/Text.Parsec.Error.html#Message"><span class="hs-identifier hs-var">P.Message</span></a></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;No fields in clause&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SourceName -&gt; SourcePos
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Pos.html#initialPos/Text.Parsec.Pos.html#initialPos"><span class="hs-identifier hs-var">P.initialPos</span></a></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;&lt;condition&gt;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | Parse @'Condition' 'ConfVar'@ from section arguments provided by parsec</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- based outline parser.</span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Distribution.Fields.ConfVar.html#parseConditionConfVar"><span class="hs-identifier hs-type">parseConditionConfVar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span id="parseConditionConfVar"><span class="annot"><span class="annottext">parseConditionConfVar :: [SectionArg Position] -&gt; ParseResult (Condition ConfVar)
+</span><a href="Distribution.Fields.ConfVar.html#parseConditionConfVar"><span class="hs-identifier hs-var hs-var">parseConditionConfVar</span></a></span></span><span> </span><span id="local-6989586621679437237"><span class="annot"><span class="annottext">[SectionArg Position]
+</span><a href="#local-6989586621679437237"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">-- The name of the input file is irrelevant, as we reformat the error message.</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; ()
+-&gt; SourceName
+-&gt; [SectionArg Position]
+-&gt; Either ParseError (Condition ConfVar)
+forall s t u a.
+Stream s Identity t =&gt;
+Parsec s u a -&gt; u -&gt; SourceName -&gt; s -&gt; Either ParseError a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Prim.html#runParser/Text.Parsec.Prim.html#runParser"><span class="hs-identifier hs-var">P.runParser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="Distribution.Fields.ConfVar.html#parser"><span class="hs-identifier hs-var">parser</span></a></span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A/GHC.Base.html#%3C%2A"><span class="hs-operator hs-var">&lt;*</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity ()
+forall s (m :: * -&gt; *) t u.
+(Stream s m t, Show t) =&gt;
+ParsecT s u m ()
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Combinator.html#eof/Text.Parsec.Combinator.html#eof"><span class="hs-identifier hs-var">P.eof</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;&lt;condition&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">[SectionArg Position]
+</span><a href="#local-6989586621679437237"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Either.html#Right/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679437238"><span class="annot"><span class="annottext">Condition ConfVar
+</span><a href="#local-6989586621679437238"><span class="hs-identifier hs-var">x</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Condition ConfVar -&gt; ParseResult (Condition ConfVar)
+forall a. a -&gt; ParseResult a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Condition ConfVar
+</span><a href="#local-6989586621679437238"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-36"></span><span>        </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Either.html#Left/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679437239"><span class="annot"><span class="annottext">ParseError
+</span><a href="#local-6989586621679437239"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>            </span><span class="hs-comment">-- Mangle the position to the actual one</span><span>
+</span><span id="line-38"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679437240"><span class="annot"><span class="annottext">ppos :: SourcePos
+</span><a href="#local-6989586621679437240"><span class="hs-identifier hs-var hs-var">ppos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParseError -&gt; SourcePos
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Error.html#errorPos/Text.Parsec.Error.html#errorPos"><span class="hs-identifier hs-var">P.errorPos</span></a></span><span> </span><span class="annot"><span class="annottext">ParseError
+</span><a href="#local-6989586621679437239"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-39"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679437242"><span class="annot"><span class="annottext">epos :: Position
+</span><a href="#local-6989586621679437242"><span class="hs-identifier hs-var hs-var">epos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Position
+</span><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-var">Position</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SourcePos -&gt; Int
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Pos.html#sourceLine/Text.Parsec.Pos.html#sourceLine"><span class="hs-identifier hs-var">P.sourceLine</span></a></span><span> </span><span class="annot"><span class="annottext">SourcePos
+</span><a href="#local-6989586621679437240"><span class="hs-identifier hs-var">ppos</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SourcePos -&gt; Int
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Pos.html#sourceColumn/Text.Parsec.Pos.html#sourceColumn"><span class="hs-identifier hs-var">P.sourceColumn</span></a></span><span> </span><span class="annot"><span class="annottext">SourcePos
+</span><a href="#local-6989586621679437240"><span class="hs-identifier hs-var">ppos</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679437246"><span class="annot"><span class="annottext">msg :: SourceName
+</span><a href="#local-6989586621679437246"><span class="hs-identifier hs-var hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SourceName
+-&gt; SourceName
+-&gt; SourceName
+-&gt; SourceName
+-&gt; SourceName
+-&gt; [Message]
+-&gt; SourceName
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Error.html#showErrorMessages/Text.Parsec.Error.html#showErrorMessages"><span class="hs-identifier hs-var">P.showErrorMessages</span></a></span><span>
+</span><span id="line-41"></span><span>                    </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;or&quot;</span></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;unknown parse error&quot;</span></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;expecting&quot;</span></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;unexpected&quot;</span></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;end of input&quot;</span></span><span>
+</span><span id="line-42"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ParseError -&gt; [Message]
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Error.html#errorMessages/Text.Parsec.Error.html#errorMessages"><span class="hs-identifier hs-var">P.errorMessages</span></a></span><span> </span><span class="annot"><span class="annottext">ParseError
+</span><a href="#local-6989586621679437239"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>            </span><span class="annot"><span class="annottext">Position -&gt; SourceName -&gt; ParseResult ()
+</span><a href="Distribution.Fields.ParseResult.html#parseFailure"><span class="hs-identifier hs-var">parseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679437242"><span class="hs-identifier hs-var">epos</span></a></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><a href="#local-6989586621679437246"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-44"></span><span>            </span><span class="annot"><span class="annottext">Condition ConfVar -&gt; ParseResult (Condition ConfVar)
+forall a. a -&gt; ParseResult a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition ConfVar -&gt; ParseResult (Condition ConfVar))
+-&gt; Condition ConfVar -&gt; ParseResult (Condition ConfVar)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition ConfVar
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">type</span><span> </span><span id="Parser"><span class="annot"><a href="Distribution.Fields.ConfVar.html#Parser"><span class="hs-identifier hs-var">Parser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../parsec-3.1.16.1/src/Text.Parsec.Prim.html#Parsec/Text.Parsec.Prim.html#Parsec"><span class="hs-identifier hs-type">P.Parsec</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span id="local-6989586621679437072"><span id="local-6989586621679437074"><span class="annot"><a href="Distribution.Fields.ConfVar.html#sepByNonEmpty"><span class="hs-identifier hs-type">sepByNonEmpty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ConfVar.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679437072"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ConfVar.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679437074"><span class="hs-identifier hs-type">sep</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ConfVar.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#NonEmpty/GHC.Base.html#NonEmpty"><span class="hs-identifier hs-type">NonEmpty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679437072"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-49"></span><span id="sepByNonEmpty"><span class="annot"><span class="annottext">sepByNonEmpty :: forall a sep. Parser a -&gt; Parser sep -&gt; Parser (NonEmpty a)
+</span><a href="Distribution.Fields.ConfVar.html#sepByNonEmpty"><span class="hs-identifier hs-var hs-var">sepByNonEmpty</span></a></span></span><span> </span><span id="local-6989586621679437258"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679437258"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679437259"><span class="annot"><span class="annottext">Parser sep
+</span><a href="#local-6989586621679437259"><span class="hs-identifier hs-var">sep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; NonEmpty a
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3A%7C/GHC.Base.html#%3A%7C"><span class="hs-operator hs-var">(:|)</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; [a] -&gt; NonEmpty a)
+-&gt; Parser a
+-&gt; ParsecT [SectionArg Position] () Identity ([a] -&gt; NonEmpty a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679437258"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity ([a] -&gt; NonEmpty a)
+-&gt; ParsecT [SectionArg Position] () Identity [a]
+-&gt; ParsecT [SectionArg Position] () Identity (NonEmpty a)
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a -&gt; ParsecT [SectionArg Position] () Identity [a]
+forall a.
+ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#many/GHC.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser sep
+</span><a href="#local-6989586621679437259"><span class="hs-identifier hs-var">sep</span></a></span><span> </span><span class="annot"><span class="annottext">Parser sep -&gt; Parser a -&gt; Parser a
+forall a b.
+ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2A%3E/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679437258"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Distribution.Fields.ConfVar.html#parser"><span class="hs-identifier hs-type">parser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ConfVar.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Condition.html#Condition"><span class="hs-identifier hs-type">Condition</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ConfVar.html#ConfVar"><span class="hs-identifier hs-type">ConfVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span id="parser"><span class="annot"><span class="annottext">parser :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="Distribution.Fields.ConfVar.html#parser"><span class="hs-identifier hs-var hs-var">parser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437263"><span class="hs-identifier hs-var">condOr</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679437263"><span class="annot"><span class="annottext">condOr :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437263"><span class="hs-identifier hs-var hs-var">condOr</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; Parser (NonEmpty (Condition ConfVar))
+forall a sep. Parser a -&gt; Parser sep -&gt; Parser (NonEmpty a)
+</span><a href="Distribution.Fields.ConfVar.html#sepByNonEmpty"><span class="hs-identifier hs-var">sepByNonEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437277"><span class="hs-identifier hs-var">condAnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;||&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser (NonEmpty (Condition ConfVar))
+-&gt; (NonEmpty (Condition ConfVar)
+    -&gt; Parsec [SectionArg Position] () (Condition ConfVar))
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity a
+-&gt; (a -&gt; ParsecT [SectionArg Position] () Identity b)
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Condition ConfVar
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a. a -&gt; ParsecT [SectionArg Position] () Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition ConfVar
+ -&gt; Parsec [SectionArg Position] () (Condition ConfVar))
+-&gt; (NonEmpty (Condition ConfVar) -&gt; Condition ConfVar)
+-&gt; NonEmpty (Condition ConfVar)
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition ConfVar -&gt; Condition ConfVar -&gt; Condition ConfVar)
+-&gt; NonEmpty (Condition ConfVar) -&gt; Condition ConfVar
+forall a. (a -&gt; a -&gt; a) -&gt; NonEmpty a -&gt; a
+</span><a href="Distribution.Compat.Prelude.html#foldl1"><span class="hs-identifier hs-var">foldl1</span></a></span><span> </span><span class="annot"><span class="annottext">Condition ConfVar -&gt; Condition ConfVar -&gt; Condition ConfVar
+forall c. Condition c -&gt; Condition c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#COr"><span class="hs-identifier hs-var">COr</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679437277"><span class="annot"><span class="annottext">condAnd :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437277"><span class="hs-identifier hs-var hs-var">condAnd</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; Parser (NonEmpty (Condition ConfVar))
+forall a sep. Parser a -&gt; Parser sep -&gt; Parser (NonEmpty a)
+</span><a href="Distribution.Fields.ConfVar.html#sepByNonEmpty"><span class="hs-identifier hs-var">sepByNonEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437282"><span class="hs-identifier hs-var">cond</span></a></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&amp;&amp;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser (NonEmpty (Condition ConfVar))
+-&gt; (NonEmpty (Condition ConfVar)
+    -&gt; Parsec [SectionArg Position] () (Condition ConfVar))
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity a
+-&gt; (a -&gt; ParsecT [SectionArg Position] () Identity b)
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Condition ConfVar
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a. a -&gt; ParsecT [SectionArg Position] () Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition ConfVar
+ -&gt; Parsec [SectionArg Position] () (Condition ConfVar))
+-&gt; (NonEmpty (Condition ConfVar) -&gt; Condition ConfVar)
+-&gt; NonEmpty (Condition ConfVar)
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition ConfVar -&gt; Condition ConfVar -&gt; Condition ConfVar)
+-&gt; NonEmpty (Condition ConfVar) -&gt; Condition ConfVar
+forall a. (a -&gt; a -&gt; a) -&gt; NonEmpty a -&gt; a
+</span><a href="Distribution.Compat.Prelude.html#foldl1"><span class="hs-identifier hs-var">foldl1</span></a></span><span> </span><span class="annot"><span class="annottext">Condition ConfVar -&gt; Condition ConfVar -&gt; Condition ConfVar
+forall c. Condition c -&gt; Condition c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#CAnd"><span class="hs-identifier hs-var">CAnd</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679437282"><span class="annot"><span class="annottext">cond :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437282"><span class="hs-identifier hs-var hs-var">cond</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Parsec [SectionArg Position] () (Condition ConfVar)]
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall s (m :: * -&gt; *) t u a.
+Stream s m t =&gt;
+[ParsecT s u m a] -&gt; ParsecT s u m a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Combinator.html#choice/Text.Parsec.Combinator.html#choice"><span class="hs-identifier hs-var">P.choice</span></a></span><span>
+</span><span id="line-57"></span><span>         </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+forall {u} {c}.
+ParsecT [SectionArg Position] u Identity (Condition c)
+</span><a href="#local-6989586621679437285"><span class="hs-identifier hs-var">boolLiteral</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall {u} {a}.
+ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437286"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437263"><span class="hs-identifier hs-var">condOr</span></a></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437287"><span class="hs-identifier hs-var">notCond</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437288"><span class="hs-identifier hs-var">osCond</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437289"><span class="hs-identifier hs-var">archCond</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437290"><span class="hs-identifier hs-var">flagCond</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437291"><span class="hs-identifier hs-var">implCond</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>    </span><span id="local-6989586621679437287"><span class="annot"><span class="annottext">notCond :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437287"><span class="hs-identifier hs-var hs-var">notCond</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Condition ConfVar -&gt; Condition ConfVar
+forall c. Condition c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#CNot"><span class="hs-identifier hs-var">CNot</span></a></span><span> </span><span class="annot"><span class="annottext">(Condition ConfVar -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT
+     [SectionArg Position]
+     ()
+     Identity
+     (Condition ConfVar -&gt; Condition ConfVar)
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;!&quot;</span></span><span> </span><span class="annot"><span class="annottext">ParsecT
+  [SectionArg Position]
+  ()
+  Identity
+  (Condition ConfVar -&gt; Condition ConfVar)
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437282"><span class="hs-identifier hs-var">cond</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679437285"><span class="annot"><span class="annottext">boolLiteral :: ParsecT [SectionArg Position] u Identity (Condition c)
+</span><a href="#local-6989586621679437285"><span class="hs-identifier hs-var hs-var">boolLiteral</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Condition c
+forall c. Bool -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Condition c)
+-&gt; ParsecT [SectionArg Position] u Identity Bool
+-&gt; ParsecT [SectionArg Position] u Identity (Condition c)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] u Identity Bool
+forall {u}. ParsecT [SectionArg Position] u Identity Bool
+</span><a href="#local-6989586621679437295"><span class="hs-identifier hs-var">boolLiteral'</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679437288"><span class="annot"><span class="annottext">osCond :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437288"><span class="hs-identifier hs-var hs-var">osCond</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConfVar -&gt; Condition ConfVar
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="annot"><span class="annottext">(ConfVar -&gt; Condition ConfVar)
+-&gt; (OS -&gt; ConfVar) -&gt; OS -&gt; Condition ConfVar
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">OS -&gt; ConfVar
+</span><a href="Distribution.Types.ConfVar.html#OS"><span class="hs-identifier hs-var">OS</span></a></span><span>   </span><span class="annot"><span class="annottext">(OS -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT
+     [SectionArg Position] () Identity (OS -&gt; Condition ConfVar)
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437303"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;os&quot;</span></span><span>   </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity (OS -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity OS
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity OS
+-&gt; ParsecT [SectionArg Position] () Identity OS
+forall {u} {a}.
+ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437286"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity OS
+forall a. Parsec a =&gt; Parser a
+</span><a href="#local-6989586621679437304"><span class="hs-identifier hs-var">fromParsec</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679437290"><span class="annot"><span class="annottext">flagCond :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437290"><span class="hs-identifier hs-var hs-var">flagCond</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConfVar -&gt; Condition ConfVar
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="annot"><span class="annottext">(ConfVar -&gt; Condition ConfVar)
+-&gt; (FlagName -&gt; ConfVar) -&gt; FlagName -&gt; Condition ConfVar
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FlagName -&gt; ConfVar
+</span><a href="Distribution.Types.ConfVar.html#PackageFlag"><span class="hs-identifier hs-var">PackageFlag</span></a></span><span> </span><span class="annot"><span class="annottext">(FlagName -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT
+     [SectionArg Position] () Identity (FlagName -&gt; Condition ConfVar)
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437303"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;flag&quot;</span></span><span> </span><span class="annot"><span class="annottext">ParsecT
+  [SectionArg Position] () Identity (FlagName -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity FlagName
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity FlagName
+-&gt; ParsecT [SectionArg Position] () Identity FlagName
+forall {u} {a}.
+ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437286"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity FlagName
+forall a. Parsec a =&gt; Parser a
+</span><a href="#local-6989586621679437304"><span class="hs-identifier hs-var">fromParsec</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679437289"><span class="annot"><span class="annottext">archCond :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437289"><span class="hs-identifier hs-var hs-var">archCond</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConfVar -&gt; Condition ConfVar
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="annot"><span class="annottext">(ConfVar -&gt; Condition ConfVar)
+-&gt; (Arch -&gt; ConfVar) -&gt; Arch -&gt; Condition ConfVar
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Arch -&gt; ConfVar
+</span><a href="Distribution.Types.ConfVar.html#Arch"><span class="hs-identifier hs-var">Arch</span></a></span><span> </span><span class="annot"><span class="annottext">(Arch -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT
+     [SectionArg Position] () Identity (Arch -&gt; Condition ConfVar)
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437303"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;arch&quot;</span></span><span> </span><span class="annot"><span class="annottext">ParsecT
+  [SectionArg Position] () Identity (Arch -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity Arch
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity Arch
+-&gt; ParsecT [SectionArg Position] () Identity Arch
+forall {u} {a}.
+ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437286"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity Arch
+forall a. Parsec a =&gt; Parser a
+</span><a href="#local-6989586621679437304"><span class="hs-identifier hs-var">fromParsec</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679437291"><span class="annot"><span class="annottext">implCond :: Parsec [SectionArg Position] () (Condition ConfVar)
+</span><a href="#local-6989586621679437291"><span class="hs-identifier hs-var hs-var">implCond</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConfVar -&gt; Condition ConfVar
+forall c. c -&gt; Condition c
+</span><a href="Distribution.Types.Condition.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span>        </span><span class="annot"><span class="annottext">(ConfVar -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT
+     [SectionArg Position] () Identity (ConfVar -&gt; Condition ConfVar)
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437303"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;impl&quot;</span></span><span> </span><span class="annot"><span class="annottext">ParsecT
+  [SectionArg Position] () Identity (ConfVar -&gt; Condition ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity ConfVar
+-&gt; Parsec [SectionArg Position] () (Condition ConfVar)
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity ConfVar
+-&gt; ParsecT [SectionArg Position] () Identity ConfVar
+forall {u} {a}.
+ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437286"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity ConfVar
+</span><a href="#local-6989586621679437320"><span class="hs-identifier hs-var">implCond'</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679437320"><span class="annot"><span class="annottext">implCond' :: ParsecT [SectionArg Position] () Identity ConfVar
+</span><a href="#local-6989586621679437320"><span class="hs-identifier hs-var hs-var">implCond'</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompilerFlavor -&gt; VersionRange -&gt; ConfVar
+</span><a href="Distribution.Types.ConfVar.html#Impl"><span class="hs-identifier hs-var">Impl</span></a></span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><span class="annottext">(CompilerFlavor -&gt; VersionRange -&gt; ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity CompilerFlavor
+-&gt; ParsecT
+     [SectionArg Position] () Identity (VersionRange -&gt; ConfVar)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity CompilerFlavor
+forall a. Parsec a =&gt; Parser a
+</span><a href="#local-6989586621679437304"><span class="hs-identifier hs-var">fromParsec</span></a></span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity (VersionRange -&gt; ConfVar)
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; ParsecT [SectionArg Position] () Identity ConfVar
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+forall s (m :: * -&gt; *) t a u.
+Stream s m t =&gt;
+a -&gt; ParsecT s u m a -&gt; ParsecT s u m a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Combinator.html#option/Text.Parsec.Combinator.html#option"><span class="hs-identifier hs-var">P.option</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#anyVersion"><span class="hs-identifier hs-var">anyVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437329"><span class="hs-identifier hs-var">versionRange</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679437332"><span class="annot"><span class="annottext">version :: Parser Version
+</span><a href="#local-6989586621679437332"><span class="hs-identifier hs-var hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser Version
+forall a. Parsec a =&gt; Parser a
+</span><a href="#local-6989586621679437304"><span class="hs-identifier hs-var">fromParsec</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679437336"><span class="annot"><span class="annottext">versionStar :: ParsecT [SectionArg Position] u Identity Version
+</span><a href="#local-6989586621679437336"><span class="hs-identifier hs-var hs-var">versionStar</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Version
+</span><a href="Distribution.Types.Version.html#mkVersion"><span class="hs-identifier hs-var">mkVersion</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Version)
+-&gt; ParsecT [SectionArg Position] u Identity [Int]
+-&gt; ParsecT [SectionArg Position] u Identity Version
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecParser [Int]
+-&gt; ParsecT [SectionArg Position] u Identity [Int]
+forall {b} {u}.
+ParsecParser b -&gt; ParsecT [SectionArg Position] u Identity b
+</span><a href="#local-6989586621679437337"><span class="hs-identifier hs-var">fromParsec'</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecParser [Int]
+</span><a href="#local-6989586621679437338"><span class="hs-identifier hs-var">versionStar'</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] u Identity Version
+-&gt; ParsecT [SectionArg Position] u Identity ()
+-&gt; ParsecT [SectionArg Position] u Identity Version
+forall a b.
+ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity b
+-&gt; ParsecT [SectionArg Position] u Identity a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A/GHC.Base.html#%3C%2A"><span class="hs-operator hs-var">&lt;*</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;*&quot;</span></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679437338"><span class="annot"><span class="annottext">versionStar' :: ParsecParser [Int]
+</span><a href="#local-6989586621679437338"><span class="hs-identifier hs-var hs-var">versionStar'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParsecParser Int -&gt; ParsecParser [Int]
+forall a. ParsecParser a -&gt; ParsecParser [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#some/GHC.Base.html#some"><span class="hs-identifier hs-var">some</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ParsecParser Int
+forall (m :: * -&gt; *) a. (CharParsing m, Integral a) =&gt; m a
+</span><a href="Distribution.Compat.CharParsing.html#integral"><span class="hs-identifier hs-var">integral</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecParser Int -&gt; ParsecParser Char -&gt; ParsecParser Int
+forall a b. ParsecParser a -&gt; ParsecParser b -&gt; ParsecParser a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A/GHC.Base.html#%3C%2A"><span class="hs-operator hs-var">&lt;*</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ParsecParser Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679437329"><span class="annot"><span class="annottext">versionRange :: ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437329"><span class="hs-identifier hs-var hs-var">versionRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437368"><span class="hs-identifier hs-var">expr</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>        </span><span id="local-6989586621679437368"><span class="annot"><span class="annottext">expr :: ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437368"><span class="hs-identifier hs-var hs-var">expr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VersionRange -&gt; VersionRange -&gt; VersionRange)
+-&gt; NonEmpty VersionRange -&gt; VersionRange
+forall a. (a -&gt; a -&gt; a) -&gt; NonEmpty a -&gt; a
+</span><a href="Distribution.Compat.Prelude.html#foldl1"><span class="hs-identifier hs-var">foldl1</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#unionVersionRanges"><span class="hs-identifier hs-var">unionVersionRanges</span></a></span><span>     </span><span class="annot"><span class="annottext">(NonEmpty VersionRange -&gt; VersionRange)
+-&gt; ParsecT
+     [SectionArg Position] () Identity (NonEmpty VersionRange)
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT
+     [SectionArg Position] () Identity (NonEmpty VersionRange)
+forall a sep. Parser a -&gt; Parser sep -&gt; Parser (NonEmpty a)
+</span><a href="Distribution.Fields.ConfVar.html#sepByNonEmpty"><span class="hs-identifier hs-var">sepByNonEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437375"><span class="hs-identifier hs-var">term</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;||&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>        </span><span id="local-6989586621679437375"><span class="annot"><span class="annottext">term :: ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437375"><span class="hs-identifier hs-var hs-var">term</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VersionRange -&gt; VersionRange -&gt; VersionRange)
+-&gt; NonEmpty VersionRange -&gt; VersionRange
+forall a. (a -&gt; a -&gt; a) -&gt; NonEmpty a -&gt; a
+</span><a href="Distribution.Compat.Prelude.html#foldl1"><span class="hs-identifier hs-var">foldl1</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#intersectVersionRanges"><span class="hs-identifier hs-var">intersectVersionRanges</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty VersionRange -&gt; VersionRange)
+-&gt; ParsecT
+     [SectionArg Position] () Identity (NonEmpty VersionRange)
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT
+     [SectionArg Position] () Identity (NonEmpty VersionRange)
+forall a sep. Parser a -&gt; Parser sep -&gt; Parser (NonEmpty a)
+</span><a href="Distribution.Fields.ConfVar.html#sepByNonEmpty"><span class="hs-identifier hs-var">sepByNonEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437376"><span class="hs-identifier hs-var">factor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&amp;&amp;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>        </span><span id="local-6989586621679437376"><span class="annot"><span class="annottext">factor :: ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437376"><span class="hs-identifier hs-var hs-var">factor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ParsecT [SectionArg Position] () Identity VersionRange]
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+forall s (m :: * -&gt; *) t u a.
+Stream s m t =&gt;
+[ParsecT s u m a] -&gt; ParsecT s u m a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Combinator.html#choice/Text.Parsec.Combinator.html#choice"><span class="hs-identifier hs-var">P.choice</span></a></span><span>
+</span><span id="line-81"></span><span>            </span><span class="annot"><span class="annottext">([ParsecT [SectionArg Position] () Identity VersionRange]
+ -&gt; ParsecT [SectionArg Position] () Identity VersionRange)
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+forall {u} {a}.
+ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437286"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+</span><a href="#local-6989586621679437368"><span class="hs-identifier hs-var">expr</span></a></span><span>
+</span><span id="line-82"></span><span>            </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+forall {u}. ParsecT [SectionArg Position] u Identity VersionRange
+</span><a href="#local-6989586621679437377"><span class="hs-identifier hs-var">parseAnyVersion</span></a></span><span>
+</span><span id="line-83"></span><span>            </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+forall {u}. ParsecT [SectionArg Position] u Identity VersionRange
+</span><a href="#local-6989586621679437378"><span class="hs-identifier hs-var">parseNoVersion</span></a></span><span>
+</span><span id="line-84"></span><span>            </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+forall {u}. ParsecT [SectionArg Position] u Identity VersionRange
+</span><a href="#local-6989586621679437379"><span class="hs-identifier hs-var">parseWildcardRange</span></a></span><span>
+</span><span id="line-85"></span><span>            </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity VersionRange
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">((ByteString, Version -&gt; VersionRange)
+ -&gt; ParsecT [SectionArg Position] () Identity VersionRange)
+-&gt; [(ByteString, Version -&gt; VersionRange)]
+-&gt; [ParsecT [SectionArg Position] () Identity VersionRange]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString, Version -&gt; VersionRange)
+-&gt; ParsecT [SectionArg Position] () Identity VersionRange
+forall {a}.
+(ByteString, Version -&gt; a)
+-&gt; ParsecT [SectionArg Position] () Identity a
+</span><a href="#local-6989586621679437380"><span class="hs-identifier hs-var">parseRangeOp</span></a></span><span> </span><span class="annot"><span class="annottext">[(ByteString, Version -&gt; VersionRange)]
+</span><a href="#local-6989586621679437381"><span class="hs-identifier hs-var">rangeOps</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span>        </span><span id="local-6989586621679437377"><span class="annot"><span class="annottext">parseAnyVersion :: ParsecT [SectionArg Position] u Identity VersionRange
+</span><a href="#local-6989586621679437377"><span class="hs-identifier hs-var hs-var">parseAnyVersion</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#anyVersion"><span class="hs-identifier hs-var">anyVersion</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+-&gt; ParsecT [SectionArg Position] u Identity ()
+-&gt; ParsecT [SectionArg Position] u Identity VersionRange
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] u Identity b
+-&gt; ParsecT [SectionArg Position] u Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437303"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;-any&quot;</span></span><span>
+</span><span id="line-88"></span><span>        </span><span id="local-6989586621679437378"><span class="annot"><span class="annottext">parseNoVersion :: ParsecT [SectionArg Position] u Identity VersionRange
+</span><a href="#local-6989586621679437378"><span class="hs-identifier hs-var hs-var">parseNoVersion</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#noVersion"><span class="hs-identifier hs-var">noVersion</span></a></span><span>  </span><span class="annot"><span class="annottext">VersionRange
+-&gt; ParsecT [SectionArg Position] u Identity ()
+-&gt; ParsecT [SectionArg Position] u Identity VersionRange
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] u Identity b
+-&gt; ParsecT [SectionArg Position] u Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437303"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;-none&quot;</span></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span>        </span><span id="local-6989586621679437379"><span class="annot"><span class="annottext">parseWildcardRange :: ParsecT [SectionArg Position] u Identity VersionRange
+</span><a href="#local-6989586621679437379"><span class="hs-identifier hs-var hs-var">parseWildcardRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] u Identity VersionRange
+-&gt; ParsecT [SectionArg Position] u Identity VersionRange
+forall s u (m :: * -&gt; *) a. ParsecT s u m a -&gt; ParsecT s u m a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Prim.html#try/Text.Parsec.Prim.html#try"><span class="hs-identifier hs-var">P.try</span></a></span><span> </span><span class="annot"><span class="annottext">(ParsecT [SectionArg Position] u Identity VersionRange
+ -&gt; ParsecT [SectionArg Position] u Identity VersionRange)
+-&gt; ParsecT [SectionArg Position] u Identity VersionRange
+-&gt; ParsecT [SectionArg Position] u Identity VersionRange
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#withinVersion"><span class="hs-identifier hs-var">withinVersion</span></a></span><span> </span><span class="annot"><span class="annottext">(Version -&gt; VersionRange)
+-&gt; ParsecT [SectionArg Position] u Identity ()
+-&gt; ParsecT
+     [SectionArg Position] u Identity (Version -&gt; VersionRange)
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] u Identity b
+-&gt; ParsecT [SectionArg Position] u Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;==&quot;</span></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] u Identity (Version -&gt; VersionRange)
+-&gt; ParsecT [SectionArg Position] u Identity Version
+-&gt; ParsecT [SectionArg Position] u Identity VersionRange
+forall a b.
+ParsecT [SectionArg Position] u Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] u Identity Version
+forall {u}. ParsecT [SectionArg Position] u Identity Version
+</span><a href="#local-6989586621679437336"><span class="hs-identifier hs-var">versionStar</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>        </span><span id="local-6989586621679437380"><span class="annot"><span class="annottext">parseRangeOp :: (ByteString, Version -&gt; a)
+-&gt; ParsecT [SectionArg Position] () Identity a
+</span><a href="#local-6989586621679437380"><span class="hs-identifier hs-var hs-var">parseRangeOp</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679437392"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437392"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679437393"><span class="annot"><span class="annottext">Version -&gt; a
+</span><a href="#local-6989586621679437393"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall s u (m :: * -&gt; *) a. ParsecT s u m a -&gt; ParsecT s u m a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Prim.html#try/Text.Parsec.Prim.html#try"><span class="hs-identifier hs-var">P.try</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; a
+</span><a href="#local-6989586621679437393"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Version -&gt; a)
+-&gt; ParsecT [SectionArg Position] () Identity ()
+-&gt; ParsecT [SectionArg Position] () Identity (Version -&gt; a)
+forall a b.
+a
+-&gt; ParsecT [SectionArg Position] () Identity b
+-&gt; ParsecT [SectionArg Position] () Identity a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] () Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437392"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] () Identity (Version -&gt; a)
+-&gt; Parser Version -&gt; ParsecT [SectionArg Position] () Identity a
+forall a b.
+ParsecT [SectionArg Position] () Identity (a -&gt; b)
+-&gt; ParsecT [SectionArg Position] () Identity a
+-&gt; ParsecT [SectionArg Position] () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Version
+</span><a href="#local-6989586621679437332"><span class="hs-identifier hs-var">version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>        </span><span id="local-6989586621679437381"><span class="annot"><span class="annottext">rangeOps :: [(ByteString, Version -&gt; VersionRange)]
+</span><a href="#local-6989586621679437381"><span class="hs-identifier hs-var hs-var">rangeOps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&lt;&quot;</span></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#earlierVersion"><span class="hs-identifier hs-var">earlierVersion</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-94"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&lt;=&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#orEarlierVersion"><span class="hs-identifier hs-var">orEarlierVersion</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-95"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&gt;&quot;</span></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#laterVersion"><span class="hs-identifier hs-var">laterVersion</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-96"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&gt;=&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#orLaterVersion"><span class="hs-identifier hs-var">orLaterVersion</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-97"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;^&gt;=&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#majorBoundVersion"><span class="hs-identifier hs-var">majorBoundVersion</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-98"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;==&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#thisVersion"><span class="hs-identifier hs-var">thisVersion</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-comment">-- Number token can have many dots in it: SecArgNum (Position 65 15) &quot;7.6.1&quot;</span><span>
+</span><span id="line-101"></span><span>    </span><span id="local-6989586621679437400"><span class="annot"><span class="annottext">identBS :: ParsecT [SectionArg Position] u Identity ByteString
+</span><a href="#local-6989586621679437400"><span class="hs-identifier hs-var hs-var">identBS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SectionArg Position -&gt; Maybe ByteString)
+-&gt; ParsecT [SectionArg Position] u Identity ByteString
+forall {a} {u}.
+(SectionArg Position -&gt; Maybe a)
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437401"><span class="hs-identifier hs-var">tokenPrim</span></a></span><span> </span><span class="annot"><span class="annottext">((SectionArg Position -&gt; Maybe ByteString)
+ -&gt; ParsecT [SectionArg Position] u Identity ByteString)
+-&gt; (SectionArg Position -&gt; Maybe ByteString)
+-&gt; ParsecT [SectionArg Position] u Identity ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679437402"><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437402"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437402"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgName"><span class="hs-identifier hs-type">SecArgName</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679437404"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437404"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437404"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">SectionArg Position
+</span><span class="hs-identifier">_</span></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621679437295"><span class="annot"><span class="annottext">boolLiteral' :: ParsecT [SectionArg Position] u Identity Bool
+</span><a href="#local-6989586621679437295"><span class="hs-identifier hs-var hs-var">boolLiteral'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SectionArg Position -&gt; Maybe Bool)
+-&gt; ParsecT [SectionArg Position] u Identity Bool
+forall {a} {u}.
+(SectionArg Position -&gt; Maybe a)
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437401"><span class="hs-identifier hs-var">tokenPrim</span></a></span><span> </span><span class="annot"><span class="annottext">((SectionArg Position -&gt; Maybe Bool)
+ -&gt; ParsecT [SectionArg Position] u Identity Bool)
+-&gt; (SectionArg Position -&gt; Maybe Bool)
+-&gt; ParsecT [SectionArg Position] u Identity Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679437414"><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437414"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437414"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgName"><span class="hs-identifier hs-type">SecArgName</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679437415"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437415"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-107"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437415"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;True&quot;</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-108"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437415"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;true&quot;</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-109"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437415"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;False&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-110"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437415"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;false&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><span class="annottext">SectionArg Position
+</span><span class="hs-identifier">_</span></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679437303"><span class="annot"><span class="annottext">string :: ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437303"><span class="hs-identifier hs-var hs-var">string</span></a></span></span><span> </span><span id="local-6989586621679437417"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437417"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SectionArg Position -&gt; Maybe ())
+-&gt; ParsecT [SectionArg Position] u Identity ()
+forall {a} {u}.
+(SectionArg Position -&gt; Maybe a)
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437401"><span class="hs-identifier hs-var">tokenPrim</span></a></span><span> </span><span class="annot"><span class="annottext">((SectionArg Position -&gt; Maybe ())
+ -&gt; ParsecT [SectionArg Position] u Identity ())
+-&gt; (SectionArg Position -&gt; Maybe ())
+-&gt; ParsecT [SectionArg Position] u Identity ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679437418"><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437418"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437418"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-114"></span><span>        </span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgName"><span class="hs-identifier hs-type">SecArgName</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679437419"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437419"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437417"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437419"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Maybe ()
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><span class="annottext">SectionArg Position
+</span><span class="hs-identifier">_</span></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe ()
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679437278"><span class="annot"><span class="annottext">oper :: ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var hs-var">oper</span></a></span></span><span> </span><span id="local-6989586621679437421"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437421"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SectionArg Position -&gt; Maybe ())
+-&gt; ParsecT [SectionArg Position] u Identity ()
+forall {a} {u}.
+(SectionArg Position -&gt; Maybe a)
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437401"><span class="hs-identifier hs-var">tokenPrim</span></a></span><span> </span><span class="annot"><span class="annottext">((SectionArg Position -&gt; Maybe ())
+ -&gt; ParsecT [SectionArg Position] u Identity ())
+-&gt; (SectionArg Position -&gt; Maybe ())
+-&gt; ParsecT [SectionArg Position] u Identity ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679437422"><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437422"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SectionArg Position
+</span><a href="#local-6989586621679437422"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-118"></span><span>        </span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgOther"><span class="hs-identifier hs-type">SecArgOther</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679437424"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437424"><span class="hs-identifier hs-var">o'</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437421"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437424"><span class="hs-identifier hs-var">o'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Maybe ()
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>        </span><span class="annot"><span class="annottext">SectionArg Position
+</span><span class="hs-identifier">_</span></span><span>                          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe ()
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span>    </span><span id="local-6989586621679437286"><span class="annot"><span class="annottext">parens :: ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437286"><span class="hs-identifier hs-var hs-var">parens</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] u Identity ()
+-&gt; ParsecT [SectionArg Position] u Identity ()
+-&gt; ParsecT [SectionArg Position] u Identity a
+-&gt; ParsecT [SectionArg Position] u Identity a
+forall s (m :: * -&gt; *) t u open close a.
+Stream s m t =&gt;
+ParsecT s u m open
+-&gt; ParsecT s u m close -&gt; ParsecT s u m a -&gt; ParsecT s u m a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Combinator.html#between/Text.Parsec.Combinator.html#between"><span class="hs-identifier hs-var">P.between</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;(&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+forall {u}.
+ByteString -&gt; ParsecT [SectionArg Position] u Identity ()
+</span><a href="#local-6989586621679437278"><span class="hs-identifier hs-var">oper</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;)&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679437401"><span class="annot"><span class="annottext">tokenPrim :: (SectionArg Position -&gt; Maybe a)
+-&gt; ParsecT [SectionArg Position] u Identity a
+</span><a href="#local-6989586621679437401"><span class="hs-identifier hs-var hs-var">tokenPrim</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SectionArg Position -&gt; SourceName)
+-&gt; (SourcePos
+    -&gt; SectionArg Position -&gt; [SectionArg Position] -&gt; SourcePos)
+-&gt; (SectionArg Position -&gt; Maybe a)
+-&gt; ParsecT [SectionArg Position] u Identity a
+forall s (m :: * -&gt; *) t a u.
+Stream s m t =&gt;
+(t -&gt; SourceName)
+-&gt; (SourcePos -&gt; t -&gt; s -&gt; SourcePos)
+-&gt; (t -&gt; Maybe a)
+-&gt; ParsecT s u m a
+</span><a href="../../parsec-3.1.16.1/src/Text.Parsec.Prim.html#tokenPrim/Text.Parsec.Prim.html#tokenPrim"><span class="hs-identifier hs-var">P.tokenPrim</span></a></span><span> </span><span class="annot"><span class="annottext">SectionArg Position -&gt; SourceName
+</span><a href="#local-6989586621679437439"><span class="hs-identifier hs-var">prettySectionArg</span></a></span><span> </span><span class="annot"><span class="annottext">SourcePos
+-&gt; SectionArg Position -&gt; [SectionArg Position] -&gt; SourcePos
+forall {p} {p} {p}. p -&gt; p -&gt; p -&gt; p
+</span><a href="#local-6989586621679437440"><span class="hs-identifier hs-var">updatePosition</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">-- TODO: check where the errors are reported</span><span>
+</span><span id="line-125"></span><span>    </span><span id="local-6989586621679437440"><span class="annot"><span class="annottext">updatePosition :: p -&gt; p -&gt; p -&gt; p
+</span><a href="#local-6989586621679437440"><span class="hs-identifier hs-var hs-var">updatePosition</span></a></span></span><span> </span><span id="local-6989586621679437441"><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679437441"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679437441"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679437439"><span class="annot"><span class="annottext">prettySectionArg :: SectionArg Position -&gt; SourceName
+</span><a href="#local-6989586621679437439"><span class="hs-identifier hs-var hs-var">prettySectionArg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SectionArg Position -&gt; SourceName
+forall a. Show a =&gt; a -&gt; SourceName
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621679437118"><span class="annot"><a href="#local-6989586621679437304"><span class="hs-identifier hs-type">fromParsec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679437118"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ConfVar.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679437118"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621679437304"><span class="annot"><span class="annottext">fromParsec :: forall a. Parsec a =&gt; Parser a
+</span><a href="#local-6989586621679437304"><span class="hs-identifier hs-var hs-var">fromParsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParsecParser a -&gt; ParsecT [SectionArg Position] () Identity a
+forall {b} {u}.
+ParsecParser b -&gt; ParsecT [SectionArg Position] u Identity b
+</span><a href="#local-6989586621679437337"><span class="hs-identifier hs-var">fromParsec'</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecParser a
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m a
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span>    </span><span id="local-6989586621679437337"><span class="annot"><span class="annottext">fromParsec' :: ParsecParser b -&gt; ParsecT [SectionArg Position] u Identity b
+</span><a href="#local-6989586621679437337"><span class="hs-identifier hs-var hs-var">fromParsec'</span></a></span></span><span> </span><span id="local-6989586621679437456"><span class="annot"><span class="annottext">ParsecParser b
+</span><a href="#local-6989586621679437456"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-132"></span><span>        </span><span id="local-6989586621679437457"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437457"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ParsecT [SectionArg Position] u Identity ByteString
+forall {u}. ParsecT [SectionArg Position] u Identity ByteString
+</span><a href="#local-6989586621679437400"><span class="hs-identifier hs-var">identBS</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679437458"><span class="annot"><span class="annottext">fls :: FieldLineStream
+</span><a href="#local-6989586621679437458"><span class="hs-identifier hs-var hs-var">fls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; FieldLineStream
+</span><a href="Distribution.Parsec.FieldLineStream.html#fieldLineStreamFromBS"><span class="hs-identifier hs-var">fieldLineStreamFromBS</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679437457"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-134"></span><span>        </span><span class="annot"><span class="annottext">(ParseError -&gt; ParsecT [SectionArg Position] u Identity b)
+-&gt; (b -&gt; ParsecT [SectionArg Position] u Identity b)
+-&gt; Either ParseError b
+-&gt; ParsecT [SectionArg Position] u Identity b
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#either/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SourceName -&gt; ParsecT [SectionArg Position] u Identity b
+forall a. SourceName -&gt; ParsecT [SectionArg Position] u Identity a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; SourceName -&gt; m a
+</span><a href="../../base-4.18.2.1/src/Control.Monad.Fail.html#fail/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">(SourceName -&gt; ParsecT [SectionArg Position] u Identity b)
+-&gt; (ParseError -&gt; SourceName)
+-&gt; ParseError
+-&gt; ParsecT [SectionArg Position] u Identity b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ParseError -&gt; SourceName
+forall a. Show a =&gt; a -&gt; SourceName
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b -&gt; ParsecT [SectionArg Position] u Identity b
+forall a. a -&gt; ParsecT [SectionArg Position] u Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ParsecParser b
+-&gt; SourceName -&gt; FieldLineStream -&gt; Either ParseError b
+forall a.
+ParsecParser a
+-&gt; SourceName -&gt; FieldLineStream -&gt; Either ParseError a
+</span><a href="Distribution.Parsec.html#runParsecParser"><span class="hs-identifier hs-var">runParsecParser</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecParser b
+</span><a href="#local-6989586621679437456"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">SourceName
+</span><span class="hs-string">&quot;&lt;fromParsec'&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">FieldLineStream
+</span><a href="#local-6989586621679437458"><span class="hs-identifier hs-var">fls</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span></pre></body></html>

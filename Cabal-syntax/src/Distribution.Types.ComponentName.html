@@ -1,0 +1,508 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.ComponentName</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier">ComponentName</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier">CFLibName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier">CExeName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier">CTestName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier">CBenchName</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier">showComponentName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameRaw"><span class="hs-identifier">componentNameRaw</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameStanza"><span class="hs-identifier">componentNameStanza</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameString"><span class="hs-identifier">componentNameString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html"><span class="hs-identifier">Distribution.Types.UnqualComponentName</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html"><span class="hs-identifier">Distribution.Types.LibraryName</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- Libraries live in a separate namespace, so must distinguish</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">data</span><span> </span><span id="ComponentName"><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-var">ComponentName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CLibName"><span class="annot"><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-var">CLibName</span></a></span></span><span>   </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span>
+</span><span id="line-26"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="CNotLibName"><span class="annot"><a href="Distribution.Types.ComponentName.html#CNotLibName"><span class="hs-identifier hs-var">CNotLibName</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#NotLibComponentName"><span class="hs-identifier hs-type">NotLibComponentName</span></a></span><span>
+</span><span id="line-27"></span><span>                   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679406265"><span id="local-6989586621679406271"><span class="annot"><span class="annottext">ComponentName -&gt; ComponentName -&gt; Bool
+(ComponentName -&gt; ComponentName -&gt; Bool)
+-&gt; (ComponentName -&gt; ComponentName -&gt; Bool) -&gt; Eq ComponentName
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ComponentName -&gt; ComponentName -&gt; Bool
+== :: ComponentName -&gt; ComponentName -&gt; Bool
+$c/= :: ComponentName -&gt; ComponentName -&gt; Bool
+/= :: ComponentName -&gt; ComponentName -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406276"><span id="local-6989586621679406278"><span class="annot"><span class="annottext">(forall x. ComponentName -&gt; Rep ComponentName x)
+-&gt; (forall x. Rep ComponentName x -&gt; ComponentName)
+-&gt; Generic ComponentName
+forall x. Rep ComponentName x -&gt; ComponentName
+forall x. ComponentName -&gt; Rep ComponentName x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ComponentName -&gt; Rep ComponentName x
+from :: forall x. ComponentName -&gt; Rep ComponentName x
+$cto :: forall x. Rep ComponentName x -&gt; ComponentName
+to :: forall x. Rep ComponentName x -&gt; ComponentName
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406284"><span id="local-6989586621679406290"><span id="local-6989586621679406294"><span id="local-6989586621679406298"><span id="local-6989586621679406301"><span id="local-6989586621679406304"><span id="local-6989586621679406307"><span class="annot"><span class="annottext">Eq ComponentName
+Eq ComponentName =&gt;
+(ComponentName -&gt; ComponentName -&gt; Ordering)
+-&gt; (ComponentName -&gt; ComponentName -&gt; Bool)
+-&gt; (ComponentName -&gt; ComponentName -&gt; Bool)
+-&gt; (ComponentName -&gt; ComponentName -&gt; Bool)
+-&gt; (ComponentName -&gt; ComponentName -&gt; Bool)
+-&gt; (ComponentName -&gt; ComponentName -&gt; ComponentName)
+-&gt; (ComponentName -&gt; ComponentName -&gt; ComponentName)
+-&gt; Ord ComponentName
+ComponentName -&gt; ComponentName -&gt; Bool
+ComponentName -&gt; ComponentName -&gt; Ordering
+ComponentName -&gt; ComponentName -&gt; ComponentName
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ComponentName -&gt; ComponentName -&gt; Ordering
+compare :: ComponentName -&gt; ComponentName -&gt; Ordering
+$c&lt; :: ComponentName -&gt; ComponentName -&gt; Bool
+&lt; :: ComponentName -&gt; ComponentName -&gt; Bool
+$c&lt;= :: ComponentName -&gt; ComponentName -&gt; Bool
+&lt;= :: ComponentName -&gt; ComponentName -&gt; Bool
+$c&gt; :: ComponentName -&gt; ComponentName -&gt; Bool
+&gt; :: ComponentName -&gt; ComponentName -&gt; Bool
+$c&gt;= :: ComponentName -&gt; ComponentName -&gt; Bool
+&gt;= :: ComponentName -&gt; ComponentName -&gt; Bool
+$cmax :: ComponentName -&gt; ComponentName -&gt; ComponentName
+max :: ComponentName -&gt; ComponentName -&gt; ComponentName
+$cmin :: ComponentName -&gt; ComponentName -&gt; ComponentName
+min :: ComponentName -&gt; ComponentName -&gt; ComponentName
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406311"><span id="local-6989586621679406315"><span id="local-6989586621679406318"><span id="local-6989586621679406331"><span class="annot"><span class="annottext">ReadPrec [ComponentName]
+ReadPrec ComponentName
+Int -&gt; ReadS ComponentName
+ReadS [ComponentName]
+(Int -&gt; ReadS ComponentName)
+-&gt; ReadS [ComponentName]
+-&gt; ReadPrec ComponentName
+-&gt; ReadPrec [ComponentName]
+-&gt; Read ComponentName
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ComponentName
+readsPrec :: Int -&gt; ReadS ComponentName
+$creadList :: ReadS [ComponentName]
+readList :: ReadS [ComponentName]
+$creadPrec :: ReadPrec ComponentName
+readPrec :: ReadPrec ComponentName
+$creadListPrec :: ReadPrec [ComponentName]
+readListPrec :: ReadPrec [ComponentName]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406335"><span id="local-6989586621679406344"><span id="local-6989586621679406348"><span class="annot"><span class="annottext">Int -&gt; ComponentName -&gt; ShowS
+[ComponentName] -&gt; ShowS
+ComponentName -&gt; String
+(Int -&gt; ComponentName -&gt; ShowS)
+-&gt; (ComponentName -&gt; String)
+-&gt; ([ComponentName] -&gt; ShowS)
+-&gt; Show ComponentName
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ComponentName -&gt; ShowS
+showsPrec :: Int -&gt; ComponentName -&gt; ShowS
+$cshow :: ComponentName -&gt; String
+show :: ComponentName -&gt; String
+$cshowList :: [ComponentName] -&gt; ShowS
+showList :: [ComponentName] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="NotLibComponentName"><span class="annot"><a href="Distribution.Types.ComponentName.html#NotLibComponentName"><span class="hs-identifier hs-var">NotLibComponentName</span></a></span></span><span>
+</span><span id="line-30"></span><span>                   </span><span class="hs-glyph">=</span><span> </span><span id="CNLFLibName"><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLFLibName"><span class="hs-identifier hs-var">CNLFLibName</span></a></span></span><span>  </span><span class="hs-special">{</span><span> </span><span id="toCompName"><span class="annot"><span class="annottext">NotLibComponentName -&gt; UnqualComponentName
+</span><a href="Distribution.Types.ComponentName.html#toCompName"><span class="hs-identifier hs-var hs-var">toCompName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="CNLExeName"><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLExeName"><span class="hs-identifier hs-var">CNLExeName</span></a></span></span><span>   </span><span class="hs-special">{</span><span> </span><span id="toCompName"><span class="annot"><a href="Distribution.Types.ComponentName.html#toCompName"><span class="hs-identifier hs-var">toCompName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-32"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="CNLTestName"><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLTestName"><span class="hs-identifier hs-var">CNLTestName</span></a></span></span><span>  </span><span class="hs-special">{</span><span> </span><span id="toCompName"><span class="annot"><a href="Distribution.Types.ComponentName.html#toCompName"><span class="hs-identifier hs-var">toCompName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="CNLBenchName"><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLBenchName"><span class="hs-identifier hs-var">CNLBenchName</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="toCompName"><span class="annot"><a href="Distribution.Types.ComponentName.html#toCompName"><span class="hs-identifier hs-var">toCompName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>                   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679406357"><span id="local-6989586621679406364"><span class="annot"><span class="annottext">NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+(NotLibComponentName -&gt; NotLibComponentName -&gt; Bool)
+-&gt; (NotLibComponentName -&gt; NotLibComponentName -&gt; Bool)
+-&gt; Eq NotLibComponentName
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+== :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+$c/= :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+/= :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406367"><span id="local-6989586621679406369"><span class="annot"><span class="annottext">(forall x. NotLibComponentName -&gt; Rep NotLibComponentName x)
+-&gt; (forall x. Rep NotLibComponentName x -&gt; NotLibComponentName)
+-&gt; Generic NotLibComponentName
+forall x. Rep NotLibComponentName x -&gt; NotLibComponentName
+forall x. NotLibComponentName -&gt; Rep NotLibComponentName x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. NotLibComponentName -&gt; Rep NotLibComponentName x
+from :: forall x. NotLibComponentName -&gt; Rep NotLibComponentName x
+$cto :: forall x. Rep NotLibComponentName x -&gt; NotLibComponentName
+to :: forall x. Rep NotLibComponentName x -&gt; NotLibComponentName
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406374"><span id="local-6989586621679406381"><span id="local-6989586621679406384"><span id="local-6989586621679406387"><span id="local-6989586621679406390"><span id="local-6989586621679406393"><span id="local-6989586621679406396"><span class="annot"><span class="annottext">Eq NotLibComponentName
+Eq NotLibComponentName =&gt;
+(NotLibComponentName -&gt; NotLibComponentName -&gt; Ordering)
+-&gt; (NotLibComponentName -&gt; NotLibComponentName -&gt; Bool)
+-&gt; (NotLibComponentName -&gt; NotLibComponentName -&gt; Bool)
+-&gt; (NotLibComponentName -&gt; NotLibComponentName -&gt; Bool)
+-&gt; (NotLibComponentName -&gt; NotLibComponentName -&gt; Bool)
+-&gt; (NotLibComponentName
+    -&gt; NotLibComponentName -&gt; NotLibComponentName)
+-&gt; (NotLibComponentName
+    -&gt; NotLibComponentName -&gt; NotLibComponentName)
+-&gt; Ord NotLibComponentName
+NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+NotLibComponentName -&gt; NotLibComponentName -&gt; Ordering
+NotLibComponentName -&gt; NotLibComponentName -&gt; NotLibComponentName
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: NotLibComponentName -&gt; NotLibComponentName -&gt; Ordering
+compare :: NotLibComponentName -&gt; NotLibComponentName -&gt; Ordering
+$c&lt; :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+&lt; :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+$c&lt;= :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+&lt;= :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+$c&gt; :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+&gt; :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+$c&gt;= :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+&gt;= :: NotLibComponentName -&gt; NotLibComponentName -&gt; Bool
+$cmax :: NotLibComponentName -&gt; NotLibComponentName -&gt; NotLibComponentName
+max :: NotLibComponentName -&gt; NotLibComponentName -&gt; NotLibComponentName
+$cmin :: NotLibComponentName -&gt; NotLibComponentName -&gt; NotLibComponentName
+min :: NotLibComponentName -&gt; NotLibComponentName -&gt; NotLibComponentName
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406399"><span id="local-6989586621679406402"><span id="local-6989586621679406405"><span id="local-6989586621679406432"><span class="annot"><span class="annottext">ReadPrec [NotLibComponentName]
+ReadPrec NotLibComponentName
+Int -&gt; ReadS NotLibComponentName
+ReadS [NotLibComponentName]
+(Int -&gt; ReadS NotLibComponentName)
+-&gt; ReadS [NotLibComponentName]
+-&gt; ReadPrec NotLibComponentName
+-&gt; ReadPrec [NotLibComponentName]
+-&gt; Read NotLibComponentName
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS NotLibComponentName
+readsPrec :: Int -&gt; ReadS NotLibComponentName
+$creadList :: ReadS [NotLibComponentName]
+readList :: ReadS [NotLibComponentName]
+$creadPrec :: ReadPrec NotLibComponentName
+readPrec :: ReadPrec NotLibComponentName
+$creadListPrec :: ReadPrec [NotLibComponentName]
+readListPrec :: ReadPrec [NotLibComponentName]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406435"><span id="local-6989586621679406446"><span id="local-6989586621679406449"><span class="annot"><span class="annottext">Int -&gt; NotLibComponentName -&gt; ShowS
+[NotLibComponentName] -&gt; ShowS
+NotLibComponentName -&gt; String
+(Int -&gt; NotLibComponentName -&gt; ShowS)
+-&gt; (NotLibComponentName -&gt; String)
+-&gt; ([NotLibComponentName] -&gt; ShowS)
+-&gt; Show NotLibComponentName
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NotLibComponentName -&gt; ShowS
+showsPrec :: Int -&gt; NotLibComponentName -&gt; ShowS
+$cshow :: NotLibComponentName -&gt; String
+show :: NotLibComponentName -&gt; String
+$cshowList :: [NotLibComponentName] -&gt; ShowS
+showList :: [NotLibComponentName] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier hs-type">CFLibName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">pattern</span><span> </span><span id="CFLibName"><span id="%24mCFLibName"><span id="%24bCFLibName"><span class="annot"><span class="annottext">$mCFLibName :: forall {r}.
+ComponentName -&gt; (UnqualComponentName -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bCFLibName :: UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier hs-var hs-var hs-var">CFLibName</span></a></span></span></span></span><span>  </span><span class="annot"><a href="#local-6989586621679406453"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNotLibName"><span class="hs-identifier hs-type">CNotLibName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLFLibName"><span class="hs-identifier hs-type">CNLFLibName</span></a></span><span>  </span><span id="local-6989586621679406453"><span class="annot"><a href="#local-6989586621679406453"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier hs-type">CExeName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">pattern</span><span> </span><span id="CExeName"><span id="%24mCExeName"><span id="%24bCExeName"><span class="annot"><span class="annottext">$mCExeName :: forall {r}.
+ComponentName -&gt; (UnqualComponentName -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bCExeName :: UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier hs-var hs-var hs-var">CExeName</span></a></span></span></span></span><span>   </span><span class="annot"><a href="#local-6989586621679406456"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNotLibName"><span class="hs-identifier hs-type">CNotLibName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLExeName"><span class="hs-identifier hs-type">CNLExeName</span></a></span><span>   </span><span id="local-6989586621679406456"><span class="annot"><a href="#local-6989586621679406456"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier hs-type">CTestName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">pattern</span><span> </span><span id="CTestName"><span id="%24mCTestName"><span id="%24bCTestName"><span class="annot"><span class="annottext">$mCTestName :: forall {r}.
+ComponentName -&gt; (UnqualComponentName -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bCTestName :: UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier hs-var hs-var hs-var">CTestName</span></a></span></span></span></span><span>  </span><span class="annot"><a href="#local-6989586621679406459"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNotLibName"><span class="hs-identifier hs-type">CNotLibName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLTestName"><span class="hs-identifier hs-type">CNLTestName</span></a></span><span>  </span><span id="local-6989586621679406459"><span class="annot"><a href="#local-6989586621679406459"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier hs-type">CBenchName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">pattern</span><span> </span><span id="CBenchName"><span id="%24mCBenchName"><span id="%24bCBenchName"><span class="annot"><span class="annottext">$mCBenchName :: forall {r}.
+ComponentName -&gt; (UnqualComponentName -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bCBenchName :: UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier hs-var hs-var hs-var">CBenchName</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621679406462"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNotLibName"><span class="hs-identifier hs-type">CNotLibName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNLBenchName"><span class="hs-identifier hs-type">CNLBenchName</span></a></span><span> </span><span id="local-6989586621679406462"><span class="annot"><a href="#local-6989586621679406462"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-pragma hs-type">CLibName</span></a></span><span class="hs-pragma">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-pragma hs-type">CFLibName</span></a></span><span class="hs-pragma">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-pragma hs-type">CExeName</span></a></span><span class="hs-pragma">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-pragma hs-type">CTestName</span></a></span><span class="hs-pragma">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-pragma hs-type">CBenchName</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406464"><span id="local-6989586621679406471"><span id="local-6989586621679406477"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#NotLibComponentName"><span class="hs-identifier hs-type">NotLibComponentName</span></a></span></span></span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406528"><span id="local-6989586621679406535"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#NotLibComponentName"><span class="hs-identifier hs-type">NotLibComponentName</span></a></span></span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406581"><span id="local-6989586621679406588"><span id="local-6989586621679406594"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span></span></span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406622"><span id="local-6989586621679406629"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span></span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- Build-target-ish syntax</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406658"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679406666"><span class="annot"><span class="annottext">pretty :: ComponentName -&gt; Doc
+</span><a href="#local-6989586621679406666"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-type">CLibName</span></a></span><span> </span><span id="local-6989586621679406668"><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406668"><span class="hs-identifier hs-var">lib</span></a></span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName -&gt; Doc
+</span><a href="Distribution.Types.LibraryName.html#prettyLibraryNameComponent"><span class="hs-identifier hs-var">prettyLibraryNameComponent</span></a></span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406668"><span class="hs-identifier hs-var">lib</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier hs-type">CFLibName</span></a></span><span> </span><span id="local-6989586621679406670"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406670"><span class="hs-identifier hs-var">str</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;flib:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406670"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier hs-type">CExeName</span></a></span><span> </span><span id="local-6989586621679406673"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406673"><span class="hs-identifier hs-var">str</span></a></span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;exe:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406673"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier hs-type">CTestName</span></a></span><span> </span><span id="local-6989586621679406674"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406674"><span class="hs-identifier hs-var">str</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;test:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406674"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier hs-type">CBenchName</span></a></span><span> </span><span id="local-6989586621679406675"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406675"><span class="hs-identifier hs-var">str</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bench:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406675"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- note: this works as lib/flib/... all start with different character!</span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679406697"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m ComponentName
+</span><a href="#local-6989586621679406697"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ComponentName
+</span><a href="#local-6989586621679406699"><span class="hs-identifier hs-var">parseComposite</span></a></span><span> </span><span class="annot"><span class="annottext">m ComponentName -&gt; m ComponentName -&gt; m ComponentName
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%7C%3E/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m ComponentName
+</span><a href="#local-6989586621679406701"><span class="hs-identifier hs-var">parseLib</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>        </span><span id="local-6989586621679406701"><span class="annot"><span class="annottext">parseLib :: m ComponentName
+</span><a href="#local-6989586621679406701"><span class="hs-identifier hs-var hs-var">parseLib</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-var">CLibName</span></a></span><span> </span><span class="annot"><span class="annottext">(LibraryName -&gt; ComponentName) -&gt; m LibraryName -&gt; m ComponentName
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m LibraryName
+forall (m :: * -&gt; *). CabalParsing m =&gt; m LibraryName
+</span><a href="Distribution.Types.LibraryName.html#parsecLibraryNameComponent"><span class="hs-identifier hs-var">parsecLibraryNameComponent</span></a></span><span>
+</span><span id="line-68"></span><span>        </span><span id="local-6989586621679406699"><span class="annot"><span class="annottext">parseComposite :: m ComponentName
+</span><a href="#local-6989586621679406699"><span class="hs-identifier hs-var hs-var">parseComposite</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>            </span><span id="local-6989586621679406764"><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="#local-6989586621679406764"><span class="hs-identifier hs-var">ctor</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[m (UnqualComponentName -&gt; ComponentName)]
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall (m :: * -&gt; *) a. Alternative m =&gt; [m a] -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#choice"><span class="hs-identifier hs-var">P.choice</span></a></span><span>
+</span><span id="line-70"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;flib:&quot;</span></span><span> </span><span class="annot"><span class="annottext">m String
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier hs-var">CFLibName</span></a></span><span>
+</span><span id="line-71"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;exe:&quot;</span></span><span> </span><span class="annot"><span class="annottext">m String
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier hs-var">CExeName</span></a></span><span>
+</span><span id="line-72"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bench:&quot;</span></span><span> </span><span class="annot"><span class="annottext">m String
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier hs-var">CBenchName</span></a></span><span>
+</span><span id="line-73"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;test:&quot;</span></span><span> </span><span class="annot"><span class="annottext">m String
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; m (UnqualComponentName -&gt; ComponentName)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier hs-var">CTestName</span></a></span><span>
+</span><span id="line-74"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>            </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="#local-6989586621679406764"><span class="hs-identifier hs-var">ctor</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; m UnqualComponentName -&gt; m ComponentName
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m UnqualComponentName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m UnqualComponentName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier hs-type">showComponentName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-78"></span><span id="showComponentName"><span class="annot"><span class="annottext">showComponentName :: ComponentName -&gt; String
+</span><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier hs-var hs-var">showComponentName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-type">CLibName</span></a></span><span> </span><span id="local-6989586621679406767"><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406767"><span class="hs-identifier hs-var">lib</span></a></span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName -&gt; String
+</span><a href="Distribution.Types.LibraryName.html#showLibraryName"><span class="hs-identifier hs-var">showLibraryName</span></a></span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406767"><span class="hs-identifier hs-var">lib</span></a></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier hs-var">showComponentName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier hs-type">CFLibName</span></a></span><span>  </span><span id="local-6989586621679406769"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406769"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;foreign library '&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406769"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier hs-var">showComponentName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier hs-type">CExeName</span></a></span><span>   </span><span id="local-6989586621679406771"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406771"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;executable '&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406771"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier hs-var">showComponentName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier hs-type">CTestName</span></a></span><span>  </span><span id="local-6989586621679406772"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406772"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;test suite '&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406772"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier hs-var">showComponentName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier hs-type">CBenchName</span></a></span><span> </span><span id="local-6989586621679406773"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406773"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;benchmark '&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406773"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameRaw"><span class="hs-identifier hs-type">componentNameRaw</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-85"></span><span id="componentNameRaw"><span class="annot"><span class="annottext">componentNameRaw :: ComponentName -&gt; String
+</span><a href="Distribution.Types.ComponentName.html#componentNameRaw"><span class="hs-identifier hs-var hs-var">componentNameRaw</span></a></span></span><span> </span><span id="local-6989586621679406774"><span class="annot"><span class="annottext">l :: ComponentName
+</span><a href="#local-6989586621679406774"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-type">CLibName</span></a></span><span>  </span><span class="annot"><span class="annottext">LibraryName
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComponentName -&gt; String
+</span><a href="Distribution.Types.ComponentName.html#showComponentName"><span class="hs-identifier hs-var">showComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentName
+</span><a href="#local-6989586621679406774"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameRaw"><span class="hs-identifier hs-var">componentNameRaw</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNotLibName"><span class="hs-identifier hs-type">CNotLibName</span></a></span><span> </span><span id="local-6989586621679406775"><span class="annot"><span class="annottext">NotLibComponentName
+</span><a href="#local-6989586621679406775"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; String) -&gt; UnqualComponentName -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NotLibComponentName -&gt; UnqualComponentName
+</span><a href="Distribution.Types.ComponentName.html#toCompName"><span class="hs-identifier hs-var">toCompName</span></a></span><span> </span><span class="annot"><span class="annottext">NotLibComponentName
+</span><a href="#local-6989586621679406775"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameStanza"><span class="hs-identifier hs-type">componentNameStanza</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-89"></span><span id="componentNameStanza"><span class="annot"><span class="annottext">componentNameStanza :: ComponentName -&gt; String
+</span><a href="Distribution.Types.ComponentName.html#componentNameStanza"><span class="hs-identifier hs-var hs-var">componentNameStanza</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-type">CLibName</span></a></span><span> </span><span id="local-6989586621679406776"><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406776"><span class="hs-identifier hs-var">lib</span></a></span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName -&gt; String
+</span><a href="Distribution.Types.LibraryName.html#libraryNameStanza"><span class="hs-identifier hs-var">libraryNameStanza</span></a></span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406776"><span class="hs-identifier hs-var">lib</span></a></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameStanza"><span class="hs-identifier hs-var">componentNameStanza</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier hs-type">CFLibName</span></a></span><span>  </span><span id="local-6989586621679406778"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406778"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;foreign-library &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406778"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameStanza"><span class="hs-identifier hs-var">componentNameStanza</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier hs-type">CExeName</span></a></span><span>   </span><span id="local-6989586621679406779"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406779"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;executable &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406779"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameStanza"><span class="hs-identifier hs-var">componentNameStanza</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier hs-type">CTestName</span></a></span><span>  </span><span id="local-6989586621679406780"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406780"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;test-suite &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406780"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameStanza"><span class="hs-identifier hs-var">componentNameStanza</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier hs-type">CBenchName</span></a></span><span> </span><span id="local-6989586621679406781"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406781"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;benchmark &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679406781"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- | This gets the underlying unqualified component name. In fact, it is</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- guaranteed to uniquely identify a component, returning</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- @Nothing@ if the 'ComponentName' was for the public</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- library.</span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameString"><span class="hs-identifier hs-type">componentNameString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-100"></span><span id="componentNameString"><span class="annot"><span class="annottext">componentNameString :: ComponentName -&gt; Maybe UnqualComponentName
+</span><a href="Distribution.Types.ComponentName.html#componentNameString"><span class="hs-identifier hs-var hs-var">componentNameString</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-type">CLibName</span></a></span><span>  </span><span id="local-6989586621679406782"><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406782"><span class="hs-identifier hs-var">lib</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName -&gt; Maybe UnqualComponentName
+</span><a href="Distribution.Types.LibraryName.html#libraryNameString"><span class="hs-identifier hs-var">libraryNameString</span></a></span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679406782"><span class="hs-identifier hs-var">lib</span></a></span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Distribution.Types.ComponentName.html#componentNameString"><span class="hs-identifier hs-var">componentNameString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentName.html#CNotLibName"><span class="hs-identifier hs-type">CNotLibName</span></a></span><span> </span><span id="local-6989586621679406784"><span class="annot"><span class="annottext">NotLibComponentName
+</span><a href="#local-6989586621679406784"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; Maybe UnqualComponentName
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; Maybe UnqualComponentName)
+-&gt; UnqualComponentName -&gt; Maybe UnqualComponentName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NotLibComponentName -&gt; UnqualComponentName
+</span><a href="Distribution.Types.ComponentName.html#toCompName"><span class="hs-identifier hs-var">toCompName</span></a></span><span> </span><span class="annot"><span class="annottext">NotLibComponentName
+</span><a href="#local-6989586621679406784"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-102"></span></pre></body></html>

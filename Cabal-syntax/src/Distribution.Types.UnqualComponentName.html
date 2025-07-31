@@ -1,0 +1,476 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679401578"><span id="local-6989586621679401579"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable         #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric              #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.UnqualComponentName</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier">UnqualComponentName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier">unUnqualComponentName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentNameST"><span class="hs-identifier">unUnqualComponentNameST</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#mkUnqualComponentName"><span class="hs-identifier">mkUnqualComponentName</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#packageNameToUnqualComponentName"><span class="hs-identifier">packageNameToUnqualComponentName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#unqualComponentNameToPackageName"><span class="hs-identifier">unqualComponentNameToPackageName</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html"><span class="hs-identifier">Distribution.Utils.ShortText</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PackageName.html"><span class="hs-identifier">Distribution.Types.PackageName</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- | An unqualified component name, for any kind of component.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- This is distinguished from a 'ComponentName' and 'ComponentId'. The former</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- also states which of a library, executable, etc the name refers too. The</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- later uniquely identifiers a component and its closure.</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">newtype</span><span> </span><span id="UnqualComponentName"><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-var">UnqualComponentName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnqualComponentName"><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-var">UnqualComponentName</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html#ShortText"><span class="hs-identifier hs-type">ShortText</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679401587"><span id="local-6989586621679401589"><span class="annot"><span class="annottext">(forall x. UnqualComponentName -&gt; Rep UnqualComponentName x)
+-&gt; (forall x. Rep UnqualComponentName x -&gt; UnqualComponentName)
+-&gt; Generic UnqualComponentName
+forall x. Rep UnqualComponentName x -&gt; UnqualComponentName
+forall x. UnqualComponentName -&gt; Rep UnqualComponentName x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. UnqualComponentName -&gt; Rep UnqualComponentName x
+from :: forall x. UnqualComponentName -&gt; Rep UnqualComponentName x
+$cto :: forall x. Rep UnqualComponentName x -&gt; UnqualComponentName
+to :: forall x. Rep UnqualComponentName x -&gt; UnqualComponentName
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679401593"><span id="local-6989586621679401597"><span id="local-6989586621679401600"><span id="local-6989586621679401608"><span class="annot"><span class="annottext">ReadPrec [UnqualComponentName]
+ReadPrec UnqualComponentName
+Int -&gt; ReadS UnqualComponentName
+ReadS [UnqualComponentName]
+(Int -&gt; ReadS UnqualComponentName)
+-&gt; ReadS [UnqualComponentName]
+-&gt; ReadPrec UnqualComponentName
+-&gt; ReadPrec [UnqualComponentName]
+-&gt; Read UnqualComponentName
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS UnqualComponentName
+readsPrec :: Int -&gt; ReadS UnqualComponentName
+$creadList :: ReadS [UnqualComponentName]
+readList :: ReadS [UnqualComponentName]
+$creadPrec :: ReadPrec UnqualComponentName
+readPrec :: ReadPrec UnqualComponentName
+$creadListPrec :: ReadPrec [UnqualComponentName]
+readListPrec :: ReadPrec [UnqualComponentName]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679401612"><span id="local-6989586621679401618"><span id="local-6989586621679401622"><span class="annot"><span class="annottext">Int -&gt; UnqualComponentName -&gt; ShowS
+[UnqualComponentName] -&gt; ShowS
+UnqualComponentName -&gt; String
+(Int -&gt; UnqualComponentName -&gt; ShowS)
+-&gt; (UnqualComponentName -&gt; String)
+-&gt; ([UnqualComponentName] -&gt; ShowS)
+-&gt; Show UnqualComponentName
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UnqualComponentName -&gt; ShowS
+showsPrec :: Int -&gt; UnqualComponentName -&gt; ShowS
+$cshow :: UnqualComponentName -&gt; String
+show :: UnqualComponentName -&gt; String
+$cshowList :: [UnqualComponentName] -&gt; ShowS
+showList :: [UnqualComponentName] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679401626"><span id="local-6989586621679401631"><span class="annot"><span class="annottext">UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+(UnqualComponentName -&gt; UnqualComponentName -&gt; Bool)
+-&gt; (UnqualComponentName -&gt; UnqualComponentName -&gt; Bool)
+-&gt; Eq UnqualComponentName
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+== :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+$c/= :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+/= :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679401639"><span id="local-6989586621679401644"><span id="local-6989586621679401648"><span id="local-6989586621679401652"><span id="local-6989586621679401656"><span id="local-6989586621679401660"><span id="local-6989586621679401664"><span class="annot"><span class="annottext">Eq UnqualComponentName
+Eq UnqualComponentName =&gt;
+(UnqualComponentName -&gt; UnqualComponentName -&gt; Ordering)
+-&gt; (UnqualComponentName -&gt; UnqualComponentName -&gt; Bool)
+-&gt; (UnqualComponentName -&gt; UnqualComponentName -&gt; Bool)
+-&gt; (UnqualComponentName -&gt; UnqualComponentName -&gt; Bool)
+-&gt; (UnqualComponentName -&gt; UnqualComponentName -&gt; Bool)
+-&gt; (UnqualComponentName
+    -&gt; UnqualComponentName -&gt; UnqualComponentName)
+-&gt; (UnqualComponentName
+    -&gt; UnqualComponentName -&gt; UnqualComponentName)
+-&gt; Ord UnqualComponentName
+UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+UnqualComponentName -&gt; UnqualComponentName -&gt; Ordering
+UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: UnqualComponentName -&gt; UnqualComponentName -&gt; Ordering
+compare :: UnqualComponentName -&gt; UnqualComponentName -&gt; Ordering
+$c&lt; :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+&lt; :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+$c&lt;= :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+&lt;= :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+$c&gt; :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+&gt; :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+$c&gt;= :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+&gt;= :: UnqualComponentName -&gt; UnqualComponentName -&gt; Bool
+$cmax :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+max :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+$cmin :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+min :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679401672"><span id="local-6989586621679401676"><span id="local-6989586621679401679"><span id="local-6989586621679401681"><span id="local-6989586621679401683"><span id="local-6989586621679401689"><span id="local-6989586621679401694"><span id="local-6989586621679401697"><span id="local-6989586621679401700"><span id="local-6989586621679401703"><span id="local-6989586621679401706"><span id="local-6989586621679401709"><span id="local-6989586621679401714"><span id="local-6989586621679401719"><span class="annot"><span class="annottext">Typeable UnqualComponentName
+Typeable UnqualComponentName =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; UnqualComponentName
+ -&gt; c UnqualComponentName)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnqualComponentName)
+-&gt; (UnqualComponentName -&gt; Constr)
+-&gt; (UnqualComponentName -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnqualComponentName))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c UnqualComponentName))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; UnqualComponentName -&gt; UnqualComponentName)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; UnqualComponentName -&gt; m UnqualComponentName)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; UnqualComponentName -&gt; m UnqualComponentName)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; UnqualComponentName -&gt; m UnqualComponentName)
+-&gt; Data UnqualComponentName
+UnqualComponentName -&gt; Constr
+UnqualComponentName -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; UnqualComponentName -&gt; UnqualComponentName
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnqualComponentName
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; UnqualComponentName
+-&gt; c UnqualComponentName
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnqualComponentName)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c UnqualComponentName)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; UnqualComponentName
+-&gt; c UnqualComponentName
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; UnqualComponentName
+-&gt; c UnqualComponentName
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnqualComponentName
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UnqualComponentName
+$ctoConstr :: UnqualComponentName -&gt; Constr
+toConstr :: UnqualComponentName -&gt; Constr
+$cdataTypeOf :: UnqualComponentName -&gt; DataType
+dataTypeOf :: UnqualComponentName -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnqualComponentName)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UnqualComponentName)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c UnqualComponentName)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c UnqualComponentName)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; UnqualComponentName -&gt; UnqualComponentName
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; UnqualComponentName -&gt; UnqualComponentName
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UnqualComponentName -&gt; r
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; [u]
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UnqualComponentName -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UnqualComponentName -&gt; m UnqualComponentName
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>            </span><span id="local-6989586621679401725"><span id="local-6989586621679401730"><span id="local-6989586621679401736"><span class="annot"><span class="annottext">NonEmpty UnqualComponentName -&gt; UnqualComponentName
+UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+(UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName)
+-&gt; (NonEmpty UnqualComponentName -&gt; UnqualComponentName)
+-&gt; (forall b.
+    Integral b =&gt;
+    b -&gt; UnqualComponentName -&gt; UnqualComponentName)
+-&gt; Semigroup UnqualComponentName
+forall b.
+Integral b =&gt;
+b -&gt; UnqualComponentName -&gt; UnqualComponentName
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+&lt;&gt; :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+$csconcat :: NonEmpty UnqualComponentName -&gt; UnqualComponentName
+sconcat :: NonEmpty UnqualComponentName -&gt; UnqualComponentName
+$cstimes :: forall b.
+Integral b =&gt;
+b -&gt; UnqualComponentName -&gt; UnqualComponentName
+stimes :: forall b.
+Integral b =&gt;
+b -&gt; UnqualComponentName -&gt; UnqualComponentName
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679401746"><span id="local-6989586621679401751"><span id="local-6989586621679401755"><span class="annot"><span class="annottext">Semigroup UnqualComponentName
+UnqualComponentName
+Semigroup UnqualComponentName =&gt;
+UnqualComponentName
+-&gt; (UnqualComponentName
+    -&gt; UnqualComponentName -&gt; UnqualComponentName)
+-&gt; ([UnqualComponentName] -&gt; UnqualComponentName)
+-&gt; Monoid UnqualComponentName
+[UnqualComponentName] -&gt; UnqualComponentName
+UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+$cmempty :: UnqualComponentName
+mempty :: UnqualComponentName
+$cmappend :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+mappend :: UnqualComponentName -&gt; UnqualComponentName -&gt; UnqualComponentName
+$cmconcat :: [UnqualComponentName] -&gt; UnqualComponentName
+mconcat :: [UnqualComponentName] -&gt; UnqualComponentName
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- TODO: bad enabler of bad monoids</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Convert 'UnqualComponentName' to 'String'</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier hs-type">unUnqualComponentName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-32"></span><span id="unUnqualComponentName"><span class="annot"><span class="annottext">unUnqualComponentName :: UnqualComponentName -&gt; String
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier hs-var hs-var">unUnqualComponentName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span id="local-6989586621679401760"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679401760"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; String
+</span><a href="Distribution.Utils.ShortText.html#fromShortText"><span class="hs-identifier hs-var">fromShortText</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679401760"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><span class="hs-comment">-- | @since 3.4.0.0</span></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentNameST"><span class="hs-identifier hs-type">unUnqualComponentNameST</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html#ShortText"><span class="hs-identifier hs-type">ShortText</span></a></span><span>
+</span><span id="line-36"></span><span id="unUnqualComponentNameST"><span class="annot"><span class="annottext">unUnqualComponentNameST :: UnqualComponentName -&gt; ShortText
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentNameST"><span class="hs-identifier hs-var hs-var">unUnqualComponentNameST</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span id="local-6989586621679401762"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679401762"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679401762"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | Construct a 'UnqualComponentName' from a 'String'</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- 'mkUnqualComponentName' is the inverse to 'unUnqualComponentName'</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- Note: No validations are performed to ensure that the resulting</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- 'UnqualComponentName' is valid</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#mkUnqualComponentName"><span class="hs-identifier hs-type">mkUnqualComponentName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-47"></span><span id="mkUnqualComponentName"><span class="annot"><span class="annottext">mkUnqualComponentName :: String -&gt; UnqualComponentName
+</span><a href="Distribution.Types.UnqualComponentName.html#mkUnqualComponentName"><span class="hs-identifier hs-var hs-var">mkUnqualComponentName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; UnqualComponentName
+</span><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-var">UnqualComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortText -&gt; UnqualComponentName)
+-&gt; (String -&gt; ShortText) -&gt; String -&gt; UnqualComponentName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShortText
+</span><a href="Distribution.Utils.ShortText.html#toShortText"><span class="hs-identifier hs-var">toShortText</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | 'mkUnqualComponentName'</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.String.html#IsString/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679401768"><span class="annot"><span class="annottext">fromString :: String -&gt; UnqualComponentName
+</span><a href="../../base-4.18.2.1/src/Data.String.html#fromString/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UnqualComponentName
+</span><a href="Distribution.Types.UnqualComponentName.html#mkUnqualComponentName"><span class="hs-identifier hs-var">mkUnqualComponentName</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679401770"><span id="local-6989586621679401777"><span id="local-6989586621679401783"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span></span></span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679401802"><span id="local-6989586621679401809"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span></span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679401839"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679401843"><span class="annot"><span class="annottext">pretty :: UnqualComponentName -&gt; Doc
+</span><a href="#local-6989586621679401843"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="Distribution.Pretty.html#showToken"><span class="hs-identifier hs-var">showToken</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc)
+-&gt; (UnqualComponentName -&gt; String) -&gt; UnqualComponentName -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier hs-var">unUnqualComponentName</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679401860"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m UnqualComponentName
+</span><a href="#local-6989586621679401860"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UnqualComponentName
+</span><a href="Distribution.Types.UnqualComponentName.html#mkUnqualComponentName"><span class="hs-identifier hs-var">mkUnqualComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; UnqualComponentName)
+-&gt; m String -&gt; m UnqualComponentName
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m String
+forall (m :: * -&gt; *). CabalParsing m =&gt; m String
+</span><a href="Distribution.Parsec.html#parsecUnqualComponentName"><span class="hs-identifier hs-var">parsecUnqualComponentName</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679401869"><span class="annot"><span class="annottext">rnf :: UnqualComponentName -&gt; ()
+</span><a href="#local-6989586621679401869"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span id="local-6989586621679401871"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679401871"><span class="hs-identifier hs-var">pkg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679401871"><span class="hs-identifier hs-var">pkg</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- TODO avoid String round trip with these PackageName &lt;-&gt;</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- UnqualComponentName converters.</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | Converts a package name to an unqualified component name</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- Useful in legacy situations where a package name may refer to an internal</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- component, if one is defined with that name.</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- 2018-12-21: These &quot;legacy&quot; situations are not legacy.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- We can @build-depends@ on the internal library. However</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- Now dependency contains @Set LibraryName@, and we should use that.</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#packageNameToUnqualComponentName"><span class="hs-identifier hs-type">packageNameToUnqualComponentName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.PackageName.html#PackageName"><span class="hs-identifier hs-type">PackageName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-81"></span><span id="packageNameToUnqualComponentName"><span class="annot"><span class="annottext">packageNameToUnqualComponentName :: PackageName -&gt; UnqualComponentName
+</span><a href="Distribution.Types.UnqualComponentName.html#packageNameToUnqualComponentName"><span class="hs-identifier hs-var hs-var">packageNameToUnqualComponentName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; UnqualComponentName
+</span><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-var">UnqualComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortText -&gt; UnqualComponentName)
+-&gt; (PackageName -&gt; ShortText) -&gt; PackageName -&gt; UnqualComponentName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PackageName -&gt; ShortText
+</span><a href="Distribution.Types.PackageName.html#unPackageNameST"><span class="hs-identifier hs-var">unPackageNameST</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Converts an unqualified component name to a package name</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- `packageNameToUnqualComponentName` is the inverse of</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- `unqualComponentNameToPackageName`.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- Useful in legacy situations where a package name may refer to an internal</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- component, if one is defined with that name.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#unqualComponentNameToPackageName"><span class="hs-identifier hs-type">unqualComponentNameToPackageName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.PackageName.html#PackageName"><span class="hs-identifier hs-type">PackageName</span></a></span><span>
+</span><span id="line-93"></span><span id="unqualComponentNameToPackageName"><span class="annot"><span class="annottext">unqualComponentNameToPackageName :: UnqualComponentName -&gt; PackageName
+</span><a href="Distribution.Types.UnqualComponentName.html#unqualComponentNameToPackageName"><span class="hs-identifier hs-var hs-var">unqualComponentNameToPackageName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; PackageName
+</span><a href="Distribution.Types.PackageName.html#mkPackageNameST"><span class="hs-identifier hs-var">mkPackageNameST</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortText -&gt; PackageName)
+-&gt; (UnqualComponentName -&gt; ShortText)
+-&gt; UnqualComponentName
+-&gt; PackageName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ShortText
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentNameST"><span class="hs-identifier hs-var">unUnqualComponentNameST</span></a></span><span>
+</span><span id="line-94"></span></pre></body></html>

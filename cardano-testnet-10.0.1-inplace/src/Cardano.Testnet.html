@@ -1,0 +1,59 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | This module provides a library interface for initiating a local testnet</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Testnet</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Testnets</span></span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Start a testnet</span></span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Testnet.Start.Cardano.html#cardanoTestnet"><span class="hs-identifier">cardanoTestnet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Testnet.Start.Cardano.html#createAndRunTestnet"><span class="hs-identifier">createAndRunTestnet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Testnet.Start.Cardano.html#createTestnetEnv"><span class="hs-identifier">createTestnetEnv</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Testnet.Start.Cardano.html#retryOnAddressInUseError"><span class="hs-identifier">retryOnAddressInUseError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Testnet options</span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier">CardanoTestnetOptions</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Testnet.Start.Types.html#NodeOption"><span class="hs-identifier">NodeOption</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Testnet.Start.Types.html#cardanoDefaultTestnetNodeOptions"><span class="hs-identifier">cardanoDefaultTestnetNodeOptions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Testnet.Components.Configuration.html#getDefaultAlonzoGenesis"><span class="hs-identifier">getDefaultAlonzoGenesis</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Testnet.Components.Configuration.html#getDefaultShelleyGenesis"><span class="hs-identifier">getDefaultShelleyGenesis</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Configuration</span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier">Conf</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Testnet.Filepath.html#TmpAbsolutePath"><span class="hs-identifier">TmpAbsolutePath</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Testnet.Start.Types.html#NodeConfiguration"><span class="hs-identifier">NodeConfiguration</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Testnet.Start.Types.html#NodeConfigurationYaml"><span class="hs-identifier">NodeConfigurationYaml</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Testnet.Start.Types.html#mkConf"><span class="hs-identifier">mkConf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Testnet.Filepath.html#makeLogDir"><span class="hs-identifier">makeLogDir</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Testnet.Filepath.html#makeSocketDir"><span class="hs-identifier">makeSocketDir</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Testnet.Filepath.html#makeTmpBaseAbsPath"><span class="hs-identifier">makeTmpBaseAbsPath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-comment">-- * EpochState processsing helper functions</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionIndex"><span class="hs-identifier">maybeExtractGovernanceActionIndex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Processes</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Testnet.Process.Run.html#procChairman"><span class="hs-identifier">procChairman</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Utils</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="Testnet.Property.Util.html#integration"><span class="hs-identifier">integration</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Testnet.Components.Query.html#waitUntilEpoch"><span class="hs-identifier">waitUntilEpoch</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Testnet.Components.Query.html#waitForEpochs"><span class="hs-identifier">waitForEpochs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Runtime</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier">TestnetRuntime</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Testnet.Types.html#testnetSprockets"><span class="hs-identifier">testnetSprockets</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="Testnet.Types.html#spoNodes"><span class="hs-identifier">spoNodes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Testnet.Types.html#relayNodes"><span class="hs-identifier">relayNodes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Testnet.Types.html#TestnetNode"><span class="hs-identifier">TestnetNode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Testnet.Types.html#isTestnetNodeSpo"><span class="hs-identifier">isTestnetNodeSpo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="Testnet.Types.html#nodeSocketPath"><span class="hs-identifier">nodeSocketPath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Components.Query.html"><span class="hs-identifier">Testnet.Components.Query</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.EpochStateProcessing.html"><span class="hs-identifier">Testnet.EpochStateProcessing</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Filepath.html"><span class="hs-identifier">Testnet.Filepath</span></a></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Process.Run.html"><span class="hs-identifier">Testnet.Process.Run</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Process.Run.html#procChairman"><span class="hs-identifier">procChairman</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Property.Util.html"><span class="hs-identifier">Testnet.Property.Util</span></a></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Cardano.html"><span class="hs-identifier">Testnet.Start.Cardano</span></a></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Types.html"><span class="hs-identifier">Testnet.Start.Types</span></a></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Types.html"><span class="hs-identifier">Testnet.Types</span></a></span><span>
+</span><span id="line-59"></span></pre></body></html>

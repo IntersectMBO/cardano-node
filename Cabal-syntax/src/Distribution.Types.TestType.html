@@ -1,0 +1,365 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679419068"><span id="local-6989586621679419069"><span id="local-6989586621679419070"><span id="local-6989586621679419071"></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.TestType</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier">TestType</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.TestType.html#knownTestTypes"><span class="hs-identifier">knownTestTypes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.TestType.html#testTypeExe"><span class="hs-identifier">testTypeExe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Types.TestType.html#testTypeLib"><span class="hs-identifier">testTypeLib</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier">char</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier">text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- | The \&quot;test-type\&quot; field in the test suite stanza.</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="TestType"><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-var">TestType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TestTypeExe"><span class="annot"><a href="Distribution.Types.TestType.html#TestTypeExe"><span class="hs-identifier hs-var">TestTypeExe</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ \&quot;type: exitcode-stdio-x.y\&quot;</span></span><span>
+</span><span id="line-23"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span id="TestTypeLib"><span class="annot"><a href="Distribution.Types.TestType.html#TestTypeLib"><span class="hs-identifier hs-var">TestTypeLib</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ \&quot;type: detailed-x.y\&quot;</span></span><span>
+</span><span id="line-24"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span id="TestTypeUnknown"><span class="annot"><a href="Distribution.Types.TestType.html#TestTypeUnknown"><span class="hs-identifier hs-var">TestTypeUnknown</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Some unknown test type e.g. \&quot;type: foo\&quot;</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679419081"><span id="local-6989586621679419083"><span class="annot"><span class="annottext">(forall x. TestType -&gt; Rep TestType x)
+-&gt; (forall x. Rep TestType x -&gt; TestType) -&gt; Generic TestType
+forall x. Rep TestType x -&gt; TestType
+forall x. TestType -&gt; Rep TestType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TestType -&gt; Rep TestType x
+from :: forall x. TestType -&gt; Rep TestType x
+$cto :: forall x. Rep TestType x -&gt; TestType
+to :: forall x. Rep TestType x -&gt; TestType
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419087"><span id="local-6989586621679419100"><span id="local-6989586621679419104"><span class="annot"><span class="annottext">Int -&gt; TestType -&gt; ShowS
+[TestType] -&gt; ShowS
+TestType -&gt; String
+(Int -&gt; TestType -&gt; ShowS)
+-&gt; (TestType -&gt; String) -&gt; ([TestType] -&gt; ShowS) -&gt; Show TestType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TestType -&gt; ShowS
+showsPrec :: Int -&gt; TestType -&gt; ShowS
+$cshow :: TestType -&gt; String
+show :: TestType -&gt; String
+$cshowList :: [TestType] -&gt; ShowS
+showList :: [TestType] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419109"><span id="local-6989586621679419113"><span id="local-6989586621679419116"><span id="local-6989586621679419136"><span class="annot"><span class="annottext">ReadPrec [TestType]
+ReadPrec TestType
+Int -&gt; ReadS TestType
+ReadS [TestType]
+(Int -&gt; ReadS TestType)
+-&gt; ReadS [TestType]
+-&gt; ReadPrec TestType
+-&gt; ReadPrec [TestType]
+-&gt; Read TestType
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS TestType
+readsPrec :: Int -&gt; ReadS TestType
+$creadList :: ReadS [TestType]
+readList :: ReadS [TestType]
+$creadPrec :: ReadPrec TestType
+readPrec :: ReadPrec TestType
+$creadListPrec :: ReadPrec [TestType]
+readListPrec :: ReadPrec [TestType]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419141"><span id="local-6989586621679419150"><span class="annot"><span class="annottext">TestType -&gt; TestType -&gt; Bool
+(TestType -&gt; TestType -&gt; Bool)
+-&gt; (TestType -&gt; TestType -&gt; Bool) -&gt; Eq TestType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TestType -&gt; TestType -&gt; Bool
+== :: TestType -&gt; TestType -&gt; Bool
+$c/= :: TestType -&gt; TestType -&gt; Bool
+/= :: TestType -&gt; TestType -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419158"><span id="local-6989586621679419167"><span id="local-6989586621679419174"><span id="local-6989586621679419178"><span id="local-6989586621679419181"><span id="local-6989586621679419184"><span id="local-6989586621679419187"><span class="annot"><span class="annottext">Eq TestType
+Eq TestType =&gt;
+(TestType -&gt; TestType -&gt; Ordering)
+-&gt; (TestType -&gt; TestType -&gt; Bool)
+-&gt; (TestType -&gt; TestType -&gt; Bool)
+-&gt; (TestType -&gt; TestType -&gt; Bool)
+-&gt; (TestType -&gt; TestType -&gt; Bool)
+-&gt; (TestType -&gt; TestType -&gt; TestType)
+-&gt; (TestType -&gt; TestType -&gt; TestType)
+-&gt; Ord TestType
+TestType -&gt; TestType -&gt; Bool
+TestType -&gt; TestType -&gt; Ordering
+TestType -&gt; TestType -&gt; TestType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TestType -&gt; TestType -&gt; Ordering
+compare :: TestType -&gt; TestType -&gt; Ordering
+$c&lt; :: TestType -&gt; TestType -&gt; Bool
+&lt; :: TestType -&gt; TestType -&gt; Bool
+$c&lt;= :: TestType -&gt; TestType -&gt; Bool
+&lt;= :: TestType -&gt; TestType -&gt; Bool
+$c&gt; :: TestType -&gt; TestType -&gt; Bool
+&gt; :: TestType -&gt; TestType -&gt; Bool
+$c&gt;= :: TestType -&gt; TestType -&gt; Bool
+&gt;= :: TestType -&gt; TestType -&gt; Bool
+$cmax :: TestType -&gt; TestType -&gt; TestType
+max :: TestType -&gt; TestType -&gt; TestType
+$cmin :: TestType -&gt; TestType -&gt; TestType
+min :: TestType -&gt; TestType -&gt; TestType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419194"><span id="local-6989586621679419203"><span id="local-6989586621679419210"><span id="local-6989586621679419212"><span id="local-6989586621679419214"><span id="local-6989586621679419220"><span id="local-6989586621679419225"><span id="local-6989586621679419228"><span id="local-6989586621679419231"><span id="local-6989586621679419234"><span id="local-6989586621679419237"><span id="local-6989586621679419240"><span id="local-6989586621679419245"><span id="local-6989586621679419250"><span class="annot"><span class="annottext">Typeable TestType
+Typeable TestType =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; TestType -&gt; c TestType)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestType)
+-&gt; (TestType -&gt; Constr)
+-&gt; (TestType -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestType))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TestType))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; TestType -&gt; TestType)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType)
+-&gt; Data TestType
+TestType -&gt; Constr
+TestType -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; TestType -&gt; TestType
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestType
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TestType -&gt; c TestType
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestType)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TestType)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TestType -&gt; c TestType
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TestType -&gt; c TestType
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestType
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestType
+$ctoConstr :: TestType -&gt; Constr
+toConstr :: TestType -&gt; Constr
+$cdataTypeOf :: TestType -&gt; DataType
+dataTypeOf :: TestType -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestType)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestType)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TestType)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TestType)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TestType -&gt; TestType
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TestType -&gt; TestType
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestType -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestType -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TestType -&gt; m TestType
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679419257"><span id="local-6989586621679419264"><span id="local-6989586621679419270"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span></span></span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679419327"><span id="local-6989586621679419334"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span></span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679419407"><span class="annot"><span class="annottext">rnf :: TestType -&gt; ()
+</span><a href="#local-6989586621679419407"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestType -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Distribution.Types.TestType.html#knownTestTypes"><span class="hs-identifier hs-type">knownTestTypes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-33"></span><span id="knownTestTypes"><span class="annot"><span class="annottext">knownTestTypes :: [TestType]
+</span><a href="Distribution.Types.TestType.html#knownTestTypes"><span class="hs-identifier hs-var hs-var">knownTestTypes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestType
+</span><a href="Distribution.Types.TestType.html#testTypeExe"><span class="hs-identifier hs-var">testTypeExe</span></a></span><span>
+</span><span id="line-34"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestType
+</span><a href="Distribution.Types.TestType.html#testTypeLib"><span class="hs-identifier hs-var">testTypeLib</span></a></span><span>
+</span><span id="line-35"></span><span>                 </span><span class="hs-special">]</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Distribution.Types.TestType.html#testTypeExe"><span class="hs-identifier hs-type">testTypeExe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span><span>
+</span><span id="line-38"></span><span id="testTypeExe"><span class="annot"><span class="annottext">testTypeExe :: TestType
+</span><a href="Distribution.Types.TestType.html#testTypeExe"><span class="hs-identifier hs-var hs-var">testTypeExe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; TestType
+</span><a href="Distribution.Types.TestType.html#TestTypeExe"><span class="hs-identifier hs-var">TestTypeExe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Version
+</span><a href="Distribution.Types.Version.html#mkVersion"><span class="hs-identifier hs-var">mkVersion</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Distribution.Types.TestType.html#testTypeLib"><span class="hs-identifier hs-type">testTypeLib</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span><span>
+</span><span id="line-41"></span><span id="testTypeLib"><span class="annot"><span class="annottext">testTypeLib :: TestType
+</span><a href="Distribution.Types.TestType.html#testTypeLib"><span class="hs-identifier hs-var hs-var">testTypeLib</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; TestType
+</span><a href="Distribution.Types.TestType.html#TestTypeLib"><span class="hs-identifier hs-var">TestTypeLib</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Version
+</span><a href="Distribution.Types.Version.html#mkVersion"><span class="hs-identifier hs-var">mkVersion</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">9</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679419413"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679419421"><span class="annot"><span class="annottext">pretty :: TestType -&gt; Doc
+</span><a href="#local-6989586621679419421"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.TestType.html#TestTypeExe"><span class="hs-identifier hs-type">TestTypeExe</span></a></span><span> </span><span id="local-6989586621679419423"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419423"><span class="hs-identifier hs-var">ver</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;exitcode-stdio-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419423"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.TestType.html#TestTypeLib"><span class="hs-identifier hs-type">TestTypeLib</span></a></span><span> </span><span id="local-6989586621679419425"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419425"><span class="hs-identifier hs-var">ver</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;detailed-&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419425"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.TestType.html#TestTypeUnknown"><span class="hs-identifier hs-type">TestTypeUnknown</span></a></span><span> </span><span id="local-6989586621679419426"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679419426"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679419427"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419427"><span class="hs-identifier hs-var">ver</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679419426"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419427"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679419442"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m TestType
+</span><a href="#local-6989586621679419442"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Version -&gt; String -&gt; TestType) -&gt; m TestType
+forall (m :: * -&gt; *) ver a.
+(CabalParsing m, Parsec ver) =&gt;
+(ver -&gt; String -&gt; a) -&gt; m a
+</span><a href="Distribution.Parsec.html#parsecStandard"><span class="hs-identifier hs-var">parsecStandard</span></a></span><span> </span><span class="annot"><span class="annottext">((Version -&gt; String -&gt; TestType) -&gt; m TestType)
+-&gt; (Version -&gt; String -&gt; TestType) -&gt; m TestType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679419445"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419445"><span class="hs-identifier hs-var">ver</span></a></span></span><span> </span><span id="local-6989586621679419446"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679419446"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679419446"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;exitcode-stdio&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Version -&gt; TestType
+</span><a href="Distribution.Types.TestType.html#TestTypeExe"><span class="hs-identifier hs-var">TestTypeExe</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419445"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;detailed&quot;</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Version -&gt; TestType
+</span><a href="Distribution.Types.TestType.html#TestTypeLib"><span class="hs-identifier hs-var">TestTypeLib</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419445"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Version -&gt; TestType
+</span><a href="Distribution.Types.TestType.html#TestTypeUnknown"><span class="hs-identifier hs-var">TestTypeUnknown</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679419446"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679419445"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-53"></span></pre></body></html>

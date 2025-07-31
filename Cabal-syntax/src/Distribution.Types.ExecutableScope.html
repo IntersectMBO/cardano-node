@@ -1,0 +1,366 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679405837"><span id="local-6989586621679405838"><span id="local-6989586621679405839"></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.ExecutableScope</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier">ExecutableScope</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">data</span><span> </span><span id="ExecutableScope"><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-var">ExecutableScope</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ExecutablePublic"><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutablePublic"><span class="hs-identifier hs-var">ExecutablePublic</span></a></span></span><span>
+</span><span id="line-19"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="ExecutablePrivate"><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutablePrivate"><span class="hs-identifier hs-var">ExecutablePrivate</span></a></span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679405843"><span id="local-6989586621679405845"><span class="annot"><span class="annottext">(forall x. ExecutableScope -&gt; Rep ExecutableScope x)
+-&gt; (forall x. Rep ExecutableScope x -&gt; ExecutableScope)
+-&gt; Generic ExecutableScope
+forall x. Rep ExecutableScope x -&gt; ExecutableScope
+forall x. ExecutableScope -&gt; Rep ExecutableScope x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ExecutableScope -&gt; Rep ExecutableScope x
+from :: forall x. ExecutableScope -&gt; Rep ExecutableScope x
+$cto :: forall x. Rep ExecutableScope x -&gt; ExecutableScope
+to :: forall x. Rep ExecutableScope x -&gt; ExecutableScope
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679405849"><span id="local-6989586621679405851"><span id="local-6989586621679405855"><span class="annot"><span class="annottext">Int -&gt; ExecutableScope -&gt; ShowS
+[ExecutableScope] -&gt; ShowS
+ExecutableScope -&gt; String
+(Int -&gt; ExecutableScope -&gt; ShowS)
+-&gt; (ExecutableScope -&gt; String)
+-&gt; ([ExecutableScope] -&gt; ShowS)
+-&gt; Show ExecutableScope
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ExecutableScope -&gt; ShowS
+showsPrec :: Int -&gt; ExecutableScope -&gt; ShowS
+$cshow :: ExecutableScope -&gt; String
+show :: ExecutableScope -&gt; String
+$cshowList :: [ExecutableScope] -&gt; ShowS
+showList :: [ExecutableScope] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679405859"><span id="local-6989586621679405863"><span id="local-6989586621679405866"><span id="local-6989586621679405871"><span class="annot"><span class="annottext">ReadPrec [ExecutableScope]
+ReadPrec ExecutableScope
+Int -&gt; ReadS ExecutableScope
+ReadS [ExecutableScope]
+(Int -&gt; ReadS ExecutableScope)
+-&gt; ReadS [ExecutableScope]
+-&gt; ReadPrec ExecutableScope
+-&gt; ReadPrec [ExecutableScope]
+-&gt; Read ExecutableScope
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ExecutableScope
+readsPrec :: Int -&gt; ReadS ExecutableScope
+$creadList :: ReadS [ExecutableScope]
+readList :: ReadS [ExecutableScope]
+$creadPrec :: ReadPrec ExecutableScope
+readPrec :: ReadPrec ExecutableScope
+$creadListPrec :: ReadPrec [ExecutableScope]
+readListPrec :: ReadPrec [ExecutableScope]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679405875"><span id="local-6989586621679405877"><span class="annot"><span class="annottext">ExecutableScope -&gt; ExecutableScope -&gt; Bool
+(ExecutableScope -&gt; ExecutableScope -&gt; Bool)
+-&gt; (ExecutableScope -&gt; ExecutableScope -&gt; Bool)
+-&gt; Eq ExecutableScope
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+== :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+$c/= :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+/= :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679405884"><span id="local-6989586621679405886"><span id="local-6989586621679405888"><span id="local-6989586621679405892"><span id="local-6989586621679405895"><span id="local-6989586621679405898"><span id="local-6989586621679405901"><span class="annot"><span class="annottext">Eq ExecutableScope
+Eq ExecutableScope =&gt;
+(ExecutableScope -&gt; ExecutableScope -&gt; Ordering)
+-&gt; (ExecutableScope -&gt; ExecutableScope -&gt; Bool)
+-&gt; (ExecutableScope -&gt; ExecutableScope -&gt; Bool)
+-&gt; (ExecutableScope -&gt; ExecutableScope -&gt; Bool)
+-&gt; (ExecutableScope -&gt; ExecutableScope -&gt; Bool)
+-&gt; (ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope)
+-&gt; (ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope)
+-&gt; Ord ExecutableScope
+ExecutableScope -&gt; ExecutableScope -&gt; Bool
+ExecutableScope -&gt; ExecutableScope -&gt; Ordering
+ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ExecutableScope -&gt; ExecutableScope -&gt; Ordering
+compare :: ExecutableScope -&gt; ExecutableScope -&gt; Ordering
+$c&lt; :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+&lt; :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+$c&lt;= :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+&lt;= :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+$c&gt; :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+&gt; :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+$c&gt;= :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+&gt;= :: ExecutableScope -&gt; ExecutableScope -&gt; Bool
+$cmax :: ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+max :: ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+$cmin :: ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+min :: ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679405907"><span id="local-6989586621679405909"><span id="local-6989586621679405911"><span id="local-6989586621679405913"><span id="local-6989586621679405915"><span id="local-6989586621679405921"><span id="local-6989586621679405926"><span id="local-6989586621679405929"><span id="local-6989586621679405932"><span id="local-6989586621679405935"><span id="local-6989586621679405938"><span id="local-6989586621679405941"><span id="local-6989586621679405946"><span id="local-6989586621679405951"><span class="annot"><span class="annottext">Typeable ExecutableScope
+Typeable ExecutableScope =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; ExecutableScope -&gt; c ExecutableScope)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ExecutableScope)
+-&gt; (ExecutableScope -&gt; Constr)
+-&gt; (ExecutableScope -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ExecutableScope))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c ExecutableScope))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; ExecutableScope -&gt; ExecutableScope)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ExecutableScope -&gt; m ExecutableScope)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ExecutableScope -&gt; m ExecutableScope)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ExecutableScope -&gt; m ExecutableScope)
+-&gt; Data ExecutableScope
+ExecutableScope -&gt; Constr
+ExecutableScope -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; ExecutableScope -&gt; ExecutableScope
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ExecutableScope
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ExecutableScope -&gt; c ExecutableScope
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ExecutableScope)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ExecutableScope)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ExecutableScope -&gt; c ExecutableScope
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ExecutableScope -&gt; c ExecutableScope
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ExecutableScope
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ExecutableScope
+$ctoConstr :: ExecutableScope -&gt; Constr
+toConstr :: ExecutableScope -&gt; Constr
+$cdataTypeOf :: ExecutableScope -&gt; DataType
+dataTypeOf :: ExecutableScope -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ExecutableScope)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ExecutableScope)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ExecutableScope)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ExecutableScope)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ExecutableScope -&gt; ExecutableScope
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ExecutableScope -&gt; ExecutableScope
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ExecutableScope -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ExecutableScope -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ExecutableScope -&gt; m ExecutableScope
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679405958"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-type">ExecutableScope</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621679405962"><span class="annot"><span class="annottext">pretty :: ExecutableScope -&gt; Doc
+</span><a href="#local-6989586621679405962"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="Distribution.Types.ExecutableScope.html#ExecutablePublic"><span class="hs-identifier hs-var">ExecutablePublic</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;public&quot;</span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="Distribution.Types.ExecutableScope.html#ExecutablePrivate"><span class="hs-identifier hs-var">ExecutablePrivate</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;private&quot;</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-type">ExecutableScope</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>    </span><span id="local-6989586621679405983"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m ExecutableScope
+</span><a href="#local-6989586621679405983"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ExecutableScope -&gt; m ExecutableScope
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. Parsing m =&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#try"><span class="hs-identifier hs-var">P.try</span></a></span><span> </span><span class="annot"><span class="annottext">m ExecutableScope
+</span><a href="#local-6989586621679405986"><span class="hs-identifier hs-var">pub</span></a></span><span> </span><span class="annot"><span class="annottext">m ExecutableScope -&gt; m ExecutableScope -&gt; m ExecutableScope
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%7C%3E/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m ExecutableScope
+</span><a href="#local-6989586621679405988"><span class="hs-identifier hs-var">pri</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>        </span><span id="local-6989586621679405986"><span class="annot"><span class="annottext">pub :: m ExecutableScope
+</span><a href="#local-6989586621679405986"><span class="hs-identifier hs-var hs-var">pub</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="Distribution.Types.ExecutableScope.html#ExecutablePublic"><span class="hs-identifier hs-var">ExecutablePublic</span></a></span><span>  </span><span class="annot"><span class="annottext">ExecutableScope -&gt; m String -&gt; m ExecutableScope
+forall a b. a -&gt; m b -&gt; m a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;public&quot;</span></span><span>
+</span><span id="line-29"></span><span>        </span><span id="local-6989586621679405988"><span class="annot"><span class="annottext">pri :: m ExecutableScope
+</span><a href="#local-6989586621679405988"><span class="hs-identifier hs-var hs-var">pri</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="Distribution.Types.ExecutableScope.html#ExecutablePrivate"><span class="hs-identifier hs-var">ExecutablePrivate</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutableScope -&gt; m String -&gt; m ExecutableScope
+forall a b. a -&gt; m b -&gt; m a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%24/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;private&quot;</span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406004"><span id="local-6989586621679406011"><span id="local-6989586621679406017"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-type">ExecutableScope</span></a></span></span></span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406044"><span id="local-6989586621679406051"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-type">ExecutableScope</span></a></span></span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-type">ExecutableScope</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679406092"><span class="annot"><span class="annottext">rnf :: ExecutableScope -&gt; ()
+</span><a href="#local-6989586621679406092"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExecutableScope -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | 'Any' like semigroup, where 'ExecutablePrivate' is 'Any True'</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406097"><span id="local-6989586621679406101"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-type">ExecutableScope</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="Distribution.Types.ExecutableScope.html#ExecutablePublic"><span class="hs-identifier hs-var">ExecutablePublic</span></a></span><span>    </span><span id="local-6989586621679406106"><span class="annot"><span class="annottext">&lt;&gt; :: ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679406107"><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="#local-6989586621679406107"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="#local-6989586621679406107"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679406108"><span class="annot"><span class="annottext">x :: ExecutableScope
+</span><a href="#local-6989586621679406108"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="Distribution.Types.ExecutableScope.html#ExecutablePrivate"><span class="hs-identifier hs-var">ExecutablePrivate</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="#local-6989586621679406108"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><span class="hs-comment">-- | 'mempty' = 'ExecutablePublic'</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679406114"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ExecutableScope.html#ExecutableScope"><span class="hs-identifier hs-type">ExecutableScope</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679406118"><span class="annot"><span class="annottext">mempty :: ExecutableScope
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExecutableScope
+</span><a href="Distribution.Types.ExecutableScope.html#ExecutablePublic"><span class="hs-identifier hs-var">ExecutablePublic</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679406120"><span class="annot"><span class="annottext">mappend :: ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExecutableScope -&gt; ExecutableScope -&gt; ExecutableScope
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-44"></span></pre></body></html>

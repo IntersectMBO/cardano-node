@@ -1,0 +1,1000 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679442435"><span id="local-6989586621679442436"><span id="local-6989586621679442437"><span id="local-6989586621679442438"></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.ForeignLib</span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier">ForeignLib</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#emptyForeignLib"><span class="hs-identifier">emptyForeignLib</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibModules"><span class="hs-identifier">foreignLibModules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibIsShared"><span class="hs-identifier">foreignLibIsShared</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibVersion"><span class="hs-identifier">foreignLibVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier">LibVersionInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#mkLibVersionInfo"><span class="hs-identifier">mkLibVersionInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionInfoCRA"><span class="hs-identifier">libVersionInfoCRA</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionNumber"><span class="hs-identifier">libVersionNumber</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionNumberShow"><span class="hs-identifier">libVersionNumberShow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionMajor"><span class="hs-identifier">libVersionMajor</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.System.html"><span class="hs-identifier">Distribution.System</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html"><span class="hs-identifier">Distribution.Types.BuildInfo</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibOption.html"><span class="hs-identifier">Distribution.Types.ForeignLibOption</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html"><span class="hs-identifier">Distribution.Types.ForeignLibType</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html"><span class="hs-identifier">Distribution.Types.UnqualComponentName</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Text.Read.html#/Text.Read.html"><span class="hs-identifier">Text.Read</span></a></span><span>                       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Read</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html"><span class="hs-identifier">Distribution.Types.BuildInfo.Lens</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | A foreign library stanza is like a library stanza, except that</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- the built code is intended for consumption by a non-Haskell client.</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">data</span><span> </span><span id="ForeignLib"><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-var">ForeignLib</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ForeignLib"><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-var">ForeignLib</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="hs-comment">-- | Name of the foreign library</span></span><span>
+</span><span id="line-42"></span><span>      </span><span id="foreignLibName"><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibName"><span class="hs-identifier hs-var hs-var">foreignLibName</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="hs-comment">-- | What kind of foreign library is this (static or dynamic).</span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="foreignLibType"><span class="annot"><span class="annottext">ForeignLib -&gt; ForeignLibType
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibType"><span class="hs-identifier hs-var hs-var">foreignLibType</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-comment">-- | What options apply to this foreign library (e.g., are we</span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-comment">-- merging in all foreign dependencies.)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="foreignLibOptions"><span class="annot"><span class="annottext">ForeignLib -&gt; [ForeignLibOption]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibOptions"><span class="hs-identifier hs-var hs-var">foreignLibOptions</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.ForeignLibOption.html#ForeignLibOption"><span class="hs-identifier hs-type">ForeignLibOption</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="hs-comment">-- | Build information for this foreign library.</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="foreignLibBuildInfo"><span class="annot"><span class="annottext">ForeignLib -&gt; BuildInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var hs-var">foreignLibBuildInfo</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-comment">-- | Libtool-style version-info data to compute library version.</span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-comment">-- Refer to the libtool documentation on the</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-comment">-- current:revision:age versioning scheme.</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="foreignLibVersionInfo"><span class="annot"><span class="annottext">ForeignLib -&gt; Maybe LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionInfo"><span class="hs-identifier hs-var hs-var">foreignLibVersionInfo</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><span class="hs-comment">-- | Linux library version</span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="foreignLibVersionLinux"><span class="annot"><span class="annottext">ForeignLib -&gt; Maybe Version
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionLinux"><span class="hs-identifier hs-var hs-var">foreignLibVersionLinux</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>      </span><span class="hs-comment">-- | (Windows-specific) module definition files</span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-comment">-- This is a list rather than a maybe field so that we can flatten</span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-comment">-- the condition trees (for instance, when creating an sdist)</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="foreignLibModDefFile"><span class="annot"><span class="annottext">ForeignLib -&gt; [FilePath]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibModDefFile"><span class="hs-identifier hs-var hs-var">foreignLibModDefFile</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679442466"><span id="local-6989586621679442468"><span class="annot"><span class="annottext">(forall x. ForeignLib -&gt; Rep ForeignLib x)
+-&gt; (forall x. Rep ForeignLib x -&gt; ForeignLib) -&gt; Generic ForeignLib
+forall x. Rep ForeignLib x -&gt; ForeignLib
+forall x. ForeignLib -&gt; Rep ForeignLib x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ForeignLib -&gt; Rep ForeignLib x
+from :: forall x. ForeignLib -&gt; Rep ForeignLib x
+$cto :: forall x. Rep ForeignLib x -&gt; ForeignLib
+to :: forall x. Rep ForeignLib x -&gt; ForeignLib
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442472"><span id="local-6989586621679442492"><span id="local-6989586621679442496"><span class="annot"><span class="annottext">Int -&gt; ForeignLib -&gt; ShowS
+[ForeignLib] -&gt; ShowS
+ForeignLib -&gt; FilePath
+(Int -&gt; ForeignLib -&gt; ShowS)
+-&gt; (ForeignLib -&gt; FilePath)
+-&gt; ([ForeignLib] -&gt; ShowS)
+-&gt; Show ForeignLib
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ForeignLib -&gt; ShowS
+showsPrec :: Int -&gt; ForeignLib -&gt; ShowS
+$cshow :: ForeignLib -&gt; FilePath
+show :: ForeignLib -&gt; FilePath
+$cshowList :: [ForeignLib] -&gt; ShowS
+showList :: [ForeignLib] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442505"><span id="local-6989586621679442509"><span id="local-6989586621679442512"><span id="local-6989586621679442548"><span class="annot"><span class="annottext">ReadPrec [ForeignLib]
+ReadPrec ForeignLib
+Int -&gt; ReadS ForeignLib
+ReadS [ForeignLib]
+(Int -&gt; ReadS ForeignLib)
+-&gt; ReadS [ForeignLib]
+-&gt; ReadPrec ForeignLib
+-&gt; ReadPrec [ForeignLib]
+-&gt; Read ForeignLib
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ForeignLib
+readsPrec :: Int -&gt; ReadS ForeignLib
+$creadList :: ReadS [ForeignLib]
+readList :: ReadS [ForeignLib]
+$creadPrec :: ReadPrec ForeignLib
+readPrec :: ReadPrec ForeignLib
+$creadListPrec :: ReadPrec [ForeignLib]
+readListPrec :: ReadPrec [ForeignLib]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442557"><span id="local-6989586621679442575"><span class="annot"><span class="annottext">ForeignLib -&gt; ForeignLib -&gt; Bool
+(ForeignLib -&gt; ForeignLib -&gt; Bool)
+-&gt; (ForeignLib -&gt; ForeignLib -&gt; Bool) -&gt; Eq ForeignLib
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ForeignLib -&gt; ForeignLib -&gt; Bool
+== :: ForeignLib -&gt; ForeignLib -&gt; Bool
+$c/= :: ForeignLib -&gt; ForeignLib -&gt; Bool
+/= :: ForeignLib -&gt; ForeignLib -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442587"><span id="local-6989586621679442605"><span id="local-6989586621679442618"><span id="local-6989586621679442622"><span id="local-6989586621679442625"><span id="local-6989586621679442628"><span id="local-6989586621679442631"><span class="annot"><span class="annottext">Eq ForeignLib
+Eq ForeignLib =&gt;
+(ForeignLib -&gt; ForeignLib -&gt; Ordering)
+-&gt; (ForeignLib -&gt; ForeignLib -&gt; Bool)
+-&gt; (ForeignLib -&gt; ForeignLib -&gt; Bool)
+-&gt; (ForeignLib -&gt; ForeignLib -&gt; Bool)
+-&gt; (ForeignLib -&gt; ForeignLib -&gt; Bool)
+-&gt; (ForeignLib -&gt; ForeignLib -&gt; ForeignLib)
+-&gt; (ForeignLib -&gt; ForeignLib -&gt; ForeignLib)
+-&gt; Ord ForeignLib
+ForeignLib -&gt; ForeignLib -&gt; Bool
+ForeignLib -&gt; ForeignLib -&gt; Ordering
+ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ForeignLib -&gt; ForeignLib -&gt; Ordering
+compare :: ForeignLib -&gt; ForeignLib -&gt; Ordering
+$c&lt; :: ForeignLib -&gt; ForeignLib -&gt; Bool
+&lt; :: ForeignLib -&gt; ForeignLib -&gt; Bool
+$c&lt;= :: ForeignLib -&gt; ForeignLib -&gt; Bool
+&lt;= :: ForeignLib -&gt; ForeignLib -&gt; Bool
+$c&gt; :: ForeignLib -&gt; ForeignLib -&gt; Bool
+&gt; :: ForeignLib -&gt; ForeignLib -&gt; Bool
+$c&gt;= :: ForeignLib -&gt; ForeignLib -&gt; Bool
+&gt;= :: ForeignLib -&gt; ForeignLib -&gt; Bool
+$cmax :: ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+max :: ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+$cmin :: ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+min :: ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442643"><span id="local-6989586621679442661"><span id="local-6989586621679442674"><span id="local-6989586621679442676"><span id="local-6989586621679442678"><span id="local-6989586621679442684"><span id="local-6989586621679442689"><span id="local-6989586621679442692"><span id="local-6989586621679442695"><span id="local-6989586621679442698"><span id="local-6989586621679442701"><span id="local-6989586621679442704"><span id="local-6989586621679442709"><span id="local-6989586621679442714"><span class="annot"><span class="annottext">Typeable ForeignLib
+Typeable ForeignLib =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; ForeignLib -&gt; c ForeignLib)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLib)
+-&gt; (ForeignLib -&gt; Constr)
+-&gt; (ForeignLib -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLib))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c ForeignLib))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; ForeignLib -&gt; ForeignLib)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib)
+-&gt; Data ForeignLib
+ForeignLib -&gt; Constr
+ForeignLib -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; ForeignLib -&gt; ForeignLib
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLib
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ForeignLib -&gt; c ForeignLib
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLib)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c ForeignLib)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ForeignLib -&gt; c ForeignLib
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ForeignLib -&gt; c ForeignLib
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLib
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLib
+$ctoConstr :: ForeignLib -&gt; Constr
+toConstr :: ForeignLib -&gt; Constr
+$cdataTypeOf :: ForeignLib -&gt; DataType
+dataTypeOf :: ForeignLib -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLib)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLib)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c ForeignLib)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c ForeignLib)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ForeignLib -&gt; ForeignLib
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ForeignLib -&gt; ForeignLib
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLib -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLib -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ForeignLib -&gt; m ForeignLib
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">data</span><span> </span><span id="LibVersionInfo"><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-var">LibVersionInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LibVersionInfo"><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-var">LibVersionInfo</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679442729"><span id="local-6989586621679442735"><span id="local-6989586621679442740"><span id="local-6989586621679442742"><span id="local-6989586621679442744"><span id="local-6989586621679442749"><span id="local-6989586621679442754"><span id="local-6989586621679442757"><span id="local-6989586621679442760"><span id="local-6989586621679442763"><span id="local-6989586621679442766"><span id="local-6989586621679442769"><span id="local-6989586621679442774"><span id="local-6989586621679442779"><span class="annot"><span class="annottext">Typeable LibVersionInfo
+Typeable LibVersionInfo =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; LibVersionInfo -&gt; c LibVersionInfo)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LibVersionInfo)
+-&gt; (LibVersionInfo -&gt; Constr)
+-&gt; (LibVersionInfo -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LibVersionInfo))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c LibVersionInfo))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; LibVersionInfo -&gt; LibVersionInfo)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; LibVersionInfo -&gt; m LibVersionInfo)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; LibVersionInfo -&gt; m LibVersionInfo)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; LibVersionInfo -&gt; m LibVersionInfo)
+-&gt; Data LibVersionInfo
+LibVersionInfo -&gt; Constr
+LibVersionInfo -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; LibVersionInfo -&gt; LibVersionInfo
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LibVersionInfo
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LibVersionInfo -&gt; c LibVersionInfo
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LibVersionInfo)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LibVersionInfo)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LibVersionInfo -&gt; c LibVersionInfo
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LibVersionInfo -&gt; c LibVersionInfo
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LibVersionInfo
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LibVersionInfo
+$ctoConstr :: LibVersionInfo -&gt; Constr
+toConstr :: LibVersionInfo -&gt; Constr
+$cdataTypeOf :: LibVersionInfo -&gt; DataType
+dataTypeOf :: LibVersionInfo -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LibVersionInfo)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LibVersionInfo)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LibVersionInfo)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LibVersionInfo)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LibVersionInfo -&gt; LibVersionInfo
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LibVersionInfo -&gt; LibVersionInfo
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LibVersionInfo -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LibVersionInfo -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442784"><span id="local-6989586621679442790"><span class="annot"><span class="annottext">LibVersionInfo -&gt; LibVersionInfo -&gt; Bool
+(LibVersionInfo -&gt; LibVersionInfo -&gt; Bool)
+-&gt; (LibVersionInfo -&gt; LibVersionInfo -&gt; Bool) -&gt; Eq LibVersionInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LibVersionInfo -&gt; LibVersionInfo -&gt; Bool
+== :: LibVersionInfo -&gt; LibVersionInfo -&gt; Bool
+$c/= :: LibVersionInfo -&gt; LibVersionInfo -&gt; Bool
+/= :: LibVersionInfo -&gt; LibVersionInfo -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442793"><span id="local-6989586621679442795"><span class="annot"><span class="annottext">(forall x. LibVersionInfo -&gt; Rep LibVersionInfo x)
+-&gt; (forall x. Rep LibVersionInfo x -&gt; LibVersionInfo)
+-&gt; Generic LibVersionInfo
+forall x. Rep LibVersionInfo x -&gt; LibVersionInfo
+forall x. LibVersionInfo -&gt; Rep LibVersionInfo x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. LibVersionInfo -&gt; Rep LibVersionInfo x
+from :: forall x. LibVersionInfo -&gt; Rep LibVersionInfo x
+$cto :: forall x. Rep LibVersionInfo x -&gt; LibVersionInfo
+to :: forall x. Rep LibVersionInfo x -&gt; LibVersionInfo
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442801"><span id="local-6989586621679442804"><span id="local-6989586621679442807"><span id="local-6989586621679442810"><span id="local-6989586621679442813"><span id="local-6989586621679442816"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span id="local-6989586621679442820"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442820"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679442821"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442821"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679442822"><span class="annot"><span class="annottext">compare :: LibVersionInfo -&gt; LibVersionInfo -&gt; Ordering
+</span><a href="#local-6989586621679442822"><span class="hs-operator hs-var hs-var hs-var hs-var">`compare`</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span id="local-6989586621679442824"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442824"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span id="local-6989586621679442825"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442825"><span class="hs-identifier hs-var">r'</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442820"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-operator hs-var">`compare`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442824"><span class="hs-identifier hs-var">c'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-70"></span><span>            </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442821"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-operator hs-var">`compare`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442825"><span class="hs-identifier hs-var">r'</span></a></span><span>
+</span><span id="line-71"></span><span>            </span><span id="local-6989586621679442826"><span class="annot"><span class="annottext">Ordering
+</span><a href="#local-6989586621679442826"><span class="hs-identifier hs-var">e</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="#local-6989586621679442826"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442829"><span id="local-6989586621679442832"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679442838"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; LibVersionInfo -&gt; ShowS
+</span><a href="#local-6989586621679442838"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span id="local-6989586621679442840"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442840"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span id="local-6989586621679442841"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442841"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679442842"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442842"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679442843"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442843"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ShowS -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#showParen/GHC.Show.html#showParen"><span class="hs-identifier hs-var">showParen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442840"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">(ShowS -&gt; ShowS) -&gt; ShowS -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#showString/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;mkLibVersionInfo &quot;</span></span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int, Int, Int) -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; a -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#showsPrec/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var">showsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">11</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442841"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442842"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442843"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442849"><span id="local-6989586621679442852"><span id="local-6989586621679442856"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-type">Read</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>    </span><span id="local-6989586621679442869"><span class="annot"><span class="annottext">readPrec :: ReadPrec LibVersionInfo
+</span><a href="#local-6989586621679442869"><span class="hs-identifier hs-var hs-var hs-var hs-var">readPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadPrec LibVersionInfo -&gt; ReadPrec LibVersionInfo
+forall a. ReadPrec a -&gt; ReadPrec a
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#parens/GHC.Read.html#parens"><span class="hs-identifier hs-var">Read.parens</span></a></span><span> </span><span class="annot"><span class="annottext">(ReadPrec LibVersionInfo -&gt; ReadPrec LibVersionInfo)
+-&gt; ReadPrec LibVersionInfo -&gt; ReadPrec LibVersionInfo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><a href="../../base-4.18.2.1/src/Text.Read.Lex.html#Ident/Text.Read.Lex.html#Ident"><span class="hs-identifier hs-type">Read.Ident</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;mkLibVersionInfo&quot;</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadPrec Lexeme
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#lexP/GHC.Read.html#lexP"><span class="hs-identifier hs-var">Read.lexP</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span id="local-6989586621679442874"><span class="annot"><span class="annottext">(Int, Int, Int)
+</span><a href="#local-6989586621679442874"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadPrec (Int, Int, Int) -&gt; ReadPrec (Int, Int, Int)
+forall a. ReadPrec a -&gt; ReadPrec a
+</span><a href="../../base-4.18.2.1/src/Text.ParserCombinators.ReadPrec.html#step/Text.ParserCombinators.ReadPrec.html#step"><span class="hs-identifier hs-var">Read.step</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec (Int, Int, Int)
+forall a. Read a =&gt; ReadPrec a
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#readPrec/GHC.Read.html#readPrec"><span class="hs-identifier hs-var">Read.readPrec</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">LibVersionInfo -&gt; ReadPrec LibVersionInfo
+forall a. a -&gt; ReadPrec a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int, Int, Int) -&gt; LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#mkLibVersionInfo"><span class="hs-identifier hs-var">mkLibVersionInfo</span></a></span><span> </span><span class="annot"><span class="annottext">(Int, Int, Int)
+</span><a href="#local-6989586621679442874"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442877"><span id="local-6989586621679442884"><span id="local-6989586621679442890"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span></span></span></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442915"><span id="local-6989586621679442922"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span></span></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679442967"><span class="annot"><span class="annottext">rnf :: LibVersionInfo -&gt; ()
+</span><a href="#local-6989586621679442967"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibVersionInfo -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442972"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>    </span><span id="local-6989586621679442976"><span class="annot"><span class="annottext">pretty :: LibVersionInfo -&gt; Doc
+</span><a href="#local-6989586621679442976"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span id="local-6989586621679442978"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442978"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679442979"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442979"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679442980"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442980"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Doc] -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#hcat/Text.PrettyPrint.HughesPJ.html#hcat"><span class="hs-identifier hs-var">Disp.hcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Doc] -&gt; Doc) -&gt; [Doc] -&gt; Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; [Doc] -&gt; [Doc]
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#punctuate/Text.PrettyPrint.HughesPJ.html#punctuate"><span class="hs-identifier hs-var">Disp.punctuate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">Disp.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Doc] -&gt; [Doc]) -&gt; [Doc] -&gt; [Doc]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Doc) -&gt; [Int] -&gt; [Doc]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#int/Text.PrettyPrint.HughesPJ.html#int"><span class="hs-identifier hs-var">Disp.int</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442978"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442979"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679442980"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679443019"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m LibVersionInfo
+</span><a href="#local-6989586621679443019"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>        </span><span id="local-6989586621679443021"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443021"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Int
+forall (m :: * -&gt; *) a. (CharParsing m, Integral a) =&gt; m a
+</span><a href="Distribution.Compat.CharParsing.html#integral"><span class="hs-identifier hs-var">P.integral</span></a></span><span>
+</span><span id="line-95"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679443023"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443023"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443024"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443024"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; m (Int, Int) -&gt; m (Int, Int)
+forall (m :: * -&gt; *) a. Alternative m =&gt; a -&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#option"><span class="hs-identifier hs-var">P.option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m (Int, Int) -&gt; m (Int, Int)) -&gt; m (Int, Int) -&gt; m (Int, Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>            </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span>
+</span><span id="line-97"></span><span>            </span><span id="local-6989586621679443027"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443027"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Int
+forall (m :: * -&gt; *) a. (CharParsing m, Integral a) =&gt; m a
+</span><a href="Distribution.Compat.CharParsing.html#integral"><span class="hs-identifier hs-var">P.integral</span></a></span><span>
+</span><span id="line-98"></span><span>            </span><span id="local-6989586621679443028"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443028"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; m Int -&gt; m Int
+forall (m :: * -&gt; *) a. Alternative m =&gt; a -&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#option"><span class="hs-identifier hs-var">P.option</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(m Int -&gt; m Int) -&gt; m Int -&gt; m Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>                </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span>
+</span><span id="line-100"></span><span>                </span><span class="annot"><span class="annottext">m Int
+forall (m :: * -&gt; *) a. (CharParsing m, Integral a) =&gt; m a
+</span><a href="Distribution.Compat.CharParsing.html#integral"><span class="hs-identifier hs-var">P.integral</span></a></span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="annottext">(Int, Int) -&gt; m (Int, Int)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443027"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443028"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">LibVersionInfo -&gt; m LibVersionInfo
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(LibVersionInfo -&gt; m LibVersionInfo)
+-&gt; LibVersionInfo -&gt; m LibVersionInfo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Int, Int, Int) -&gt; LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#mkLibVersionInfo"><span class="hs-identifier hs-var">mkLibVersionInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443021"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443023"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443024"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Construct 'LibVersionInfo' from @(current, revision, age)@</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- numbers.</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- For instance, @mkLibVersionInfo (3,0,0)@ constructs a</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- 'LibVersionInfo' representing the version-info @3:0:0@.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- All version components must be non-negative.</span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#mkLibVersionInfo"><span class="hs-identifier hs-type">mkLibVersionInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span>
+</span><span id="line-112"></span><span id="mkLibVersionInfo"><span class="annot"><span class="annottext">mkLibVersionInfo :: (Int, Int, Int) -&gt; LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#mkLibVersionInfo"><span class="hs-identifier hs-var hs-var">mkLibVersionInfo</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679443029"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443029"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679443030"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443030"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679443031"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443031"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int -&gt; LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-var">LibVersionInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443029"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443030"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443031"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- | From a given 'LibVersionInfo', extract the @(current, revision,</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- age)@ numbers.</span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionInfoCRA"><span class="hs-identifier hs-type">libVersionInfoCRA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span id="libVersionInfoCRA"><span class="annot"><span class="annottext">libVersionInfoCRA :: LibVersionInfo -&gt; (Int, Int, Int)
+</span><a href="Distribution.Types.ForeignLib.html#libVersionInfoCRA"><span class="hs-identifier hs-var hs-var">libVersionInfoCRA</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span id="local-6989586621679443032"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443032"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679443033"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443033"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679443034"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443034"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443032"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443033"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443034"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="annot"><span class="hs-comment">-- | Given a version-info field, produce a @major.minor.build@ version</span></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionNumber"><span class="hs-identifier hs-type">libVersionNumber</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span id="libVersionNumber"><span class="annot"><span class="annottext">libVersionNumber :: LibVersionInfo -&gt; (Int, Int, Int)
+</span><a href="Distribution.Types.ForeignLib.html#libVersionNumber"><span class="hs-identifier hs-var hs-var">libVersionNumber</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span id="local-6989586621679443035"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443035"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679443036"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443036"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679443037"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443037"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443035"><span class="hs-identifier hs-var">c</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#-/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443037"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443037"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443036"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- | Given a version-info field, return @&quot;major.minor.build&quot;@ as a</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- 'String'</span><span>
+</span><span id="line-125"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionNumberShow"><span class="hs-identifier hs-type">libVersionNumberShow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-126"></span><span id="libVersionNumberShow"><span class="annot"><span class="annottext">libVersionNumberShow :: LibVersionInfo -&gt; FilePath
+</span><a href="Distribution.Types.ForeignLib.html#libVersionNumberShow"><span class="hs-identifier hs-var hs-var">libVersionNumberShow</span></a></span></span><span> </span><span id="local-6989586621679443038"><span class="annot"><span class="annottext">LibVersionInfo
+</span><a href="#local-6989586621679443038"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679443039"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443039"><span class="hs-identifier hs-var">major</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443040"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443040"><span class="hs-identifier hs-var">minor</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443041"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443041"><span class="hs-identifier hs-var">build</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibVersionInfo -&gt; (Int, Int, Int)
+</span><a href="Distribution.Types.ForeignLib.html#libVersionNumber"><span class="hs-identifier hs-var">libVersionNumber</span></a></span><span> </span><span class="annot"><span class="annottext">LibVersionInfo
+</span><a href="#local-6989586621679443038"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443039"><span class="hs-identifier hs-var">major</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443040"><span class="hs-identifier hs-var">minor</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443041"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="annot"><span class="hs-comment">-- | Return the @major@ version of a version-info field.</span></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#libVersionMajor"><span class="hs-identifier hs-type">libVersionMajor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-132"></span><span id="libVersionMajor"><span class="annot"><span class="annottext">libVersionMajor :: LibVersionInfo -&gt; Int
+</span><a href="Distribution.Types.ForeignLib.html#libVersionMajor"><span class="hs-identifier hs-var hs-var">libVersionMajor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ForeignLib.html#LibVersionInfo"><span class="hs-identifier hs-type">LibVersionInfo</span></a></span><span> </span><span id="local-6989586621679443043"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443043"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679443044"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443044"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443043"><span class="hs-identifier hs-var">c</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Num.html#-/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443044"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679443047"><span id="local-6989586621679443053"><span id="local-6989586621679443058"><span id="local-6989586621679443063"><span id="local-6989586621679443068"><span id="local-6989586621679443073"><span id="local-6989586621679443078"><span id="local-6989586621679443083"><span id="local-6989586621679443088"><span id="local-6989586621679443093"><span id="local-6989586621679443098"><span id="local-6989586621679443103"><span id="local-6989586621679443108"><span id="local-6989586621679443113"><span id="local-6989586621679443118"><span id="local-6989586621679443123"><span id="local-6989586621679443128"><span id="local-6989586621679443133"><span id="local-6989586621679443138"><span id="local-6989586621679443143"><span id="local-6989586621679443148"><span id="local-6989586621679443153"><span id="local-6989586621679443158"><span id="local-6989586621679443163"><span id="local-6989586621679443168"><span id="local-6989586621679443173"><span id="local-6989586621679443178"><span id="local-6989586621679443183"><span id="local-6989586621679443188"><span id="local-6989586621679443193"><span id="local-6989586621679443198"><span id="local-6989586621679443203"><span id="local-6989586621679443208"><span id="local-6989586621679443213"><span id="local-6989586621679443218"><span id="local-6989586621679443223"><span id="local-6989586621679443228"><span id="local-6989586621679443233"><span id="local-6989586621679443238"><span id="local-6989586621679443243"><span id="local-6989586621679443248"><span id="local-6989586621679443253"><span id="local-6989586621679443258"><span id="local-6989586621679443263"><span id="local-6989586621679443268"><span id="local-6989586621679443273"><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#HasBuildInfo"><span class="hs-identifier hs-type">L.HasBuildInfo</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679443280"><span class="annot"><span class="annottext">buildInfo :: Lens' ForeignLib BuildInfo
+</span><a href="#local-6989586621679443280"><span class="hs-identifier hs-var hs-var hs-var hs-var">buildInfo</span></a></span></span><span> </span><span id="local-6989586621679443282"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679443282"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679443283"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443283"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679443284"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679443284"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443283"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var">foreignLibBuildInfo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679443284"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; ForeignLib) -&gt; f BuildInfo -&gt; f ForeignLib
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679443282"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForeignLib -&gt; BuildInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var">foreignLibBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443283"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679443287"><span id="local-6989586621679443294"><span id="local-6989586621679443300"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span></span></span></span><span>
+</span><span id="line-138"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679443379"><span id="local-6989586621679443386"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span></span></span><span>
+</span><span id="line-139"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679443493"><span class="annot"><span class="annottext">rnf :: ForeignLib -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679443496"><span id="local-6989586621679443500"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-142"></span><span>  </span><span id="local-6989586621679443512"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443512"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679443513"><span class="annot"><span class="annottext">&lt;&gt; :: ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679443514"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443514"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">foreignLibName :: UnqualComponentName
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibName"><span class="hs-identifier hs-var">foreignLibName</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; UnqualComponentName) -&gt; UnqualComponentName
+</span><a href="#local-6989586621679443515"><span class="hs-identifier hs-var">combine'</span></a></span><span>  </span><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibName"><span class="hs-identifier hs-var">foreignLibName</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibType :: ForeignLibType
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibType"><span class="hs-identifier hs-var">foreignLibType</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; ForeignLibType) -&gt; ForeignLibType
+forall {a}. Monoid a =&gt; (ForeignLib -&gt; a) -&gt; a
+</span><a href="#local-6989586621679443516"><span class="hs-identifier hs-var">combine</span></a></span><span>   </span><span class="annot"><span class="annottext">ForeignLib -&gt; ForeignLibType
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibType"><span class="hs-identifier hs-var">foreignLibType</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibOptions :: [ForeignLibOption]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibOptions"><span class="hs-identifier hs-var">foreignLibOptions</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; [ForeignLibOption]) -&gt; [ForeignLibOption]
+forall {a}. Monoid a =&gt; (ForeignLib -&gt; a) -&gt; a
+</span><a href="#local-6989586621679443516"><span class="hs-identifier hs-var">combine</span></a></span><span>   </span><span class="annot"><span class="annottext">ForeignLib -&gt; [ForeignLibOption]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibOptions"><span class="hs-identifier hs-var">foreignLibOptions</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibBuildInfo :: BuildInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var">foreignLibBuildInfo</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; BuildInfo) -&gt; BuildInfo
+forall {a}. Monoid a =&gt; (ForeignLib -&gt; a) -&gt; a
+</span><a href="#local-6989586621679443516"><span class="hs-identifier hs-var">combine</span></a></span><span>   </span><span class="annot"><span class="annottext">ForeignLib -&gt; BuildInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var">foreignLibBuildInfo</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibVersionInfo :: Maybe LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionInfo"><span class="hs-identifier hs-var">foreignLibVersionInfo</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; Maybe LibVersionInfo) -&gt; Maybe LibVersionInfo
+forall {t}. (ForeignLib -&gt; t) -&gt; t
+</span><a href="#local-6989586621679443517"><span class="hs-identifier hs-var">combine''</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; Maybe LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionInfo"><span class="hs-identifier hs-var">foreignLibVersionInfo</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibVersionLinux :: Maybe Version
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionLinux"><span class="hs-identifier hs-var">foreignLibVersionLinux</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; Maybe Version) -&gt; Maybe Version
+forall {t}. (ForeignLib -&gt; t) -&gt; t
+</span><a href="#local-6989586621679443517"><span class="hs-identifier hs-var">combine''</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; Maybe Version
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionLinux"><span class="hs-identifier hs-var">foreignLibVersionLinux</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibModDefFile :: [FilePath]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibModDefFile"><span class="hs-identifier hs-var">foreignLibModDefFile</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; [FilePath]) -&gt; [FilePath]
+forall {a}. Monoid a =&gt; (ForeignLib -&gt; a) -&gt; a
+</span><a href="#local-6989586621679443516"><span class="hs-identifier hs-var">combine</span></a></span><span>   </span><span class="annot"><span class="annottext">ForeignLib -&gt; [FilePath]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibModDefFile"><span class="hs-identifier hs-var">foreignLibModDefFile</span></a></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679443516"><span class="annot"><span class="annottext">combine :: (ForeignLib -&gt; a) -&gt; a
+</span><a href="#local-6989586621679443516"><span class="hs-identifier hs-var hs-var">combine</span></a></span></span><span> </span><span id="local-6989586621679443523"><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><a href="#local-6989586621679443523"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><a href="#local-6989586621679443523"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443512"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><a href="#local-6989586621679443523"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443514"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-152"></span><span>          </span><span id="local-6989586621679443515"><span class="annot"><span class="annottext">combine' :: (ForeignLib -&gt; UnqualComponentName) -&gt; UnqualComponentName
+</span><a href="#local-6989586621679443515"><span class="hs-identifier hs-var hs-var">combine'</span></a></span></span><span> </span><span id="local-6989586621679443526"><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="#local-6989586621679443526"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; FilePath
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier hs-var">unUnqualComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; FilePath)
+-&gt; UnqualComponentName -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="#local-6989586621679443526"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443512"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-153"></span><span>                                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; FilePath
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier hs-var">unUnqualComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; FilePath)
+-&gt; UnqualComponentName -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="#local-6989586621679443526"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443514"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-154"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="#local-6989586621679443526"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443514"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-155"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="#local-6989586621679443526"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443512"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-156"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679443528"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679443528"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443529"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679443529"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; UnqualComponentName
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Err.html#error/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; UnqualComponentName)
+-&gt; FilePath -&gt; UnqualComponentName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Ambiguous values for executable field: '&quot;</span></span><span>
+</span><span id="line-157"></span><span>                                  </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679443528"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;' and '&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679443529"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-158"></span><span>          </span><span id="local-6989586621679443517"><span class="annot"><span class="annottext">combine'' :: (ForeignLib -&gt; t) -&gt; t
+</span><a href="#local-6989586621679443517"><span class="hs-identifier hs-var hs-var">combine''</span></a></span></span><span> </span><span id="local-6989586621679443531"><span class="annot"><span class="annottext">ForeignLib -&gt; t
+</span><a href="#local-6989586621679443531"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; t
+</span><a href="#local-6989586621679443531"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443514"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679443537"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-161"></span><span>  </span><span id="local-6989586621679443543"><span class="annot"><span class="annottext">mempty :: ForeignLib
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-162"></span><span>      </span><span class="annot"><span class="annottext">foreignLibName :: UnqualComponentName
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibName"><span class="hs-identifier hs-var">foreignLibName</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibType :: ForeignLibType
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibType"><span class="hs-identifier hs-var">foreignLibType</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibOptions :: [ForeignLibOption]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibOptions"><span class="hs-identifier hs-var">foreignLibOptions</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibBuildInfo :: BuildInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var">foreignLibBuildInfo</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibVersionInfo :: Maybe LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionInfo"><span class="hs-identifier hs-var">foreignLibVersionInfo</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe LibVersionInfo
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibVersionLinux :: Maybe Version
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionLinux"><span class="hs-identifier hs-var">foreignLibVersionLinux</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Version
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">foreignLibModDefFile :: [FilePath]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibModDefFile"><span class="hs-identifier hs-var">foreignLibModDefFile</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-170"></span><span>  </span><span id="local-6989586621679443546"><span class="annot"><span class="annottext">mappend :: ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="annot"><span class="hs-comment">-- | An empty foreign library.</span></span><span>
+</span><span id="line-173"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#emptyForeignLib"><span class="hs-identifier hs-type">emptyForeignLib</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span>
+</span><span id="line-174"></span><span id="emptyForeignLib"><span class="annot"><span class="annottext">emptyForeignLib :: ForeignLib
+</span><a href="Distribution.Types.ForeignLib.html#emptyForeignLib"><span class="hs-identifier hs-var hs-var">emptyForeignLib</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="annot"><span class="hs-comment">-- | Modules defined by a foreign library.</span></span><span>
+</span><span id="line-177"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibModules"><span class="hs-identifier hs-type">foreignLibModules</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span id="foreignLibModules"><span class="annot"><span class="annottext">foreignLibModules :: ForeignLib -&gt; [ModuleName]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibModules"><span class="hs-identifier hs-var hs-var">foreignLibModules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#otherModules"><span class="hs-identifier hs-var">otherModules</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; [ModuleName])
+-&gt; (ForeignLib -&gt; BuildInfo) -&gt; ForeignLib -&gt; [ModuleName]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; BuildInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var">foreignLibBuildInfo</span></a></span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="annot"><span class="hs-comment">-- | Is the foreign library shared?</span></span><span>
+</span><span id="line-181"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibIsShared"><span class="hs-identifier hs-type">foreignLibIsShared</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-182"></span><span id="foreignLibIsShared"><span class="annot"><span class="annottext">foreignLibIsShared :: ForeignLib -&gt; Bool
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibIsShared"><span class="hs-identifier hs-var hs-var">foreignLibIsShared</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLibType -&gt; Bool
+</span><a href="Distribution.Types.ForeignLibType.html#foreignLibTypeIsShared"><span class="hs-identifier hs-var">foreignLibTypeIsShared</span></a></span><span> </span><span class="annot"><span class="annottext">(ForeignLibType -&gt; Bool)
+-&gt; (ForeignLib -&gt; ForeignLibType) -&gt; ForeignLib -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; ForeignLibType
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibType"><span class="hs-identifier hs-var">foreignLibType</span></a></span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="hs-comment">-- | Get a version number for a foreign library.</span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- If we're on Linux, and a Linux version is specified, use that.</span><span>
+</span><span id="line-186"></span><span class="hs-comment">-- If we're on Linux, and libtool-style version-info is specified, translate</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- that field into appropriate version numbers.</span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- Otherwise, this feature is unsupported so we don't return any version data.</span><span>
+</span><span id="line-189"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibVersion"><span class="hs-identifier hs-type">foreignLibVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.System.html#OS"><span class="hs-identifier hs-type">OS</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span>
+</span><span id="line-190"></span><span id="foreignLibVersion"><span class="annot"><span class="annottext">foreignLibVersion :: ForeignLib -&gt; OS -&gt; [Int]
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersion"><span class="hs-identifier hs-var hs-var">foreignLibVersion</span></a></span></span><span> </span><span id="local-6989586621679443549"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443549"><span class="hs-identifier hs-var">flib</span></a></span></span><span> </span><span class="annot"><span class="annottext">OS
+</span><a href="Distribution.System.html#Linux"><span class="hs-identifier hs-var">Linux</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; Maybe Version
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionLinux"><span class="hs-identifier hs-var">foreignLibVersionLinux</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443549"><span class="hs-identifier hs-var">flib</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679443551"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679443551"><span class="hs-identifier hs-var">v</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Version -&gt; [Int]
+</span><a href="Distribution.Types.Version.html#versionNumbers"><span class="hs-identifier hs-var">versionNumbers</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679443551"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-194"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; Maybe LibVersionInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibVersionInfo"><span class="hs-identifier hs-var">foreignLibVersionInfo</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679443549"><span class="hs-identifier hs-var">flib</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-195"></span><span>        </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679443553"><span class="annot"><span class="annottext">LibVersionInfo
+</span><a href="#local-6989586621679443553"><span class="hs-identifier hs-var">v'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-196"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679443554"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443554"><span class="hs-identifier hs-var">major</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443555"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443555"><span class="hs-identifier hs-var">minor</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443556"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443556"><span class="hs-identifier hs-var">build</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibVersionInfo -&gt; (Int, Int, Int)
+</span><a href="Distribution.Types.ForeignLib.html#libVersionNumber"><span class="hs-identifier hs-var">libVersionNumber</span></a></span><span> </span><span class="annot"><span class="annottext">LibVersionInfo
+</span><a href="#local-6989586621679443553"><span class="hs-identifier hs-var">v'</span></a></span><span>
+</span><span id="line-197"></span><span>          </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443554"><span class="hs-identifier hs-var">major</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443555"><span class="hs-identifier hs-var">minor</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443556"><span class="hs-identifier hs-var">build</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-198"></span><span>        </span><span class="annot"><span class="annottext">Maybe LibVersionInfo
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-199"></span><span class="annot"><a href="Distribution.Types.ForeignLib.html#foreignLibVersion"><span class="hs-identifier hs-var">foreignLibVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">OS
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-200"></span></pre></body></html>
