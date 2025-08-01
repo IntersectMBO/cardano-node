@@ -24,6 +24,8 @@ module Testnet.Start.Types
 
   , CreateEnvOptions(..)
   , CreateEnvUpdateTime(..)
+  , TestnetOnChainParams(..)
+  , mainnetParamsRequest
   , NodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
@@ -31,6 +33,7 @@ module Testnet.Start.Types
   , TopologyType(..)
   , UserProvidedData(..)
   , UserProvidedEnv(..)
+  , UserProvidedGeneses(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -41,6 +44,8 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import           Prelude
 
@@ -51,7 +56,9 @@ import           Data.Default.Class
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
+import qualified Network.HTTP.Simple as HTTP
 import           System.FilePath (addTrailingPathSeparator)
+import           System.IO.Unsafe (unsafePerformIO)
 
 import           Testnet.Filepath
 
@@ -104,15 +111,48 @@ instance Default CreateEnvUpdateTime where
   def = CreateEnv
 
 data CreateEnvOptions = CreateEnvOptions
-  { ceoTopologyType :: TopologyType
+  { ceoOnChainParams :: TestnetOnChainParams
+  , ceoTopologyType :: TopologyType
   , ceoUpdateTime :: CreateEnvUpdateTime
   } deriving (Eq, Show)
 
 instance Default CreateEnvOptions where
   def = CreateEnvOptions
-    { ceoTopologyType = def
+    { ceoOnChainParams = def
+    , ceoTopologyType = def
     , ceoUpdateTime = def
     }
+
+data TestnetOnChainParams
+  = DefaultParams
+  -- | A file path to a JSON file containing on-chain params, formatted as:
+  -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest
+  | OnChainParamsFile FilePath
+  | OnChainParamsMainnet
+  deriving (Eq, Show)
+
+instance Default TestnetOnChainParams where
+  def = DefaultParams
+
+data UserProvidedGeneses = UserProvidedGeneses
+  { upgShelleyGenesis :: UserProvidedData ShelleyGenesis
+  , upgAlonzoGenesis :: UserProvidedData AlonzoGenesis
+  , upgConwayGenesis :: UserProvidedData ConwayGenesis
+  } deriving (Eq, Show)
+
+instance Default UserProvidedGeneses where
+  def = UserProvidedGeneses
+    def
+    def
+    def
+
+-- | An HTTP request to get a file containing up-to-date mainnet on-chain parameters.
+-- The file should be formatted with Blockfrost format:
+-- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
+mainnetParamsRequest :: HTTP.Request
+mainnetParamsRequest = unsafePerformIO $ HTTP.parseRequest
+  "https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json"
+{-# NOINLINE mainnetParamsRequest #-}
 
 -- | An abstract node id, used as placeholder in topology files
 -- when the actual ports/addresses aren't known yet (i.e. before runtime)
@@ -213,6 +253,10 @@ data NodeOption
 data UserProvidedData a =
     UserProvidedData a
   | NoUserProvidedData
+  deriving (Eq,Show)
+
+instance Default (UserProvidedData a) where
+  def = NoUserProvidedData
 
 isSpoNodeOptions :: NodeOption -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True
