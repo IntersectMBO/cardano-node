@@ -125,10 +125,9 @@ instance Default CreateEnvOptions where
 
 data TestnetOnChainParams
   = DefaultParams
-  -- | A file path to a JSON file containing on-chain params, formatted as:
-  -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest
   | OnChainParamsFile FilePath
-  | OnChainParamsGeneses UserProvidedGeneses
+  -- ^ A file path to a JSON file containing on-chain params, formatted as:
+  -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest
   | OnChainParamsMainnet
   deriving (Eq, Show)
 

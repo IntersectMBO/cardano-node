@@ -35,8 +35,6 @@ import           Data.Scientific (Scientific)
 import           Data.Word (Word16, Word32)
 import           Numeric.Natural (Natural)
 
-import           Testnet.Start.Types (UserProvidedGeneses(..),  UserProvidedData(..))
-
 data BlockfrostParams = BlockfrostParams
   { -- Alonzo parameters
     bfgCoinsPerUTxOWord     :: CoinPerWord
@@ -182,13 +180,12 @@ instance FromJSON BlockfrostParams where
           Nothing -> Aeson.parseFail $ "Bogus value at key " ++ show k ++ " is neither Number nor String"
 
 -- Edit a set of Genesis files with data from Blockfrost parameters
-blockfrostToGenesis :: (AlonzoGenesis, ConwayGenesis, ShelleyGenesis) -> BlockfrostParams -> UserProvidedGeneses
+blockfrostToGenesis :: ()
+  => (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
+  -> BlockfrostParams
+  -> (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
 blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') BlockfrostParams{..} =
-  UserProvidedGeneses
-    { upgAlonzoGenesis = UserProvidedData alonzoGenesis
-    , upgConwayGenesis = UserProvidedData conwayGenesis
-    , upgShelleyGenesis = UserProvidedData shelleyGenesis
-    }
+  (alonzoGenesis, conwayGenesis, shelleyGenesis)
   where
     -- Alonzo params
     alonzoGenesis = alonzoGenesis'
