@@ -128,7 +128,6 @@ data TestnetOnChainParams
   -- | A file path to a JSON file containing on-chain params, formatted as:
   -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest
   | OnChainParamsFile FilePath
-  | OnChainParamsGeneses UserProvidedGeneses
   | OnChainParamsMainnet
   deriving (Eq, Show)
 
