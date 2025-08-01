@@ -48,6 +48,8 @@ import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import           System.Directory (getFileSize)
+import qualified System.IO.MMap as MMap
 
 ------------------------------------------------------------------------------
 -- Shelley protocol
@@ -94,12 +96,33 @@ readGenesis :: GenesisFile
                        (ShelleyGenesis, GenesisHash)
 readGenesis = readGenesisAny
 
+-- | Read a genesis file using a memory-safe strategy.
+--
+-- Genesis files are used in testing and benchmarking to create testnets with
+-- large datasets. To be able to read these files in memory constrained
+-- environments we use a conditional loading strategy: if file is below ~10
+-- megabytes it is entirely read into memory, otherwise the 'ByteString' is
+-- created using `mmap` that uses the virtual memory subsystem to do on-demand
+-- loading.
+-- With current usage and how benchmakring is done only Shelley and Conway are
+-- affected (Shelley's `initialFunds` and Conway's "delegs" and "initialDReps").
 readGenesisAny :: FromJSON genesis
                => GenesisFile
                -> Maybe GenesisHash
                -> ExceptT GenesisReadError IO (genesis, GenesisHash)
 readGenesisAny (GenesisFile file) mExpectedGenesisHash = do
-    content <- handleIOExceptT (GenesisReadFileError file) $ BS.readFile file
+    content <- handleIOExceptT (GenesisReadFileError file) $ do
+        -- Size of the file in 8-bit bytes.
+        size <- getFileSize file
+        {-- Mainnet files for reference:
+              -byron-genesis.json:   1056360 (1.1M)
+              -shelley-genesis.json:    2486 (2.5K)
+              -alonzo-genesis.json:     9459 (9.3K)
+              -conway-genesis.json:     4168 (4.1K)
+        --}
+        if size >= 10485760 -- 10 megabytes.
+        then MMap.mmapFileByteString file Nothing -- MMap version.
+        else BS.readFile file                     -- Non-lazy version.
     genesisHash <- checkExpectedGenesisHash content mExpectedGenesisHash
     genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
                  Aeson.eitherDecodeStrict' content
