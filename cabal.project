@@ -85,8 +85,8 @@ source-repository-package
     type: git
     location: https://github.com/intersectmbo/cardano-api
     -- master @ Fri Jul 25 18:47:11 2025
-    tag: 4a6ce60b0028e3062d666980574aebf6acfee9b3
-    --sha256: sha256-N+eiMtiKvNyzSa9uMZjdGGhYwEpXvI0oXH5GOvp5WyE=
+    tag: 1765e37a04a8ed3dd7455e0434c1b2b09fa609a5
+    --sha256: sha256-XkoP1eBoyQGjmq1n3Oma0OJgxRos5oW4QCQ8HSfAexo=
     subdir: cardano-api
             cardano-api-gen
             cardano-rpc
