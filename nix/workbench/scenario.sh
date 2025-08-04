@@ -69,9 +69,18 @@ case "$op" in
         scenario_setup_exit_trap     "$dir"
         # Trap start
         ############
+        # Workloads that do not request that the nodes have already started.
+        for workload in $(jq -r '.workloads[] | select(.before_nodes == true) | .name' "$dir"/profile.json)
+        do
+            backend start-workload-by-name "$dir" "$workload"
+        done
         backend start-nodes          "$dir"
         backend start-generator      "$dir"
-        backend start-workloads      "$dir"
+        # Workloads that request that the nodes have already started.
+        for workload in $(jq -r '.workloads[] | select(.before_nodes == false) | .name' "$dir"/profile.json)
+        do
+            backend start-workload-by-name "$dir" "$workload"
+        done
         backend start-healthchecks   "$dir"
         if     jqtest '.workloads == []'              "$dir"/profile.json \
             || jqtest '.workloads | any(.wait_pools)' "$dir"/profile.json
