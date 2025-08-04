@@ -23,5 +23,6 @@ latencyWorkload = Types.Workload {
       Types.pre_generator = Nothing
     , Types.producers = "latency"
     }
+  , Types.before_nodes = False
   , Types.wait_pools = False
 }

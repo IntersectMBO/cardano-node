@@ -52,7 +52,7 @@ case "${op}" in
     start-tracers )              backend_$WB_BACKEND "$@";;
     start-nodes )                backend_$WB_BACKEND "$@";;
     start-generator )            backend_$WB_BACKEND "$@";;
-    start-workloads )            backend_$WB_BACKEND "$@";;
+    start-workload-by-name )     backend_$WB_BACKEND "$@";;
     start-healthchecks )         backend_$WB_BACKEND "$@";;
     # Fine grained
     start-node )                 backend_$WB_BACKEND "$@";;

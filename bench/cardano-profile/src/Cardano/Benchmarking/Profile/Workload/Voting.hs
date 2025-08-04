@@ -26,6 +26,7 @@ votingWorkload parameters = Types.Workload {
       Types.pre_generator = Just "workflow_generator"
     , Types.producers = "workflow_producer"
     }
+  , Types.before_nodes = False
   , Types.wait_pools = True
 }
 
