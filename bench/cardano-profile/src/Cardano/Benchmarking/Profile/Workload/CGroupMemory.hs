@@ -23,5 +23,6 @@ cgroupMemoryWorkload = Types.Workload {
       Types.pre_generator = Nothing
     , Types.producers = "cgroup_memory"
     }
+  , Types.before_nodes = True
   , Types.wait_pools = True
 }

@@ -146,8 +146,8 @@ backend_nomadcloud() {
       backend_nomad start-generator         "$@"
     ;;
 
-    start-workloads )
-      backend_nomad start-workloads         "$@"
+    start-workload-by-name )
+      backend_nomad start-workload-by-name  "$@"
     ;;
 
     start-healthchecks )
