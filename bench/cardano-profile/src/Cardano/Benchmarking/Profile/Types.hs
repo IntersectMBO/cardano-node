@@ -554,6 +554,7 @@ data Workload = Workload
   { workloadName :: String
   , parameters :: Aeson.Object
   , entrypoints :: Entrypoints
+  , before_nodes :: Bool
   , wait_pools :: Bool
   }
   deriving (Eq, Show, Generic)
@@ -567,10 +568,11 @@ data Entrypoints = Entrypoints
 instance Aeson.ToJSON Workload where
   toJSON p =
     Aeson.object
-      [ "name"        Aeson..= workloadName p
-      , "parameters"  Aeson..= parameters   p
-      , "entrypoints" Aeson..= entrypoints  p
-      , "wait_pools"  Aeson..= wait_pools   p
+      [ "name"         Aeson..= workloadName p
+      , "parameters"   Aeson..= parameters   p
+      , "entrypoints"  Aeson..= entrypoints  p
+      , "before_nodes" Aeson..= before_nodes p
+      , "wait_pools"   Aeson..= wait_pools   p
       ]
 
 instance Aeson.FromJSON Workload where
@@ -580,6 +582,7 @@ instance Aeson.FromJSON Workload where
         <$> o Aeson..: "name"
         <*> o Aeson..: "parameters"
         <*> o Aeson..: "entrypoints"
+        <*> o Aeson..: "before_nodes"
         <*> o Aeson..: "wait_pools"
 
 instance Aeson.ToJSON Entrypoints

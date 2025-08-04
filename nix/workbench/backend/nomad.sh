@@ -1527,10 +1527,10 @@ backend_nomad() {
 
     ############################################################################
     # Functions to start/stop groups of cluster "programs":
-    # - start-tracers      RUN-DIR
-    # - start-nodes        RUN-DIR
-    # - start-workloads    RUN-DIR
-    # - start-healthchecks RUN-DIR
+    # - start-tracers          RUN-DIR
+    # - start-nodes            RUN-DIR
+    # - start-workload-by-name RUN-DIR
+    # - start-healthchecks     RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
@@ -1640,39 +1640,36 @@ backend_nomad() {
     ;;
 
     # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
-    start-workloads )
-      local usage="USAGE: wb backend $op RUN-DIR"
+    start-workload-by-name )
+      local usage="USAGE: wb backend $op RUN-DIR WORKLOAD-NAME"
       local dir=${1:?$usage}; shift
+      local workload=${1:?$usage}; shift
 
-      # For every workload
-      for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
+      local jobs_array=()
+      # Workload may or may not run something in all producers.
+      local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
+      for node in ${nodes[*]}
       do
-        local jobs_array=()
-        # Workload may or may not run something in all producers.
-        local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad start-workload "${dir}" "${workload}" "${node}" &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
-        then
-          if ! wait_kill_em_all "${jobs_array[@]}"
-          then
-            fatal "Failed to start workload(s)"
-            return 1
-          else
-            for node in ${nodes[*]}
-            do
-              if ! test -f "${dir}"/workloads/"${workload}"/"${node}"/started
-              then
-                fatal "Workload \"${workload}\" for \"${node}\" failed to start!"
-              fi
-            done
-          fi
-        fi
+        backend_nomad start-workload "${dir}" "${workload}" "${node}" &
+        jobs_array+=("$!")
       done
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_kill_em_all "${jobs_array[@]}"
+        then
+          fatal "Failed to start workload(s)"
+          return 1
+        else
+          for node in ${nodes[*]}
+          do
+            if ! test -f "${dir}"/workloads/"${workload}"/"${node}"/started
+            then
+              fatal "Workload \"${workload}\" for \"${node}\" failed to start!"
+            fi
+          done
+        fi
+      fi
       return 0
     ;;
 

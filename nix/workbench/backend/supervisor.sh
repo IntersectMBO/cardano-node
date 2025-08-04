@@ -300,28 +300,25 @@ EOF
         fi
         backend_supervisor save-child-pids "$dir";;
 
-    start-workloads )
+    start-workload-by-name )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
+        local workload=${1:?$usage}; shift
 
         while test $# -gt 0
         do case "$1" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
-        # For every workload
-        for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
-        do
-            if ! supervisorctl start "${workload}"
-            then progress "supervisor" "$(red fatal: failed to start) $(white "${workload} workload")"
-                 echo "$(red "${workload}" workload stdout) ----------------------" >&2
-                 cat "$dir"/workloads/"${workload}"/stdout
-                 echo "$(red "${workload}" workload stderr) ----------------------" >&2
-                 cat "$dir"/workloads/"${workload}"/stderr
-                 echo "$(white -------------------------------------------------)" >&2
-                 fatal "could not start $(white "${workload} workload")"
-            fi
-        done
+        if ! supervisorctl start "${workload}"
+        then progress "supervisor" "$(red fatal: failed to start) $(white "${workload} workload")"
+             echo "$(red "${workload}" workload stdout) ----------------------" >&2
+             cat "$dir"/workloads/"${workload}"/stdout
+             echo "$(red "${workload}" workload stderr) ----------------------" >&2
+             cat "$dir"/workloads/"${workload}"/stderr
+             echo "$(white -------------------------------------------------)" >&2
+             fatal "could not start $(white "${workload} workload")"
+        fi
         backend_supervisor save-child-pids "$dir";;
 
     wait-node-stopped )
