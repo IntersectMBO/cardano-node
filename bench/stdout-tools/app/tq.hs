@@ -40,6 +40,7 @@ module Main (main) where
 
 -- base.
 import           Control.Applicative (some, (<|>))
+import           System.IO (hPutStrLn, stderr)
 -- package: time.
 import           Data.Time.Clock (getCurrentTime, diffUTCTime)
 -- package: async.
@@ -145,28 +146,30 @@ optsParser = CliOpts <$>
 run :: CliOpts -> IO ()
 run (CliOpts _ _ []) = putStrLn "Nothing to do, bye!"
 run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
-  t0 <- getCurrentTime
-  print b
+  -- Will print to stderr the time elapsed.
+  t0 <- getCurrentTime  
+  -- Print filter used to stderr and as a top line comment.
+  hPutStrLn stderr (show b)
+  putStrLn $ "# " ++ show b
   if not parallel
   then do
-    ------------------------------------
-    putStrLn "-------------------------"
-    putStrLn "Apply filter to all files"
-    putStrLn "-------------------------"
-    ------------------------------------
+    -------------------------------------------------------
+    hPutStrLn stderr "------------------------------------"
+    hPutStrLn stderr "Apply filter to all files one by one"
+    hPutStrLn stderr "------------------------------------"
+    -------------------------------------------------------
     mapM_
       (\(logName,fp) -> do
         ans <- FilterReduce.filterReduce f r fp
-        print logName
-        Reducer.printAns r ans
+        fileOutput logName r ans
       )
       (files cliOpts)
   else do
-    ---------------------------------------------------------
-    putStrLn "----------------------------------------------"
-    putStrLn "Do the same with all files but now in parallel"
-    putStrLn "----------------------------------------------"
-    ---------------------------------------------------------
+    -----------------------------------------------------------------
+    hPutStrLn stderr "----------------------------------------------"
+    hPutStrLn stderr "Do the same with all files but now in parallel"
+    hPutStrLn stderr "----------------------------------------------"
+    -----------------------------------------------------------------
     ansParallel <- Async.mapConcurrently
       (\(logName,fp) -> do
         ans <- FilterReduce.filterReduce f r fp
@@ -175,15 +178,21 @@ run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
       (files cliOpts)
     mapM_
       (\(logName,ans) -> do
-        putStrLn $ "# " ++ logName
-        Reducer.printAns r ans
-        putStrLn ""
+        fileOutput logName r ans
       )
       ansParallel
   t1 <- getCurrentTime
-  print $ diffUTCTime t1 t0
+  hPutStrLn stderr $ show $ diffUTCTime t1 t0
   -- End
   return ()
+
+fileOutput :: Reducer.Reducer r => String -> r -> Reducer.Accum r -> IO ()
+fileOutput logName r acc = do
+  putStrLn $ "# " ++ logName  
+  Reducer.printAns r acc
+  -- Two empty lines so gnuplot undertands it as a different data block.
+  putStrLn ""
+  putStrLn ""
 
 --------------------------------------------------------------------------------
 
