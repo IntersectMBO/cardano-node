@@ -39,7 +39,7 @@ MaxKnownMajorProtocolVersion: 2
 PeerSharing: True
 
 # The following control the number of outbound connections to strictly our upstream peers
-# cf. https://developers.cardano.org/docs/get-started/cardano-node/p2p
+# cf. https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/topology
 # defaults are provided by ouroboros-network, but can be overridden by uncommenting below:
 # SyncTargetNumberOfActiveBigLedgerPeers: 30
 # SyncTargetNumberOfActivePeers: 5

@@ -155,12 +155,13 @@ data BasicInfoCommon = BasicInfoCommon {
   , biNodeStartTime :: UTCTime
   }
 
+-- Fields of this type are made strict to be sure no path from GC roots to genesis is retained
 data BasicInfoShelleyBased = BasicInfoShelleyBased {
-    bisEra               :: Text
-  , bisSystemStartTime   :: UTCTime
-  , bisSlotLength        :: NominalDiffTime
-  , bisEpochLength       :: Word64
-  , bisSlotsPerKESPeriod :: Word64
+    bisEra               :: !Text
+  , bisSystemStartTime   :: !UTCTime
+  , bisSlotLength        :: !NominalDiffTime
+  , bisEpochLength       :: !Word64
+  , bisSlotsPerKESPeriod :: !Word64
   }
 
 data BasicInfoByron = BasicInfoByron {

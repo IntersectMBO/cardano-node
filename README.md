@@ -45,11 +45,11 @@ stateDiagram-v2
 
 The process for getting a `cardano-node` executable can be found in the
 [Cardano Developer
-Portal](https://developers.cardano.org/docs/get-started/cardano-node/installing-cardano-node).
+Portal](https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/installing-cardano-node).
 
 The configuration and files required to run a `cardano-node` in one of the
 supported networks are described also in the [Cardano Developer
-Portal](https://developers.cardano.org/docs/get-started/cardano-node/running-cardano).
+Portal](https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/running-cardano).
 
 # Using `cardano-node` and dependencies as a library
 
