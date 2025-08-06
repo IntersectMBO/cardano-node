@@ -1,0 +1,1434 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679397221"><span id="local-6989586621679397222"><span id="local-6989586621679397223"><span id="local-6989586621679397224"><span id="local-6989586621679397225"><span id="local-6989586621679397226"><span id="local-6989586621679397227"><span id="local-6989586621679397228"><span id="local-6989586621679397229"><span id="local-6989586621679397230"><span id="local-6989586621679397231"><span id="local-6989586621679397232"><span id="local-6989586621679397233"><span id="local-6989586621679397234"><span id="local-6989586621679397235"><span id="local-6989586621679397236"><span id="local-6989586621679397237"><span id="local-6989586621679397238"><span id="local-6989586621679397239"><span id="local-6989586621679397240"><span id="local-6989586621679397241"></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.SourceRepo</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier">SourceRepo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier">RepoKind</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier">RepoType</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier">KnownRepoType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#knownRepoTypes"><span class="hs-identifier">knownRepoTypes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#emptySourceRepo"><span class="hs-identifier">emptySourceRepo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#classifyRepoType"><span class="hs-identifier">classifyRepoType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#classifyRepoKind"><span class="hs-identifier">classifyRepoKind</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#lowercase"><span class="hs-identifier">lowercase</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Strict.html#/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- ------------------------------------------------------------</span><span>
+</span><span id="line-28"></span><span class="annot"><span class="hs-comment">-- * Source repos</span></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- ------------------------------------------------------------</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- | Information about the source revision control system for a package.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- When specifying a repo it is useful to know the meaning or intention of the</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- information as doing so enables automation. There are two obvious common</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- purposes: one is to find the repo for the latest development version, the</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- other is to find the repo for this specific release. The 'ReopKind'</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- specifies which one we mean (or another custom one).</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- A package can specify one or the other kind or both. Most will specify just</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- a head repo but some may want to specify a repo to reconstruct the sources</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- for this package release.</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- The required information is the 'RepoType' which tells us if it's using</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- 'Darcs', 'Git' for example. The 'repoLocation' and other details are</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- interpreted according to the repo type.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="SourceRepo"><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier hs-var">SourceRepo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SourceRepo"><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier hs-var">SourceRepo</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="hs-comment">-- | The kind of repo. This field is required.</span></span><span>
+</span><span id="line-49"></span><span>  </span><span id="repoKind"><span class="annot"><span class="annottext">SourceRepo -&gt; RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#repoKind"><span class="hs-identifier hs-var hs-var">repoKind</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-comment">-- | The type of the source repository system for this repo, eg 'Darcs' or</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-comment">-- 'Git'. This field is required.</span><span>
+</span><span id="line-53"></span><span>  </span><span id="repoType"><span class="annot"><span class="annottext">SourceRepo -&gt; Maybe RepoType
+</span><a href="Distribution.Types.SourceRepo.html#repoType"><span class="hs-identifier hs-var hs-var">repoType</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-type">RepoType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-comment">-- | The location of the repository. For most 'RepoType's this is a URL.</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-comment">-- This field is required.</span><span>
+</span><span id="line-57"></span><span>  </span><span id="repoLocation"><span class="annot"><span class="annottext">SourceRepo -&gt; Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoLocation"><span class="hs-identifier hs-var hs-var">repoLocation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-comment">-- | 'CVS' can put multiple \&quot;modules\&quot; on one server and requires a</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-comment">-- module name in addition to the location to identify a particular repo.</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-comment">-- Logically this is part of the location but unfortunately has to be</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-comment">-- specified separately. This field is required for the 'CVS' 'RepoType' and</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-comment">-- should not be given otherwise.</span><span>
+</span><span id="line-64"></span><span>  </span><span id="repoModule"><span class="annot"><span class="annottext">SourceRepo -&gt; Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoModule"><span class="hs-identifier hs-var hs-var">repoModule</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-comment">-- | The name or identifier of the branch, if any. Many source control</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">-- systems have the notion of multiple branches in a repo that exist in the</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- same location. For example 'Git' and 'CVS' use this while systems like</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-comment">-- 'Darcs' use different locations for different branches. This field is</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-comment">-- optional but should be used if necessary to identify the sources,</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-comment">-- especially for the 'RepoThis' repo kind.</span><span>
+</span><span id="line-72"></span><span>  </span><span id="repoBranch"><span class="annot"><span class="annottext">SourceRepo -&gt; Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoBranch"><span class="hs-identifier hs-var hs-var">repoBranch</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-comment">-- | The tag identify a particular state of the repository. This should be</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-comment">-- given for the 'RepoThis' repo kind and not for 'RepoHead' kind.</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span>  </span><span id="repoTag"><span class="annot"><span class="annottext">SourceRepo -&gt; Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoTag"><span class="hs-identifier hs-var hs-var">repoTag</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-comment">-- | Some repositories contain multiple projects in different subdirectories</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-comment">-- This field specifies the subdirectory where this packages sources can be</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-comment">-- found, eg the subdirectory containing the @.cabal@ file. It is interpreted</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- relative to the root of the repository. This field is optional. If not</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-comment">-- given the default is \&quot;.\&quot; ie no subdirectory.</span><span>
+</span><span id="line-84"></span><span>  </span><span id="repoSubdir"><span class="annot"><span class="annottext">SourceRepo -&gt; Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoSubdir"><span class="hs-identifier hs-var hs-var">repoSubdir</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-85"></span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679397277"><span id="local-6989586621679397290"><span class="annot"><span class="annottext">SourceRepo -&gt; SourceRepo -&gt; Bool
+(SourceRepo -&gt; SourceRepo -&gt; Bool)
+-&gt; (SourceRepo -&gt; SourceRepo -&gt; Bool) -&gt; Eq SourceRepo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SourceRepo -&gt; SourceRepo -&gt; Bool
+== :: SourceRepo -&gt; SourceRepo -&gt; Bool
+$c/= :: SourceRepo -&gt; SourceRepo -&gt; Bool
+/= :: SourceRepo -&gt; SourceRepo -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397299"><span id="local-6989586621679397311"><span id="local-6989586621679397321"><span id="local-6989586621679397325"><span id="local-6989586621679397328"><span id="local-6989586621679397331"><span id="local-6989586621679397334"><span class="annot"><span class="annottext">Eq SourceRepo
+Eq SourceRepo =&gt;
+(SourceRepo -&gt; SourceRepo -&gt; Ordering)
+-&gt; (SourceRepo -&gt; SourceRepo -&gt; Bool)
+-&gt; (SourceRepo -&gt; SourceRepo -&gt; Bool)
+-&gt; (SourceRepo -&gt; SourceRepo -&gt; Bool)
+-&gt; (SourceRepo -&gt; SourceRepo -&gt; Bool)
+-&gt; (SourceRepo -&gt; SourceRepo -&gt; SourceRepo)
+-&gt; (SourceRepo -&gt; SourceRepo -&gt; SourceRepo)
+-&gt; Ord SourceRepo
+SourceRepo -&gt; SourceRepo -&gt; Bool
+SourceRepo -&gt; SourceRepo -&gt; Ordering
+SourceRepo -&gt; SourceRepo -&gt; SourceRepo
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: SourceRepo -&gt; SourceRepo -&gt; Ordering
+compare :: SourceRepo -&gt; SourceRepo -&gt; Ordering
+$c&lt; :: SourceRepo -&gt; SourceRepo -&gt; Bool
+&lt; :: SourceRepo -&gt; SourceRepo -&gt; Bool
+$c&lt;= :: SourceRepo -&gt; SourceRepo -&gt; Bool
+&lt;= :: SourceRepo -&gt; SourceRepo -&gt; Bool
+$c&gt; :: SourceRepo -&gt; SourceRepo -&gt; Bool
+&gt; :: SourceRepo -&gt; SourceRepo -&gt; Bool
+$c&gt;= :: SourceRepo -&gt; SourceRepo -&gt; Bool
+&gt;= :: SourceRepo -&gt; SourceRepo -&gt; Bool
+$cmax :: SourceRepo -&gt; SourceRepo -&gt; SourceRepo
+max :: SourceRepo -&gt; SourceRepo -&gt; SourceRepo
+$cmin :: SourceRepo -&gt; SourceRepo -&gt; SourceRepo
+min :: SourceRepo -&gt; SourceRepo -&gt; SourceRepo
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397339"><span id="local-6989586621679397341"><span class="annot"><span class="annottext">(forall x. SourceRepo -&gt; Rep SourceRepo x)
+-&gt; (forall x. Rep SourceRepo x -&gt; SourceRepo) -&gt; Generic SourceRepo
+forall x. Rep SourceRepo x -&gt; SourceRepo
+forall x. SourceRepo -&gt; Rep SourceRepo x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. SourceRepo -&gt; Rep SourceRepo x
+from :: forall x. SourceRepo -&gt; Rep SourceRepo x
+$cto :: forall x. Rep SourceRepo x -&gt; SourceRepo
+to :: forall x. Rep SourceRepo x -&gt; SourceRepo
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397345"><span id="local-6989586621679397349"><span id="local-6989586621679397352"><span id="local-6989586621679397383"><span class="annot"><span class="annottext">ReadPrec [SourceRepo]
+ReadPrec SourceRepo
+Int -&gt; ReadS SourceRepo
+ReadS [SourceRepo]
+(Int -&gt; ReadS SourceRepo)
+-&gt; ReadS [SourceRepo]
+-&gt; ReadPrec SourceRepo
+-&gt; ReadPrec [SourceRepo]
+-&gt; Read SourceRepo
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS SourceRepo
+readsPrec :: Int -&gt; ReadS SourceRepo
+$creadList :: ReadS [SourceRepo]
+readList :: ReadS [SourceRepo]
+$creadPrec :: ReadPrec SourceRepo
+readPrec :: ReadPrec SourceRepo
+$creadListPrec :: ReadPrec [SourceRepo]
+readListPrec :: ReadPrec [SourceRepo]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397391"><span id="local-6989586621679397406"><span id="local-6989586621679397410"><span class="annot"><span class="annottext">Int -&gt; SourceRepo -&gt; ShowS
+[SourceRepo] -&gt; ShowS
+SourceRepo -&gt; String
+(Int -&gt; SourceRepo -&gt; ShowS)
+-&gt; (SourceRepo -&gt; String)
+-&gt; ([SourceRepo] -&gt; ShowS)
+-&gt; Show SourceRepo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SourceRepo -&gt; ShowS
+showsPrec :: Int -&gt; SourceRepo -&gt; ShowS
+$cshow :: SourceRepo -&gt; String
+show :: SourceRepo -&gt; String
+$cshowList :: [SourceRepo] -&gt; ShowS
+showList :: [SourceRepo] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397420"><span id="local-6989586621679397433"><span id="local-6989586621679397444"><span id="local-6989586621679397446"><span id="local-6989586621679397448"><span id="local-6989586621679397454"><span id="local-6989586621679397459"><span id="local-6989586621679397462"><span id="local-6989586621679397465"><span id="local-6989586621679397468"><span id="local-6989586621679397471"><span id="local-6989586621679397474"><span id="local-6989586621679397479"><span id="local-6989586621679397484"><span class="annot"><span class="annottext">Typeable SourceRepo
+Typeable SourceRepo =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; SourceRepo -&gt; c SourceRepo)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SourceRepo)
+-&gt; (SourceRepo -&gt; Constr)
+-&gt; (SourceRepo -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SourceRepo))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c SourceRepo))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; SourceRepo -&gt; SourceRepo)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo)
+-&gt; Data SourceRepo
+SourceRepo -&gt; Constr
+SourceRepo -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; SourceRepo -&gt; SourceRepo
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SourceRepo
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SourceRepo -&gt; c SourceRepo
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SourceRepo)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c SourceRepo)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SourceRepo -&gt; c SourceRepo
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SourceRepo -&gt; c SourceRepo
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SourceRepo
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SourceRepo
+$ctoConstr :: SourceRepo -&gt; Constr
+toConstr :: SourceRepo -&gt; Constr
+$cdataTypeOf :: SourceRepo -&gt; DataType
+dataTypeOf :: SourceRepo -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SourceRepo)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SourceRepo)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c SourceRepo)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c SourceRepo)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; SourceRepo -&gt; SourceRepo
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; SourceRepo -&gt; SourceRepo
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SourceRepo -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SourceRepo -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SourceRepo -&gt; m SourceRepo
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#emptySourceRepo"><span class="hs-identifier hs-type">emptySourceRepo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier hs-type">SourceRepo</span></a></span><span>
+</span><span id="line-89"></span><span id="emptySourceRepo"><span class="annot"><span class="annottext">emptySourceRepo :: RepoKind -&gt; SourceRepo
+</span><a href="Distribution.Types.SourceRepo.html#emptySourceRepo"><span class="hs-identifier hs-var hs-var">emptySourceRepo</span></a></span></span><span> </span><span id="local-6989586621679397494"><span class="annot"><span class="annottext">RepoKind
+</span><a href="#local-6989586621679397494"><span class="hs-identifier hs-var">kind</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier hs-type">SourceRepo</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">repoKind :: RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#repoKind"><span class="hs-identifier hs-var">repoKind</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RepoKind
+</span><a href="#local-6989586621679397494"><span class="hs-identifier hs-var">kind</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">repoType :: Maybe RepoType
+</span><a href="Distribution.Types.SourceRepo.html#repoType"><span class="hs-identifier hs-var">repoType</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe RepoType
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">repoLocation :: Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoLocation"><span class="hs-identifier hs-var">repoLocation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">repoModule :: Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoModule"><span class="hs-identifier hs-var">repoModule</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">repoBranch :: Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoBranch"><span class="hs-identifier hs-var">repoBranch</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">repoTag :: Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoTag"><span class="hs-identifier hs-var">repoTag</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">repoSubdir :: Maybe String
+</span><a href="Distribution.Types.SourceRepo.html#repoSubdir"><span class="hs-identifier hs-var">repoSubdir</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679397496"><span id="local-6989586621679397503"><span id="local-6989586621679397509"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier hs-type">SourceRepo</span></a></span></span></span></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679397572"><span id="local-6989586621679397579"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier hs-type">SourceRepo</span></a></span></span></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#SourceRepo"><span class="hs-identifier hs-type">SourceRepo</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679397674"><span class="annot"><span class="annottext">rnf :: SourceRepo -&gt; ()
+</span><a href="#local-6989586621679397674"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SourceRepo -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- | What this repo info is for, what it represents.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span class="hs-keyword">data</span><span> </span><span id="RepoKind"><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-var">RepoKind</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- | The repository for the \&quot;head\&quot; or development version of the project.</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- This repo is where we should track the latest development activity or</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- the usual repo people should get to contribute patches.</span><span>
+</span><span id="line-109"></span><span>    </span><span id="RepoHead"><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoHead"><span class="hs-identifier hs-var">RepoHead</span></a></span></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- | The repository containing the sources for this exact package version</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- or release. For this kind of repo a tag should be given to give enough</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">-- information to re-create the exact sources.</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RepoThis"><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoThis"><span class="hs-identifier hs-var">RepoThis</span></a></span></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RepoKindUnknown"><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKindUnknown"><span class="hs-identifier hs-var">RepoKindUnknown</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679397679"><span id="local-6989586621679397682"><span class="annot"><span class="annottext">RepoKind -&gt; RepoKind -&gt; Bool
+(RepoKind -&gt; RepoKind -&gt; Bool)
+-&gt; (RepoKind -&gt; RepoKind -&gt; Bool) -&gt; Eq RepoKind
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: RepoKind -&gt; RepoKind -&gt; Bool
+== :: RepoKind -&gt; RepoKind -&gt; Bool
+$c/= :: RepoKind -&gt; RepoKind -&gt; Bool
+/= :: RepoKind -&gt; RepoKind -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397685"><span id="local-6989586621679397687"><span class="annot"><span class="annottext">(forall x. RepoKind -&gt; Rep RepoKind x)
+-&gt; (forall x. Rep RepoKind x -&gt; RepoKind) -&gt; Generic RepoKind
+forall x. Rep RepoKind x -&gt; RepoKind
+forall x. RepoKind -&gt; Rep RepoKind x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. RepoKind -&gt; Rep RepoKind x
+from :: forall x. RepoKind -&gt; Rep RepoKind x
+$cto :: forall x. Rep RepoKind x -&gt; RepoKind
+to :: forall x. Rep RepoKind x -&gt; RepoKind
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397692"><span id="local-6989586621679397695"><span id="local-6989586621679397698"><span id="local-6989586621679397701"><span id="local-6989586621679397704"><span id="local-6989586621679397707"><span id="local-6989586621679397710"><span class="annot"><span class="annottext">Eq RepoKind
+Eq RepoKind =&gt;
+(RepoKind -&gt; RepoKind -&gt; Ordering)
+-&gt; (RepoKind -&gt; RepoKind -&gt; Bool)
+-&gt; (RepoKind -&gt; RepoKind -&gt; Bool)
+-&gt; (RepoKind -&gt; RepoKind -&gt; Bool)
+-&gt; (RepoKind -&gt; RepoKind -&gt; Bool)
+-&gt; (RepoKind -&gt; RepoKind -&gt; RepoKind)
+-&gt; (RepoKind -&gt; RepoKind -&gt; RepoKind)
+-&gt; Ord RepoKind
+RepoKind -&gt; RepoKind -&gt; Bool
+RepoKind -&gt; RepoKind -&gt; Ordering
+RepoKind -&gt; RepoKind -&gt; RepoKind
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: RepoKind -&gt; RepoKind -&gt; Ordering
+compare :: RepoKind -&gt; RepoKind -&gt; Ordering
+$c&lt; :: RepoKind -&gt; RepoKind -&gt; Bool
+&lt; :: RepoKind -&gt; RepoKind -&gt; Bool
+$c&lt;= :: RepoKind -&gt; RepoKind -&gt; Bool
+&lt;= :: RepoKind -&gt; RepoKind -&gt; Bool
+$c&gt; :: RepoKind -&gt; RepoKind -&gt; Bool
+&gt; :: RepoKind -&gt; RepoKind -&gt; Bool
+$c&gt;= :: RepoKind -&gt; RepoKind -&gt; Bool
+&gt;= :: RepoKind -&gt; RepoKind -&gt; Bool
+$cmax :: RepoKind -&gt; RepoKind -&gt; RepoKind
+max :: RepoKind -&gt; RepoKind -&gt; RepoKind
+$cmin :: RepoKind -&gt; RepoKind -&gt; RepoKind
+min :: RepoKind -&gt; RepoKind -&gt; RepoKind
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397713"><span id="local-6989586621679397716"><span id="local-6989586621679397719"><span id="local-6989586621679397728"><span class="annot"><span class="annottext">ReadPrec [RepoKind]
+ReadPrec RepoKind
+Int -&gt; ReadS RepoKind
+ReadS [RepoKind]
+(Int -&gt; ReadS RepoKind)
+-&gt; ReadS [RepoKind]
+-&gt; ReadPrec RepoKind
+-&gt; ReadPrec [RepoKind]
+-&gt; Read RepoKind
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS RepoKind
+readsPrec :: Int -&gt; ReadS RepoKind
+$creadList :: ReadS [RepoKind]
+readList :: ReadS [RepoKind]
+$creadPrec :: ReadPrec RepoKind
+readPrec :: ReadPrec RepoKind
+$creadListPrec :: ReadPrec [RepoKind]
+readListPrec :: ReadPrec [RepoKind]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397731"><span id="local-6989586621679397736"><span id="local-6989586621679397739"><span class="annot"><span class="annottext">Int -&gt; RepoKind -&gt; ShowS
+[RepoKind] -&gt; ShowS
+RepoKind -&gt; String
+(Int -&gt; RepoKind -&gt; ShowS)
+-&gt; (RepoKind -&gt; String) -&gt; ([RepoKind] -&gt; ShowS) -&gt; Show RepoKind
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RepoKind -&gt; ShowS
+showsPrec :: Int -&gt; RepoKind -&gt; ShowS
+$cshow :: RepoKind -&gt; String
+show :: RepoKind -&gt; String
+$cshowList :: [RepoKind] -&gt; ShowS
+showList :: [RepoKind] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397744"><span id="local-6989586621679397748"><span id="local-6989586621679397752"><span id="local-6989586621679397754"><span id="local-6989586621679397756"><span id="local-6989586621679397761"><span id="local-6989586621679397766"><span id="local-6989586621679397769"><span id="local-6989586621679397772"><span id="local-6989586621679397775"><span id="local-6989586621679397778"><span id="local-6989586621679397781"><span id="local-6989586621679397786"><span id="local-6989586621679397791"><span class="annot"><span class="annottext">Typeable RepoKind
+Typeable RepoKind =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; RepoKind -&gt; c RepoKind)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoKind)
+-&gt; (RepoKind -&gt; Constr)
+-&gt; (RepoKind -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoKind))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoKind))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; RepoKind -&gt; RepoKind)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind)
+-&gt; Data RepoKind
+RepoKind -&gt; Constr
+RepoKind -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; RepoKind -&gt; RepoKind
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoKind
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; RepoKind -&gt; c RepoKind
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoKind)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoKind)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; RepoKind -&gt; c RepoKind
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; RepoKind -&gt; c RepoKind
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoKind
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoKind
+$ctoConstr :: RepoKind -&gt; Constr
+toConstr :: RepoKind -&gt; Constr
+$cdataTypeOf :: RepoKind -&gt; DataType
+dataTypeOf :: RepoKind -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoKind)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoKind)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoKind)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoKind)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; RepoKind -&gt; RepoKind
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; RepoKind -&gt; RepoKind
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoKind -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoKind -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoKind -&gt; m RepoKind
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679397796"><span id="local-6989586621679397802"><span id="local-6989586621679397808"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span></span></span></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679397851"><span id="local-6989586621679397857"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span></span></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679397904"><span class="annot"><span class="annottext">rnf :: RepoKind -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RepoKind -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- | An enumeration of common source control systems. The fields used in the</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- 'SourceRepo' depend on the type of repo. The tools and methods used to</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- obtain and track the repo depend on the repo type.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-keyword">data</span><span> </span><span id="KnownRepoType"><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-var">KnownRepoType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Darcs"><span class="annot"><a href="Distribution.Types.SourceRepo.html#Darcs"><span class="hs-identifier hs-var">Darcs</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Git"><span class="annot"><a href="Distribution.Types.SourceRepo.html#Git"><span class="hs-identifier hs-var">Git</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="SVN"><span class="annot"><a href="Distribution.Types.SourceRepo.html#SVN"><span class="hs-identifier hs-var">SVN</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="CVS"><span class="annot"><a href="Distribution.Types.SourceRepo.html#CVS"><span class="hs-identifier hs-var">CVS</span></a></span></span><span>
+</span><span id="line-128"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="Mercurial"><span class="annot"><a href="Distribution.Types.SourceRepo.html#Mercurial"><span class="hs-identifier hs-var">Mercurial</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="GnuArch"><span class="annot"><a href="Distribution.Types.SourceRepo.html#GnuArch"><span class="hs-identifier hs-var">GnuArch</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Bazaar"><span class="annot"><a href="Distribution.Types.SourceRepo.html#Bazaar"><span class="hs-identifier hs-var">Bazaar</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Monotone"><span class="annot"><a href="Distribution.Types.SourceRepo.html#Monotone"><span class="hs-identifier hs-var">Monotone</span></a></span></span><span>
+</span><span id="line-129"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="Pijul"><span class="annot"><a href="Distribution.Types.SourceRepo.html#Pijul"><span class="hs-identifier hs-var">Pijul</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @since 3.4.0.0</span></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679397912"><span id="local-6989586621679397914"><span class="annot"><span class="annottext">KnownRepoType -&gt; KnownRepoType -&gt; Bool
+(KnownRepoType -&gt; KnownRepoType -&gt; Bool)
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; Bool) -&gt; Eq KnownRepoType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+== :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+$c/= :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+/= :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397918"><span id="local-6989586621679397920"><span class="annot"><span class="annottext">(forall x. KnownRepoType -&gt; Rep KnownRepoType x)
+-&gt; (forall x. Rep KnownRepoType x -&gt; KnownRepoType)
+-&gt; Generic KnownRepoType
+forall x. Rep KnownRepoType x -&gt; KnownRepoType
+forall x. KnownRepoType -&gt; Rep KnownRepoType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. KnownRepoType -&gt; Rep KnownRepoType x
+from :: forall x. KnownRepoType -&gt; Rep KnownRepoType x
+$cto :: forall x. Rep KnownRepoType x -&gt; KnownRepoType
+to :: forall x. Rep KnownRepoType x -&gt; KnownRepoType
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397925"><span id="local-6989586621679397927"><span id="local-6989586621679397929"><span id="local-6989586621679397933"><span id="local-6989586621679397936"><span id="local-6989586621679397939"><span id="local-6989586621679397942"><span class="annot"><span class="annottext">Eq KnownRepoType
+Eq KnownRepoType =&gt;
+(KnownRepoType -&gt; KnownRepoType -&gt; Ordering)
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; Bool)
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; Bool)
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; Bool)
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; Bool)
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType)
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType)
+-&gt; Ord KnownRepoType
+KnownRepoType -&gt; KnownRepoType -&gt; Bool
+KnownRepoType -&gt; KnownRepoType -&gt; Ordering
+KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: KnownRepoType -&gt; KnownRepoType -&gt; Ordering
+compare :: KnownRepoType -&gt; KnownRepoType -&gt; Ordering
+$c&lt; :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+&lt; :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+$c&lt;= :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+&lt;= :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+$c&gt; :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+&gt; :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+$c&gt;= :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+&gt;= :: KnownRepoType -&gt; KnownRepoType -&gt; Bool
+$cmax :: KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType
+max :: KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType
+$cmin :: KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType
+min :: KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397945"><span id="local-6989586621679397949"><span id="local-6989586621679397952"><span id="local-6989586621679397963"><span class="annot"><span class="annottext">ReadPrec [KnownRepoType]
+ReadPrec KnownRepoType
+Int -&gt; ReadS KnownRepoType
+ReadS [KnownRepoType]
+(Int -&gt; ReadS KnownRepoType)
+-&gt; ReadS [KnownRepoType]
+-&gt; ReadPrec KnownRepoType
+-&gt; ReadPrec [KnownRepoType]
+-&gt; Read KnownRepoType
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS KnownRepoType
+readsPrec :: Int -&gt; ReadS KnownRepoType
+$creadList :: ReadS [KnownRepoType]
+readList :: ReadS [KnownRepoType]
+$creadPrec :: ReadPrec KnownRepoType
+readPrec :: ReadPrec KnownRepoType
+$creadListPrec :: ReadPrec [KnownRepoType]
+readListPrec :: ReadPrec [KnownRepoType]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397966"><span id="local-6989586621679397968"><span id="local-6989586621679397972"><span class="annot"><span class="annottext">Int -&gt; KnownRepoType -&gt; ShowS
+[KnownRepoType] -&gt; ShowS
+KnownRepoType -&gt; String
+(Int -&gt; KnownRepoType -&gt; ShowS)
+-&gt; (KnownRepoType -&gt; String)
+-&gt; ([KnownRepoType] -&gt; ShowS)
+-&gt; Show KnownRepoType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; KnownRepoType -&gt; ShowS
+showsPrec :: Int -&gt; KnownRepoType -&gt; ShowS
+$cshow :: KnownRepoType -&gt; String
+show :: KnownRepoType -&gt; String
+$cshowList :: [KnownRepoType] -&gt; ShowS
+showList :: [KnownRepoType] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679397977"><span id="local-6989586621679397979"><span id="local-6989586621679397981"><span id="local-6989586621679397983"><span id="local-6989586621679397985"><span id="local-6989586621679397991"><span id="local-6989586621679397996"><span id="local-6989586621679397999"><span id="local-6989586621679398002"><span id="local-6989586621679398005"><span id="local-6989586621679398008"><span id="local-6989586621679398011"><span id="local-6989586621679398016"><span id="local-6989586621679398021"><span class="annot"><span class="annottext">Typeable KnownRepoType
+Typeable KnownRepoType =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; KnownRepoType -&gt; c KnownRepoType)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c KnownRepoType)
+-&gt; (KnownRepoType -&gt; Constr)
+-&gt; (KnownRepoType -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c KnownRepoType))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c KnownRepoType))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; KnownRepoType -&gt; KnownRepoType)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType)
+-&gt; Data KnownRepoType
+KnownRepoType -&gt; Constr
+KnownRepoType -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; KnownRepoType -&gt; KnownRepoType
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c KnownRepoType
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; KnownRepoType -&gt; c KnownRepoType
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c KnownRepoType)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c KnownRepoType)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; KnownRepoType -&gt; c KnownRepoType
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; KnownRepoType -&gt; c KnownRepoType
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c KnownRepoType
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c KnownRepoType
+$ctoConstr :: KnownRepoType -&gt; Constr
+toConstr :: KnownRepoType -&gt; Constr
+$cdataTypeOf :: KnownRepoType -&gt; DataType
+dataTypeOf :: KnownRepoType -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c KnownRepoType)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c KnownRepoType)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c KnownRepoType)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c KnownRepoType)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; KnownRepoType -&gt; KnownRepoType
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; KnownRepoType -&gt; KnownRepoType
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; KnownRepoType -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; KnownRepoType -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; KnownRepoType -&gt; m KnownRepoType
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398026"><span id="local-6989586621679398034"><span id="local-6989586621679398040"><span id="local-6989586621679398049"><span id="local-6989586621679398051"><span id="local-6989586621679398055"><span id="local-6989586621679398059"><span id="local-6989586621679398062"><span class="annot"><span class="annottext">Int -&gt; KnownRepoType
+KnownRepoType -&gt; Int
+KnownRepoType -&gt; [KnownRepoType]
+KnownRepoType -&gt; KnownRepoType
+KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+(KnownRepoType -&gt; KnownRepoType)
+-&gt; (KnownRepoType -&gt; KnownRepoType)
+-&gt; (Int -&gt; KnownRepoType)
+-&gt; (KnownRepoType -&gt; Int)
+-&gt; (KnownRepoType -&gt; [KnownRepoType])
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType])
+-&gt; (KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType])
+-&gt; (KnownRepoType
+    -&gt; KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType])
+-&gt; Enum KnownRepoType
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: KnownRepoType -&gt; KnownRepoType
+succ :: KnownRepoType -&gt; KnownRepoType
+$cpred :: KnownRepoType -&gt; KnownRepoType
+pred :: KnownRepoType -&gt; KnownRepoType
+$ctoEnum :: Int -&gt; KnownRepoType
+toEnum :: Int -&gt; KnownRepoType
+$cfromEnum :: KnownRepoType -&gt; Int
+fromEnum :: KnownRepoType -&gt; Int
+$cenumFrom :: KnownRepoType -&gt; [KnownRepoType]
+enumFrom :: KnownRepoType -&gt; [KnownRepoType]
+$cenumFromThen :: KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+enumFromThen :: KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+$cenumFromTo :: KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+enumFromTo :: KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+$cenumFromThenTo :: KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+enumFromThenTo :: KnownRepoType -&gt; KnownRepoType -&gt; KnownRepoType -&gt; [KnownRepoType]
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#Enum/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398066"><span id="local-6989586621679398068"><span class="annot"><span class="annottext">KnownRepoType
+KnownRepoType -&gt; KnownRepoType -&gt; Bounded KnownRepoType
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: KnownRepoType
+minBound :: KnownRepoType
+$cmaxBound :: KnownRepoType
+maxBound :: KnownRepoType
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#Bounded/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398071"><span id="local-6989586621679398078"><span id="local-6989586621679398084"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span></span></span></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398157"><span id="local-6989586621679398164"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span></span></span><span>
+</span><span id="line-134"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679398241"><span class="annot"><span class="annottext">rnf :: KnownRepoType -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KnownRepoType -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679398259"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m KnownRepoType
+</span><a href="#local-6989586621679398259"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621679398261"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398261"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch1"><span class="hs-identifier hs-var">P.munch1</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Types.SourceRepo.html#isIdent"><span class="hs-identifier hs-var">isIdent</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">m KnownRepoType
+-&gt; (KnownRepoType -&gt; m KnownRepoType)
+-&gt; Maybe KnownRepoType
+-&gt; m KnownRepoType
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Maybe.html#maybe/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; m KnownRepoType
+forall a. String -&gt; m a
+forall (m :: * -&gt; *) a. Parsing m =&gt; String -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#unexpected"><span class="hs-identifier hs-var">P.unexpected</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m KnownRepoType) -&gt; String -&gt; m KnownRepoType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Could not parse KnownRepoType from &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398261"><span class="hs-identifier hs-var">str</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">KnownRepoType -&gt; m KnownRepoType
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-142"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Map String KnownRepoType -&gt; Maybe KnownRepoType
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398261"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="annot"><span class="annottext">Map String KnownRepoType
+</span><a href="Distribution.Types.SourceRepo.html#knownRepoTypeMap"><span class="hs-identifier hs-var">knownRepoTypeMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398270"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>  </span><span id="local-6989586621679398274"><span class="annot"><span class="annottext">pretty :: KnownRepoType -&gt; Doc
+</span><a href="#local-6989586621679398274"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc)
+-&gt; (KnownRepoType -&gt; String) -&gt; KnownRepoType -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="Distribution.Utils.Generic.html#lowercase"><span class="hs-identifier hs-var">lowercase</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; (KnownRepoType -&gt; String) -&gt; KnownRepoType -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">KnownRepoType -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#show/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-keyword">data</span><span> </span><span id="RepoType"><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-var">RepoType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="KnownRepoType"><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-var">KnownRepoType</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span><span>
+</span><span id="line-148"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span id="OtherRepoType"><span class="annot"><a href="Distribution.Types.SourceRepo.html#OtherRepoType"><span class="hs-identifier hs-var">OtherRepoType</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679398282"><span id="local-6989586621679398286"><span class="annot"><span class="annottext">RepoType -&gt; RepoType -&gt; Bool
+(RepoType -&gt; RepoType -&gt; Bool)
+-&gt; (RepoType -&gt; RepoType -&gt; Bool) -&gt; Eq RepoType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: RepoType -&gt; RepoType -&gt; Bool
+== :: RepoType -&gt; RepoType -&gt; Bool
+$c/= :: RepoType -&gt; RepoType -&gt; Bool
+/= :: RepoType -&gt; RepoType -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398289"><span id="local-6989586621679398291"><span class="annot"><span class="annottext">(forall x. RepoType -&gt; Rep RepoType x)
+-&gt; (forall x. Rep RepoType x -&gt; RepoType) -&gt; Generic RepoType
+forall x. Rep RepoType x -&gt; RepoType
+forall x. RepoType -&gt; Rep RepoType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. RepoType -&gt; Rep RepoType x
+from :: forall x. RepoType -&gt; Rep RepoType x
+$cto :: forall x. Rep RepoType x -&gt; RepoType
+to :: forall x. Rep RepoType x -&gt; RepoType
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398296"><span id="local-6989586621679398300"><span id="local-6989586621679398304"><span id="local-6989586621679398307"><span id="local-6989586621679398310"><span id="local-6989586621679398313"><span id="local-6989586621679398316"><span class="annot"><span class="annottext">Eq RepoType
+Eq RepoType =&gt;
+(RepoType -&gt; RepoType -&gt; Ordering)
+-&gt; (RepoType -&gt; RepoType -&gt; Bool)
+-&gt; (RepoType -&gt; RepoType -&gt; Bool)
+-&gt; (RepoType -&gt; RepoType -&gt; Bool)
+-&gt; (RepoType -&gt; RepoType -&gt; Bool)
+-&gt; (RepoType -&gt; RepoType -&gt; RepoType)
+-&gt; (RepoType -&gt; RepoType -&gt; RepoType)
+-&gt; Ord RepoType
+RepoType -&gt; RepoType -&gt; Bool
+RepoType -&gt; RepoType -&gt; Ordering
+RepoType -&gt; RepoType -&gt; RepoType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: RepoType -&gt; RepoType -&gt; Ordering
+compare :: RepoType -&gt; RepoType -&gt; Ordering
+$c&lt; :: RepoType -&gt; RepoType -&gt; Bool
+&lt; :: RepoType -&gt; RepoType -&gt; Bool
+$c&lt;= :: RepoType -&gt; RepoType -&gt; Bool
+&lt;= :: RepoType -&gt; RepoType -&gt; Bool
+$c&gt; :: RepoType -&gt; RepoType -&gt; Bool
+&gt; :: RepoType -&gt; RepoType -&gt; Bool
+$c&gt;= :: RepoType -&gt; RepoType -&gt; Bool
+&gt;= :: RepoType -&gt; RepoType -&gt; Bool
+$cmax :: RepoType -&gt; RepoType -&gt; RepoType
+max :: RepoType -&gt; RepoType -&gt; RepoType
+$cmin :: RepoType -&gt; RepoType -&gt; RepoType
+min :: RepoType -&gt; RepoType -&gt; RepoType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398319"><span id="local-6989586621679398322"><span id="local-6989586621679398325"><span id="local-6989586621679398336"><span class="annot"><span class="annottext">ReadPrec [RepoType]
+ReadPrec RepoType
+Int -&gt; ReadS RepoType
+ReadS [RepoType]
+(Int -&gt; ReadS RepoType)
+-&gt; ReadS [RepoType]
+-&gt; ReadPrec RepoType
+-&gt; ReadPrec [RepoType]
+-&gt; Read RepoType
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS RepoType
+readsPrec :: Int -&gt; ReadS RepoType
+$creadList :: ReadS [RepoType]
+readList :: ReadS [RepoType]
+$creadPrec :: ReadPrec RepoType
+readPrec :: ReadPrec RepoType
+$creadListPrec :: ReadPrec [RepoType]
+readListPrec :: ReadPrec [RepoType]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398339"><span id="local-6989586621679398346"><span id="local-6989586621679398349"><span class="annot"><span class="annottext">Int -&gt; RepoType -&gt; ShowS
+[RepoType] -&gt; ShowS
+RepoType -&gt; String
+(Int -&gt; RepoType -&gt; ShowS)
+-&gt; (RepoType -&gt; String) -&gt; ([RepoType] -&gt; ShowS) -&gt; Show RepoType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RepoType -&gt; ShowS
+showsPrec :: Int -&gt; RepoType -&gt; ShowS
+$cshow :: RepoType -&gt; String
+show :: RepoType -&gt; String
+$cshowList :: [RepoType] -&gt; ShowS
+showList :: [RepoType] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398354"><span id="local-6989586621679398359"><span id="local-6989586621679398364"><span id="local-6989586621679398366"><span id="local-6989586621679398368"><span id="local-6989586621679398373"><span id="local-6989586621679398378"><span id="local-6989586621679398381"><span id="local-6989586621679398384"><span id="local-6989586621679398387"><span id="local-6989586621679398390"><span id="local-6989586621679398393"><span id="local-6989586621679398398"><span id="local-6989586621679398403"><span class="annot"><span class="annottext">Typeable RepoType
+Typeable RepoType =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; RepoType -&gt; c RepoType)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoType)
+-&gt; (RepoType -&gt; Constr)
+-&gt; (RepoType -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoType))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoType))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; RepoType -&gt; RepoType)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType)
+-&gt; Data RepoType
+RepoType -&gt; Constr
+RepoType -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; RepoType -&gt; RepoType
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoType
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; RepoType -&gt; c RepoType
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoType)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoType)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; RepoType -&gt; c RepoType
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; RepoType -&gt; c RepoType
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoType
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c RepoType
+$ctoConstr :: RepoType -&gt; Constr
+toConstr :: RepoType -&gt; Constr
+$cdataTypeOf :: RepoType -&gt; DataType
+dataTypeOf :: RepoType -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoType)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c RepoType)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoType)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c RepoType)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; RepoType -&gt; RepoType
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; RepoType -&gt; RepoType
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; RepoType -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; RepoType -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; RepoType -&gt; m RepoType
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398408"><span id="local-6989586621679398414"><span id="local-6989586621679398420"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-type">RepoType</span></a></span></span></span></span><span>
+</span><span id="line-152"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398449"><span id="local-6989586621679398455"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-type">RepoType</span></a></span></span></span><span>
+</span><span id="line-153"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-type">RepoType</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679398496"><span class="annot"><span class="annottext">rnf :: RepoType -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RepoType -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#knownRepoTypes"><span class="hs-identifier hs-type">knownRepoTypes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-156"></span><span id="knownRepoTypes"><span class="annot"><span class="annottext">knownRepoTypes :: [KnownRepoType]
+</span><a href="Distribution.Types.SourceRepo.html#knownRepoTypes"><span class="hs-identifier hs-var hs-var">knownRepoTypes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">KnownRepoType
+forall a. Bounded a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#minBound/GHC.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+forall a. Bounded a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#maxBound/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#repoTypeAliases"><span class="hs-identifier hs-type">repoTypeAliases</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-159"></span><span id="repoTypeAliases"><span class="annot"><span class="annottext">repoTypeAliases :: KnownRepoType -&gt; [String]
+</span><a href="Distribution.Types.SourceRepo.html#repoTypeAliases"><span class="hs-identifier hs-var hs-var">repoTypeAliases</span></a></span></span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="Distribution.Types.SourceRepo.html#Bazaar"><span class="hs-identifier hs-var">Bazaar</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bzr&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#repoTypeAliases"><span class="hs-identifier hs-var">repoTypeAliases</span></a></span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="Distribution.Types.SourceRepo.html#Mercurial"><span class="hs-identifier hs-var">Mercurial</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;hg&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-161"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#repoTypeAliases"><span class="hs-identifier hs-var">repoTypeAliases</span></a></span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="Distribution.Types.SourceRepo.html#GnuArch"><span class="hs-identifier hs-var">GnuArch</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;arch&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-162"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#repoTypeAliases"><span class="hs-identifier hs-var">repoTypeAliases</span></a></span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><span class="hs-identifier">_</span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398502"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621679398505"><span class="annot"><span class="annottext">pretty :: RepoKind -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="annot"><span class="annottext">RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#RepoHead"><span class="hs-identifier hs-var">RepoHead</span></a></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;head&quot;</span></span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#RepoThis"><span class="hs-identifier hs-var">RepoThis</span></a></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;this&quot;</span></span><span>
+</span><span id="line-167"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKindUnknown"><span class="hs-identifier hs-type">RepoKindUnknown</span></a></span><span> </span><span id="local-6989586621679398506"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398506"><span class="hs-identifier hs-var">other</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398506"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-170"></span><span>  </span><span id="local-6989586621679398520"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m RepoKind
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#classifyRepoKind"><span class="hs-identifier hs-var">classifyRepoKind</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; RepoKind) -&gt; m String -&gt; m RepoKind
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch1"><span class="hs-identifier hs-var">P.munch1</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Types.SourceRepo.html#isIdent"><span class="hs-identifier hs-var">isIdent</span></a></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#classifyRepoKind"><span class="hs-identifier hs-type">classifyRepoKind</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoKind"><span class="hs-identifier hs-type">RepoKind</span></a></span><span>
+</span><span id="line-173"></span><span id="classifyRepoKind"><span class="annot"><span class="annottext">classifyRepoKind :: String -&gt; RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#classifyRepoKind"><span class="hs-identifier hs-var hs-var">classifyRepoKind</span></a></span></span><span> </span><span id="local-6989586621679398522"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398522"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="Distribution.Utils.Generic.html#lowercase"><span class="hs-identifier hs-var">lowercase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398522"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;head&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#RepoHead"><span class="hs-identifier hs-var">RepoHead</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;this&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#RepoThis"><span class="hs-identifier hs-var">RepoThis</span></a></span><span>
+</span><span id="line-176"></span><span>  </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; RepoKind
+</span><a href="Distribution.Types.SourceRepo.html#RepoKindUnknown"><span class="hs-identifier hs-var">RepoKindUnknown</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398522"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-type">RepoType</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-179"></span><span>  </span><span id="local-6989586621679398533"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m RepoType
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; RepoType
+</span><a href="Distribution.Types.SourceRepo.html#classifyRepoType"><span class="hs-identifier hs-var">classifyRepoType</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; RepoType) -&gt; m String -&gt; m RepoType
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch1"><span class="hs-identifier hs-var">P.munch1</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Types.SourceRepo.html#isIdent"><span class="hs-identifier hs-var">isIdent</span></a></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398536"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-type">RepoType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-182"></span><span>  </span><span id="local-6989586621679398540"><span class="annot"><span class="annottext">pretty :: RepoType -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.SourceRepo.html#OtherRepoType"><span class="hs-identifier hs-type">OtherRepoType</span></a></span><span> </span><span id="local-6989586621679398541"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398541"><span class="hs-identifier hs-var">other</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398541"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span><span> </span><span id="local-6989586621679398542"><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="#local-6989586621679398542"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KnownRepoType -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="#local-6989586621679398542"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#classifyRepoType"><span class="hs-identifier hs-type">classifyRepoType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#RepoType"><span class="hs-identifier hs-type">RepoType</span></a></span><span>
+</span><span id="line-186"></span><span id="classifyRepoType"><span class="annot"><span class="annottext">classifyRepoType :: String -&gt; RepoType
+</span><a href="Distribution.Types.SourceRepo.html#classifyRepoType"><span class="hs-identifier hs-var hs-var">classifyRepoType</span></a></span></span><span> </span><span id="local-6989586621679398543"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398543"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-187"></span><span>  </span><span class="annot"><span class="annottext">RepoType
+-&gt; (KnownRepoType -&gt; RepoType) -&gt; Maybe KnownRepoType -&gt; RepoType
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Maybe.html#maybe/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; RepoType
+</span><a href="Distribution.Types.SourceRepo.html#OtherRepoType"><span class="hs-identifier hs-var">OtherRepoType</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398543"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>    </span><span class="annot"><span class="annottext">KnownRepoType -&gt; RepoType
+</span><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-var">KnownRepoType</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Map String KnownRepoType -&gt; Maybe KnownRepoType
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShowS
+</span><a href="Distribution.Utils.Generic.html#lowercase"><span class="hs-identifier hs-var">lowercase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398543"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map String KnownRepoType
+</span><a href="Distribution.Types.SourceRepo.html#knownRepoTypeMap"><span class="hs-identifier hs-var">knownRepoTypeMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#knownRepoTypeMap"><span class="hs-identifier hs-type">knownRepoTypeMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.SourceRepo.html#KnownRepoType"><span class="hs-identifier hs-type">KnownRepoType</span></a></span><span>
+</span><span id="line-193"></span><span id="knownRepoTypeMap"><span class="annot"><span class="annottext">knownRepoTypeMap :: Map String KnownRepoType
+</span><a href="Distribution.Types.SourceRepo.html#knownRepoTypeMap"><span class="hs-identifier hs-var hs-var">knownRepoTypeMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-194"></span><span>  </span><span class="annot"><span class="annottext">[(String, KnownRepoType)] -&gt; Map String KnownRepoType
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">M.fromList</span></a></span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398545"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="#local-6989586621679398546"><span class="hs-identifier hs-var">repoType'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679398546"><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="#local-6989586621679398546"><span class="hs-identifier hs-var">repoType'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[KnownRepoType]
+</span><a href="Distribution.Types.SourceRepo.html#knownRepoTypes"><span class="hs-identifier hs-var">knownRepoTypes</span></a></span><span>
+</span><span id="line-197"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398545"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679398545"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">KnownRepoType -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="Distribution.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="#local-6989586621679398546"><span class="hs-identifier hs-var">repoType'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; [String]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">KnownRepoType -&gt; [String]
+</span><a href="Distribution.Types.SourceRepo.html#repoTypeAliases"><span class="hs-identifier hs-var">repoTypeAliases</span></a></span><span> </span><span class="annot"><span class="annottext">KnownRepoType
+</span><a href="#local-6989586621679398546"><span class="hs-identifier hs-var">repoType'</span></a></span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="annot"><a href="Distribution.Types.SourceRepo.html#isIdent"><span class="hs-identifier hs-type">isIdent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-201"></span><span id="isIdent"><span class="annot"><span class="annottext">isIdent :: Char -&gt; Bool
+</span><a href="Distribution.Types.SourceRepo.html#isIdent"><span class="hs-identifier hs-var hs-var">isIdent</span></a></span></span><span> </span><span id="local-6989586621679398548"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679398548"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Unicode.html#isAlphaNum/GHC.Unicode.html#isAlphaNum"><span class="hs-identifier hs-var">isAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679398548"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679398548"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679398548"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span>
+</span><span id="line-202"></span></pre></body></html>

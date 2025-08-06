@@ -1,0 +1,368 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679406946"><span id="local-6989586621679406947"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.ComponentId</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier">ComponentId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#unComponentId"><span class="hs-identifier">unComponentId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#mkComponentId"><span class="hs-identifier">mkComponentId</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html"><span class="hs-identifier">Distribution.Utils.ShortText</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier">text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | A 'ComponentId' uniquely identifies the transitive source</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- code closure of a component (i.e. libraries, executables).</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- For non-Backpack components, this corresponds one to one with</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- the 'UnitId', which serves as the basis for install paths,</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- linker symbols, etc.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- Use 'mkComponentId' and 'unComponentId' to convert from/to a</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- 'String'.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- This type is opaque since @Cabal-2.0@</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">newtype</span><span> </span><span id="ComponentId"><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-var">ComponentId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ComponentId"><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-var">ComponentId</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Utils.ShortText.html#ShortText"><span class="hs-identifier hs-type">ShortText</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679406953"><span id="local-6989586621679406955"><span class="annot"><span class="annottext">(forall x. ComponentId -&gt; Rep ComponentId x)
+-&gt; (forall x. Rep ComponentId x -&gt; ComponentId)
+-&gt; Generic ComponentId
+forall x. Rep ComponentId x -&gt; ComponentId
+forall x. ComponentId -&gt; Rep ComponentId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ComponentId -&gt; Rep ComponentId x
+from :: forall x. ComponentId -&gt; Rep ComponentId x
+$cto :: forall x. Rep ComponentId x -&gt; ComponentId
+to :: forall x. Rep ComponentId x -&gt; ComponentId
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406959"><span id="local-6989586621679406963"><span id="local-6989586621679406966"><span id="local-6989586621679406974"><span class="annot"><span class="annottext">ReadPrec [ComponentId]
+ReadPrec ComponentId
+Int -&gt; ReadS ComponentId
+ReadS [ComponentId]
+(Int -&gt; ReadS ComponentId)
+-&gt; ReadS [ComponentId]
+-&gt; ReadPrec ComponentId
+-&gt; ReadPrec [ComponentId]
+-&gt; Read ComponentId
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ComponentId
+readsPrec :: Int -&gt; ReadS ComponentId
+$creadList :: ReadS [ComponentId]
+readList :: ReadS [ComponentId]
+$creadPrec :: ReadPrec ComponentId
+readPrec :: ReadPrec ComponentId
+$creadListPrec :: ReadPrec [ComponentId]
+readListPrec :: ReadPrec [ComponentId]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406978"><span id="local-6989586621679406984"><span id="local-6989586621679406988"><span class="annot"><span class="annottext">Int -&gt; ComponentId -&gt; ShowS
+[ComponentId] -&gt; ShowS
+ComponentId -&gt; String
+(Int -&gt; ComponentId -&gt; ShowS)
+-&gt; (ComponentId -&gt; String)
+-&gt; ([ComponentId] -&gt; ShowS)
+-&gt; Show ComponentId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ComponentId -&gt; ShowS
+showsPrec :: Int -&gt; ComponentId -&gt; ShowS
+$cshow :: ComponentId -&gt; String
+show :: ComponentId -&gt; String
+$cshowList :: [ComponentId] -&gt; ShowS
+showList :: [ComponentId] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679406992"><span id="local-6989586621679406997"><span class="annot"><span class="annottext">ComponentId -&gt; ComponentId -&gt; Bool
+(ComponentId -&gt; ComponentId -&gt; Bool)
+-&gt; (ComponentId -&gt; ComponentId -&gt; Bool) -&gt; Eq ComponentId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ComponentId -&gt; ComponentId -&gt; Bool
+== :: ComponentId -&gt; ComponentId -&gt; Bool
+$c/= :: ComponentId -&gt; ComponentId -&gt; Bool
+/= :: ComponentId -&gt; ComponentId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679407005"><span id="local-6989586621679407010"><span id="local-6989586621679407014"><span id="local-6989586621679407018"><span id="local-6989586621679407022"><span id="local-6989586621679407026"><span id="local-6989586621679407030"><span class="annot"><span class="annottext">Eq ComponentId
+Eq ComponentId =&gt;
+(ComponentId -&gt; ComponentId -&gt; Ordering)
+-&gt; (ComponentId -&gt; ComponentId -&gt; Bool)
+-&gt; (ComponentId -&gt; ComponentId -&gt; Bool)
+-&gt; (ComponentId -&gt; ComponentId -&gt; Bool)
+-&gt; (ComponentId -&gt; ComponentId -&gt; Bool)
+-&gt; (ComponentId -&gt; ComponentId -&gt; ComponentId)
+-&gt; (ComponentId -&gt; ComponentId -&gt; ComponentId)
+-&gt; Ord ComponentId
+ComponentId -&gt; ComponentId -&gt; Bool
+ComponentId -&gt; ComponentId -&gt; Ordering
+ComponentId -&gt; ComponentId -&gt; ComponentId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ComponentId -&gt; ComponentId -&gt; Ordering
+compare :: ComponentId -&gt; ComponentId -&gt; Ordering
+$c&lt; :: ComponentId -&gt; ComponentId -&gt; Bool
+&lt; :: ComponentId -&gt; ComponentId -&gt; Bool
+$c&lt;= :: ComponentId -&gt; ComponentId -&gt; Bool
+&lt;= :: ComponentId -&gt; ComponentId -&gt; Bool
+$c&gt; :: ComponentId -&gt; ComponentId -&gt; Bool
+&gt; :: ComponentId -&gt; ComponentId -&gt; Bool
+$c&gt;= :: ComponentId -&gt; ComponentId -&gt; Bool
+&gt;= :: ComponentId -&gt; ComponentId -&gt; Bool
+$cmax :: ComponentId -&gt; ComponentId -&gt; ComponentId
+max :: ComponentId -&gt; ComponentId -&gt; ComponentId
+$cmin :: ComponentId -&gt; ComponentId -&gt; ComponentId
+min :: ComponentId -&gt; ComponentId -&gt; ComponentId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679407038"><span id="local-6989586621679407042"><span id="local-6989586621679407045"><span id="local-6989586621679407047"><span id="local-6989586621679407049"><span id="local-6989586621679407055"><span id="local-6989586621679407060"><span id="local-6989586621679407063"><span id="local-6989586621679407066"><span id="local-6989586621679407069"><span id="local-6989586621679407072"><span id="local-6989586621679407075"><span id="local-6989586621679407080"><span id="local-6989586621679407085"><span class="annot"><span class="annottext">Typeable ComponentId
+Typeable ComponentId =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; ComponentId -&gt; c ComponentId)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ComponentId)
+-&gt; (ComponentId -&gt; Constr)
+-&gt; (ComponentId -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ComponentId))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c ComponentId))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; ComponentId -&gt; ComponentId)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId)
+-&gt; Data ComponentId
+ComponentId -&gt; Constr
+ComponentId -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; ComponentId -&gt; ComponentId
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ComponentId
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ComponentId -&gt; c ComponentId
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ComponentId)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ComponentId)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ComponentId -&gt; c ComponentId
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ComponentId -&gt; c ComponentId
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ComponentId
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ComponentId
+$ctoConstr :: ComponentId -&gt; Constr
+toConstr :: ComponentId -&gt; Constr
+$cdataTypeOf :: ComponentId -&gt; DataType
+dataTypeOf :: ComponentId -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ComponentId)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ComponentId)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ComponentId)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ComponentId)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ComponentId -&gt; ComponentId
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ComponentId -&gt; ComponentId
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ComponentId -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ComponentId -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ComponentId -&gt; m ComponentId
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Construct a 'ComponentId' from a 'String'</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- 'mkComponentId' is the inverse to 'unComponentId'</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Note: No validations are performed to ensure that the resulting</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- 'ComponentId' is valid</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Distribution.Types.ComponentId.html#mkComponentId"><span class="hs-identifier hs-type">mkComponentId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span>
+</span><span id="line-44"></span><span id="mkComponentId"><span class="annot"><span class="annottext">mkComponentId :: String -&gt; ComponentId
+</span><a href="Distribution.Types.ComponentId.html#mkComponentId"><span class="hs-identifier hs-var hs-var">mkComponentId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; ComponentId
+</span><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-var">ComponentId</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortText -&gt; ComponentId)
+-&gt; (String -&gt; ShortText) -&gt; String -&gt; ComponentId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShortText
+</span><a href="Distribution.Utils.ShortText.html#toShortText"><span class="hs-identifier hs-var">toShortText</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Convert 'ComponentId' to 'String'</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Distribution.Types.ComponentId.html#unComponentId"><span class="hs-identifier hs-type">unComponentId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-50"></span><span id="unComponentId"><span class="annot"><span class="annottext">unComponentId :: ComponentId -&gt; String
+</span><a href="Distribution.Types.ComponentId.html#unComponentId"><span class="hs-identifier hs-var hs-var">unComponentId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span id="local-6989586621679407092"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679407092"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; String
+</span><a href="Distribution.Utils.ShortText.html#fromShortText"><span class="hs-identifier hs-var">fromShortText</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679407092"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | 'mkComponentId'</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.String.html#IsString/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679407097"><span class="annot"><span class="annottext">fromString :: String -&gt; ComponentId
+</span><a href="../../base-4.18.2.1/src/Data.String.html#fromString/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ComponentId
+</span><a href="Distribution.Types.ComponentId.html#mkComponentId"><span class="hs-identifier hs-var">mkComponentId</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679407099"><span id="local-6989586621679407106"><span id="local-6989586621679407112"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span></span></span></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679407131"><span id="local-6989586621679407138"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span></span></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679407168"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679407172"><span class="annot"><span class="annottext">pretty :: ComponentId -&gt; Doc
+</span><a href="#local-6989586621679407172"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc) -&gt; (ComponentId -&gt; String) -&gt; ComponentId -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; String
+</span><a href="Distribution.Types.ComponentId.html#unComponentId"><span class="hs-identifier hs-var">unComponentId</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679407190"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m ComponentId
+</span><a href="#local-6989586621679407190"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ComponentId
+</span><a href="Distribution.Types.ComponentId.html#mkComponentId"><span class="hs-identifier hs-var">mkComponentId</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ComponentId) -&gt; m String -&gt; m ComponentId
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch1"><span class="hs-identifier hs-var">P.munch1</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="#local-6989586621679407193"><span class="hs-identifier hs-var">abi_char</span></a></span><span>
+</span><span id="line-66"></span><span>   </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679407193"><span class="annot"><span class="annottext">abi_char :: Char -&gt; Bool
+</span><a href="#local-6989586621679407193"><span class="hs-identifier hs-var hs-var">abi_char</span></a></span></span><span> </span><span id="local-6989586621679407198"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679407198"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Unicode.html#isAlphaNum/GHC.Unicode.html#isAlphaNum"><span class="hs-identifier hs-var">isAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679407198"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679407198"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#elem/Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;-_.&quot;</span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ComponentId.html#ComponentId"><span class="hs-identifier hs-type">ComponentId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621679407209"><span class="annot"><span class="annottext">rnf :: ComponentId -&gt; ()
+</span><a href="#local-6989586621679407209"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ()) -&gt; (ComponentId -&gt; String) -&gt; ComponentId -&gt; ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ComponentId -&gt; String
+</span><a href="Distribution.Types.ComponentId.html#unComponentId"><span class="hs-identifier hs-var">unComponentId</span></a></span><span>
+</span><span id="line-70"></span></pre></body></html>

@@ -1,0 +1,766 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP              #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes       #-}</span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">-- | A parse result type for parsers from AST to Haskell types.</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Fields.ParseResult</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier">ParseResult</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#runParseResult"><span class="hs-identifier">runParseResult</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#recoverWith"><span class="hs-identifier">recoverWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseWarning"><span class="hs-identifier">parseWarning</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseWarnings"><span class="hs-identifier">parseWarnings</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseFailure"><span class="hs-identifier">parseFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseFatalFailure"><span class="hs-identifier">parseFatalFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseFatalFailure%27"><span class="hs-identifier">parseFatalFailure'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#getCabalSpecVersion"><span class="hs-identifier">getCabalSpecVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#setCabalSpecVersion"><span class="hs-identifier">setCabalSpecVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#withoutWarnings"><span class="hs-identifier">withoutWarnings</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Parsec.Error.html"><span class="hs-identifier">Distribution.Parsec.Error</span></a></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier">PError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Parsec.Position.html"><span class="hs-identifier">Distribution.Parsec.Position</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier">Position</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#zeroPos"><span class="hs-identifier">zeroPos</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Parsec.Warning.html"><span class="hs-identifier">Distribution.Parsec.Warning</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarnType"><span class="hs-identifier">PWarnType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier">PWarning</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>         </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- liftA2 is not in base &lt;4.10, hence we need to only import it explicitly when we're on &gt;=4.10</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- Additionally, since liftA2 will be exported from Prelude starting with ~4.18, we should hide</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- it from Prelude and get it from Control.Applicative to be backwards compatible and avoid warnings</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,10,0)
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier">Applicative</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="../../base-4.18.2.1/src/Control.Applicative.html#/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier">Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Distribution.Compat.Prelude</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-37"></span><span class="annot"><span class="hs-comment">-- | A monad with failure and accumulating errors and warnings.</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">newtype</span><span> </span><span id="ParseResult"><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-var">ParseResult</span></a></span></span><span> </span><span id="local-6989586621679430662"><span class="annot"><a href="#local-6989586621679430662"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PR"><span class="annot"><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="unPR"><span class="annot"><span class="annottext">forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var hs-var">unPR</span></a></span></span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679430665"><span class="annot"><a href="#local-6989586621679430665"><span class="hs-identifier hs-type">r</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679430665"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- failure, but we were able to recover a new-style spec-version declaration</span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679430662"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679430665"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>             </span><span class="hs-comment">-- success</span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679430665"><span class="hs-identifier hs-type">r</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- Note: we have version here, as we could get any version.</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="PRState"><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PRState"><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-type">PWarning</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-type">PError</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Distribution.Fields.ParseResult.html#emptyPRState"><span class="hs-identifier hs-type">emptyPRState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span>
+</span><span id="line-50"></span><span id="emptyPRState"><span class="annot"><span class="annottext">emptyPRState :: PRState
+</span><a href="Distribution.Fields.ParseResult.html#emptyPRState"><span class="hs-identifier hs-var hs-var">emptyPRState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Maybe Version
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | Forget 'ParseResult's warnings.</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- @since 3.4.0.0</span><span>
+</span><span id="line-55"></span><span id="local-6989586621679430672"><span class="annot"><a href="Distribution.Fields.ParseResult.html#withoutWarnings"><span class="hs-identifier hs-type">withoutWarnings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430672"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430672"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-56"></span><span id="withoutWarnings"><span class="annot"><span class="annottext">withoutWarnings :: forall a. ParseResult a -&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#withoutWarnings"><span class="hs-identifier hs-var hs-var">withoutWarnings</span></a></span></span><span> </span><span id="local-6989586621679430765"><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430765"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+ -&gt; ParseResult a)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679430766"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430766"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679430767"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430767"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430768"><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430768"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430765"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430766"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430767"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; a -&gt; r) -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430769"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430769"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430768"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430769"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; PRState -&gt; PRState
+</span><a href="#local-6989586621679430770"><span class="hs-operator hs-var">`withWarningsOf`</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430766"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>    </span><span id="local-6989586621679430770"><span class="annot"><span class="annottext">withWarningsOf :: PRState -&gt; PRState -&gt; PRState
+</span><a href="#local-6989586621679430770"><span class="hs-identifier hs-var hs-var">withWarningsOf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679430771"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430771"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621679430772"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430772"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430773"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430773"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430773"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430771"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430772"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | Destruct a 'ParseResult' into the emitted warnings and either</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- a successful value or</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- list of errors and possibly recovered a spec-version declaration.</span><span>
+</span><span id="line-64"></span><span id="local-6989586621679430678"><span class="annot"><a href="Distribution.Fields.ParseResult.html#runParseResult"><span class="hs-identifier hs-type">runParseResult</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430678"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-type">PWarning</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Either.html#Either/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#NonEmpty/GHC.Base.html#NonEmpty"><span class="hs-identifier hs-type">NonEmpty</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-type">PError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679430678"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-65"></span><span id="runParseResult"><span class="annot"><span class="annottext">runParseResult :: forall a.
+ParseResult a
+-&gt; ([PWarning], Either (Maybe Version, NonEmpty PError) a)
+</span><a href="Distribution.Fields.ParseResult.html#runParseResult"><span class="hs-identifier hs-var hs-var">runParseResult</span></a></span></span><span> </span><span id="local-6989586621679430774"><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430774"><span class="hs-identifier hs-var">pr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430774"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="Distribution.Fields.ParseResult.html#emptyPRState"><span class="hs-identifier hs-var">emptyPRState</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; ([PWarning], Either (Maybe Version, NonEmpty PError) a)
+forall {b}.
+PRState -&gt; ([PWarning], Either (Maybe Version, NonEmpty PError) b)
+</span><a href="#local-6989586621679430775"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+-&gt; a -&gt; ([PWarning], Either (Maybe Version, NonEmpty PError) a)
+forall {b}.
+PRState
+-&gt; b -&gt; ([PWarning], Either (Maybe Version, NonEmpty PError) b)
+</span><a href="#local-6989586621679430776"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679430775"><span class="annot"><span class="annottext">failure :: PRState -&gt; ([PWarning], Either (Maybe Version, NonEmpty PError) b)
+</span><a href="#local-6989586621679430775"><span class="hs-identifier hs-var hs-var">failure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430777"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430777"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>         </span><span id="local-6989586621679430778"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430778"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430777"><span class="hs-identifier hs-var">warns</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Maybe Version, NonEmpty PError)
+-&gt; Either (Maybe Version, NonEmpty PError) b
+forall a b. a -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Left/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430778"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Position -&gt; String -&gt; PError
+</span><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-var">PError</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="Distribution.Parsec.Position.html#zeroPos"><span class="hs-identifier hs-var">zeroPos</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;panic&quot;</span></span><span> </span><span class="annot"><span class="annottext">PError -&gt; [PError] -&gt; NonEmpty PError
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3A%7C/GHC.Base.html#%3A%7C"><span class="hs-operator hs-var">:|</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><a href="#local-6989586621679430775"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430781"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430781"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679430782"><span class="annot"><span class="annottext">PError
+</span><a href="#local-6989586621679430782"><span class="hs-identifier hs-var">err</span></a></span></span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span id="local-6989586621679430783"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430783"><span class="hs-identifier hs-var">errs</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430784"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430784"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430781"><span class="hs-identifier hs-var">warns</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Maybe Version, NonEmpty PError)
+-&gt; Either (Maybe Version, NonEmpty PError) b
+forall a b. a -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Left/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430784"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PError
+</span><a href="#local-6989586621679430782"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="annot"><span class="annottext">PError -&gt; [PError] -&gt; NonEmpty PError
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3A%7C/GHC.Base.html#%3A%7C"><span class="hs-operator hs-var">:|</span></a></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430783"><span class="hs-identifier hs-var">errs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621679430776"><span class="annot"><span class="annottext">success :: PRState
+-&gt; b -&gt; ([PWarning], Either (Maybe Version, NonEmpty PError) b)
+</span><a href="#local-6989586621679430776"><span class="hs-identifier hs-var hs-var">success</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430785"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430785"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>         </span><span class="annot"><span class="annottext">Maybe Version
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>   </span><span id="local-6989586621679430786"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679430786"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430785"><span class="hs-identifier hs-var">warns</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b -&gt; Either (Maybe Version, NonEmpty PError) b
+forall a b. b -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Right/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679430786"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- If there are any errors, don't return the result</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><a href="#local-6989586621679430776"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430787"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430787"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679430788"><span class="annot"><span class="annottext">PError
+</span><a href="#local-6989586621679430788"><span class="hs-identifier hs-var">err</span></a></span></span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span id="local-6989586621679430789"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430789"><span class="hs-identifier hs-var">errs</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430790"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430790"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430787"><span class="hs-identifier hs-var">warns</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Maybe Version, NonEmpty PError)
+-&gt; Either (Maybe Version, NonEmpty PError) b
+forall a b. a -&gt; Either a b
+</span><a href="../../base-4.18.2.1/src/Data.Either.html#Left/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430790"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PError
+</span><a href="#local-6989586621679430788"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="annot"><span class="annottext">PError -&gt; [PError] -&gt; NonEmpty PError
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3A%7C/GHC.Base.html#%3A%7C"><span class="hs-operator hs-var">:|</span></a></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430789"><span class="hs-identifier hs-var">errs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679430793"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679430797"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; ParseResult a -&gt; ParseResult b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679430798"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679430798"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-type">PR</span></a></span><span> </span><span id="local-6989586621679430799"><span class="annot"><span class="annottext">forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="#local-6989586621679430799"><span class="hs-identifier hs-var">pr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+ -&gt; ParseResult b)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430800"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430800"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679430801"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430801"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430802"><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430802"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="#local-6989586621679430799"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430800"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430801"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; a -&gt; r) -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430803"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430803"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span id="local-6989586621679430804"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430804"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430802"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430803"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679430798"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430804"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-pragma hs-type">fmap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>    </span><span id="local-6989586621679430814"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; ParseResult a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span id="local-6989586621679430815"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430815"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+ -&gt; ParseResult a)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430816"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430816"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679430817"><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430817"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430817"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430816"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430815"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-pragma hs-type">pure</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679430818"><span class="annot"><span class="annottext">ParseResult (a -&gt; b)
+</span><a href="#local-6989586621679430818"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679430819"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. ParseResult (a -&gt; b) -&gt; ParseResult a -&gt; ParseResult b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span id="local-6989586621679430820"><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430820"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+ -&gt; ParseResult b)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430821"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430821"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span id="local-6989586621679430822"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430822"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430823"><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430823"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">ParseResult (a -&gt; b)
+-&gt; forall r.
+   PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; (a -&gt; b) -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult (a -&gt; b)
+</span><a href="#local-6989586621679430818"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430821"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430822"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; (a -&gt; b) -&gt; r) -&gt; r)
+-&gt; (PRState -&gt; (a -&gt; b) -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430824"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430824"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span id="local-6989586621679430825"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679430825"><span class="hs-identifier hs-var">f'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430820"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430824"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430822"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; a -&gt; r) -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430826"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430826"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span id="local-6989586621679430827"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430827"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430823"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430826"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679430825"><span class="hs-identifier hs-var">f'</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430827"><span class="hs-identifier hs-var">x'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;*&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>    </span><span id="local-6989586621679430828"><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430828"><span class="hs-identifier hs-var">x</span></a></span></span><span>  </span><span id="local-6989586621679430829"><span class="annot"><span class="annottext">*&gt; :: forall a b. ParseResult a -&gt; ParseResult b -&gt; ParseResult b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2A%3E/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">*&gt;</span></a></span></span><span> </span><span id="local-6989586621679430830"><span class="annot"><span class="annottext">ParseResult b
+</span><a href="#local-6989586621679430830"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+ -&gt; ParseResult b)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430831"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430831"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span id="local-6989586621679430832"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430832"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430833"><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430833"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430828"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430831"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430832"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; a -&gt; r) -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430834"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430834"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><span class="annottext">ParseResult b
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult b
+</span><a href="#local-6989586621679430830"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430834"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430832"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430833"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">*&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span>    </span><span id="local-6989586621679430835"><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430835"><span class="hs-identifier hs-var">x</span></a></span></span><span>  </span><span id="local-6989586621679430836"><span class="annot"><span class="annottext">&lt;* :: forall a b. ParseResult a -&gt; ParseResult b -&gt; ParseResult a
+</span><a href="#local-6989586621679430836"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*</span></a></span></span><span> </span><span id="local-6989586621679430838"><span class="annot"><span class="annottext">ParseResult b
+</span><a href="#local-6989586621679430838"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+ -&gt; ParseResult a)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430839"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430839"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span id="local-6989586621679430840"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430840"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430841"><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430841"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="annottext">ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430835"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430839"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430840"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; a -&gt; r) -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430842"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430842"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span id="local-6989586621679430843"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430843"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">ParseResult b
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult b
+</span><a href="#local-6989586621679430838"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430842"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430840"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; b -&gt; r) -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430844"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430844"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430841"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430844"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430843"><span class="hs-identifier hs-var">x'</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;*</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+
+#if MIN_VERSION_base(4,10,0)
+</span><span>    </span><span id="local-6989586621679430845"><span class="annot"><span class="annottext">liftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; ParseResult a -&gt; ParseResult b -&gt; ParseResult c
+</span><a href="#local-6989586621679430845"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftA2</span></a></span></span><span> </span><span id="local-6989586621679430847"><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679430847"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679430848"><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430848"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679430849"><span class="annot"><span class="annottext">ParseResult b
+</span><a href="#local-6989586621679430849"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; c -&gt; r) -&gt; r)
+-&gt; ParseResult c
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; c -&gt; r) -&gt; r)
+ -&gt; ParseResult c)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; c -&gt; r) -&gt; r)
+-&gt; ParseResult c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430850"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430850"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span id="local-6989586621679430851"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430851"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430852"><span class="annot"><span class="annottext">PRState -&gt; c -&gt; r
+</span><a href="#local-6989586621679430852"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430848"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430850"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430851"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; a -&gt; r) -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430853"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430853"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span id="local-6989586621679430854"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430854"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">ParseResult b
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult b
+</span><a href="#local-6989586621679430849"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430853"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430851"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; b -&gt; r) -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430855"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430855"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span id="local-6989586621679430856"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679430856"><span class="hs-identifier hs-var">y'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">PRState -&gt; c -&gt; r
+</span><a href="#local-6989586621679430852"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430855"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679430847"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430854"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679430856"><span class="hs-identifier hs-var">y'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#liftA2/GHC.Base.html#liftA2"><span class="hs-pragma hs-type">liftA2</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-108"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monad/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>    </span><span id="local-6989586621679430865"><span class="annot"><span class="annottext">return :: forall a. a -&gt; ParseResult a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; ParseResult a
+forall a. a -&gt; ParseResult a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span id="local-6989586621679430867"><span class="annot"><span class="annottext">&gt;&gt; :: forall a b. ParseResult a -&gt; ParseResult b -&gt; ParseResult b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&gt;&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParseResult a -&gt; ParseResult b -&gt; ParseResult b
+forall a b. ParseResult a -&gt; ParseResult b -&gt; ParseResult b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2A%3E/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">(*&gt;)</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>    </span><span id="local-6989586621679430868"><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430868"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679430869"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. ParseResult a -&gt; (a -&gt; ParseResult b) -&gt; ParseResult b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;=</span></a></span></span><span> </span><span id="local-6989586621679430870"><span class="annot"><span class="annottext">a -&gt; ParseResult b
+</span><a href="#local-6989586621679430870"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+ -&gt; ParseResult b)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r)
+-&gt; ParseResult b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430871"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430871"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679430872"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430872"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430873"><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430873"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="annot"><span class="annottext">ParseResult a
+</span><a href="#local-6989586621679430868"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430871"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430872"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">((PRState -&gt; a -&gt; r) -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430874"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430874"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span id="local-6989586621679430875"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430875"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-114"></span><span>        </span><span class="annot"><span class="annottext">ParseResult b
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; b -&gt; r) -&gt; r
+forall a.
+ParseResult a
+-&gt; forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="Distribution.Fields.ParseResult.html#unPR"><span class="hs-identifier hs-var">unPR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ParseResult b
+</span><a href="#local-6989586621679430870"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430875"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430874"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430872"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; b -&gt; r
+</span><a href="#local-6989586621679430873"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;=</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | &quot;Recover&quot; the parse result, so we can proceed parsing.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- 'runParseResult' will still result in 'Nothing', if there are recorded errors.</span><span>
+</span><span id="line-119"></span><span id="local-6989586621679430732"><span class="annot"><a href="Distribution.Fields.ParseResult.html#recoverWith"><span class="hs-identifier hs-type">recoverWith</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430732"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679430732"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430732"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-120"></span><span id="recoverWith"><span class="annot"><span class="annottext">recoverWith :: forall a. ParseResult a -&gt; a -&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#recoverWith"><span class="hs-identifier hs-var hs-var">recoverWith</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-type">PR</span></a></span><span> </span><span id="local-6989586621679430876"><span class="annot"><span class="annottext">forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="#local-6989586621679430876"><span class="hs-identifier hs-var">pr</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430877"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430877"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+ -&gt; ParseResult a)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430878"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430878"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679430879"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430879"><span class="hs-identifier hs-var">_failure</span></a></span></span><span> </span><span id="local-6989586621679430880"><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430880"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+</span><a href="#local-6989586621679430876"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430878"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430881"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430881"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430880"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430881"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430877"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430880"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="annot"><span class="hs-comment">-- | Set cabal spec version.</span></span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Distribution.Fields.ParseResult.html#setCabalSpecVersion"><span class="hs-identifier hs-type">setCabalSpecVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span id="setCabalSpecVersion"><span class="annot"><span class="annottext">setCabalSpecVersion :: Maybe Version -&gt; ParseResult ()
+</span><a href="Distribution.Fields.ParseResult.html#setCabalSpecVersion"><span class="hs-identifier hs-var hs-var">setCabalSpecVersion</span></a></span></span><span> </span><span id="local-6989586621679430882"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430882"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+ -&gt; ParseResult ())
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430883"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430883"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span id="local-6989586621679430884"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430884"><span class="hs-identifier hs-var">errs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430885"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430885"><span class="hs-identifier hs-var">_failure</span></a></span></span><span> </span><span id="local-6989586621679430886"><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430886"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430886"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430883"><span class="hs-identifier hs-var">warns</span></a></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430884"><span class="hs-identifier hs-var">errs</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430882"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><span class="hs-comment">-- | Get cabal spec version.</span></span><span>
+</span><span id="line-129"></span><span class="annot"><a href="Distribution.Fields.ParseResult.html#getCabalSpecVersion"><span class="hs-identifier hs-type">getCabalSpecVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span id="getCabalSpecVersion"><span class="annot"><span class="annottext">getCabalSpecVersion :: ParseResult (Maybe Version)
+</span><a href="Distribution.Fields.ParseResult.html#getCabalSpecVersion"><span class="hs-identifier hs-var hs-var">getCabalSpecVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r.
+ PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; Maybe Version -&gt; r) -&gt; r)
+-&gt; ParseResult (Maybe Version)
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r.
+  PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; Maybe Version -&gt; r) -&gt; r)
+ -&gt; ParseResult (Maybe Version))
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; Maybe Version -&gt; r) -&gt; r)
+-&gt; ParseResult (Maybe Version)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679430887"><span class="annot"><span class="annottext">s :: PRState
+</span><a href="#local-6989586621679430887"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679430888"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430888"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430889"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430889"><span class="hs-identifier hs-var">_failure</span></a></span></span><span> </span><span id="local-6989586621679430890"><span class="annot"><span class="annottext">PRState -&gt; Maybe Version -&gt; r
+</span><a href="#local-6989586621679430890"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">PRState -&gt; Maybe Version -&gt; r
+</span><a href="#local-6989586621679430890"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430887"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430888"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="annot"><span class="hs-comment">-- | Add a warning. This doesn't fail the parsing process.</span></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseWarning"><span class="hs-identifier hs-type">parseWarning</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarnType"><span class="hs-identifier hs-type">PWarnType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span id="parseWarning"><span class="annot"><span class="annottext">parseWarning :: Position -&gt; PWarnType -&gt; String -&gt; ParseResult ()
+</span><a href="Distribution.Fields.ParseResult.html#parseWarning"><span class="hs-identifier hs-var hs-var">parseWarning</span></a></span></span><span> </span><span id="local-6989586621679430891"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679430891"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span id="local-6989586621679430892"><span class="annot"><span class="annottext">PWarnType
+</span><a href="#local-6989586621679430892"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679430893"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679430893"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+ -&gt; ParseResult ())
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430894"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430894"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span id="local-6989586621679430895"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430895"><span class="hs-identifier hs-var">errs</span></a></span></span><span> </span><span id="local-6989586621679430896"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430896"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430897"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430897"><span class="hs-identifier hs-var">_failure</span></a></span></span><span> </span><span id="local-6989586621679430898"><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430898"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430898"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PWarnType -&gt; Position -&gt; String -&gt; PWarning
+</span><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-var">PWarning</span></a></span><span> </span><span class="annot"><span class="annottext">PWarnType
+</span><a href="#local-6989586621679430892"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679430891"><span class="hs-identifier hs-var">pos</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679430893"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">PWarning -&gt; [PWarning] -&gt; [PWarning]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430894"><span class="hs-identifier hs-var">warns</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430895"><span class="hs-identifier hs-var">errs</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430896"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><span class="hs-comment">-- | Add multiple warnings at once.</span></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseWarnings"><span class="hs-identifier hs-type">parseWarnings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Parsec.Warning.html#PWarning"><span class="hs-identifier hs-type">PWarning</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span id="parseWarnings"><span class="annot"><span class="annottext">parseWarnings :: [PWarning] -&gt; ParseResult ()
+</span><a href="Distribution.Fields.ParseResult.html#parseWarnings"><span class="hs-identifier hs-var hs-var">parseWarnings</span></a></span></span><span> </span><span id="local-6989586621679430900"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430900"><span class="hs-identifier hs-var">newWarns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+ -&gt; ParseResult ())
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430901"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430901"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span id="local-6989586621679430902"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430902"><span class="hs-identifier hs-var">errs</span></a></span></span><span> </span><span id="local-6989586621679430903"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430903"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430904"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430904"><span class="hs-identifier hs-var">_failure</span></a></span></span><span> </span><span id="local-6989586621679430905"><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430905"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430905"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430900"><span class="hs-identifier hs-var">newWarns</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning] -&gt; [PWarning] -&gt; [PWarning]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430901"><span class="hs-identifier hs-var">warns</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430902"><span class="hs-identifier hs-var">errs</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430903"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- | Add an error, but not fail the parser yet.</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- For fatal failure use 'parseFatalFailure'</span><span>
+</span><span id="line-146"></span><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseFailure"><span class="hs-identifier hs-type">parseFailure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span id="parseFailure"><span class="annot"><span class="annottext">parseFailure :: Position -&gt; String -&gt; ParseResult ()
+</span><a href="Distribution.Fields.ParseResult.html#parseFailure"><span class="hs-identifier hs-var hs-var">parseFailure</span></a></span></span><span> </span><span id="local-6989586621679430906"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679430906"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span id="local-6989586621679430907"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679430907"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+ -&gt; ParseResult ())
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; () -&gt; r) -&gt; r)
+-&gt; ParseResult ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430908"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430908"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span id="local-6989586621679430909"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430909"><span class="hs-identifier hs-var">errs</span></a></span></span><span> </span><span id="local-6989586621679430910"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430910"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430911"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430911"><span class="hs-identifier hs-var">_failure</span></a></span></span><span> </span><span id="local-6989586621679430912"><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430912"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">PRState -&gt; () -&gt; r
+</span><a href="#local-6989586621679430912"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430908"><span class="hs-identifier hs-var">warns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Position -&gt; String -&gt; PError
+</span><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-var">PError</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679430906"><span class="hs-identifier hs-var">pos</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679430907"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">PError -&gt; [PError] -&gt; [PError]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430909"><span class="hs-identifier hs-var">errs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430910"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="annot"><span class="hs-comment">-- | Add an fatal error.</span></span><span>
+</span><span id="line-151"></span><span id="local-6989586621679430742"><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseFatalFailure"><span class="hs-identifier hs-type">parseFatalFailure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430742"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-152"></span><span id="parseFatalFailure"><span class="annot"><span class="annottext">parseFatalFailure :: forall a. Position -&gt; String -&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#parseFatalFailure"><span class="hs-identifier hs-var hs-var">parseFatalFailure</span></a></span></span><span> </span><span id="local-6989586621679430913"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679430913"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span id="local-6989586621679430914"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679430914"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">((forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+ -&gt; ParseResult a)
+-&gt; (forall r.
+    PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430915"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430915"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span id="local-6989586621679430916"><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430916"><span class="hs-identifier hs-var">errs</span></a></span></span><span> </span><span id="local-6989586621679430917"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430917"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430918"><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430918"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430919"><span class="annot"><span class="annottext">PRState -&gt; a -&gt; r
+</span><a href="#local-6989586621679430919"><span class="hs-identifier hs-var">_success</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="annottext">PRState -&gt; r
+</span><a href="#local-6989586621679430918"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430915"><span class="hs-identifier hs-var">warns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Position -&gt; String -&gt; PError
+</span><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-var">PError</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679430913"><span class="hs-identifier hs-var">pos</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679430914"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">PError -&gt; [PError] -&gt; [PError]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[PError]
+</span><a href="#local-6989586621679430916"><span class="hs-identifier hs-var">errs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430917"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><span class="hs-comment">-- | A 'mzero'.</span></span><span>
+</span><span id="line-156"></span><span id="local-6989586621679430745"><span class="annot"><a href="Distribution.Fields.ParseResult.html#parseFatalFailure%27"><span class="hs-identifier hs-type">parseFatalFailure'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.ParseResult.html#ParseResult"><span class="hs-identifier hs-type">ParseResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430745"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-157"></span><span id="parseFatalFailure%27"><span class="annot"><span class="annottext">parseFatalFailure' :: forall a. ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#parseFatalFailure%27"><span class="hs-identifier hs-var hs-var">parseFatalFailure'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+forall a.
+(forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r)
+-&gt; ParseResult a
+</span><a href="Distribution.Fields.ParseResult.html#PR"><span class="hs-identifier hs-var">PR</span></a></span><span> </span><span class="annot"><span class="annottext">PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall r. PRState -&gt; (PRState -&gt; r) -&gt; (PRState -&gt; a -&gt; r) -&gt; r
+forall {t} {p}. PRState -&gt; (PRState -&gt; t) -&gt; p -&gt; t
+</span><a href="#local-6989586621679430921"><span class="hs-identifier hs-var">pr</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-159"></span><span>    </span><span id="local-6989586621679430921"><span class="annot"><span class="annottext">pr :: PRState -&gt; (PRState -&gt; t) -&gt; p -&gt; t
+</span><a href="#local-6989586621679430921"><span class="hs-identifier hs-var hs-var">pr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-type">PRState</span></a></span><span> </span><span id="local-6989586621679430922"><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430922"><span class="hs-identifier hs-var">warns</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679430923"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430923"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430924"><span class="annot"><span class="annottext">PRState -&gt; t
+</span><a href="#local-6989586621679430924"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430925"><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679430925"><span class="hs-identifier hs-var">_success</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PRState -&gt; t
+</span><a href="#local-6989586621679430924"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PWarning] -&gt; [PError] -&gt; Maybe Version -&gt; PRState
+</span><a href="Distribution.Fields.ParseResult.html#PRState"><span class="hs-identifier hs-var">PRState</span></a></span><span> </span><span class="annot"><span class="annottext">[PWarning]
+</span><a href="#local-6989586621679430922"><span class="hs-identifier hs-var">warns</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">PError
+</span><a href="#local-6989586621679430926"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679430923"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><a href="#local-6989586621679430921"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span id="local-6989586621679430927"><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430927"><span class="hs-identifier hs-var">s</span></a></span></span><span>                    </span><span id="local-6989586621679430928"><span class="annot"><span class="annottext">PRState -&gt; t
+</span><a href="#local-6989586621679430928"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span id="local-6989586621679430929"><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679430929"><span class="hs-identifier hs-var">_success</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PRState -&gt; t
+</span><a href="#local-6989586621679430928"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">PRState
+</span><a href="#local-6989586621679430927"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span>    </span><span id="local-6989586621679430926"><span class="annot"><span class="annottext">err :: PError
+</span><a href="#local-6989586621679430926"><span class="hs-identifier hs-var hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Position -&gt; String -&gt; PError
+</span><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-var">PError</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="Distribution.Parsec.Position.html#zeroPos"><span class="hs-identifier hs-var">zeroPos</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unknown fatal error&quot;</span></span><span>
+</span><span id="line-163"></span></pre></body></html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679417619"><span id="local-6989586621679417620"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.ModuleReexport</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier">ModuleReexport</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PackageName.html"><span class="hs-identifier">Distribution.Types.PackageName</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- Module re-exports</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="ModuleReexport"><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-var">ModuleReexport</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ModuleReexport"><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-var">ModuleReexport</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-23"></span><span>       </span><span id="moduleReexportOriginalPackage"><span class="annot"><span class="annottext">ModuleReexport -&gt; Maybe PackageName
+</span><a href="Distribution.Types.ModuleReexport.html#moduleReexportOriginalPackage"><span class="hs-identifier hs-var hs-var">moduleReexportOriginalPackage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PackageName.html#PackageName"><span class="hs-identifier hs-type">PackageName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>       </span><span id="moduleReexportOriginalName"><span class="annot"><span class="annottext">ModuleReexport -&gt; ModuleName
+</span><a href="Distribution.Types.ModuleReexport.html#moduleReexportOriginalName"><span class="hs-identifier hs-var hs-var">moduleReexportOriginalName</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>       </span><span id="moduleReexportName"><span class="annot"><span class="annottext">ModuleReexport -&gt; ModuleName
+</span><a href="Distribution.Types.ModuleReexport.html#moduleReexportName"><span class="hs-identifier hs-var hs-var">moduleReexportName</span></a></span></span><span>            </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679417626"><span id="local-6989586621679417634"><span class="annot"><span class="annottext">ModuleReexport -&gt; ModuleReexport -&gt; Bool
+(ModuleReexport -&gt; ModuleReexport -&gt; Bool)
+-&gt; (ModuleReexport -&gt; ModuleReexport -&gt; Bool) -&gt; Eq ModuleReexport
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+== :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+$c/= :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+/= :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679417642"><span id="local-6989586621679417650"><span id="local-6989586621679417656"><span id="local-6989586621679417660"><span id="local-6989586621679417663"><span id="local-6989586621679417666"><span id="local-6989586621679417669"><span class="annot"><span class="annottext">Eq ModuleReexport
+Eq ModuleReexport =&gt;
+(ModuleReexport -&gt; ModuleReexport -&gt; Ordering)
+-&gt; (ModuleReexport -&gt; ModuleReexport -&gt; Bool)
+-&gt; (ModuleReexport -&gt; ModuleReexport -&gt; Bool)
+-&gt; (ModuleReexport -&gt; ModuleReexport -&gt; Bool)
+-&gt; (ModuleReexport -&gt; ModuleReexport -&gt; Bool)
+-&gt; (ModuleReexport -&gt; ModuleReexport -&gt; ModuleReexport)
+-&gt; (ModuleReexport -&gt; ModuleReexport -&gt; ModuleReexport)
+-&gt; Ord ModuleReexport
+ModuleReexport -&gt; ModuleReexport -&gt; Bool
+ModuleReexport -&gt; ModuleReexport -&gt; Ordering
+ModuleReexport -&gt; ModuleReexport -&gt; ModuleReexport
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ModuleReexport -&gt; ModuleReexport -&gt; Ordering
+compare :: ModuleReexport -&gt; ModuleReexport -&gt; Ordering
+$c&lt; :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+&lt; :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+$c&lt;= :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+&lt;= :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+$c&gt; :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+&gt; :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+$c&gt;= :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+&gt;= :: ModuleReexport -&gt; ModuleReexport -&gt; Bool
+$cmax :: ModuleReexport -&gt; ModuleReexport -&gt; ModuleReexport
+max :: ModuleReexport -&gt; ModuleReexport -&gt; ModuleReexport
+$cmin :: ModuleReexport -&gt; ModuleReexport -&gt; ModuleReexport
+min :: ModuleReexport -&gt; ModuleReexport -&gt; ModuleReexport
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679417674"><span id="local-6989586621679417676"><span class="annot"><span class="annottext">(forall x. ModuleReexport -&gt; Rep ModuleReexport x)
+-&gt; (forall x. Rep ModuleReexport x -&gt; ModuleReexport)
+-&gt; Generic ModuleReexport
+forall x. Rep ModuleReexport x -&gt; ModuleReexport
+forall x. ModuleReexport -&gt; Rep ModuleReexport x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ModuleReexport -&gt; Rep ModuleReexport x
+from :: forall x. ModuleReexport -&gt; Rep ModuleReexport x
+$cto :: forall x. Rep ModuleReexport x -&gt; ModuleReexport
+to :: forall x. Rep ModuleReexport x -&gt; ModuleReexport
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679417680"><span id="local-6989586621679417684"><span id="local-6989586621679417687"><span id="local-6989586621679417705"><span class="annot"><span class="annottext">ReadPrec [ModuleReexport]
+ReadPrec ModuleReexport
+Int -&gt; ReadS ModuleReexport
+ReadS [ModuleReexport]
+(Int -&gt; ReadS ModuleReexport)
+-&gt; ReadS [ModuleReexport]
+-&gt; ReadPrec ModuleReexport
+-&gt; ReadPrec [ModuleReexport]
+-&gt; Read ModuleReexport
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ModuleReexport
+readsPrec :: Int -&gt; ReadS ModuleReexport
+$creadList :: ReadS [ModuleReexport]
+readList :: ReadS [ModuleReexport]
+$creadPrec :: ReadPrec ModuleReexport
+readPrec :: ReadPrec ModuleReexport
+$creadListPrec :: ReadPrec [ModuleReexport]
+readListPrec :: ReadPrec [ModuleReexport]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679417710"><span id="local-6989586621679417720"><span id="local-6989586621679417724"><span class="annot"><span class="annottext">Int -&gt; ModuleReexport -&gt; ShowS
+[ModuleReexport] -&gt; ShowS
+ModuleReexport -&gt; String
+(Int -&gt; ModuleReexport -&gt; ShowS)
+-&gt; (ModuleReexport -&gt; String)
+-&gt; ([ModuleReexport] -&gt; ShowS)
+-&gt; Show ModuleReexport
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ModuleReexport -&gt; ShowS
+showsPrec :: Int -&gt; ModuleReexport -&gt; ShowS
+$cshow :: ModuleReexport -&gt; String
+show :: ModuleReexport -&gt; String
+$cshowList :: [ModuleReexport] -&gt; ShowS
+showList :: [ModuleReexport] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679417731"><span id="local-6989586621679417739"><span id="local-6989586621679417745"><span id="local-6989586621679417747"><span id="local-6989586621679417749"><span id="local-6989586621679417755"><span id="local-6989586621679417760"><span id="local-6989586621679417763"><span id="local-6989586621679417766"><span id="local-6989586621679417769"><span id="local-6989586621679417772"><span id="local-6989586621679417775"><span id="local-6989586621679417780"><span id="local-6989586621679417785"><span class="annot"><span class="annottext">Typeable ModuleReexport
+Typeable ModuleReexport =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; ModuleReexport -&gt; c ModuleReexport)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ModuleReexport)
+-&gt; (ModuleReexport -&gt; Constr)
+-&gt; (ModuleReexport -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ModuleReexport))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c ModuleReexport))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; ModuleReexport -&gt; ModuleReexport)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ModuleReexport -&gt; m ModuleReexport)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ModuleReexport -&gt; m ModuleReexport)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ModuleReexport -&gt; m ModuleReexport)
+-&gt; Data ModuleReexport
+ModuleReexport -&gt; Constr
+ModuleReexport -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; ModuleReexport -&gt; ModuleReexport
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ModuleReexport
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ModuleReexport -&gt; c ModuleReexport
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ModuleReexport)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ModuleReexport)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ModuleReexport -&gt; c ModuleReexport
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ModuleReexport -&gt; c ModuleReexport
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ModuleReexport
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ModuleReexport
+$ctoConstr :: ModuleReexport -&gt; Constr
+toConstr :: ModuleReexport -&gt; Constr
+$cdataTypeOf :: ModuleReexport -&gt; DataType
+dataTypeOf :: ModuleReexport -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ModuleReexport)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ModuleReexport)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ModuleReexport)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ModuleReexport)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ModuleReexport -&gt; ModuleReexport
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ModuleReexport -&gt; ModuleReexport
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ModuleReexport -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ModuleReexport -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ModuleReexport -&gt; m ModuleReexport
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679417792"><span id="local-6989586621679417799"><span id="local-6989586621679417805"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-type">ModuleReexport</span></a></span></span></span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679417842"><span id="local-6989586621679417849"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-type">ModuleReexport</span></a></span></span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-type">ModuleReexport</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679417912"><span class="annot"><span class="annottext">rnf :: ModuleReexport -&gt; ()
+</span><a href="#local-6989586621679417912"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleReexport -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679417917"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-type">ModuleReexport</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621679417927"><span class="annot"><span class="annottext">pretty :: ModuleReexport -&gt; Doc
+</span><a href="#local-6989586621679417927"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-type">ModuleReexport</span></a></span><span> </span><span id="local-6989586621679417929"><span class="annot"><span class="annottext">Maybe PackageName
+</span><a href="#local-6989586621679417929"><span class="hs-identifier hs-var">mpkgname</span></a></span></span><span> </span><span id="local-6989586621679417930"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417930"><span class="hs-identifier hs-var">origname</span></a></span></span><span> </span><span id="local-6989586621679417931"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417931"><span class="hs-identifier hs-var">newname</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>          </span><span class="annot"><span class="annottext">Doc -&gt; (PackageName -&gt; Doc) -&gt; Maybe PackageName -&gt; Doc
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Maybe.html#maybe/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#empty/Text.PrettyPrint.HughesPJ.html#empty"><span class="hs-identifier hs-var">Disp.empty</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679417934"><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679417934"><span class="hs-identifier hs-var">pkgname</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PackageName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">PackageName
+</span><a href="#local-6989586621679417934"><span class="hs-identifier hs-var">pkgname</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">Disp.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe PackageName
+</span><a href="#local-6989586621679417929"><span class="hs-identifier hs-var">mpkgname</span></a></span><span>
+</span><span id="line-36"></span><span>       </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417930"><span class="hs-identifier hs-var">origname</span></a></span><span>
+</span><span id="line-37"></span><span>      </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#%3C%2B%3E/Text.PrettyPrint.HughesPJ.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417931"><span class="hs-identifier hs-var">newname</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; ModuleName -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417930"><span class="hs-identifier hs-var">origname</span></a></span><span>
+</span><span id="line-38"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#empty/Text.PrettyPrint.HughesPJ.html#empty"><span class="hs-identifier hs-var">Disp.empty</span></a></span><span>
+</span><span id="line-39"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;as&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#%3C%2B%3E/Text.PrettyPrint.HughesPJ.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417931"><span class="hs-identifier hs-var">newname</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-type">ModuleReexport</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679417979"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m ModuleReexport
+</span><a href="#local-6989586621679417979"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>        </span><span id="local-6989586621679417981"><span class="annot"><span class="annottext">Maybe PackageName
+</span><a href="#local-6989586621679417981"><span class="hs-identifier hs-var">mpkgname</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m PackageName -&gt; m (Maybe PackageName)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="../../base-4.18.2.1/src/Control.Applicative.html#optional/Control.Applicative.html#optional"><span class="hs-identifier hs-var">P.optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m PackageName -&gt; m PackageName
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. Parsing m =&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#try"><span class="hs-identifier hs-var">P.try</span></a></span><span> </span><span class="annot"><span class="annottext">(m PackageName -&gt; m PackageName) -&gt; m PackageName -&gt; m PackageName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m PackageName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m PackageName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span> </span><span class="annot"><span class="annottext">m PackageName -&gt; m Char -&gt; m PackageName
+forall a b. m a -&gt; m b -&gt; m a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%2A/GHC.Base.html#%3C%2A"><span class="hs-operator hs-var">&lt;*</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; Char -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>        </span><span id="local-6989586621679417986"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417986"><span class="hs-identifier hs-var">origname</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ModuleName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m ModuleName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-45"></span><span>        </span><span id="local-6989586621679417987"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417987"><span class="hs-identifier hs-var">newname</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; m ModuleName -&gt; m ModuleName
+forall (m :: * -&gt; *) a. Alternative m =&gt; a -&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#option"><span class="hs-identifier hs-var">P.option</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417986"><span class="hs-identifier hs-var">origname</span></a></span><span> </span><span class="annot"><span class="annottext">(m ModuleName -&gt; m ModuleName) -&gt; m ModuleName -&gt; m ModuleName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m ModuleName -&gt; m ModuleName
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. Parsing m =&gt; m a -&gt; m a
+</span><a href="Distribution.Compat.Parsing.html#try"><span class="hs-identifier hs-var">P.try</span></a></span><span> </span><span class="annot"><span class="annottext">(m ModuleName -&gt; m ModuleName) -&gt; m ModuleName -&gt; m ModuleName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>            </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). CharParsing m =&gt; m ()
+</span><a href="Distribution.Compat.CharParsing.html#spaces"><span class="hs-identifier hs-var">P.spaces</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#string"><span class="hs-identifier hs-var">P.string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;as&quot;</span></span><span>
+</span><span id="line-48"></span><span>            </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). CharParsing m =&gt; m ()
+</span><a href="Distribution.Compat.CharParsing.html#spaces"><span class="hs-identifier hs-var">P.spaces</span></a></span><span>
+</span><span id="line-49"></span><span>            </span><span class="annot"><span class="annottext">m ModuleName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m ModuleName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">ModuleReexport -&gt; m ModuleReexport
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe PackageName -&gt; ModuleName -&gt; ModuleName -&gt; ModuleReexport
+</span><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-var">ModuleReexport</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe PackageName
+</span><a href="#local-6989586621679417981"><span class="hs-identifier hs-var">mpkgname</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417986"><span class="hs-identifier hs-var">origname</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621679417987"><span class="hs-identifier hs-var">newname</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span></pre></body></html>
