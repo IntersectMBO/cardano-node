@@ -34,11 +34,10 @@ MaxKnownMajorProtocolVersion: 2
 
 ##### Network Configuration #####
 
-PeerSharing: True
-
 # The following control the number of outbound connections to strictly our upstream peers
 # cf. https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/topology
-# defaults are provided by ouroboros-network, but can be overridden by uncommenting below:
+#
+# Defaults are provided by ouroboros-network, but can be overridden by uncommenting below:
 # SyncTargetNumberOfActiveBigLedgerPeers: 30
 # SyncTargetNumberOfActivePeers: 5
 # SyncTargetNumberOfEstablishedBigLedgerPeers: 40
@@ -51,8 +50,15 @@ PeerSharing: True
 # TargetNumberOfEstablishedBigLedgerPeers: 10
 # TargetNumberOfEstablishedPeers: 30
 # TargetNumberOfKnownBigLedgerPeers: 15
-# TargetNumberOfKnownPeers: 150
-# TargetNumberOfRootPeers: 60
+#
+# Additionally, as of ouroboros-network `0.22.2` with cardano-node `10.6.0`,
+# the following three node config parameters which previously required
+# explicit configuration depending on whether the node is a forger are now
+# handled automatically.
+#
+# PeerSharing: false for forgers, true for non-forgers
+# TargetNumberOfKnownPeers: set according to forging status
+# TargetNumberOfRootPeers: set according to forging status
 
 # When syncing in Genesis mode, this is the minimum number of active connections
 # to big ledger peers needed to continue:
@@ -83,7 +89,11 @@ LedgerDB:
 
 ##### Version Information #####
 
-MinNodeVersion: 10.4.0
+# Min is currently 10.6.0 for proper default handling of PeerSharing,
+# TargetNumberOfKnownPeers and TargetNumberOfRootPeers parameters depending
+# on whether node is a forger or not, as well as removal of legacy
+# networking mode.
+MinNodeVersion: 10.6.0
 
 ##### Logging configuration #####
 
