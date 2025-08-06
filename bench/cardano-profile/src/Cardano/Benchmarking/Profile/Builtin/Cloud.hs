@@ -173,6 +173,9 @@ profilesNoEraCloud =
   , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn        . cgmem
   , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb . cgmem
+              -- Heap from sample LMDB run goes from 6,400,000,000 bytes to 6,700,000,000 bytes.
+              -- Using 6,900,000,000 bytes, as 1024-base megabytes, to force the garbage collector during genesis reading.
+              . P.rtsHeapLimit 6580 . P.heapLimit 6580
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
   , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
