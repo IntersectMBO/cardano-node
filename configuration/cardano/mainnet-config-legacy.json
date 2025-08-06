@@ -19,8 +19,7 @@
     "SnapshotInterval": 4320
   },
   "MaxKnownMajorProtocolVersion": 2,
-  "MinNodeVersion": "10.4.0",
-  "PeerSharing": true,
+  "MinNodeVersion": "10.6.0",
   "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresNoMagic",
   "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
