@@ -18,6 +18,7 @@
 # The main contents of the image.
 , cardano-cli
 , cardano-node
+, snapshot-converter
 , scripts
 
 # Set gitrev to null, to ensure the version below is used
@@ -161,6 +162,7 @@ in
       cp -v ${context}/bin/* usr/local/bin
       ln -sv ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -sv ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+      ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
       ln -sv ${jq}/bin/jq usr/local/bin/jq
 
       # Create iohk-nix network configs, organized by network directory.

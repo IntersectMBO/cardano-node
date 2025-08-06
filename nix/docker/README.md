@@ -209,6 +209,29 @@ docker volume inspect opt-cardano
 sudo tree /var/lib/docker/volumes/opt-cardano/_data
 ```
 
+## Cardano Ledger Snapshot Conversion
+The snapshot-converter utility is included in the cardano-node image at path
+`/usr/local/bin/snapshot-converter`.  It can be used to convert between ledger
+state types as needed, without relying on host level tooling or full
+chain ledger replays.
+
+An example follows to convert preprod ledger state in a named docker volume in
+snapshot `295420` from `Legacy` to `Mem` when node is not already
+running:
+```
+docker run -v preprod-data:/data --rm -it --entrypoint=bash ghcr.io/intersectmbo/cardano-node:dev -c '
+  mv /data/db/ledger /data/db/ledger-old \
+    && mkdir -p /data/db/ledger \
+    && snapshot-converter Legacy /data/db/ledger-old/295420 Mem /data/db/ledger/295420 cardano --config /opt/cardano/config/preprod/config.json
+'
+```
+
+Note that once ledger state is converted, the cardano-node container will need
+to be run with a node configuration aligned with the new ledger state type,
+otherwise ledger replay from genesis will re-occur.
+
+For more info, see the [UTxO Migration Guide](https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/utxo-hd/migrating/).
+
 
 ## Legacy Tracing System
 Cardano-node now defaults to using the new tracing system.  The legacy tracing
