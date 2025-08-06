@@ -796,8 +796,12 @@ in {
       peerSnapshotFile = mkOption {
         type = funcToOr nullOrStr;
         default = i:
-          # Node config in 10.5 will default to genesis mode for preview and preprod.
-          if cfg.useNewTopology && elem cfg.environment ["preview" "preprod"]
+          # As of node `10.5.0` preview and preprod will default to a
+          # `ConsensusMode` of `GenesisMode` and utilize a peer snapshot.
+          #
+          # Mainnet does not yet require it, but declaring it will also
+          # facilitate testing.
+          if cfg.useNewTopology
           then
             if cfg.useSystemdReload
             then "peer-snapshot-${toString i}.json"
@@ -806,14 +810,20 @@ in {
         example = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";
         apply = x: if lib.isFunction x then x else _: x;
         description = ''
-          If set, cardano-node will load a peer snapshot file from the declared path which can
-          be absolute or relative.  If a relative path is given, it will be interpreted relative
-          to the location of the topology file which it is declared in.
+          If set, the topology file will include a peer snapshot file from the
+          declared path which can be absolute or relative.  If a relative path
+          is given, it will be interpreted relative to the location of the
+          topology file which it is declared in.
 
-          The peer snapshot file contains a snapshot of big ledger peers taken at some arbitrary slot.
-          These are the largest pools that cumulatively hold 90% of total stake.
+          The peer snapshot file contains a snapshot of big ledger peers taken
+          at some arbitrary slot. These are the largest pools that cumulatively
+          hold 90% of total stake.
 
-          A peer snapshot file can be generated with a `cardano-cli query ledger-peer-snapshot` command.
+          When cardano-node `ConsensusMode` configuration is set to
+          `GenesisMode` the peer snapshot file will be loaded and used.
+
+          A peer snapshot file can be generated with a command:
+            `cardano-cli query ledger-peer-snapshot`
         '';
       };
     };
