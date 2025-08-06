@@ -545,6 +545,9 @@ in {
         description = ''
           Routes to public peers. Only used if slot is less than
           useLedgerAfterSlot.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
@@ -555,6 +558,9 @@ in {
           Routes to public peers. Only used if slot is less than
           useLedgerAfterSlot and specific to a given instance when
           multiple instances are used.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
@@ -569,7 +575,12 @@ in {
           advertise = false;
           valency = 1;
         }];
-        description = ''Static routes to local peers.'';
+        description = ''
+          Static routes to local peers.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
+        '';
       };
 
       instanceProducers = mkOption {
@@ -578,6 +589,9 @@ in {
         description = ''
           Static routes to local peers, specific to a given instance when
           multiple instances are used.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
@@ -611,11 +625,18 @@ in {
 
       bootstrapPeers = mkOption {
         type = nullOr (listOf attrs);
-        default = map (e: {address = e.addr; inherit (e) port;}) envConfig.edgeNodes;
+        default =
+          map (e:
+            {address = e.addr;}
+              // optionalAttrs (e ? port && e.port != null) {inherit (e) port;})
+          envConfig.edgeNodes;
         description = ''
           If set, it will enable bootstrap peers. To disable, set this to null.
           To enable, set this to a list of attributes of address and port,
           example: [{ address = "addr"; port = 3001; }]
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
