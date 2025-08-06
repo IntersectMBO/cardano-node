@@ -86,11 +86,17 @@ let
       "Startup".severity = "Notice";
       "Startup.DiffusionInit".severity = "Debug";
       "StateQueryServer".severity = "Notice";
+      "TxSubmission.Counters".severity = "Silence";
       "TxSubmission.Local".severity = "Notice";
       "TxSubmission.LocalServer".severity = "Notice";
       "TxSubmission.MonitorClient".severity = "Notice";
       "TxSubmission.Remote".severity = "Notice";
       "TxSubmission.TxInbound".severity = "Debug";
+      "TxSubmission.TxInbound.TxInboundAddedToMempool".severity = "Silence";
+      "TxSubmission.TxInbound.TxInboundDecision".severity = "Silence";
+      "TxSubmission.TxInbound.TxInboundRejectedFromMempool".severity = "Silence";
+      "TxSubmission.TxInbound.TxLogic".severity = "Silence";
+      "TxSubmission.TxLogic".severity = "Silence";
       "TxSubmission.TxOutbound".severity = "Notice";
       "Version.NodeVersion".severity = "Info";
 

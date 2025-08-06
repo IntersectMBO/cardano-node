@@ -116,6 +116,9 @@ let
                   TargetNumberOfActivePeers          = max 15 valency;
                   TargetNumberOfEstablishedPeers     = max 40 valency;
 
+                  ## use new tx submission logic, reducing overall tx diffusion
+                  TxSubmissionLogicVersion     = 2;
+
                   ByronGenesisFile             = "../genesis/byron/genesis.json";
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
