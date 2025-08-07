@@ -40,20 +40,10 @@ let
         (builtins.toJSON
           (env.nodeConfig // genesisAttrs));
 
-      nodeConfigBp = pkgs.writeText
-        "config-bp.json"
-        (builtins.toJSON
-          (env.nodeConfigBp // genesisAttrs));
-
       nodeConfigLegacy= pkgs.writeText
         "config-legacy.json"
         (builtins.toJSON
           (env.nodeConfigLegacy // genesisAttrs));
-
-      nodeConfigBpLegacy= pkgs.writeText
-        "config-bp-legacy.json"
-        (builtins.toJSON
-          (env.nodeConfigBpLegacy // genesisAttrs));
 
       tracerConfig = pkgs.writeText
         "tracer-config.json"
@@ -65,20 +55,18 @@ let
 
       topologyConfig = pkgs.cardanoLib.mkTopology env;
 
-      # Genesis files are the same for env.nodeConfig and env.nodeConfigBp
       inherit (env.nodeConfig)
         ByronGenesisFile ShelleyGenesisFile AlonzoGenesisFile;
     in
-      # Format the node config file and copy the genesis files
+      # Format the node config file and copy the genesis files. Normalize the
+      # topology file peer snapshot ref for per env dir placement.
       ''
         mkdir -p "share/${name}"
         jq . < "${nodeConfig}" > share/${name}/config.json
-        jq . < "${nodeConfigBp}" > share/${name}/config-bp.json
         jq . < "${nodeConfigLegacy}" > share/${name}/config-legacy.json
-        jq . < "${nodeConfigBpLegacy}" > share/${name}/config-bp-legacy.json
         jq . < "${tracerConfig}" > share/${name}/tracer-config.json
         jq . < "${peerSnapshot}" > share/${name}/peer-snapshot.json
-        jq . < "${topologyConfig}" > share/${name}/topology.json
+        jq '.peerSnapshotFile = "peer-snapshot.json"' < "${topologyConfig}" > share/${name}/topology.json
         cp -n --remove-destination -v \
           "${ByronGenesisFile}" \
            share/${name}/byron-genesis.json
