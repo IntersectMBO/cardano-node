@@ -58,7 +58,7 @@ let
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.json" (toJSON (if (cfg.useNewTopology) then assertNewTopology i else oldTopology i));
+    else toFile "topology.json" (toJSON (if (cfg.useNewTopology != false) then assertNewTopology i else oldTopology i));
 
   topology = i:
     if cfg.useSystemdReload
@@ -72,10 +72,17 @@ let
               // (mapAttrs' (era: epoch:
                 nameValuePair "Test${era}HardForkAtEpoch" epoch
               ) cfg.forceHardForks)
-              // (optionalAttrs cfg.useNewTopology (
+              // (optionalAttrs (cfg.useNewTopology != false) (
                 {
-                  EnableP2P = true;
                   MaxConcurrencyBulkSync = 2;
+                } // optionalAttrs (cfg.useNewTopology == true) {
+                  # Starting with node 10.6.0, p2p is the only network
+                  # operating mode and EnableP2P becomes a no-op and is not
+                  # declared by default.
+                  #
+                  # Older node versions which still require an explicit
+                  # declaration can set useNewTopology true.
+                  EnableP2P = true;
                 } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
                   TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
                 } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
@@ -596,10 +603,17 @@ in {
       };
 
       useNewTopology = mkOption {
-        type = bool;
-        default = cfg.nodeConfig.EnableP2P or false;
+        type = nullOr bool;
+        default = cfg.nodeConfig.EnableP2P or null;
         description = ''
-          Use new, peer to peer and ledger peers compatible topology.
+          Use new, p2p and ledger peers compatible topology.
+
+          The useNewTopology option is deprecated and will be removed in the
+          future. As of cardano-node 10.6.0, this option should remain null.
+          For older node versions, a bool value can be set, but this will only
+          be supported until the Dijkstra hard fork at which point all
+          cardano-node versions will be compelled to upgrade and the
+          useNewTopology option will be removed.
         '';
       };
 
@@ -801,7 +815,7 @@ in {
           #
           # Mainnet does not yet require it, but declaring it will also
           # facilitate testing.
-          if cfg.useNewTopology
+          if (cfg.useNewTopology != false)
           then
             if cfg.useSystemdReload
             then "peer-snapshot-${toString i}.json"
@@ -849,7 +863,7 @@ in {
             (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.json".source = selectTopology i;}) {}
           (range 0 (cfg.instances - 1)))
         )
-        (mkIf (cfg.useNewTopology && cfg.useSystemdReload)
+        (mkIf ((cfg.useNewTopology != false) && cfg.useSystemdReload)
           (foldl'
             (acc: i: recursiveUpdate acc (
               optionalAttrs (cfg.peerSnapshotFile i != null) {
@@ -873,12 +887,12 @@ in {
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
         partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
-        reloadTriggers = mkIf (cfg.useSystemdReload && cfg.useNewTopology) [ (selectTopology i) ];
+        reloadTriggers = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) [ (selectTopology i) ];
         script = mkScript cfg i;
         serviceConfig = {
           User = "cardano-node";
           Group = "cardano-node";
-          ExecReload = mkIf (cfg.useSystemdReload && cfg.useNewTopology) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+          ExecReload = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           Restart = "always";
           RuntimeDirectory = mkIf (!cfg.systemdSocketActivation)
             (removePrefix cfg.runDirBase (runtimeDir i));
@@ -941,7 +955,7 @@ in {
           message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
         }
         {
-          assertion = !(cfg.systemdSocketActivation && cfg.useNewTopology);
+          assertion = !(cfg.systemdSocketActivation && (cfg.useNewTopology != false));
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
         }
         {
@@ -949,6 +963,14 @@ in {
           message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
         }
       ];
+
+      warnings = (
+        optional (cfg.useNewTopology != null) ''
+          The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
+          For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
+          cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.
+        ''
+      );
     }
   ]);
 }
