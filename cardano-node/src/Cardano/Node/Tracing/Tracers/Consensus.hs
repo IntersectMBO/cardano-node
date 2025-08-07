@@ -1194,6 +1194,9 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
     documentFor (Namespace _ ["TxInboundAddedToMempool"]) = Just $ mconcat
       [ "Transaction ids that made it into the mempool"
       ]
+    documentFor (Namespace _ ["TxInboundRejectedFromMempool"]) = Just $ mconcat
+      [ "Transaction ids that were rejected from mempool"
+      ]
     documentFor (Namespace _ ["TxInboundDecision"]) = Just $ mconcat
       [ "Current decision made by the decision logic thread"
       , " to guide the TX Submission protocol"
@@ -1210,7 +1213,9 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
         , Namespace [] ["CanRequestMoreTxs"]
         , Namespace [] ["CannotRequestMoreTxs"]
         , Namespace [] ["TxInboundAddedToMempool"]
+        , Namespace [] ["TxInboundRejectedFromMempool"]
         , Namespace [] ["TxInboundDecision"]
+        , Namespace [] ["TxInboundError"]
         ]
 
 --------------------------------------------------------------------------------
