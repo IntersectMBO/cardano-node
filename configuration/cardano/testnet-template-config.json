@@ -5,7 +5,6 @@
   "ByronGenesisFile": "byron-genesis.json",
   "ConsensusMode": "PraosMode",
   "ConwayGenesisFile": "conway-genesis.json",
-  "EnableP2P": true,
   "ExperimentalHardForksEnabled": true,
   "ExperimentalProtocolsEnabled": true,
   "LastKnownBlockVersion-Alt": 0,
