@@ -702,28 +702,35 @@ allocate-run-nomadcloud() {
       # We do this for each producer instead of for all producer at once because
       # even if modules have the same name from a Nomad perspective, in each
       # client the real path is defined in Nomad's config file and may differ!
+      # It's "slow" (fetches individual client configs), done only if necessary.
       if    test "${node_name}" != "explorer"                                  \
          && jqtest '.node.utxo_lmdb' "${dir}"/profile.json                     \
          && jqtest '(.cluster.nomad.host_volumes.producer | length) > 0' "${dir}"/profile.json
       then
-        # Index on the "host_volumes" array.
+        # Iterate over the profile's Nomad "host_volumes" array by key/index.
         for host_volume_key in $(jq_tolist '.cluster.nomad.host_volumes.producer | keys' "${dir}"/profile.json)
         do
-          # Compare the SSD directory the node will use and volume destination.
+          # Compare defined node's SSD directory with this volume's destination.
           local ssd_directory host_volume_destination
-          ssd_directory="$(jq -r . '.node.ssd_directory' "${dir}"/profile.json)"
+          ssd_directory="$(jq -r '.node.ssd_directory' "${dir}"/profile.json)"
           host_volume_destination="$(jq -r ".cluster.nomad.host_volumes.producer[${host_volume_key}].destination" "${dir}"/profile.json)"
           if test "${ssd_directory}" = "${host_volume_destination}"
           then
             # Use volume source to fetch the path defined in the client machine.
             local host_volume_source host_volume_path
             host_volume_source="$(jq -r ".cluster.nomad.host_volumes.producer[${host_volume_key}].source" "${dir}"/profile.json)"
-            host_volume_path="$(wb nomad clients ssh "${client_name}" "jq -r .client.host_volume[\"${host_volume_source}\"].path /etc/nomad.json")"
+            host_volume_path="$(wb nomad clients ssh "${client_name}" cat /etc/nomad.json | jq -r ".client.host_volume[\"${host_volume_source}\"].path")"
             local rm_command
-            rm_command="rm -rf \"${host_volume_path}/\""
-            msg "$(yellow "About to: ${rm_command}")"
-            read -p "Hit enter to continue ..."
-            wb nomad clients ssh producers "${client_name}" "${rm_command}"
+            # Won't remove hidden files like ".mounted".
+            rm_command="rm -rf \"${host_volume_path}\"/*"
+            msg "$(yellow "Cleaning up SSD host volume. Executing: \"${rm_command}\" on Nomad client \"${client_name}\" (${client_id}) ...")"
+            wb nomad clients ssh "${client_name}" "${rm_command}"
+            # Check that the directory is empty (hidden files ignored).
+            if wb nomad clients ssh "${client_name}" "ls \"${host_volume_path}\"/" | grep --invert-match --quiet -E "^0$"
+            then
+              msg "$(yellow "WARNING: Nomad client \"${client_name}\" (${client_id}) still has files in \"${host_volume_path}\"")"
+              read -p "Hit enter to continue ..."
+            fi
           fi
         done
       fi
@@ -1083,16 +1090,20 @@ fetch-logs-ssh-node() {
   fi
   # Download tracer(s) logs. ###################################################
   ##############################################################################
-  msg "$(blue Fetching) $(yellow "program \"tracer\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-  if ! rsync -e "${ssh_command}" -au                 \
-         -f'- start.sh' -f'- config.json'            \
-         -f'- tracer.socket' -f'- logRoot/'          \
-         "${public_ipv4}":/local/run/current/tracer/ \
-         "${dir}"/tracer/"${node}"/
+  # A "tracer"(s) is optional.
+  if jqtest ".node.tracer" "${dir}"/profile.json
   then
-    node_ok="false"
-    touch "${dir}"/nomad/"${node}"/download_failed
-    msg "$(red Error fetching) $(yellow "program \"tracer\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    msg "$(blue Fetching) $(yellow "program \"tracer\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    if ! rsync -e "${ssh_command}" -au                 \
+           -f'- start.sh' -f'- config.json'            \
+           -f'- tracer.socket' -f'- logRoot/'          \
+           "${public_ipv4}":/local/run/current/tracer/ \
+           "${dir}"/tracer/"${node}"/
+    then
+      node_ok="false"
+      touch "${dir}"/nomad/"${node}"/download_failed
+      msg "$(red Error fetching) $(yellow "program \"tracer\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    fi
   fi
   # Allow the user to do something if a download fails
   if ! test "${node_ok}" = "true"

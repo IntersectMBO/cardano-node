@@ -4,10 +4,9 @@ module Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple) where
 import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSample)
 import           Cardano.Logging.Prometheus.NetworkRun
 
-import           Control.Concurrent.Async (async)
+import           Control.Concurrent.Async (async, link)
 import qualified Control.Exception as E
 import           Control.Monad (when)
-import           Control.Monad.Class.MonadAsync (link)
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Builder
 import qualified Data.ByteString.Char8 as BC

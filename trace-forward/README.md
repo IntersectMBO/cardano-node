@@ -14,4 +14,4 @@ These protocols are `typed-protocols`-based, so they can be `Mux`-ed for use via
 
 ## Developers
 
-Benchmarking team is responsible for this library. The primary developer is [@denisshevchenko](https://github.com/denisshevchenko).
+Benchmarking team is responsible for this library. The primary developer is [@jutaro](https://github.com/jutaro).

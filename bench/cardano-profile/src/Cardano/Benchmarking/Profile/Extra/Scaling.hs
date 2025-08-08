@@ -100,7 +100,7 @@ clusterNomadSsdNoRegions =
   , Types.explorer = Just $ Types.Resources 16 120000 124000
   })
   .
-  P.nomadHostVolume (
+  P.appendNomadHostVolume (
     let hostVolumes =
           [ Types.HostVolume "/ssd1" False "ssd1"
           , Types.HostVolume "/ssd2" False "ssd2"

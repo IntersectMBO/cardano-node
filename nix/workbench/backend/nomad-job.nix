@@ -746,8 +746,12 @@ let
                     ;
                     # Only for the node that will run the generator
                     withGenerator = taskName == generatorTaskName;
-                    # Only for the tracer task or also nodes if oneTracerPerNode
-                    withTracer = oneTracerPerNode || taskName == "tracer";
+                    # Only if "tracer" was requested.
+                    # And, if tracer task or also nodes if oneTracerPerNode.
+                    withTracer =
+                         profile.node.tracer
+                      && (oneTracerPerNode || taskName == "tracer")
+                    ;
                     inherit withSsh;
                     # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
                     inherit unixHttpServerPort;

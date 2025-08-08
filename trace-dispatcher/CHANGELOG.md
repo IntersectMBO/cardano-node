@@ -5,6 +5,7 @@
 * Failure to initialise the `PrometheusSimple` backend is now lenient - i.e., won't result in an exception being propagated.
 * `trace-forward` now depends on `trace-dispatcher`, and not the other way round.
 * Improves the structure and metadata of generated tracer documentation.
+* Drop unnecessary dependency on `io-classes`.
 
 ## 2.9.2 -- May 2025
 * New config field `traceOptionLedgerMetricsFrequency`.
