@@ -997,13 +997,11 @@ in {
         }
       ];
 
-      warnings = (
-        optional (cfg.useNewTopology != null) ''
-          The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
-          For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
-          cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.
-        ''
-      );
+      warnings = optional (cfg.useNewTopology != null) ''
+        The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
+        For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
+        cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.
+      '';
     }
   ]);
 }
