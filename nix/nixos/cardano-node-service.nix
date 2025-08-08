@@ -171,6 +171,10 @@ let
       "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
     ] ++ optionals (cfg.tracerSocketPathConnect i != null) [
       "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
+    ] ++ optionals (cfg.tracerSocketNetworkAccept i != null) [
+      "--tracer-socket-network-accept ${cfg.tracerSocketNetworkAccept i}"
+    ] ++ optionals (cfg.tracerSocketNetworkConnect i != null) [
+      "--tracer-socket-network-connect ${cfg.tracerSocketNetworkConnect i}"
     ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
       echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -451,6 +455,26 @@ in {
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''
           Connect to a cardano-tracer listening on a local socket,
+          for each instance.
+        '';
+      };
+
+      tracerSocketNetworkAccept = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          Listen for an incoming cardano-tracer connection at HOST:PORT,
+          for each instance.
+        '';
+      };
+
+      tracerSocketNetworkConnect = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          Connect to a cardano-tracer listening at HOST:PORT,
           for each instance.
         '';
       };
@@ -945,7 +969,7 @@ in {
     {
       assertions = [
         {
-          assertion = all (i : hasPrefix cfg.stateDirBase (cfg.stateDir i))
+          assertion = all (i: hasPrefix cfg.stateDirBase (cfg.stateDir i))
                                    (genList trivial.id cfg.instances);
           message = "The option services.cardano-node.stateDir should have ${cfg.stateDirBase}
                      as a prefix, for each instance!";
@@ -961,6 +985,15 @@ in {
         {
           assertion = (length lmdbPaths) == (length (lists.unique lmdbPaths));
           message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
+        }
+        {
+          assertion = count (o: o != null) (with cfg; [
+            (tracerSocketPathAccept i)
+            (tracerSocketPathConnect i)
+            (tracerSocketNetworkAccept i)
+            (tracerSocketNetworkConnect i)
+          ]) <= 1;
+          message   = "Only one option of services.cardano-node.tracerSocket(PathAccept|PathConnect|NetworkAccept|NetworkConnect) can be declared.";
         }
       ];
 
