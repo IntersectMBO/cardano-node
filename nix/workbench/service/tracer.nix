@@ -62,6 +62,7 @@ let
         systemd.sockets = mkOption {};
         users = mkOption {};
         assertions = mkOption {};
+        warnings = mkOption {};
         environment = mkOption {};
       };
       eval = evalModules {
