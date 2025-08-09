@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-07-14T17:31:29Z
-  , cardano-haskell-packages 2025-07-01T09:22:51Z
+  , hackage.haskell.org 2025-07-22T09:13:54Z
+  , cardano-haskell-packages 2025-07-28T14:33:19Z
 
 packages:
   cardano-node
@@ -61,6 +61,14 @@ package plutus-scripts-bench
 allow-newer:
   , katip:Win32
 
+allow-newer:
+    , cardano-ledger-byron
+    -- https://github.com/phadej/vec/issues/121
+    , ral:QuickCheck
+    , fin:QuickCheck
+    , bin:QuickCheck
+
+
 if impl (ghc >= 9.12)
   allow-newer:
     -- https://github.com/kapralVV/Unique/issues/11
@@ -76,15 +84,62 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: 31d46d77278cb3ea5b1606ee2fc20ae7c3b5c59a
+  tag: a894d0063f403222677c33152b3396bba87450bc
   --sha256: sha256-Lqg+eGfdYphLbgS3LZ0Qf62mTLkibl6L8i7GOia0hoo=
   subdir: cardano-cli
 
 
 source-repository-package
   type: git
-  location: https://github.com/intersectmbo/cardano-api.git
-  tag: 159822505a74a6479fff037ef5bdc881437aae53
-  --sha256: sha256-V9PZ4X7N1Kg0pSxS/qVByEwxA5VASZFNRT+n8JDBlgc=
-  subdir: cardano-api
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 0eeff17265628f2ad055c9e63e0f9698759c2e0b
+  --sha256: sha256-XmuQTZdD/ZdCNlRuD+V5cNslEM05xwTACmMunzuCCJY=
+  subdir:
+    cardano-api
+
+
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 15fc8c4fee64473350e1904347bfd5852f9cdbfa
+  --sha256: sha256-Tvw0dLGZkBAflpvcEwl7Acnrux9H5UaniW5YwMvIeIs=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core 
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: 20485948f78ab139d246695e540f9ec00963a16e
+  --sha256: sha256-SHnyp+GvNeR82UXoKeDEgsp1AUE2yF5dGL4HIZm0zK8=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley-ma/test-suite
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/set-algebra
+    libs/small-steps
+    libs/vector-map
 

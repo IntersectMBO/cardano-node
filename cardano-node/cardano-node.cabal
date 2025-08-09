@@ -191,10 +191,10 @@ library
                       , ouroboros-consensus-cardano ^>= 0.25
                       , ouroboros-consensus-diffusion ^>= 0.23
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.14
-                      , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-framework ^>= 0.18.0.1
-                      , ouroboros-network-protocols ^>= 0.14
+                      , ouroboros-network-api ^>= 0.16
+                      , ouroboros-network ^>= 0.22
+                      , ouroboros-network-framework 
+                      , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -218,8 +218,8 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 0.3
-                      , typed-protocols-stateful >= 0.3
+                      , typed-protocols >= 1.0
+                      , typed-protocols-stateful
                       , yaml
 
 executable cardano-node
