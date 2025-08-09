@@ -23,7 +23,7 @@ let
           enable = true;
           ## In both the local and remote scenarios, it's most frequently
           ## convenient to act as an acceptor.
-          acceptingSocket = "tracer.socket";
+          acceptAt = "tracer.socket";
           networkMagic = profile.genesis.network_magic;
           configFile     = "config.json";
           metricsHelp    = "../../../cardano-tracer/configuration/metrics_help.json";
@@ -62,6 +62,7 @@ let
         systemd.sockets = mkOption {};
         users = mkOption {};
         assertions = mkOption {};
+        warnings = mkOption {};
         environment = mkOption {};
       };
       eval = evalModules {
