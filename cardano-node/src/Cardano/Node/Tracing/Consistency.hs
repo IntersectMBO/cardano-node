@@ -113,7 +113,7 @@ checkNodeTraceConfiguration configFileName = do
           configFileName
           defaultCardanoConfig
           getAllNamespaces
-  (dt,_) <- docTracersFirstPhase Nothing
+  (dt,_, _, _) <- docTracersFirstPhase Nothing
   pure $ w1 <> dtWarnings dt
 
 -- | Check the configuration in the given file.

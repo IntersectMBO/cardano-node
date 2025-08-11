@@ -12,6 +12,7 @@ module Cardano.Logging.DocuGenerator (
   , documentTracer'
   , docuResultsToText
   , docuResultsToMetricsHelptext
+  , documentation
   -- Callbacks
   , docTracer
   , docTracerDatapoint
@@ -25,18 +26,20 @@ module Cardano.Logging.DocuGenerator (
 ) where
 
 import           Cardano.Logging.ConfigurationParser ()
-import           Cardano.Logging.DocuGenerator.Tree
 import           Cardano.Logging.DocuGenerator.Result (DocuResult (..))
 import qualified Cardano.Logging.DocuGenerator.Result as DocuResult
+import           Cardano.Logging.DocuGenerator.Tree
 import           Cardano.Logging.Types
 
 import           Prelude hiding (lines, unlines)
 
+import           Control.Arrow (first)
 import           Control.Monad (mfilter)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as TR
 import           Data.Aeson (ToJSON)
 import qualified Data.Aeson.Encode.Pretty as AE
+import           Data.Foldable (traverse_)
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (find, groupBy, intersperse, isPrefixOf, nub, sortBy)
 import qualified Data.Map.Strict as Map
@@ -90,6 +93,23 @@ documentTracer' :: forall a a1.
 documentTracer' hook tracer = do
     tr' <- hook tracer
     documentTracer tr'
+
+
+documentation :: forall a.
+     MetaTrace a
+  => Trace IO a
+  -> IO [([Text], Text, [Text], Bool)]
+documentation tracer = do
+  DocCollector docRef <- documentTracersRun [tracer]
+  items <- fmap Map.toList (liftIO (readIORef docRef))
+  traverse_ print items
+  pure $ process =<< items
+   where
+    process :: (Int, LogDoc) -> [([Text], Text, [Text], Bool)]
+    process (_, doc) | Map.null (ldMetricsDoc doc) = [ (uncurry (++) (head (ldNamespace doc)), ldDoc doc, [], False) ]
+                     | otherwise =
+                         fmap ((\(x, y) -> (x, y, fmap (intercalate "." . uncurry (++)) (ldNamespace doc), True)) . first (split (== '.')))
+                              (Map.toList (ldMetricsDoc doc))
 
 -- This fuction calls document tracers and returns a DocTracer result
 documentTracer :: forall a.
