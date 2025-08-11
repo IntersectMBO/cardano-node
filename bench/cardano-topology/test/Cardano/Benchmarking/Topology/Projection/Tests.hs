@@ -23,12 +23,17 @@ import qualified Paths_cardano_topology as Paths
 tests :: Tasty.TestTree
 tests =  Tasty.testGroup "Cardano.Benchmarking.Topology.Projection"
   [
-    projection
-  , projectionP2P
-  , projectionExplorer
+    projectionCoreNode
+  -- TODO: explorer test
+  , projectionRelayNode
   , projectionChainDB
   ]
 
+--
+-- TODO: remove code and test data from data/test
+--
+
+{-
 projection :: Tasty.TestTree
 projection = Tasty.testGroup
   "Cardano.Benchmarking.Topology.Projection.projection" $
@@ -152,10 +157,11 @@ projection = Tasty.testGroup
       , map (\i -> (i, "node-" ++ show i ++ ".json")) [0..51]
       )
     ]
+-}
 
-projectionP2P :: Tasty.TestTree
-projectionP2P = Tasty.testGroup
-  "Cardano.Benchmarking.Topology.Projection.projectionP2P" $
+projectionCoreNode :: Tasty.TestTree
+projectionCoreNode = Tasty.testGroup
+  "Cardano.Benchmarking.Topology.Projection.projectionCoreNode" $
   map
     (\(profileName, projections) -> Tasty.testGroup profileName $
       map
@@ -168,9 +174,9 @@ projectionP2P = Tasty.testGroup
           case (eitherTopology, eitherProjection) of
             (Right topology, Right projP2P) ->
               assertEqual
-                (profileName ++ "/" ++ projectionName ++ " == (projectionP2P \"" ++ show projectionId ++ "\")")
+                (profileName ++ "/" ++ projectionName ++ " == (projectionCoreNode \"" ++ show projectionId ++ "\")")
                 projP2P                                                -- expected
-                (Projection.projectionP2P topology projectionId 30000) -- got
+                (Projection.projectionCoreNode topology projectionId 30000) -- got
             errors -> fail (show errors)
         )
         projections
@@ -231,22 +237,24 @@ projectionP2P = Tasty.testGroup
       )
     ]
 
-projectionExplorer :: Tasty.TestTree
-projectionExplorer = Tasty.testGroup
-  "Cardano.Benchmarking.Topology.Projection.projectionExplorer" $
+projectionRelayNode :: Tasty.TestTree
+projectionRelayNode = Tasty.testGroup
+  "Cardano.Benchmarking.Topology.Projection.projectionRelayNode" $
   map
     (\(profileName, projections) -> Tasty.testGroup profileName $
       map
         (\(projectionId, projectionName) -> testCase projectionName $ do
           let profileDir   = "data/test/" ++ profileName ++ "/"
+          topologyPath   <- Paths.getDataFileName $ profileDir ++ "topology.json"
           projectionPath <- Paths.getDataFileName $ profileDir ++ projectionName
+          eitherTopology   <- Aeson.eitherDecodeFileStrict topologyPath
           eitherProjection <- Aeson.eitherDecodeFileStrict projectionPath
-          case eitherProjection of
-            (Right projExplorer) ->
+          case (eitherTopology, eitherProjection) of
+            (Right topology, Right projP2P) ->
               assertEqual
-                (profileName ++ "/" ++ projectionName ++ " == (projectionExplorer \"" ++ show projectionId ++ "\")")
-                projExplorer                                                -- expected
-                (Projection.projectionExplorer projectionId 30000) -- got
+                (profileName ++ "/" ++ projectionName ++ " == (projectionRelayNode \"" ++ show projectionId ++ "\")")
+                projP2P                                                      -- expected
+                (Projection.projectionRelayNode topology projectionId 30000) -- got
             errors -> fail (show errors)
         )
         projections
@@ -260,23 +268,11 @@ projectionExplorer = Tasty.testGroup
       , [(  2, "explorer.json")]
       )
     , (
-        "ci-test-nomadperf-nop2p-coay"
-      , [(  2, "explorer.json")]
-      )
-    , (
         "default-nomadperf-coay"
       , [(  6, "explorer.json")]
       )
     , (
-        "default-nomadperf-nop2p-coay"
-      , [(  6, "explorer.json")]
-      )
-    , (
         "value-volt-nomadperf-coay"
-      , [( 52, "explorer.json")]
-      )
-    , (
-        "value-nomadperf-nop2p-coay"
       , [( 52, "explorer.json")]
       )
     ]

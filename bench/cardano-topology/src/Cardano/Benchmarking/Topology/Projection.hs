@@ -9,9 +9,8 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Topology.Projection (
-  projection
-, projectionP2P
-, projectionExplorer
+  projectionCoreNode
+, projectionRelayNode
 , projectionChainDB
 ) where
 
@@ -37,63 +36,50 @@ import qualified Cardano.Benchmarking.Topology.Types as Types
 
 --------------------------------------------------------------------------------
 
-projection :: Types.Topology -> Int -> Int -> NetworkTopology
-projection topology i basePort = RealNodeTopology $
-  map
-    (\name ->
-      let node = getCoreNodeByName topology name
-      in RemoteAddress {
-           raAddress = "127.0.0.1"
-         , raPort = toEnum (basePort + Types.nodeId node)
-         , raValency = 1
-         }
-    )
-    (getCoreNodeProducersById topology i)
+projectionCoreNode  :: Types.Topology -> Int -> Int -> NetworkTopologyP2P
+projectionCoreNode  topology i basePort =
+  projectionP2P topology (getCoreNodeProducersById  topology i) basePort
 
-projectionP2P :: Types.Topology -> Int -> Int -> NetworkTopologyP2P
-projectionP2P topology i basePort = RealNodeTopologyP2P
+projectionRelayNode :: Types.Topology -> Int -> Int -> NetworkTopologyP2P
+projectionRelayNode topology i basePort =
+  projectionP2P topology (getRelayNodeProducersById topology i) basePort
+
+projectionP2P :: Types.Topology -> [String] -> Int -> NetworkTopologyP2P
+projectionP2P topology producers basePort = RealNodeTopologyP2P
   {
     ntLocalRootPeersGroups = LocalRootPeersGroups {
       groups =
-        map
-          (\name ->
-            let node = getCoreNodeByName topology name
-                v = length $ Types.producers node
-            in LocalRootPeersGroup {
-                 localRoots = RootConfig {
-                   rootAccessPoints = [
-                     RelayAccessAddress
-                      "127.0.0.1"
-                      (toEnum $ basePort + Types.nodeId node)
-                   ]
-                 , rootAdvertise = DoNotAdvertisePeer
-                 }
-               , trustable = IsTrustable
-               , valency = Valency v
-               }
-          )
-          (getCoreNodeProducersById topology i)
+        let val = 1 -- length producers
+        in map
+            (\name ->
+              LocalRootPeersGroup
+                { localRoots = RootConfig
+                    { rootAccessPoints =
+                        [ RelayAccessAddress
+                          "127.0.0.1"
+                          (
+                            let node = getCoreNodeByName topology name
+                                nodeId = Types.nodeId node
+                            in toEnum $ basePort + nodeId
+                          )
+                        ]
+                    , rootAdvertise = DoNotAdvertisePeer
+                    }
+                , trustable = IsTrustable
+                , valency = Valency val
+                }
+            )
+            producers
     }
   , ntPublicRootPeers = []
   , ntUseLedgerPeers = DontUseLedgerPeers
   , ntUseBootstrapPeers = DontUseBootstrapPeers
   }
 
-projectionExplorer :: Int -> Int -> NetworkTopology
-projectionExplorer srcIndices basePort = RealNodeTopology $
-  map
-    (\i ->
-      RemoteAddress {
-         raAddress = "127.0.0.1"
-       , raPort = toEnum (basePort + i)
-       , raValency = 1
-       }
-    )
-    [0..(srcIndices - 1)]
-
--- ChainDB servers are just "{Producers:[]}".
-projectionChainDB :: Types.Topology -> NetworkTopology
-projectionChainDB _ = RealNodeTopology []
+-- ChainDB servers using the non-p2p topology are just "{Producers:[]}".
+-- TODO: validate this definition for p2p by default
+projectionChainDB :: Types.Topology -> NetworkTopologyP2P
+projectionChainDB = const emptyNetworkTopologyP2P
 
 --------------------------------------------------------------------------------
 
@@ -111,71 +97,12 @@ getCoreNodeProducersById topology i = Types.producers $
       ((== i) . Types.nodeId)
       (Types.coreNodes topology)
 
---------------------------------------------------------------------------------
--- Projection for a non-P2P topology. ------------------------------------------
---------------------------------------------------------------------------------
-
-{-- Example output:
-{
-  "Producers": [
-    {
-      "addr": "127.0.0.1",
-      "port": 30001,
-      "valency": 1
-    }
-  ]
-}
---}
-
------------------------------------------
--- Cardano.Node.Configuration.Topology --
------------------------------------------
-
--- https://github.com/IntersectMBO/cardano-node/blob/52b708f37cd3dc92a188717deae2a6a60117f696/cardano-node/src/Cardano/Node/Configuration/Topology.hs#L115
-
--- `NetworkTopology` without the `MockNodeTopology` constructor.
-data NetworkTopology = RealNodeTopology ![RemoteAddress]
-                     | MockNodeTopology
-  deriving (Eq, Show)
-
-instance Aeson.FromJSON NetworkTopology where
-  parseJSON = Aeson.withObject "NetworkTopology" $ \o -> RealNodeTopology
-    <$> o Aeson..: "Producers"
-
-instance Aeson.ToJSON NetworkTopology where
-  toJSON (RealNodeTopology ras) =
-    Aeson.object [ "Producers" Aeson..= Aeson.toJSON ras ]
-  toJSON _ = error "Unsupported" -- `MockNodeTopology` constructor.
-
--- https://github.com/IntersectMBO/cardano-node/blob/52b708f37cd3dc92a188717deae2a6a60117f696/cardano-node/src/Cardano/Node/Configuration/Topology.hs#L42
-
--- | Domain name with port number
---
-data RemoteAddress = RemoteAddress
-  { raAddress :: !Text.Text
-  -- ^ Either a dns address or an ip address.
-  , raPort    :: !Socket.PortNumber
-  -- ^ Port number of the destination.
-  , raValency :: !Int
-  -- ^ If a DNS address is given valency governs
-  -- to how many resolved IP addresses
-  -- should we maintain active (hot) connection;
-  -- if an IP address is given valency is used as
-  -- a Boolean value, @0@ means to ignore the address;
-  } deriving (Eq, Ord, Show)
-
-instance Aeson.FromJSON RemoteAddress where
-  parseJSON = Aeson.withObject "RemoteAddress" $ \v -> RemoteAddress
-    <$> v Aeson..: "addr"
-    <*> ((fromIntegral :: Int -> Socket.PortNumber) <$> v Aeson..: "port")
-    <*> v Aeson..: "valency"
-
-instance Aeson.ToJSON RemoteAddress where
-  toJSON ra = Aeson.object
-    [ "addr"    Aeson..= raAddress ra
-    , "port"    Aeson..= (fromIntegral (raPort ra) :: Int)
-    , "valency" Aeson..= raValency ra
-    ]
+getRelayNodeProducersById :: Types.Topology -> Int -> [String]
+getRelayNodeProducersById topology i = Types.producers $
+  (!! 0) $
+    filter
+      ((== i) . Types.nodeId)
+      (Types.relayNodes topology)
 
 --------------------------------------------------------------------------------
 -- Projection for a P2P topology. ----------------------------------------------
@@ -217,6 +144,14 @@ data NetworkTopologyP2P = RealNodeTopologyP2P
 -}
   }
   deriving (Eq, Show)
+
+emptyNetworkTopologyP2P :: NetworkTopologyP2P
+emptyNetworkTopologyP2P = RealNodeTopologyP2P
+  { ntLocalRootPeersGroups  = LocalRootPeersGroups []
+  , ntPublicRootPeers       = []
+  , ntUseLedgerPeers        = DontUseLedgerPeers
+  , ntUseBootstrapPeers     = DontUseBootstrapPeers
+  }
 
 instance Aeson.FromJSON NetworkTopologyP2P where
   parseJSON = Aeson.withObject "NetworkTopologyP2P" $ \o -> RealNodeTopologyP2P
