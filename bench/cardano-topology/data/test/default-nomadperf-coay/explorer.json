@@ -1,34 +1,72 @@
 {
-  "Producers": [
+  "localRoots": [
     {
-      "addr": "127.0.0.1",
-      "port": 30000,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30000
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30001,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30001
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30002,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30002
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30003,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30003
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30004,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30004
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30005,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30005
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     }
-  ]
+  ],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
 }
