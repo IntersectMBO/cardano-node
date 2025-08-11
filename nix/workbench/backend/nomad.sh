@@ -826,24 +826,28 @@ backend_nomad() {
       fi
       # Stop tracer(s).
       #################
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if test "${one_tracer_per_node}" = "true"
+      # A "tracer"(s) is optional.
+      if jqtest ".node.tracer" "${dir}"/profile.json
       then
-        local jobs_tracers_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad stop-all-tracers "${dir}" "${node}" &
-          jobs_tracers_array+=("$!")
-        done
-        if ! wait_all "${jobs_tracers_array[@]}"
+        local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+        if test "${one_tracer_per_node}" = "true"
         then
-          msg "$(red "Failed to stop tracer(s)")"
-        fi
-      else
-        if ! backend_nomad stop-all-tracers "${dir}" "tracer"
-        then
-          msg "$(red "Failed to stop tracer")"
+          local jobs_tracers_array=()
+          local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+          for node in ${nodes[*]}
+          do
+            backend_nomad stop-all-tracers "${dir}" "${node}" &
+            jobs_tracers_array+=("$!")
+          done
+          if ! wait_all "${jobs_tracers_array[@]}"
+          then
+            msg "$(red "Failed to stop tracer(s)")"
+          fi
+        else
+          if ! backend_nomad stop-all-tracers "${dir}" "tracer"
+          then
+            msg "$(red "Failed to stop tracer")"
+          fi
         fi
       fi
     ;;
@@ -891,7 +895,7 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local workload=${1:?$usage}; shift
       local task=${1:?$usage}; shift
-      local task_dir="${dir}"/"${workload}"/"${task}"
+      local task_dir="${dir}"/workloads/"${workload}"/"${task}"
       if test -f "${task_dir}"/started && !(test -f "${task_dir}"/stopped || test -f "${task_dir}"/quit)
       then
         if backend_nomad is-task-program-running "${dir}" "${task}" "${workload}"
@@ -1537,44 +1541,44 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
 
       # A "tracer"(s) is optional.
-      if jqtest ".node.tracer" "${dir}"/profile.json
+      if ! jqtest ".node.tracer" "${dir}"/profile.json
       then
         true
-      fi
-
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if ! test "${one_tracer_per_node}" = "true"
-      then
-        backend_nomad start-tracer "${dir}" "tracer"
       else
-        local jobs_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad start-tracer "${dir}" "${node}" &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
+        local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+        if ! test "${one_tracer_per_node}" = "true"
         then
-          if ! wait_kill_em_all "${jobs_array[@]}"
+          backend_nomad start-tracer "${dir}" "tracer"
+        else
+          local jobs_array=()
+          local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+          for node in ${nodes[*]}
+          do
+            backend_nomad start-tracer "${dir}" "${node}" &
+            jobs_array+=("$!")
+          done
+          # Wait and check!
+          if test -n "${jobs_array}"
           then
-            msg "$(red "Failed to start tracer(s)")"
-            backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-            fatal "scenario.sh start-tracers failed!"
-          else
-            for node in ${nodes[*]}
-            do
-              if ! test -f "${dir}"/tracer/"${node}"/started
-              then
-                msg "$(red "Tracer for \"${node}\" failed to start!")"
-                backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-                fatal "scenario.sh start-tracers failed!"
-              fi
-            done
+            if ! wait_kill_em_all "${jobs_array[@]}"
+            then
+              msg "$(red "Failed to start tracer(s)")"
+              backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+              fatal "scenario.sh start-tracers failed!"
+            else
+              for node in ${nodes[*]}
+              do
+                if ! test -f "${dir}"/tracer/"${node}"/started
+                then
+                  msg "$(red "Tracer for \"${node}\" failed to start!")"
+                  backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+                  fatal "scenario.sh start-tracers failed!"
+                fi
+              done
+            fi
           fi
+          return 0
         fi
-        return 0
       fi
     ;;
 
@@ -2113,7 +2117,6 @@ backend_nomad() {
 
       local nomad_environment=$(envjqr   'nomad_environment')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "${dir}/profile.json")
       local socket_name
       if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
       then
@@ -2122,16 +2125,21 @@ backend_nomad() {
         socket_name=$(jq -r '.network.contents' "${dir}/tracer/config.json")
       fi
       # Wait for tracer socket
+      local patience start elapsed=0
+      patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "${dir}/profile.json")
+      start="$(date +"%s")"
       msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
-      local i=0
       # Always keep checking that the supervisord program is still running!
       while \
             backend_nomad is-task-program-running "${dir}" "${task}" tracer  \
         &&                                                                   \
           ! backend_nomad task-file-stat "${dir}" "${task}" run/current/tracer/"${socket_name}" | grep --quiet "application/octet-stream"
-      do printf "%3d" $i; sleep 1
-        i=$((i+1))
-        if test "${i}" -ge "${patience}"
+      do
+        local now
+        now="$(date +"%s")"
+        elapsed=$((now-start))
+        printf "%3d" $elapsed; sleep 1
+        if test "${elapsed}" -ge "${patience}"
         then
           msg "$(red "Patience ran out for Task \"${task}\"'s tracer after ${patience}s")"
           if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
@@ -2144,7 +2152,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" up (${i}s)!")"
+      msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" up (${elapsed}s)!")"
       return 0
     ;;
 
@@ -2169,19 +2177,22 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
 
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
+      local patience start elapsed=0
+      patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
+      start="$(date +"%s")"
       msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
-      local i=0
       # Always keep checking that the supervisord program is still running!
       while \
             backend_nomad is-task-program-running "${dir}" "${node}" "${node}" \
         &&                                                                     \
           ! backend_nomad task-file-stat "${dir}" "${node}" run/current/"${node}"/node.socket 2>/dev/null | grep --quiet "application/octet-stream"
-      # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
+      # TODO: Add the "timer" `printf "%3d" $elapsed;` but for concurrent processes!
       do
         sleep 1
-        i=$((i+1))
-        if test "${i}" -ge "${patience}"
+        local now elapsed
+        now="$(date +"%s")"
+        elapsed=$((now-start))
+        if test "${elapsed}" -ge "${patience}"
         then
           msg "$(red "Patience ran out for \"${node}\" after ${patience}s")"
           msg "$(yellow "check logs in ${dir}/${node}/[stdout & stderr]")"
@@ -2189,7 +2200,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${i}s)!")"
+      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${elapsed}s)!")"
       return 0
     ;;
 
@@ -2987,9 +2998,9 @@ backend_nomad() {
           if test -n "${strikes}"
           then
             # A strike parameter was given
-            msg "$(yellow "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            msg "$(yellow "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})")"
             strikes=$(( strikes - 1 ))
-            msg "$(yellow "Strikes for \"is-task-program-running\" left: ${strikes}")"
+            msg "$(yellow "Strikes for \"is-task-program-running ${task} ${program}\" left: ${strikes}")"
             if test "${strikes}" -gt 0
             then
               # Strikes still available, sleep/retry!
@@ -3004,11 +3015,11 @@ backend_nomad() {
               backend_nomad is-task-program-running "${dir}" "${task}" "${program}" "${strikes}"
             else
               # Fails everything only if using strikes!
-              fatal "Function \"is-task-program-running\" failed: $(cat ${stderr_file})"
+              fatal "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})"
             fi
           else
             # No strike parameter was given, don't use "fatal"!
-            msg "$(red "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            msg "$(red "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})")"
             false
           fi
         else
@@ -3020,7 +3031,7 @@ backend_nomad() {
         if test -s "${stderr_file}"
         then
           # Don't supress possible error messages!
-          msg "$(yellow "WARNING: \"is-task-program-running\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
+          msg "$(yellow "WARNING: \"is-task-program-running ${task} ${program}\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
         fi
         true # Program is running!
       fi
@@ -3047,7 +3058,7 @@ backend_nomad() {
         if test -n "${strikes}"
         then
           # A strike parameter was given
-          msg "$(yellow "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          msg "$(yellow "Function \"is-task-program-failed ${task} ${program}\" failed: $(cat ${stderr_file})")"
           strikes=$(( strikes - 1 ))
           msg "$(yellow "Strikes for \"is-task-program-failed\" left: ${strikes}")"
           if test "${strikes}" -gt 0
@@ -3064,11 +3075,11 @@ backend_nomad() {
             backend_nomad is-task-program-failed "${dir}" "${task}" "${program}" $(( strikes - 1 ))
           else
             # Fails everything only if using strikes!
-            fatal "Function \"is-task-program-failed\" failed"
+            fatal "Function \"is-task-program-failed ${task} ${program}\" failed"
           fi
         else
           # No strike parameter was given, don't use "fatal"!
-          msg "$(red "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          msg "$(red "Function \"is-task-program-failed ${task} ${program}\" failed: $(cat ${stderr_file})")"
           true # Assuming program failed due to Nomad command error!
         fi
       else
@@ -3076,7 +3087,7 @@ backend_nomad() {
         if test -s "${stderr_file}"
         then
           # Don't supress possible error messages!
-          msg "$(yellow "WARNING: \"is-task-program-failed\" is returning a non-empty stderr: $(cat ${stderr_file})")"
+          msg "$(yellow "WARNING: \"is-task-program-failed ${task} ${program}\" is returning a non-empty stderr: $(cat ${stderr_file})")"
         fi
         test "${exit_code}" != "0"
       fi
@@ -3891,6 +3902,12 @@ client {
     # function. By default, templates can access files only within the task
     # working directory.
     disable_file_sandbox = false
+  }
+
+  # Feature parity with the "nomadperf" cloud cluster.
+  host_volume "cgroup" {
+    path = "/sys/fs/cgroup"
+    read_only = true
   }
 
   # To use when resolving IPs.

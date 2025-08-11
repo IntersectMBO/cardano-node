@@ -80,7 +80,6 @@ library
                       , hashable
                       , hostname
                       , http-date
-                      , io-classes
                       , network
                       , serialise
                       , stm
