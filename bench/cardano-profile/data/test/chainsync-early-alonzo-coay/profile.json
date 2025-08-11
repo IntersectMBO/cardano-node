@@ -287,7 +287,9 @@
     "tracing_backend": "trace-dispatcher",
     "tracer": false,
     "utxo_lmdb": false,
-    "verbatim": {}
+    "verbatim": {
+      "EnableP2P": true
+    }
   },
   "analysis": {
     "type": "performance",
