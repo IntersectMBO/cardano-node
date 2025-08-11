@@ -394,7 +394,6 @@ data Node = Node
     utxo_lmdb :: Bool
   , ssd_directory :: Maybe String
 
-  -- TODO: Move up "EnableP2P". A new level only for this?
   , verbatim :: NodeVerbatim
 
   -- TODO: "tracing_backend" is null or has a backend name!
@@ -449,20 +448,18 @@ newtype NodeVerbatim = NodeVerbatim
 
 -- `Nothing` properties are not in the final "config.json", not even "null".
 instance Aeson.ToJSON NodeVerbatim where
-  -- If the "EnableP2P" JSON property is present in a Cardano node version that
-  -- does not support P2P, the profile can fail to properly initiate a cluster.
-  toJSON   (NodeVerbatim Nothing) = Aeson.object []
-  toJSON p@(NodeVerbatim _) =
-    Aeson.object
-      [ "EnableP2P"   Aeson..= enableP2P p
-      ]
+  -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
+  -- Therefore, any attempt to set this to false for a profile must be a critical error.
+  -- For backwards compatibility with Node < 10.6, we explicitly set EnableP2P = true in the config.
+  toJSON (NodeVerbatim (Just True)) = Aeson.object [ "EnableP2P" Aeson..= True ]
+  toJSON (NodeVerbatim _)           = error "NodeVerbatim: EnableP2P must be true; non-p2p topologies are no longer supported since Node 10.6"
 
--- TODO: Switch to lower-case in workbench/bash
 instance Aeson.FromJSON NodeVerbatim where
+  -- As it is the implicit default on Node 10.6, assumption for the default value changes
   parseJSON =
     Aeson.withObject "NodeVerbatim" $ \o -> do
       NodeVerbatim
-        <$> o Aeson..:? "EnableP2P"
+        <$> o Aeson..:? "EnableP2P" Aeson..!= Just True
 
 --------------------------------------------------------------------------------
 

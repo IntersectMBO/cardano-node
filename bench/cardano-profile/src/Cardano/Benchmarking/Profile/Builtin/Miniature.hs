@@ -81,24 +81,22 @@ profilesNoEraMiniature =
       ripemd   = V.plutusDoublePlusSaturation . V.plutusTypeRIPEMD   . P.analysisSizeSmall
   in [
   -- 2 nodes, local
-    ciBench02Value    & P.name "ci-bench"                        . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench02Value    & P.name "ci-bench-lmdb"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOn  . P.lmdb . P.ssdDirectory "/tmp"
-  , ciBench02Value    & P.name "ci-bench-rtview"                 . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.tracerRtview
-  , ciBench02Value    & P.name "ci-bench-p2p"                    . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOn 
-  , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing . P.p2pOff
-  , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench02Plutus   & P.name "ci-bench-plutus24"               . loop2024     . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-ecdsa"      . ecdsa        . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-schnorr"    . schnorr      . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-blst"          . blst         . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd"        . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.v10Preview
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd-step2x" . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.v10Preview . P.budgetBlockStepsDouble
+    ciBench02Value    & P.name "ci-bench"                        . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench02Value    & P.name "ci-bench-lmdb"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.lmdb . P.ssdDirectory "/tmp"
+  , ciBench02Value    & P.name "ci-bench-rtview"                 . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.tracerRtview
+  , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing
+  , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn  . P.newTracing
+  , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench02Plutus   & P.name "ci-bench-plutus24"               . loop2024     . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-ecdsa"      . ecdsa        . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-schnorr"    . schnorr      . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-blst"          . blst         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd"        . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.v10Preview
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd-step2x" . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.v10Preview . P.budgetBlockStepsDouble
   -- 10 nodes, local
-  , ciBench10Value    & P.name "10"                              . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , ciBench10Value    & P.name "10-p2p"                          . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOn
-  , ciBench10Value    & P.name "10-notracer"                     . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing . P.p2pOff
-  , ciBench10Plutus   & P.name "10-plutus"                       . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
+  , ciBench10Value    & P.name "10"                              . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench10Value    & P.name "10-notracer"                     . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing
+  , ciBench10Plutus   & P.name "10-plutus"                       . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
   ]
   ++
   ---------------------------------------------------------------------------------------
@@ -111,7 +109,6 @@ profilesNoEraMiniature =
         -- Function `genesisVariantPreVoltaire` last to match `jq` order.
         . P.blocksize64k . P.v9Preview . V.genesisVariantPreVoltaire
         . P.dreps 0
-        . P.p2pOn
         . P.analysisSizeFull . P.analysisUnitary
   in [
     dense & P.name "6-dense"            . V.valueCloud . duration30  . P.traceForwardingOn . P.newTracing

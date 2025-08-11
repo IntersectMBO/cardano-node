@@ -160,42 +160,39 @@ profilesNoEraCloud =
              . P.workloadAppend C.cgroupMemoryWorkload
   in [
   -- Value (pre-Voltaire profiles)
-    value     & P.name "value-nomadperf"                                   . P.dreps      0 . P.newTracing . P.p2pOn
-  , value     & P.name "value-nomadperf-nop2p"                             . P.dreps      0 . P.newTracing . P.p2pOff
-  , value     & P.name "value-drep1k-nomadperf"                            . P.dreps   1000 . P.newTracing . P.p2pOn
-  , value     & P.name "value-drep10k-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
-  , value     & P.name "value-drep100k-nomadperf"                          . P.dreps 100000 . P.newTracing . P.p2pOn
-  , value     & P.name "value-oldtracing-nomadperf"                        . P.dreps      0 . P.oldTracing . P.p2pOn
-  , value     & P.name "value-oldtracing-nomadperf-nop2p"                  . P.dreps      0 . P.oldTracing . P.p2pOff
+    value     & P.name "value-nomadperf"                                   . P.dreps      0 . P.newTracing
+  , value     & P.name "value-drep1k-nomadperf"                            . P.dreps   1000 . P.newTracing
+  , value     & P.name "value-drep10k-nomadperf"                           . P.dreps  10000 . P.newTracing
+  , value     & P.name "value-drep100k-nomadperf"                          . P.dreps 100000 . P.newTracing
+  , value     & P.name "value-oldtracing-nomadperf"                        . P.dreps      0 . P.oldTracing
   -- Value (post-Voltaire profiles)
-  , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing . P.p2pOn
-  , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
-  , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
-  , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn        . cgmem
-  , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb . cgmem
+  , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing
+  , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.rtsGcParallel . P.rtsGcLoadBalance
+  , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . lmdb
+  , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing        . cgmem
+  , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . lmdb . cgmem
   -- Plutus (pre-Voltaire profiles)
-  , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
-  , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
-  , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000 . P.newTracing . P.p2pOn
-  , loop      & P.name "plutus-drep10k-nomadperf"                          . P.dreps  10000 . P.newTracing . P.p2pOn
-  , loop      & P.name "plutus-drep100k-nomadperf"                         . P.dreps 100000 . P.newTracing . P.p2pOn
-  , loop2024  & P.name "plutus24-nomadperf"                                . P.dreps      0 . P.newTracing . P.p2pOn
-  , ecdsa     & P.name "plutus-secp-ecdsa-nomadperf"                       . P.dreps      0 . P.newTracing . P.p2pOn
-  , schnorr   & P.name "plutus-secp-schnorr-nomadperf"                     . P.dreps      0 . P.newTracing . P.p2pOn
+  , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing
+  , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000 . P.newTracing
+  , loop      & P.name "plutus-drep10k-nomadperf"                          . P.dreps  10000 . P.newTracing
+  , loop      & P.name "plutus-drep100k-nomadperf"                         . P.dreps 100000 . P.newTracing
+  , loop2024  & P.name "plutus24-nomadperf"                                . P.dreps      0 . P.newTracing
+  , ecdsa     & P.name "plutus-secp-ecdsa-nomadperf"                       . P.dreps      0 . P.newTracing
+  , schnorr   & P.name "plutus-secp-schnorr-nomadperf"                     . P.dreps      0 . P.newTracing
   -- Plutus (post-Voltaire profiles)
-  , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
-  , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn
-  , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem15x
-  , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . P.newTracing . P.p2pOn . blockMem2x
-  , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.newTracing . P.p2pOn . P.rtsGcParallel . P.rtsGcLoadBalance
-  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
+  , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing
+  , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000 . P.newTracing
+  , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . P.newTracing . blockMem15x
+  , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . P.newTracing . blockMem2x
+  , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.newTracing . P.rtsGcParallel . P.rtsGcLoadBalance
+  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . P.newTracing . lmdb
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
-  , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview
-  , blst      & P.name "plutusv3-blst-stepx15-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview . P.budgetBlockStepsOneAndAHalf
-  , blst      & P.name "plutusv3-blst-stepx2-nomadperf"                    . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview . P.budgetBlockStepsDouble
-  , ripemd    & P.name "plutusv3-ripemd-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview
-  , ripemd    & P.name "plutusv3-ripemd-stepx15-nomadperf"                 . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview . P.budgetBlockStepsOneAndAHalf
-  , ripemd    & P.name "plutusv3-ripemd-stepx2-nomadperf"                  . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview . P.budgetBlockStepsDouble
+  , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000 . P.newTracing . P.v10Preview
+  , blst      & P.name "plutusv3-blst-stepx15-nomadperf"                   . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsOneAndAHalf
+  , blst      & P.name "plutusv3-blst-stepx2-nomadperf"                    . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsDouble
+  , ripemd    & P.name "plutusv3-ripemd-nomadperf"                         . P.dreps  10000 . P.newTracing . P.v10Preview
+  , ripemd    & P.name "plutusv3-ripemd-stepx15-nomadperf"                 . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsOneAndAHalf
+  , ripemd    & P.name "plutusv3-ripemd-stepx2-nomadperf"                  . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsDouble
   ]
   ----------
   -- Voting.
@@ -208,12 +205,12 @@ profilesNoEraCloud =
       loopVoting   = plutusVoting & plutusLoopBase . V.plutusTypeLoop . P.analysisSizeSmall
   in [
   -- Voting
-    valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadUtxo
-  , valueVoting & P.name "value-voting-volt-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx1
-  , valueVoting & P.name "value-voting-double-volt-nomadperf"            . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx2
-  , loopVoting  & P.name "plutus-voting-utxo-volt-nomadperf"             . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadUtxo
-  , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx1
-  , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx2
+    valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.newTracing . P.workloadAppend W.votingWorkloadUtxo
+  , valueVoting & P.name "value-voting-volt-nomadperf"                   . P.dreps  10000 . P.newTracing . P.workloadAppend W.votingWorkloadx1
+  , valueVoting & P.name "value-voting-double-volt-nomadperf"            . P.dreps  10000 . P.newTracing . P.workloadAppend W.votingWorkloadx2
+  , loopVoting  & P.name "plutus-voting-utxo-volt-nomadperf"             . P.dreps  10000 . P.newTracing . P.workloadAppend W.votingWorkloadUtxo
+  , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.newTracing . P.workloadAppend W.votingWorkloadx1
+  , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.newTracing . P.workloadAppend W.votingWorkloadx2
   ]
   -----------
   -- Latency.
@@ -234,7 +231,7 @@ profilesNoEraCloud =
   in (
     latency & P.name "latency-nomadperf"
             . P.desc "AWS perf class cluster, stop when all latency services stop"
-            . P.traceForwardingOn . P.newTracing . P.p2pOn . nomadPerf
+            . P.traceForwardingOn . P.newTracing . nomadPerf
   )
   ----------------------
   -- Testing benchmarks.
@@ -255,12 +252,9 @@ profilesNoEraCloud =
         -- TODO: Inconsistency: "ci-test-nomadperf" uses epoch 300        and "fast-nomadperf*" the last know epoch.
         . V.genesisVariant300
   in [
-    fastNP & P.name "fast-nomadperf"               . P.newTracing . P.p2pOn
-  , fastNP & P.name "fast-nomadperf-nop2p"         . P.newTracing . P.p2pOff
-  , ciNP   & P.name "ci-test-nomadperf"            . P.newTracing . P.p2pOn
-  , ciNP   & P.name "ci-test-nomadperf-nop2p"      . P.newTracing . P.p2pOff
-  -- TODO: FIXME: A non "nop2p" "nomadperf" profile without P2P???
-  , ciNP   & P.name "ci-test-oldtracing-nomadperf" . P.oldTracing . P.p2pOff
+    fastNP & P.name "fast-nomadperf"               . P.newTracing
+  , ciNP   & P.name "ci-test-nomadperf"            . P.newTracing
+  , ciNP   & P.name "ci-test-oldtracing-nomadperf" . P.oldTracing
   ]
   ++
   -- TODO: Inconsistency: "fast*" and "ci-test*" use `V.valueLocal` and "default*"/"oldtracing" use `V.valueCloud`.
@@ -275,10 +269,8 @@ profilesNoEraCloud =
         . P.delegators 6
         . P.analysisUnitary
   in [
-    defNP & P.name "default-nomadperf-nop2p"    . P.newTracing . P.p2pOff
-  , defNP & P.name "default-nomadperf"          . P.newTracing . P.p2pOn
-  , defNP & P.name "oldtracing-nomadperf"       . P.oldTracing . P.p2pOn
-  , defNP & P.name "oldtracing-nomadperf-nop2p" . P.oldTracing . P.p2pOff
+    defNP & P.name "default-nomadperf"          . P.newTracing
+  , defNP & P.name "oldtracing-nomadperf"       . P.oldTracing
   ]
   ++
   let ciBench =
@@ -295,9 +287,8 @@ profilesNoEraCloud =
         . P.desc "Miniature dataset, CI-friendly duration, bench scale"
   -- 2 nodes, Nomad perf
   in [
-    ciBench & P.name "ci-bench-nomadperf"            . V.valueLocal . P.dreps 0 . P.traceForwardingOn . P.newTracing . P.p2pOn
-  , ciBench & P.name "ci-bench-nomadperf-nop2p"      . V.valueLocal . P.dreps 0 . P.traceForwardingOn . P.newTracing . P.p2pOff
-  , ciBench & P.name "ci-bench-oldtracing-nomadperf" . V.valueLocal . P.dreps 0 .                       P.oldTracing . P.p2pOn
+    ciBench & P.name "ci-bench-nomadperf"            . V.valueLocal . P.dreps 0 . P.traceForwardingOn . P.newTracing
+  , ciBench & P.name "ci-bench-oldtracing-nomadperf" . V.valueLocal . P.dreps 0 .                       P.oldTracing
   ]
 
 

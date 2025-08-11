@@ -58,13 +58,11 @@ profilesNoEraChainsync =
       alonzo = chainsync & P.shutdownOnSlot 38901589 . P.chaindb (1800,1799) (38901589,37173650)
   in [
   -- Byron
-    byron & P.name "chainsync-early-byron"               . P.traceForwardingOff . P.newTracing . P.p2pOff
-  , byron & P.name "chainsync-early-byron-notracer"      . P.traceForwardingOff . P.newTracing . P.p2pOff
-  , byron & P.name "chainsync-early-byron-oldtracing"    . P.traceForwardingOff . P.oldTracing . P.p2pOff
+    byron & P.name "chainsync-early-byron"               . P.traceForwardingOff . P.newTracing
+  , byron & P.name "chainsync-early-byron-notracer"      . P.traceForwardingOff . P.newTracing
+  , byron & P.name "chainsync-early-byron-oldtracing"    . P.traceForwardingOff . P.oldTracing
   -- Alonzo
-  , alonzo  & P.name "chainsync-early-alonzo"            . P.traceForwardingOff . P.newTracing . P.p2pOff
-  , alonzo  & P.name "chainsync-early-alonzo-notracer"   . P.traceForwardingOff . P.newTracing . P.p2pOff
-  -- TODO: Remove and make `P.p2pOn` the default without adding a "-nop2p" profile.
-  , alonzo  & P.name "chainsync-early-alonzo-p2p"        . P.traceForwardingOff . P.newTracing . P.p2pOn
-  , alonzo  & P.name "chainsync-early-alonzo-oldtracing" . P.traceForwardingOff . P.oldTracing . P.p2pOff
+  , alonzo  & P.name "chainsync-early-alonzo"            . P.traceForwardingOff . P.newTracing
+  , alonzo  & P.name "chainsync-early-alonzo-notracer"   . P.traceForwardingOff . P.newTracing
+  , alonzo  & P.name "chainsync-early-alonzo-oldtracing" . P.traceForwardingOff . P.oldTracing
   ]

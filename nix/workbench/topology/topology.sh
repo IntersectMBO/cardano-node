@@ -247,10 +247,6 @@ case "${op}" in
                   --baseport $basePort
                   --node-number $i
                  )
-            if jqtest ".node.verbatim.EnableP2P" <<<$prof
-            then
-              args+=('--enable-p2p')
-            fi
         ;;
         local-explorer )
            local nodes
