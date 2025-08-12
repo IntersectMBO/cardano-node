@@ -25,7 +25,7 @@ let
         else (import ./patch.nix {})
       )
       # Amazon S3 HTTP to upload/download the genesis tar file.
-      pkgs.awscli
+      pkgs.awscli2
       # Used to download the logs.
       pkgs.rsync
     ]
