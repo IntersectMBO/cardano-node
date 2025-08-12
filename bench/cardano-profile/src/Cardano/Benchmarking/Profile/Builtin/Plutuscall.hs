@@ -45,6 +45,19 @@ profilesNoEraPlutuscall =
         . P.analysisStandard
         . P.desc "Small dataset, honest 15 epochs duration"
 
+      -- This most probably requires a 32GB RAM machine
+      plutusCallDense =
+          P.empty
+        & P.fixedLoaded
+        . P.torusDense . V.hosts 12 . P.loopback
+        . compressedFor15Epochs
+        . V.datasetSmall
+        . V.fundsDefault
+        . P.p2pOff
+        . P.traceForwardingOn . P.newTracing
+        . P.analysisStandard
+        . P.desc "Small dataset, 12 hosts torus-dense topology, 15 ep duration"
+
       loop            = plutusCall & V.plutusTypeLoop    . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
       ecdsa           = plutusCall & V.plutusTypeECDSA   . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
       schnorr         = plutusCall & V.plutusTypeSchnorr . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
@@ -53,7 +66,8 @@ profilesNoEraPlutuscall =
       blstVolt        = plutusCall & V.plutusTypeBLST    . V.plutusDoublePlusSaturation . P.analysisSizeModerate2
       ripemdVolt      = plutusCall & V.plutusTypeRIPEMD  . V.plutusDoublePlusSaturation . P.analysisSizeSmall
 
-      postPlomin      = V.genesisVariantVoltaire         . P.v10Preview
+      loopVoltDense   = plutusCallDense & V.plutusTypeLoop . V.plutusDoublePlusSaturation . P.analysisSizeSmall
+      postPlomin      = V.genesisVariantVoltaire           . P.v10Preview
   in [
     loop        & P.name "plutuscall-loop"                 . postPlomin
   , loop        & P.name "plutuscall-loop-memx2"           . postPlomin . P.budgetBlockMemoryDouble . P.overlay Pl.calibrateLoopBlockMemx2
@@ -65,4 +79,6 @@ profilesNoEraPlutuscall =
   , loopVolt    & P.name "plutuscall-volt-loop"            . postPlomin
   , blstVolt    & P.name "plutuscall-volt-blst"            . postPlomin
   , ripemdVolt  & P.name "plutuscall-volt-ripemd"          . postPlomin
+
+  , loopVoltDense & P.name "plutuscall-volt-dense-loop"    . postPlomin
   ]
