@@ -1,0 +1,349 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679426757"><span id="local-6989586621679426758"><span id="local-6989586621679426759"></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.BenchmarkType</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier">BenchmarkType</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#knownBenchmarkTypes"><span class="hs-identifier">knownBenchmarkTypes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#benchmarkTypeExe"><span class="hs-identifier">benchmarkTypeExe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>     </span><span class="hs-special">(</span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier">char</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier">text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | The \&quot;benchmark-type\&quot; field in the benchmark stanza.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">data</span><span> </span><span id="BenchmarkType"><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-var">BenchmarkType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BenchmarkTypeExe"><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeExe"><span class="hs-identifier hs-var">BenchmarkTypeExe</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-22"></span><span>                     </span><span class="annot"><span class="hs-comment">-- ^ \&quot;type: exitcode-stdio-x.y\&quot;</span></span><span>
+</span><span id="line-23"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="BenchmarkTypeUnknown"><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeUnknown"><span class="hs-identifier hs-var">BenchmarkTypeUnknown</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-24"></span><span>                     </span><span class="annot"><span class="hs-comment">-- ^ Some unknown benchmark type e.g. \&quot;type: foo\&quot;</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679426767"><span id="local-6989586621679426769"><span class="annot"><span class="annottext">(forall x. BenchmarkType -&gt; Rep BenchmarkType x)
+-&gt; (forall x. Rep BenchmarkType x -&gt; BenchmarkType)
+-&gt; Generic BenchmarkType
+forall x. Rep BenchmarkType x -&gt; BenchmarkType
+forall x. BenchmarkType -&gt; Rep BenchmarkType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. BenchmarkType -&gt; Rep BenchmarkType x
+from :: forall x. BenchmarkType -&gt; Rep BenchmarkType x
+$cto :: forall x. Rep BenchmarkType x -&gt; BenchmarkType
+to :: forall x. Rep BenchmarkType x -&gt; BenchmarkType
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426773"><span id="local-6989586621679426784"><span id="local-6989586621679426788"><span class="annot"><span class="annottext">Int -&gt; BenchmarkType -&gt; ShowS
+[BenchmarkType] -&gt; ShowS
+BenchmarkType -&gt; String
+(Int -&gt; BenchmarkType -&gt; ShowS)
+-&gt; (BenchmarkType -&gt; String)
+-&gt; ([BenchmarkType] -&gt; ShowS)
+-&gt; Show BenchmarkType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BenchmarkType -&gt; ShowS
+showsPrec :: Int -&gt; BenchmarkType -&gt; ShowS
+$cshow :: BenchmarkType -&gt; String
+show :: BenchmarkType -&gt; String
+$cshowList :: [BenchmarkType] -&gt; ShowS
+showList :: [BenchmarkType] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426793"><span id="local-6989586621679426797"><span id="local-6989586621679426800"><span id="local-6989586621679426816"><span class="annot"><span class="annottext">ReadPrec [BenchmarkType]
+ReadPrec BenchmarkType
+Int -&gt; ReadS BenchmarkType
+ReadS [BenchmarkType]
+(Int -&gt; ReadS BenchmarkType)
+-&gt; ReadS [BenchmarkType]
+-&gt; ReadPrec BenchmarkType
+-&gt; ReadPrec [BenchmarkType]
+-&gt; Read BenchmarkType
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS BenchmarkType
+readsPrec :: Int -&gt; ReadS BenchmarkType
+$creadList :: ReadS [BenchmarkType]
+readList :: ReadS [BenchmarkType]
+$creadPrec :: ReadPrec BenchmarkType
+readPrec :: ReadPrec BenchmarkType
+$creadListPrec :: ReadPrec [BenchmarkType]
+readListPrec :: ReadPrec [BenchmarkType]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426821"><span id="local-6989586621679426829"><span class="annot"><span class="annottext">BenchmarkType -&gt; BenchmarkType -&gt; Bool
+(BenchmarkType -&gt; BenchmarkType -&gt; Bool)
+-&gt; (BenchmarkType -&gt; BenchmarkType -&gt; Bool) -&gt; Eq BenchmarkType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+== :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+$c/= :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+/= :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426837"><span id="local-6989586621679426845"><span id="local-6989586621679426851"><span id="local-6989586621679426855"><span id="local-6989586621679426858"><span id="local-6989586621679426861"><span id="local-6989586621679426864"><span class="annot"><span class="annottext">Eq BenchmarkType
+Eq BenchmarkType =&gt;
+(BenchmarkType -&gt; BenchmarkType -&gt; Ordering)
+-&gt; (BenchmarkType -&gt; BenchmarkType -&gt; Bool)
+-&gt; (BenchmarkType -&gt; BenchmarkType -&gt; Bool)
+-&gt; (BenchmarkType -&gt; BenchmarkType -&gt; Bool)
+-&gt; (BenchmarkType -&gt; BenchmarkType -&gt; Bool)
+-&gt; (BenchmarkType -&gt; BenchmarkType -&gt; BenchmarkType)
+-&gt; (BenchmarkType -&gt; BenchmarkType -&gt; BenchmarkType)
+-&gt; Ord BenchmarkType
+BenchmarkType -&gt; BenchmarkType -&gt; Bool
+BenchmarkType -&gt; BenchmarkType -&gt; Ordering
+BenchmarkType -&gt; BenchmarkType -&gt; BenchmarkType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: BenchmarkType -&gt; BenchmarkType -&gt; Ordering
+compare :: BenchmarkType -&gt; BenchmarkType -&gt; Ordering
+$c&lt; :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+&lt; :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+$c&lt;= :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+&lt;= :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+$c&gt; :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+&gt; :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+$c&gt;= :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+&gt;= :: BenchmarkType -&gt; BenchmarkType -&gt; Bool
+$cmax :: BenchmarkType -&gt; BenchmarkType -&gt; BenchmarkType
+max :: BenchmarkType -&gt; BenchmarkType -&gt; BenchmarkType
+$cmin :: BenchmarkType -&gt; BenchmarkType -&gt; BenchmarkType
+min :: BenchmarkType -&gt; BenchmarkType -&gt; BenchmarkType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679426871"><span id="local-6989586621679426879"><span id="local-6989586621679426885"><span id="local-6989586621679426887"><span id="local-6989586621679426889"><span id="local-6989586621679426895"><span id="local-6989586621679426900"><span id="local-6989586621679426903"><span id="local-6989586621679426906"><span id="local-6989586621679426909"><span id="local-6989586621679426912"><span id="local-6989586621679426915"><span id="local-6989586621679426920"><span id="local-6989586621679426925"><span class="annot"><span class="annottext">Typeable BenchmarkType
+Typeable BenchmarkType =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; BenchmarkType -&gt; c BenchmarkType)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BenchmarkType)
+-&gt; (BenchmarkType -&gt; Constr)
+-&gt; (BenchmarkType -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BenchmarkType))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c BenchmarkType))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; BenchmarkType -&gt; BenchmarkType)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType)
+-&gt; Data BenchmarkType
+BenchmarkType -&gt; Constr
+BenchmarkType -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; BenchmarkType -&gt; BenchmarkType
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BenchmarkType
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BenchmarkType -&gt; c BenchmarkType
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BenchmarkType)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c BenchmarkType)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BenchmarkType -&gt; c BenchmarkType
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BenchmarkType -&gt; c BenchmarkType
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BenchmarkType
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BenchmarkType
+$ctoConstr :: BenchmarkType -&gt; Constr
+toConstr :: BenchmarkType -&gt; Constr
+$cdataTypeOf :: BenchmarkType -&gt; DataType
+dataTypeOf :: BenchmarkType -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BenchmarkType)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BenchmarkType)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c BenchmarkType)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c BenchmarkType)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; BenchmarkType -&gt; BenchmarkType
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; BenchmarkType -&gt; BenchmarkType
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BenchmarkType -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BenchmarkType -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BenchmarkType -&gt; m BenchmarkType
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679426932"><span id="local-6989586621679426939"><span id="local-6989586621679426945"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span></span></span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679426991"><span id="local-6989586621679426998"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span></span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679427064"><span class="annot"><span class="annottext">rnf :: BenchmarkType -&gt; ()
+</span><a href="#local-6989586621679427064"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BenchmarkType -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#knownBenchmarkTypes"><span class="hs-identifier hs-type">knownBenchmarkTypes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-32"></span><span id="knownBenchmarkTypes"><span class="annot"><span class="annottext">knownBenchmarkTypes :: [BenchmarkType]
+</span><a href="Distribution.Types.BenchmarkType.html#knownBenchmarkTypes"><span class="hs-identifier hs-var hs-var">knownBenchmarkTypes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">BenchmarkType
+</span><a href="Distribution.Types.BenchmarkType.html#benchmarkTypeExe"><span class="hs-identifier hs-var">benchmarkTypeExe</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#benchmarkTypeExe"><span class="hs-identifier hs-type">benchmarkTypeExe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span><span>
+</span><span id="line-35"></span><span id="benchmarkTypeExe"><span class="annot"><span class="annottext">benchmarkTypeExe :: BenchmarkType
+</span><a href="Distribution.Types.BenchmarkType.html#benchmarkTypeExe"><span class="hs-identifier hs-var hs-var">benchmarkTypeExe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; BenchmarkType
+</span><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeExe"><span class="hs-identifier hs-var">BenchmarkTypeExe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Version
+</span><a href="Distribution.Types.Version.html#mkVersion"><span class="hs-identifier hs-var">mkVersion</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427070"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679427077"><span class="annot"><span class="annottext">pretty :: BenchmarkType -&gt; Doc
+</span><a href="#local-6989586621679427077"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeExe"><span class="hs-identifier hs-type">BenchmarkTypeExe</span></a></span><span> </span><span id="local-6989586621679427079"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679427079"><span class="hs-identifier hs-var">ver</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;exitcode-stdio-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679427079"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeUnknown"><span class="hs-identifier hs-type">BenchmarkTypeUnknown</span></a></span><span> </span><span id="local-6989586621679427081"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679427081"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679427082"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679427082"><span class="hs-identifier hs-var">ver</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679427081"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#char/Text.PrettyPrint.HughesPJ.html#char"><span class="hs-identifier hs-var">char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="Distribution.Compat.Prelude.html#%3C%3C%3E%3E"><span class="hs-operator hs-var">&lt;&lt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679427082"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679427095"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m BenchmarkType
+</span><a href="#local-6989586621679427095"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Version -&gt; String -&gt; BenchmarkType) -&gt; m BenchmarkType
+forall (m :: * -&gt; *) ver a.
+(CabalParsing m, Parsec ver) =&gt;
+(ver -&gt; String -&gt; a) -&gt; m a
+</span><a href="Distribution.Parsec.html#parsecStandard"><span class="hs-identifier hs-var">parsecStandard</span></a></span><span> </span><span class="annot"><span class="annottext">((Version -&gt; String -&gt; BenchmarkType) -&gt; m BenchmarkType)
+-&gt; (Version -&gt; String -&gt; BenchmarkType) -&gt; m BenchmarkType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679427098"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679427098"><span class="hs-identifier hs-var">ver</span></a></span></span><span> </span><span id="local-6989586621679427099"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679427099"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679427099"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-43"></span><span>       </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;exitcode-stdio&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Version -&gt; BenchmarkType
+</span><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeExe"><span class="hs-identifier hs-var">BenchmarkTypeExe</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679427098"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-44"></span><span>       </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Version -&gt; BenchmarkType
+</span><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeUnknown"><span class="hs-identifier hs-var">BenchmarkTypeUnknown</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679427099"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679427098"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-45"></span></pre></body></html>

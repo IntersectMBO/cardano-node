@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- Module      :  Distribution.Version</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Copyright   :  Isaac Jones, Simon Marlow 2003-2004</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--                Duncan Coutts 2008</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- License     :  BSD3</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Maintainer  :  cabal-devel@haskell.org</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Portability :  portable</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Exports the 'Version' type along with a parser and pretty printer. A version</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- is something like @\&quot;1.3.3\&quot;@. It also defines the 'VersionRange' data</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- types. Version ranges are like @\&quot;&gt;= 1.2 &amp;&amp; &lt; 2\&quot;@.</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Version</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Package versions</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Distribution.Types.Version.html#version0"><span class="hs-identifier">version0</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Distribution.Types.Version.html#mkVersion"><span class="hs-identifier">mkVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Distribution.Types.Version.html#mkVersion%27"><span class="hs-identifier">mkVersion'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Distribution.Types.Version.html#versionNumbers"><span class="hs-identifier">versionNumbers</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Distribution.Types.Version.html#nullVersion"><span class="hs-identifier">nullVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Distribution.Types.Version.html#alterVersion"><span class="hs-identifier">alterVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Version ranges</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier">VersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Constructing</span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#anyVersion"><span class="hs-identifier">anyVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#noVersion"><span class="hs-identifier">noVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#thisVersion"><span class="hs-identifier">thisVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#notThisVersion"><span class="hs-identifier">notThisVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#laterVersion"><span class="hs-identifier">laterVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#earlierVersion"><span class="hs-identifier">earlierVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#orLaterVersion"><span class="hs-identifier">orLaterVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#orEarlierVersion"><span class="hs-identifier">orEarlierVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#unionVersionRanges"><span class="hs-identifier">unionVersionRanges</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#intersectVersionRanges"><span class="hs-identifier">intersectVersionRanges</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#withinVersion"><span class="hs-identifier">withinVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#majorBoundVersion"><span class="hs-identifier">majorBoundVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Inspection</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.html#withinRange"><span class="hs-identifier">withinRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.html#isAnyVersion"><span class="hs-identifier">isAnyVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#isNoVersion"><span class="hs-identifier">isNoVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#isSpecificVersion"><span class="hs-identifier">isSpecificVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#simplifyVersionRange"><span class="hs-identifier">simplifyVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.html#foldVersionRange"><span class="hs-identifier">foldVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.html#normaliseVersionRange"><span class="hs-identifier">normaliseVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.html#stripParensVersionRange"><span class="hs-identifier">stripParensVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.html#hasUpperBound"><span class="hs-identifier">hasUpperBound</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.html#hasLowerBound"><span class="hs-identifier">hasLowerBound</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Cata &amp; ana</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRangeF"><span class="hs-identifier">VersionRangeF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#cataVersionRange"><span class="hs-identifier">cataVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#anaVersionRange"><span class="hs-identifier">anaVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#hyloVersionRange"><span class="hs-identifier">hyloVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#projectVersionRange"><span class="hs-identifier">projectVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#embedVersionRange"><span class="hs-identifier">embedVersionRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Utilities</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#wildcardUpperBound"><span class="hs-identifier">wildcardUpperBound</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#majorUpperBound"><span class="hs-identifier">majorUpperBound</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Modification</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#removeUpperBound"><span class="hs-identifier">removeUpperBound</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#removeLowerBound"><span class="hs-identifier">removeLowerBound</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#transformCaret"><span class="hs-identifier">transformCaret</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#transformCaretUpper"><span class="hs-identifier">transformCaretUpper</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Distribution.Version.html#transformCaretLower"><span class="hs-identifier">transformCaretLower</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Version intervals view</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#asVersionIntervals"><span class="hs-identifier">asVersionIntervals</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#VersionInterval"><span class="hs-identifier">VersionInterval</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#LowerBound"><span class="hs-identifier">LowerBound</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#UpperBound"><span class="hs-identifier">UpperBound</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#Bound"><span class="hs-identifier">Bound</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** 'VersionIntervals' abstract type</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-comment">-- | The 'VersionIntervals' type and the accompanying functions are exposed</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-comment">-- primarily for completeness and testing purposes. In practice</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-comment">-- 'asVersionIntervals' is the main function to use to</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-comment">-- view a 'VersionRange' as a bunch of 'VersionInterval's.</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#VersionIntervals"><span class="hs-identifier">VersionIntervals</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#toVersionIntervals"><span class="hs-identifier">toVersionIntervals</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#fromVersionIntervals"><span class="hs-identifier">fromVersionIntervals</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="Distribution.Types.VersionInterval.html#unVersionIntervals"><span class="hs-identifier">unVersionIntervals</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Version.html"><span class="hs-identifier">Distribution.Types.Version</span></a></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.html"><span class="hs-identifier">Distribution.Types.VersionRange</span></a></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.VersionInterval.html"><span class="hs-identifier">Distribution.Types.VersionInterval</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- Utilities on VersionRange requiring VersionInterval</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- | This is the converse of 'isAnyVersion'. It check if the version range is</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- empty, if there is no possible version that satisfies the version range.</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- For example this is @True@ (for all @v@):</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- &gt; isNoVersion (EarlierVersion v `IntersectVersionRanges` LaterVersion v)</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="annot"><a href="Distribution.Version.html#isNoVersion"><span class="hs-identifier hs-type">isNoVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-104"></span><span id="isNoVersion"><span class="annot"><span class="annottext">isNoVersion :: VersionRange -&gt; Bool
+</span><a href="Distribution.Version.html#isNoVersion"><span class="hs-identifier hs-var hs-var">isNoVersion</span></a></span></span><span> </span><span id="local-6989586621679418839"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679418839"><span class="hs-identifier hs-var">vr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; [VersionInterval]
+</span><a href="Distribution.Types.VersionInterval.html#asVersionIntervals"><span class="hs-identifier hs-var">asVersionIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679418839"><span class="hs-identifier hs-var">vr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><span class="annottext">[VersionInterval]
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- | Is this version range in fact just a specific version?</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- For example the version range @\&quot;&gt;= 3 &amp;&amp; &lt;= 3\&quot;@ contains only the version</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- @3@.</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--</span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Distribution.Version.html#isSpecificVersion"><span class="hs-identifier hs-type">isSpecificVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-114"></span><span id="isSpecificVersion"><span class="annot"><span class="annottext">isSpecificVersion :: VersionRange -&gt; Maybe Version
+</span><a href="Distribution.Version.html#isSpecificVersion"><span class="hs-identifier hs-var hs-var">isSpecificVersion</span></a></span></span><span> </span><span id="local-6989586621679418840"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679418840"><span class="hs-identifier hs-var">vr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; [VersionInterval]
+</span><a href="Distribution.Types.VersionInterval.html#asVersionIntervals"><span class="hs-identifier hs-var">asVersionIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679418840"><span class="hs-identifier hs-var">vr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.VersionInterval.html#VersionInterval"><span class="hs-identifier hs-type">VersionInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionInterval.html#LowerBound"><span class="hs-identifier hs-type">LowerBound</span></a></span><span> </span><span id="local-6989586621679418842"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418842"><span class="hs-identifier hs-var">v</span></a></span></span><span>  </span><span class="annot"><span class="annottext">Bound
+</span><a href="Distribution.Types.VersionInterval.html#InclusiveBound"><span class="hs-identifier hs-var">InclusiveBound</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionInterval.html#UpperBound"><span class="hs-identifier hs-type">UpperBound</span></a></span><span> </span><span id="local-6989586621679418845"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418845"><span class="hs-identifier hs-var">v'</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bound
+</span><a href="Distribution.Types.VersionInterval.html#InclusiveBound"><span class="hs-identifier hs-var">InclusiveBound</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418842"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Version -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418845"><span class="hs-identifier hs-var">v'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Maybe Version
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418842"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><span class="annottext">[VersionInterval]
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Version
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- Transformations</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- | Simplify a 'VersionRange' expression. For non-empty version ranges</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- this produces a canonical form. Empty or inconsistent version ranges</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- are left as-is because that provides more information.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- If you need a canonical form use</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- @fromVersionIntervals . toVersionIntervals@</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- It satisfies the following properties:</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- &gt; withinRange v (simplifyVersionRange r) = withinRange v r</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- &gt;     withinRange v r = withinRange v r'</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- &gt; ==&gt; simplifyVersionRange r = simplifyVersionRange r'</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- &gt;  || isNoVersion r</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- &gt;  || isNoVersion r'</span><span>
+</span><span id="line-138"></span><span class="hs-comment">--</span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Distribution.Version.html#simplifyVersionRange"><span class="hs-identifier hs-type">simplifyVersionRange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span>
+</span><span id="line-140"></span><span id="simplifyVersionRange"><span class="annot"><span class="annottext">simplifyVersionRange :: VersionRange -&gt; VersionRange
+</span><a href="Distribution.Version.html#simplifyVersionRange"><span class="hs-identifier hs-var hs-var">simplifyVersionRange</span></a></span></span><span> </span><span id="local-6989586621679418846"><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679418846"><span class="hs-identifier hs-var">vr</span></a></span></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-comment">-- If the version range is inconsistent then we just return the</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">-- original since that has more information than &quot;&gt;1 &amp;&amp; &lt; 1&quot;, which</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">-- is the canonical inconsistent version range.</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">[VersionInterval] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#null/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VersionIntervals -&gt; [VersionInterval]
+</span><a href="Distribution.Types.VersionInterval.html#unVersionIntervals"><span class="hs-identifier hs-var">unVersionIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">VersionIntervals
+</span><a href="#local-6989586621679418848"><span class="hs-identifier hs-var">vi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679418846"><span class="hs-identifier hs-var">vr</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>                    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionIntervals -&gt; VersionRange
+</span><a href="Distribution.Types.VersionInterval.html#fromVersionIntervals"><span class="hs-identifier hs-var">fromVersionIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">VersionIntervals
+</span><a href="#local-6989586621679418848"><span class="hs-identifier hs-var">vi</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621679418848"><span class="annot"><span class="annottext">vi :: VersionIntervals
+</span><a href="#local-6989586621679418848"><span class="hs-identifier hs-var hs-var">vi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionIntervals
+</span><a href="Distribution.Types.VersionInterval.html#toVersionIntervals"><span class="hs-identifier hs-var">toVersionIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange
+</span><a href="#local-6989586621679418846"><span class="hs-identifier hs-var">vr</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- | Given a version range, remove the highest upper bound. Example: @(&gt;= 1 &amp;&amp; &lt;</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- 3) || (&gt;= 4 &amp;&amp; &lt; 5)@ is converted to @(&gt;= 1 &amp;&amp; &lt; 3) || (&gt;= 4)@.</span><span>
+</span><span id="line-151"></span><span class="annot"><a href="Distribution.Version.html#removeUpperBound"><span class="hs-identifier hs-type">removeUpperBound</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span>
+</span><span id="line-152"></span><span id="removeUpperBound"><span class="annot"><span class="annottext">removeUpperBound :: VersionRange -&gt; VersionRange
+</span><a href="Distribution.Version.html#removeUpperBound"><span class="hs-identifier hs-var hs-var">removeUpperBound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionIntervals -&gt; VersionRange
+</span><a href="Distribution.Types.VersionInterval.html#fromVersionIntervals"><span class="hs-identifier hs-var">fromVersionIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">(VersionIntervals -&gt; VersionRange)
+-&gt; (VersionRange -&gt; VersionIntervals)
+-&gt; VersionRange
+-&gt; VersionRange
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VersionIntervals -&gt; VersionIntervals
+</span><a href="Distribution.Types.VersionInterval.html#relaxLastInterval"><span class="hs-identifier hs-var">relaxLastInterval</span></a></span><span> </span><span class="annot"><span class="annottext">(VersionIntervals -&gt; VersionIntervals)
+-&gt; (VersionRange -&gt; VersionIntervals)
+-&gt; VersionRange
+-&gt; VersionIntervals
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionIntervals
+</span><a href="Distribution.Types.VersionInterval.html#toVersionIntervals"><span class="hs-identifier hs-var">toVersionIntervals</span></a></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- | Given a version range, remove the lowest lower bound.</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- Example: @(&gt;= 1 &amp;&amp; &lt; 3) || (&gt;= 4 &amp;&amp; &lt; 5)@ is converted to</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- @(&gt;= 0 &amp;&amp; &lt; 3) || (&gt;= 4 &amp;&amp; &lt; 5)@.</span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Distribution.Version.html#removeLowerBound"><span class="hs-identifier hs-type">removeLowerBound</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span>
+</span><span id="line-158"></span><span id="removeLowerBound"><span class="annot"><span class="annottext">removeLowerBound :: VersionRange -&gt; VersionRange
+</span><a href="Distribution.Version.html#removeLowerBound"><span class="hs-identifier hs-var hs-var">removeLowerBound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionIntervals -&gt; VersionRange
+</span><a href="Distribution.Types.VersionInterval.html#fromVersionIntervals"><span class="hs-identifier hs-var">fromVersionIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">(VersionIntervals -&gt; VersionRange)
+-&gt; (VersionRange -&gt; VersionIntervals)
+-&gt; VersionRange
+-&gt; VersionRange
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VersionIntervals -&gt; VersionIntervals
+</span><a href="Distribution.Types.VersionInterval.html#relaxHeadInterval"><span class="hs-identifier hs-var">relaxHeadInterval</span></a></span><span> </span><span class="annot"><span class="annottext">(VersionIntervals -&gt; VersionIntervals)
+-&gt; (VersionRange -&gt; VersionIntervals)
+-&gt; VersionRange
+-&gt; VersionIntervals
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionIntervals
+</span><a href="Distribution.Types.VersionInterval.html#toVersionIntervals"><span class="hs-identifier hs-var">toVersionIntervals</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- | Rewrite @^&gt;= x.y.z@ into @&gt;= x.y.z &amp;&amp; &lt; x.(y+1)@</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- @since 3.6.0.0</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--</span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Distribution.Version.html#transformCaret"><span class="hs-identifier hs-type">transformCaret</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span>
+</span><span id="line-165"></span><span id="transformCaret"><span class="annot"><span class="annottext">transformCaret :: VersionRange -&gt; VersionRange
+</span><a href="Distribution.Version.html#transformCaret"><span class="hs-identifier hs-var hs-var">transformCaret</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VersionRangeF VersionRange -&gt; VersionRange)
+-&gt; (VersionRange -&gt; VersionRangeF VersionRange)
+-&gt; VersionRange
+-&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#hyloVersionRange"><span class="hs-identifier hs-var">hyloVersionRange</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="#local-6989586621679418852"><span class="hs-identifier hs-var">embed</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRangeF VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#projectVersionRange"><span class="hs-identifier hs-var">projectVersionRange</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-166"></span><span>    </span><span id="local-6989586621679418852"><span class="annot"><span class="annottext">embed :: VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="#local-6989586621679418852"><span class="hs-identifier hs-var hs-var">embed</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#MajorBoundVersionF"><span class="hs-identifier hs-type">MajorBoundVersionF</span></a></span><span> </span><span id="local-6989586621679418854"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418854"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#orLaterVersion"><span class="hs-identifier hs-var">orLaterVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418854"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#intersectVersionRanges"><span class="hs-operator hs-var">`intersectVersionRanges`</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#earlierVersion"><span class="hs-identifier hs-var">earlierVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Version
+</span><a href="Distribution.Types.VersionRange.Internal.html#majorUpperBound"><span class="hs-identifier hs-var">majorUpperBound</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418854"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><a href="#local-6989586621679418852"><span class="hs-identifier hs-var">embed</span></a></span><span> </span><span id="local-6989586621679418855"><span class="annot"><span class="annottext">VersionRangeF VersionRange
+</span><a href="#local-6989586621679418855"><span class="hs-identifier hs-var">vr</span></a></span></span><span>                     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#embedVersionRange"><span class="hs-identifier hs-var">embedVersionRange</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange
+</span><a href="#local-6989586621679418855"><span class="hs-identifier hs-var">vr</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- | Rewrite @^&gt;= x.y.z@ into @&gt;= x.y.z@</span><span>
+</span><span id="line-170"></span><span class="hs-comment">--</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- @since 3.6.0.0</span><span>
+</span><span id="line-172"></span><span class="hs-comment">--</span><span>
+</span><span id="line-173"></span><span class="annot"><a href="Distribution.Version.html#transformCaretUpper"><span class="hs-identifier hs-type">transformCaretUpper</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span>
+</span><span id="line-174"></span><span id="transformCaretUpper"><span class="annot"><span class="annottext">transformCaretUpper :: VersionRange -&gt; VersionRange
+</span><a href="Distribution.Version.html#transformCaretUpper"><span class="hs-identifier hs-var hs-var">transformCaretUpper</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VersionRangeF VersionRange -&gt; VersionRange)
+-&gt; (VersionRange -&gt; VersionRangeF VersionRange)
+-&gt; VersionRange
+-&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#hyloVersionRange"><span class="hs-identifier hs-var">hyloVersionRange</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="#local-6989586621679418856"><span class="hs-identifier hs-var">embed</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRangeF VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#projectVersionRange"><span class="hs-identifier hs-var">projectVersionRange</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-175"></span><span>    </span><span id="local-6989586621679418856"><span class="annot"><span class="annottext">embed :: VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="#local-6989586621679418856"><span class="hs-identifier hs-var hs-var">embed</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#MajorBoundVersionF"><span class="hs-identifier hs-type">MajorBoundVersionF</span></a></span><span> </span><span id="local-6989586621679418857"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418857"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#orLaterVersion"><span class="hs-identifier hs-var">orLaterVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418857"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><a href="#local-6989586621679418856"><span class="hs-identifier hs-var">embed</span></a></span><span> </span><span id="local-6989586621679418858"><span class="annot"><span class="annottext">VersionRangeF VersionRange
+</span><a href="#local-6989586621679418858"><span class="hs-identifier hs-var">vr</span></a></span></span><span>                     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#embedVersionRange"><span class="hs-identifier hs-var">embedVersionRange</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange
+</span><a href="#local-6989586621679418858"><span class="hs-identifier hs-var">vr</span></a></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- | Rewrite @^&gt;= x.y.z@ into @&lt;x.(y+1)@</span><span>
+</span><span id="line-179"></span><span class="hs-comment">--</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- @since 3.6.0.0</span><span>
+</span><span id="line-181"></span><span class="hs-comment">--</span><span>
+</span><span id="line-182"></span><span class="annot"><a href="Distribution.Version.html#transformCaretLower"><span class="hs-identifier hs-type">transformCaretLower</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#VersionRange"><span class="hs-identifier hs-type">VersionRange</span></a></span><span>
+</span><span id="line-183"></span><span id="transformCaretLower"><span class="annot"><span class="annottext">transformCaretLower :: VersionRange -&gt; VersionRange
+</span><a href="Distribution.Version.html#transformCaretLower"><span class="hs-identifier hs-var hs-var">transformCaretLower</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VersionRangeF VersionRange -&gt; VersionRange)
+-&gt; (VersionRange -&gt; VersionRangeF VersionRange)
+-&gt; VersionRange
+-&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#hyloVersionRange"><span class="hs-identifier hs-var">hyloVersionRange</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="#local-6989586621679418859"><span class="hs-identifier hs-var">embed</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRange -&gt; VersionRangeF VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#projectVersionRange"><span class="hs-identifier hs-var">projectVersionRange</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-184"></span><span>    </span><span id="local-6989586621679418859"><span class="annot"><span class="annottext">embed :: VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="#local-6989586621679418859"><span class="hs-identifier hs-var hs-var">embed</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.VersionRange.Internal.html#MajorBoundVersionF"><span class="hs-identifier hs-type">MajorBoundVersionF</span></a></span><span> </span><span id="local-6989586621679418860"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418860"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#earlierVersion"><span class="hs-identifier hs-var">earlierVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Version
+</span><a href="Distribution.Types.VersionRange.Internal.html#majorUpperBound"><span class="hs-identifier hs-var">majorUpperBound</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679418860"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><a href="#local-6989586621679418859"><span class="hs-identifier hs-var">embed</span></a></span><span> </span><span id="local-6989586621679418861"><span class="annot"><span class="annottext">VersionRangeF VersionRange
+</span><a href="#local-6989586621679418861"><span class="hs-identifier hs-var">vr</span></a></span></span><span>                     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange -&gt; VersionRange
+</span><a href="Distribution.Types.VersionRange.Internal.html#embedVersionRange"><span class="hs-identifier hs-var">embedVersionRange</span></a></span><span> </span><span class="annot"><span class="annottext">VersionRangeF VersionRange
+</span><a href="#local-6989586621679418861"><span class="hs-identifier hs-var">vr</span></a></span><span>
+</span><span id="line-186"></span></pre></body></html>
