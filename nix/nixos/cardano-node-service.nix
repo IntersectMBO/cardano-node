@@ -638,6 +638,16 @@ in {
           be supported until the Dijkstra hard fork at which point all
           cardano-node versions will be compelled to upgrade and the
           useNewTopology option will be removed.
+
+          For node version < 10.6.0, useNewTopology will need to be explicitly
+          declared true or false to behave accordingly.  If left null while
+          also using the auto-generated p2p topology, node will fail to start.
+
+          For node version >= 10.6.0, useNewTopology should be left as null
+          until the option is removed after the Dijkstra hard fork.  If
+          explicitly declared true, node will continue to work, but if declared
+          false while using the auto-generated legacy topology, node will fail to
+          start.
         '';
       };
 
@@ -1000,7 +1010,8 @@ in {
       warnings = optional (cfg.useNewTopology != null) ''
         The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
         For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
-        cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.
+        cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.  See the services.cardano-node.useNewTopology
+        option description for further details.
       '';
     }
   ]);
