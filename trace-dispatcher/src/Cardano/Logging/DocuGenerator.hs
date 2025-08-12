@@ -102,7 +102,6 @@ documentation :: forall a.
 documentation tracer = do
   DocCollector docRef <- documentTracersRun [tracer]
   items <- fmap Map.toList (liftIO (readIORef docRef))
-  traverse_ print items
   pure $ process =<< items
    where
     process :: (Int, LogDoc) -> [([Text], Text, [Text], Bool)]
