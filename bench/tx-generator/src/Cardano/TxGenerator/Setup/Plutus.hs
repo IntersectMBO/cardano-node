@@ -40,6 +40,7 @@ import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
 import           Control.Exception (SomeException (..), try)
 import           System.FilePath ((<.>), (</>))
+import           RIO (runRIO)
 
 import           Paths_tx_generator
 
@@ -71,7 +72,7 @@ readPlutusScript (Left s)
     doLoad fp  = second (second (const $ ResolvedToFallback asFileName)) <$> readPlutusScript (Right fp)
 readPlutusScript (Right fp)
   = runExceptT $ do
-    script <- firstExceptT ApiError $
+    script <- runRIO () $
       readFileScriptInAnyLang fp
     case script of
       ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure (script, ResolvedToFileName fp)
