@@ -154,7 +154,6 @@ library
                       , random
                       , serialise
                       , streaming
-                      , strict-stm
                       , cardano-ledger-shelley
                       , prettyprinter
                       , stm
