@@ -17,7 +17,7 @@ import           GHC.Float (double2Int)
 
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (CreateEnvOptions (..), CreateEnvUpdateTime (..),
+import           Testnet.Start.Types (UpdateTimestamps (..),
                    GenesisHashesPolicy (..), GenesisOptions (..),
                    UserProvidedEnv (..))
 
@@ -47,8 +47,8 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
   -- Call `createTestnetEnv` again to update the time stamps
   createTestnetEnv
     testnetOptions genesisOptions
-    def{ceoUpdateTime = UpdateTimeAndExit}
-    conf
+    def
+    conf{updateTimestamps = UpdateTimestamps}
 
   -- Run testnet with generated config
   runtime <- cardanoTestnet testnetOptions genesisOptions conf

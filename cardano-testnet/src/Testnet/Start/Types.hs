@@ -23,7 +23,7 @@ module Testnet.Start.Types
   , eraToString
 
   , CreateEnvOptions(..)
-  , CreateEnvUpdateTime(..)
+  , UpdateTimestamps(..)
   , TestnetOnChainParams(..)
   , mainnetParamsRequest
   , NodeOption(..)
@@ -77,6 +77,7 @@ data CardanoTestnetCliOptions = CardanoTestnetCliOptions
   { cliTestnetOptions :: CardanoTestnetOptions
   , cliGenesisOptions :: GenesisOptions
   , cliNodeEnvironment :: UserProvidedEnv
+  , cliUpdateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
 instance Default CardanoTestnetCliOptions where
@@ -84,6 +85,7 @@ instance Default CardanoTestnetCliOptions where
     { cliTestnetOptions = def
     , cliGenesisOptions = def
     , cliNodeEnvironment = def
+    , cliUpdateTimestamps = def
     }
 
 data UserProvidedEnv
@@ -102,25 +104,21 @@ data TopologyType
 instance Default TopologyType where
   def = DirectTopology
 
-data CreateEnvUpdateTime
-  = CreateEnv
-  | UpdateTimeAndExit
+data UpdateTimestamps = UpdateTimestamps | DontUpdateTimestamps
   deriving (Eq, Show)
 
-instance Default CreateEnvUpdateTime where
-  def = CreateEnv
+instance Default UpdateTimestamps where
+  def = DontUpdateTimestamps
 
 data CreateEnvOptions = CreateEnvOptions
   { ceoOnChainParams :: TestnetOnChainParams
   , ceoTopologyType :: TopologyType
-  , ceoUpdateTime :: CreateEnvUpdateTime
   } deriving (Eq, Show)
 
 instance Default CreateEnvOptions where
   def = CreateEnvOptions
     { ceoOnChainParams = def
     , ceoTopologyType = def
-    , ceoUpdateTime = def
     }
 
 data TestnetOnChainParams
@@ -284,9 +282,11 @@ data GenesisHashesPolicy = WithHashes | WithoutHashes
 data Conf = Conf
   { genesisHashesPolicy :: GenesisHashesPolicy
   , tempAbsPath :: TmpAbsolutePath
+  , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled.
+-- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
 -- Logs the argument in the test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
@@ -294,6 +294,7 @@ mkConf tempAbsPath' = withFrozenCallStack $ do
   pure $ Conf
     { genesisHashesPolicy = WithHashes
     , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
+    , updateTimestamps = DontUpdateTimestamps
     }
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@

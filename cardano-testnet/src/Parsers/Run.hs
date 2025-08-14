@@ -76,10 +76,13 @@ runCardanoOptions CardanoTestnetCliOptions
   { cliTestnetOptions=testnetOptions@CardanoTestnetOptions{cardanoOutputDir}
   , cliGenesisOptions=genesisOptions
   , cliNodeEnvironment=env
+  , cliUpdateTimestamps=updateTimestamps
   } =
     case env of
       NoUserProvidedEnv ->
-        -- Create the sandbox, then run cardano-testnet
+        -- Create the sandbox, then run cardano-testnet.
+        -- It is not necessary to honor `cliUpdateTimestamps` here, because
+        -- the genesis files will be created with up-to-date stamps already.
         runTestnet cardanoOutputDir $ \conf -> do
           createTestnetEnv
             testnetOptions genesisOptions def
@@ -88,4 +91,8 @@ runCardanoOptions CardanoTestnetCliOptions
       UserProvidedEnv nodeEnvPath ->
         -- Run cardano-testnet in the sandbox provided by the user
         -- In that case, 'cardanoOutputDir' is not used
-        runTestnet (UserProvidedEnv nodeEnvPath) $ cardanoTestnet testnetOptions genesisOptions
+        runTestnet (UserProvidedEnv nodeEnvPath) $ \conf ->
+          cardanoTestnet
+            testnetOptions
+            genesisOptions
+            conf{updateTimestamps=updateTimestamps}

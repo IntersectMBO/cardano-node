@@ -30,6 +30,7 @@ optsTestnet envCli = CardanoTestnetCliOptions
   <$> pCardanoTestnetCliOptions envCli
   <*> pGenesisOptions
   <*> pNodeEnvironment
+  <*> pUpdateTimestamps
 
 optsCreateTestnet :: EnvCli -> Parser CardanoTestnetCreateEnvOptions
 optsCreateTestnet envCli = CardanoTestnetCreateEnvOptions
@@ -44,7 +45,6 @@ pCreateEnvOptions :: Parser CreateEnvOptions
 pCreateEnvOptions = CreateEnvOptions
   <$> pOnChainParams
   <*> pTopologyType
-  <*> pCreateEnvUpdateTime
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
@@ -125,10 +125,10 @@ pTopologyType = OA.flag DirectTopology P2PTopology
   <> OA.showDefault
   )
 
-pCreateEnvUpdateTime :: Parser CreateEnvUpdateTime
-pCreateEnvUpdateTime = OA.flag CreateEnv UpdateTimeAndExit
+pUpdateTimestamps :: Parser UpdateTimestamps
+pUpdateTimestamps = OA.flag DontUpdateTimestamps UpdateTimestamps
   (  OA.long "update-time"
-  <> OA.help "Don't create anything, just update the time stamps in existing files"
+  <> OA.help "Update the time stamps in genesis files to current date"
   <> OA.showDefault
   )
 
