@@ -90504,7 +90504,7 @@
       "utxo": 4000000,
       "utxo_keys": 1
     },
-    "name": "value-volt-nomadperf",
+    "name": "value-volt-cgmem-nomadperf",
     "node": {
       "heap_limit": null,
       "rts_flags_override": [],
@@ -91393,7 +91393,7 @@
       "utxo": 4000000,
       "utxo_keys": 1
     },
-    "name": "value-volt-lmdb-nomadperf",
+    "name": "value-volt-lmdb-cgmem-nomadperf",
     "node": {
       "heap_limit": null,
       "rts_flags_override": [],
