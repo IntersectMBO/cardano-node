@@ -55,7 +55,7 @@ library
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.8
+                      , cardano-ping >= 0.9
                       , cardano-prelude
                       , contra-tracer
                       , containers
@@ -80,7 +80,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.21
+                      , ouroboros-network ^>= 0.22
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -88,7 +88,7 @@ library
                       , retry
                       , safe-exceptions
                       , scientific
-                      , si-timers
+                      , io-classes
                       , stm
                       , tasty ^>= 1.5
                       , tasty-expected-failure
