@@ -2100,16 +2100,16 @@ instance MetaTrace (TraceGsmEvent selection) where
     \case
       GsmEventEnterCaughtUp {}        -> Namespace [] ["EnterCaughtUp"]
       GsmEventLeaveCaughtUp {}        -> Namespace [] ["LeaveCaughtUp"]
-      GsmEventPreSyncingToSyncing {}  -> Namespace [] ["GsmEventPreSyncingToSyncing"]
-      GsmEventSyncingToPreSyncing {}  -> Namespace [] ["GsmEventSyncingToPreSyncing"]
+      GsmEventPreSyncingToSyncing {}  -> Namespace [] ["PreSyncingToSyncing"]
+      GsmEventSyncingToPreSyncing {}  -> Namespace [] ["SyncingToPreSyncing"]
 
   severityFor ns _ =
     case ns of
-      Namespace _ ["EnterCaughtUp"]               -> Just Info
-      Namespace _ ["LeaveCaughtUp"]               -> Just Info
-      Namespace _ ["GsmEventPreSyncingToSyncing"] -> Just Info
-      Namespace _ ["GsmEventSyncingToPreSyncing"] -> Just Info
-      Namespace _ _                               -> Nothing
+      Namespace _ ["EnterCaughtUp"]       -> Just Info
+      Namespace _ ["LeaveCaughtUp"]       -> Just Info
+      Namespace _ ["PreSyncingToSyncing"] -> Just Info
+      Namespace _ ["SyncingToPreSyncing"] -> Just Info
+      Namespace _ _                       -> Nothing
 
   documentFor = \case
     Namespace _ ["EnterCaughtUp"] ->
@@ -2117,9 +2117,9 @@ instance MetaTrace (TraceGsmEvent selection) where
     Namespace _ ["LeaveCaughtUp"] ->
       Just "Node is not caught up"
 
-    Namespace _ ["GsmEventPreSyncingToSyncing"] ->
+    Namespace _ ["PreSyncingToSyncing"] ->
       Just "The Honest Availability Assumption is now satisfied"
-    Namespace _ ["GsmEventSyncingToPreSyncing"] ->
+    Namespace _ ["SyncingToPreSyncing"] ->
       Just "The Honest Availability Assumption is no longer satisfied"
 
     Namespace _ _ ->
@@ -2128,8 +2128,8 @@ instance MetaTrace (TraceGsmEvent selection) where
   allNamespaces =
     [ Namespace [] ["EnterCaughtUp"]
     , Namespace [] ["LeaveCaughtUp"]
-    , Namespace [] ["GsmEventPreSyncingToSyncing"]
-    , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    , Namespace [] ["PreSyncingToSyncing"]
+    , Namespace [] ["SyncingToPreSyncing"]
     ]
 
 --------------------------------------------------------------------------------
