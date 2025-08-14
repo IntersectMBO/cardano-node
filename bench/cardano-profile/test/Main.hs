@@ -506,8 +506,8 @@ testGroupMap = Tasty.testGroup
             ("Profile == (decode \"" ++ fp ++ "\") - Name")
             [] -- Expected value.
             ((\\)
-              (Map.keys $ Map.map Types.name allProfiles)
-              (Map.keys $ Map.map Types.name profiles)
+              (Map.assocs $ Map.map Types.name allProfiles)
+              (Map.assocs $ Map.map Types.name profiles)
             )
           ----------------------------------------------------------------------
           -- Show first profile with differences in the Scenario type.
