@@ -2095,6 +2095,17 @@ instance ( LogFormatting selection
 
   forHuman = showT
 
+  asMetrics =
+    \case
+      GsmEventEnterCaughtUp {}       -> [caughtUp]
+      GsmEventLeaveCaughtUp {}       -> [preSyncing]
+      GsmEventPreSyncingToSyncing {} -> [syncing]
+      GsmEventSyncingToPreSyncing {} -> [preSyncing]
+    where
+      preSyncing = IntM "GSM.state" 0
+      syncing    = IntM "GSM.state" 1
+      caughtUp   = IntM "GSM.state" 2
+
 instance MetaTrace (TraceGsmEvent selection) where
   namespaceFor =
     \case
@@ -2124,6 +2135,19 @@ instance MetaTrace (TraceGsmEvent selection) where
 
     Namespace _ _ ->
       Nothing
+
+  metricsDocFor = \case
+    Namespace _ ["EnterCaughtUp"]       -> doc
+    Namespace _ ["LeaveCaughtUp"]       -> doc
+    Namespace _ ["PreSyncingToSyncing"] -> doc
+    Namespace _ ["SyncingToPreSyncing"] -> doc
+    Namespace _ _                       -> []
+    where
+      doc =
+        [ ("GSM.state"
+          , "The state of the Genesis State Machine. 0 = PreSyncing, 1 = Syncing, 2 = CaughtUp."
+          )
+        ]
 
   allNamespaces =
     [ Namespace [] ["EnterCaughtUp"]
