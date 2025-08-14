@@ -72,7 +72,7 @@ library
                       , ekg-core
                       , ekg-forward  >= 0.9
                       , singletons ^>= 3.0
-                      , ouroboros-network-framework ^>= 0.18.0.1
+                      , ouroboros-network-framework ^>= 0.19
                       , serialise
                       , stm
                       , text

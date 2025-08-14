@@ -68,6 +68,9 @@ allow-newer:
     , fin:QuickCheck
     , bin:QuickCheck
 
+    -- TODO update those in ekg-forward instead of allow-newer
+    , ekg-forward:typed-protocols
+    , ekg-forward:ouroboros-network-framework
 
 if impl (ghc >= 9.12)
   allow-newer:
@@ -110,7 +113,7 @@ source-repository-package
     ouroboros-consensus-diffusion
     ouroboros-consensus-protocol
     sop-extras
-    strict-sop-core 
+    strict-sop-core
 
 source-repository-package
   type: git
