@@ -1756,8 +1756,14 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
     mconcat [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
 instance HasPrivacyAnnotation (TraceGsmEvent selection) where
+
 instance HasSeverityAnnotation (TraceGsmEvent selection) where
-  getSeverityAnnotation _ = Info
+  getSeverityAnnotation = \case
+    GsmEventEnterCaughtUp{}       -> Notice
+    GsmEventLeaveCaughtUp{}       -> Warning
+    GsmEventPreSyncingToSyncing{} -> Notice
+    GsmEventSyncingToPreSyncing{} -> Notice
+
 instance ToObject selection => Transformable Text IO (TraceGsmEvent selection) where
   trTransformer = trStructured
 
