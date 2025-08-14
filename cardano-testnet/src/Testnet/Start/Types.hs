@@ -49,11 +49,11 @@ import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import           Prelude
 
+import           Control.Exception (throw)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
 import           Data.Default.Class
-import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
@@ -150,7 +150,7 @@ instance Default UserProvidedGeneses where
 -- The file should be formatted with Blockfrost format:
 -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
 mainnetParamsRequest :: HTTP.Request
-mainnetParamsRequest = fromJust $ HTTP.parseRequest
+mainnetParamsRequest = either throw id $ HTTP.parseRequest
   "https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json"
 
 -- | An abstract node id, used as placeholder in topology files
