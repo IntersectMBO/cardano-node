@@ -16,6 +16,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   [--node-env FILEPATH]
+  [--update-time]
 
   Start a testnet in any era
 
@@ -61,4 +62,6 @@ Available options:
                            otherwise). You can generate a default environment
                            with the 'create-env' command, then modify it and
                            pass it with this argument.
+  --update-time            Update the time stamps in genesis files to current
+                           date
   -h,--help                Show this help text

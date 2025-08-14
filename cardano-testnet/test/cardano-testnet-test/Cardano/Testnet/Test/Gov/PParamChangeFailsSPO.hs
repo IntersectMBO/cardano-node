@@ -34,7 +34,7 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (failToSubmitTx, signTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -47,7 +47,7 @@ import           Hedgehog.Internal.Source (HasCallStack, withFrozenCallStack)
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PParam change fails for SPO/"'@
 hprop_check_pparam_fails_spo :: Property
-hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbsBasePath' ->
+hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \tempAbsBasePath' ->
                                  H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
