@@ -46223,6 +46223,7 @@
         },
         "name": "latency",
         "parameters": {},
+        "before_nodes": false,
         "wait_pools": false
       }
     ]
@@ -46866,6 +46867,7 @@
         },
         "name": "latency",
         "parameters": {},
+        "before_nodes": false,
         "wait_pools": false
       }
     ]
@@ -63098,6 +63100,7 @@
           "submit_vote": true,
           "votes_per_tx": 2
         },
+        "before_nodes": false,
         "wait_pools": true
       }
     ]
@@ -64052,6 +64055,7 @@
           "outs_per_split_transaction": 193,
           "submit_vote": false
         },
+        "before_nodes": false,
         "wait_pools": true
       }
     ]
@@ -65007,6 +65011,7 @@
           "submit_vote": true,
           "votes_per_tx": 1
         },
+        "before_nodes": false,
         "wait_pools": true
       }
     ]
@@ -90532,6 +90537,7 @@
           "pre_generator": null,
           "producers": "cgroup_memory"
         },
+        "before_nodes": true,
         "wait_pools": true
       }
     ]
@@ -91421,6 +91427,7 @@
           "pre_generator": null,
           "producers": "cgroup_memory"
         },
+        "before_nodes": true,
         "wait_pools": true
       }
     ]
@@ -94983,6 +94990,7 @@
           "submit_vote": true,
           "votes_per_tx": 2
         },
+        "before_nodes": false,
         "wait_pools": true
       }
     ]
@@ -95934,6 +95942,7 @@
           "outs_per_split_transaction": 193,
           "submit_vote": false
         },
+        "before_nodes": false,
         "wait_pools": true
       }
     ]
@@ -96886,6 +96895,7 @@
           "submit_vote": true,
           "votes_per_tx": 1
         },
+        "before_nodes": false,
         "wait_pools": true
       }
     ]
