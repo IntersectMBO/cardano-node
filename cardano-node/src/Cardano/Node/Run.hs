@@ -84,6 +84,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import qualified Ouroboros.Cardano.PeerSelection.PeerSelectionActions as Cardano
 import           Ouroboros.Cardano.PeerSelection.Churn (peerChurnGovernor)
 import           Ouroboros.Cardano.Network.Types (ChurnMode (..))
@@ -168,6 +169,7 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
+import Cardano.Node.Types (hasProtocolFile)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -493,6 +495,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         ledgerPeerSnapshotPathVar <- newTVarIO ntPeerSnapshotPath
         ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
                                                 (startupTracer tracers)
+                                                nc
                                                 (readTVar ledgerPeerSnapshotPathVar)
                                                 (readTVar useLedgerVar)
                                                 (const . pure $ ())
@@ -534,6 +537,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   ledgerPeerSnapshotPathVar
                 void $ updateLedgerPeerSnapshot
                   (startupTracer tracers)
+                  nc
                   (readTVar ledgerPeerSnapshotPathVar)
                   (readTVar useLedgerVar)
                   (writeTVar ledgerPeerSnapshotVar)
@@ -763,6 +767,7 @@ installP2PSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publ
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
                startupTracer
+               nc
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
@@ -854,7 +859,7 @@ updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
 updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
                             useBootsrapPeersVar ledgerPeerSnapshotPathVar = do
     traceWith startupTracer NetworkConfigUpdate
-    result <- try $ readTopologyFileOrError nc startupTracer
+    result <- try $ TopologyP2P.readTopologyFileOrError nc startupTracer
     case result of
       Left (FatalError err) ->
         traceWith startupTracer
@@ -876,31 +881,56 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
 #endif
 
 updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
+                         -> NodeConfiguration
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> STM IO UseLedgerPeers
                          -> (Maybe LedgerPeerSnapshot -> STM IO ())
                          -> IO (Maybe LedgerPeerSnapshot)
-updateLedgerPeerSnapshot startupTracer readLedgerPeerPath readUseLedgerVar writeVar = do
+updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode, ncProtocolFiles})
+                         readLedgerPeerPath readUseLedgerVar writeVar = do
   mPeerSnapshotFile <- atomically readLedgerPeerPath
-  mLedgerPeerSnapshot <- forM mPeerSnapshotFile $ \f -> do
-    lps@(LedgerPeerSnapshot (wOrigin, _)) <- readPeerSnapshotFile f
-    useLedgerPeers <- atomically readUseLedgerVar
-    case useLedgerPeers of
-      DontUseLedgerPeers ->
-        traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
-      UseLedgerPeers afterSlot
-        | Always <- afterSlot ->
-            traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-        | After slotNo <- afterSlot ->
-            case wOrigin of
-              Origin -> error "Unsupported big ledger peer snapshot file: taken at Origin"
-              At slotNo' | slotNo' >= slotNo ->
-                traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-              _otherwise ->
-                traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
-    return lps
+
+  mLedgerPeerSnapshot <- case (ncConsensusMode, mPeerSnapshotFile) of
+    (GenesisMode, Nothing) ->
+      error "Genesis mode but no peer snapshot file provided"
+    (GenesisMode, Just peerSnapshotFile) -> do
+      snapshot <- liftIO $ readPeerSnapshotFile peerSnapshotFile
+      either (error . Text.unpack) (pure . Just) snapshot
+    (PraosMode, Just peerSnapshotFile) -> do
+      snapshot <- liftIO $ readPeerSnapshotFile peerSnapshotFile
+      either
+        (const $ do
+          traceWith startupTracer
+            (NetworkConfigUpdateInfo "Failed to open the peer snapshot file (ignored).")
+          pure Nothing
+        )
+        (pure . Just)
+        snapshot
+    _else -> pure Nothing
+
+  forM_ mLedgerPeerSnapshot checkSnapshot
   atomically . writeVar $ mLedgerPeerSnapshot
   pure mLedgerPeerSnapshot
+
+  where
+    checkSnapshot (LedgerPeerSnapshot (wOrigin, _)) = do
+      useLedgerPeers <- atomically readUseLedgerVar
+      if hasProtocolFile ncProtocolFiles
+      then traceWith startupTracer
+             (NetworkConfigUpdateError "Using ledger peer snapshots is not recommended for block producers")
+      else case useLedgerPeers of
+        DontUseLedgerPeers ->
+          traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
+        UseLedgerPeers afterSlot
+          | Always <- afterSlot ->
+              traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
+          | After slotNo <- afterSlot ->
+              case wOrigin of
+                Origin -> error "Unsupported big ledger peer snapshot file: taken at Origin"
+                At slotNo' | slotNo' >= slotNo ->
+                  traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
+                _otherwise ->
+                  traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
 
 --------------------------------------------------------------------------------
 -- Helper functions

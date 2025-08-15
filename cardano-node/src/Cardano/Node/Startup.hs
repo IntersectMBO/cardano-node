@@ -108,6 +108,10 @@ data StartupTrace blk =
   --
   | NetworkConfigUpdateError Text
 
+  -- | Log network configuration update info.
+  --
+  | NetworkConfigUpdateInfo Text
+
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
