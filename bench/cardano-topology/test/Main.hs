@@ -151,24 +151,6 @@ topology = Tasty.testGroup
           )
           (Just (Types.AWS Types.EU_CENTRAL_1))
         )
-  , testCase "ci-test-nomadperf-nop2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/ci-test-nomadperf-nop2p-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("Torus (ci-test nomadperf-nop2p) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.Torus
-            2
-            [
-              Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_1
-            , Types.AWS Types.AP_SOUTHEAST_2
-            ]
-            (\_ -> Just 1)
-          )
-          (Just (Types.AWS Types.EU_CENTRAL_1))
-        )
   {--
     {
       "dense_pool_density": 1,
@@ -201,24 +183,6 @@ topology = Tasty.testGroup
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("Torus (default-nomadperf) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.Torus
-            6
-            [
-              Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_1
-            , Types.AWS Types.AP_SOUTHEAST_2
-            ]
-            (\_ -> Just 1)
-          )
-          (Just (Types.AWS Types.EU_CENTRAL_1))
-        )
-  , testCase "default-nomadperf-nop2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/default-nomadperf-nop2p-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("Torus (default-nomadperf-nop2p) == (decode \"" ++ fp ++ "\")")
         ans
         (Right $ Topo.mkTopology
           (Topo.Torus
@@ -296,24 +260,6 @@ topology = Tasty.testGroup
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("TorusDense (value-volt-nomadperf) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.TorusDense
-            52
-            [
-              Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_1
-            , Types.AWS Types.AP_SOUTHEAST_2
-            ]
-            (\_ -> Just 1)
-          )
-          (Just (Types.AWS Types.EU_CENTRAL_1))
-        )
-  , testCase "value-nomadperf-nop2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/value-nomadperf-nop2p-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("TorusDense (value-nomadperf-nop2p) == (decode \"" ++ fp ++ "\")")
         ans
         (Right $ Topo.mkTopology
           (Topo.TorusDense

@@ -78,7 +78,7 @@ testGroupTypes = Tasty.testGroup
 ciTestBage :: Types.Profile
 ciTestBage = Types.Profile {
     Types.name = "ci-test-bage"
-  , Types.desc = Just "Miniature dataset, CI-friendly duration, test scale"
+  , Types.desc = Just "Miniature dataset, CI-friendly duration (2-3min), test scale"
   , Types.composition = Types.Composition {
       Types.locations = [Types.Loopback]
     , Types.n_bft_hosts = 0
@@ -346,13 +346,13 @@ ciTestBage = Types.Profile {
   , Types.node = Types.Node {
       Types.utxo_lmdb = False
     , Types.ssd_directory = Nothing
-    , Types.verbatim = Types.NodeVerbatim Nothing
+    , Types.verbatim = Types.NodeVerbatim (Just True)     -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = True
     , Types.tracing_backend = "trace-dispatcher"
     , Types.rts_flags_override = []
     , Types.heap_limit = Nothing
     , Types.shutdown_on_slot_synced = Nothing
-    , Types.shutdown_on_block_synced = Just 3
+    , Types.shutdown_on_block_synced = Just 8
   }
   , Types.generator = Types.Generator {
       Types.tps = 15
@@ -365,7 +365,7 @@ ciTestBage = Types.Profile {
       , Types.plutusScript = Nothing
       , Types.redeemer = Nothing
       }
-    , Types.epochs = 3
+    , Types.epochs = 2
     , Types.tx_count = Just 9000
     , Types.add_tx_size = 100
   }
@@ -506,8 +506,8 @@ testGroupMap = Tasty.testGroup
             ("Profile == (decode \"" ++ fp ++ "\") - Name")
             [] -- Expected value.
             ((\\)
-              (Map.keys $ Map.map Types.name allProfiles)
-              (Map.keys $ Map.map Types.name profiles)
+              (Map.assocs $ Map.map Types.name allProfiles)
+              (Map.assocs $ Map.map Types.name profiles)
             )
           ----------------------------------------------------------------------
           -- Show first profile with differences in the Scenario type.
@@ -768,10 +768,10 @@ overlay =
     ("name",    Aeson.String "HOLA!")
   , ("genesis", Aeson.Object $ KeyMap.fromList [
       ("network_magic"     , Aeson.Number 1327330847)
-      -- As "10-*" profiles have "--shutdown-on-block-synced", the effective
+      -- As "ci-test-*" profiles have "--shutdown-on-block-synced", the effective
       -- epochs will be calculated using the blocks per epochs number obtained
       -- using the active slots coefficient.
-    , ("active_slots_coeff", Aeson.Number 0.000001)
+    , ("active_slots_coeff", Aeson.Number 0.000002667)
     ])
   ]
 

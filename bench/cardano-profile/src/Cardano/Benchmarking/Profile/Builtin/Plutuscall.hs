@@ -40,7 +40,6 @@ profilesNoEraPlutuscall =
         . compressedFor15Epochs
         . V.datasetSmall
         . V.fundsDefault
-        . P.p2pOff
         . P.traceForwardingOn . P.newTracing
         . P.analysisStandard
         . P.desc "Small dataset, honest 15 epochs duration"
