@@ -45,9 +45,6 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
   H.threadDelay $ double2Int $ realToFrac startTimeOffsetSeconds * 1_000_000 * 1.2
 
   -- Run testnet and specify to update time stamps before starting
-  runtime <- cardanoTestnet
-    testnetOptions
-    genesisOptions
-    conf{updateTimestamps = UpdateTimestamps}
+  runtime <- cardanoTestnet testnetOptions conf{updateTimestamps = UpdateTimestamps}
 
   nodesProduceBlocks tmpDir runtime

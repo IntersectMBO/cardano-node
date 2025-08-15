@@ -43,6 +43,6 @@ hprop_p2p_topology = integrationRetryWorkspace 2 "p2p-topology" $ \tmpDir -> H.r
   (_topology :: P2P.NetworkTopology NodeId) <- H.leftFail eTopology
 
   -- Run testnet with generated config
-  runtime <- cardanoTestnet testnetOptions genesisOptions conf
+  runtime <- cardanoTestnet testnetOptions conf
 
   nodesProduceBlocks tmpDir runtime

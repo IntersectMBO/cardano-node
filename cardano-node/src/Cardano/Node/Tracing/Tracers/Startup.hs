@@ -233,6 +233,12 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
+  forMachine _dtal (NetworkConfigUpdateWarning msg) =
+      mconcat [ "kind" .= String "NetworkConfigUpdateWarning"
+               , "message" .= String msg ]
+  forMachine _dtal (NetworkConfigUpdateInfo msg) =
+      mconcat [ "kind" .= String "NetworkConfigUpdateInfo"
+               , "message" .= String msg ]
   forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFileMaybe) =
       mconcat [ "kind" .= String "NetworkConfig"
                , "localRoots" .= toJSON localRoots
@@ -333,6 +339,10 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigUpdateUnsupported"]
   namespaceFor NetworkConfigUpdateError {}  =
     Namespace [] ["NetworkConfigUpdateError"]
+  namespaceFor NetworkConfigUpdateWarning {}  =
+    Namespace [] ["NetworkConfigUpdateWarning"]
+  namespaceFor NetworkConfigUpdateInfo {}  =
+    Namespace [] ["NetworkConfigUpdateInfo"]
   namespaceFor NetworkConfig {}  =
     Namespace [] ["NetworkConfig"]
   namespaceFor NonP2PWarning {}  =
@@ -354,6 +364,8 @@ instance MetaTrace  (StartupTrace blk) where
 
   severityFor (Namespace _ ["SocketConfigError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdate"]) _ = Just Notice
+  severityFor (Namespace _ ["NetworkConfigUpdateInfo"]) _ = Just Info
+  severityFor (Namespace _ ["NetworkConfigUpdateWarning"]) _ = Just Warning
   severityFor (Namespace _ ["NetworkConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdateUnsupported"]) _ = Just Warning
   severityFor (Namespace _ ["NonP2PWarning"]) _ = Just Warning
@@ -386,6 +398,10 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["NetworkConfigUpdate"]) = Just
     ""
   documentFor (Namespace [] ["NetworkConfigUpdateUnsupported"]) = Just
+    ""
+  documentFor (Namespace [] ["NetworkConfigUpdateInfo"]) = Just
+    ""
+  documentFor (Namespace [] ["NetworkConfigUpdateWarning"]) = Just
     ""
   documentFor (Namespace [] ["NetworkConfigUpdateError"]) = Just
     ""
@@ -539,6 +555,8 @@ ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration upda
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
   "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
+ppStartupInfoTrace (NetworkConfigUpdateWarning msg) = msg
+ppStartupInfoTrace (NetworkConfigUpdateInfo msg) = msg
 ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFile) =
     pack
   $ intercalate "\n"
