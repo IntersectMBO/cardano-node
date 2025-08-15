@@ -27,6 +27,7 @@ instance HasSeverityAnnotation (StartupTrace blk) where
     getSeverityAnnotation (StartupSocketConfigError _) = Error
     getSeverityAnnotation NetworkConfigUpdate = Notice
     getSeverityAnnotation (NetworkConfigUpdateError _) = Error
+    getSeverityAnnotation (NetworkConfigUpdateInfo _) = Info
     getSeverityAnnotation NetworkConfigUpdateUnsupported = Warning
     getSeverityAnnotation NonP2PWarning = Warning
     getSeverityAnnotation WarningDevelopmentNodeToNodeVersions {} = Warning

@@ -45,7 +45,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
                    WarmValency (..))
 
 import           Control.Applicative (Alternative (..))
-import           Control.Exception.Safe (Exception (..), IOException, handleAny)
+import           Control.Exception.Safe (Exception (..), IOException)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified "contra-tracer" Control.Tracer as CT
@@ -246,7 +246,7 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
     if isGenesisCompatible ncConsensusMode ntUseBootstrapPeers
        then pure topology
        else do
-         liftIO $ CT.traceWith tracer $ NetworkConfigUpdateError genesisIncompatible
+         liftIO $ CT.traceWith tracer $ NetworkConfigUpdateInfo genesisIncompatible
          pure $ topology{ntUseBootstrapPeers = DontUseBootstrapPeers}
   where
     handler :: IOException -> Text
@@ -289,12 +289,13 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
-readPeerSnapshotFile :: PeerSnapshotFile -> IO LedgerPeerSnapshot
+readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text LedgerPeerSnapshot)
 readPeerSnapshotFile  (PeerSnapshotFile peerSnapshotFile) =
-  handleException $
-    either error pure =<< eitherDecodeFileStrict peerSnapshotFile
+  either handler id <$> eitherDecodeFileStrict peerSnapshotFile
   where
-    handleException = handleAny $ \e -> error $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> displayException e
+    handler msg =
+      Left . Text.pack
+        $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> msg
 
 --
 -- Checking for chance of progress in bootstrap phase
