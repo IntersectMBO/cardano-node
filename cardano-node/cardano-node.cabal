@@ -217,8 +217,7 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 1.0
-                      , typed-protocols-stateful
+                      , typed-protocols:{typed-protocols, stateful} >= 1.0
                       , yaml
 
 executable cardano-node
