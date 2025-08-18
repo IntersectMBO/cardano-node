@@ -108,6 +108,10 @@ data StartupTrace blk =
   --
   | NetworkConfigUpdateError Text
 
+  -- | Log network configuration update warning.
+  --
+  | NetworkConfigUpdateWarning Text
+
   -- | Log network configuration update info.
   --
   | NetworkConfigUpdateInfo Text

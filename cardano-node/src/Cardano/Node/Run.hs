@@ -917,7 +917,7 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode, ncPr
       useLedgerPeers <- atomically readUseLedgerVar
       if hasProtocolFile ncProtocolFiles
       then traceWith startupTracer
-             (NetworkConfigUpdateError "Using ledger peer snapshots is not recommended for block producers")
+             (NetworkConfigUpdateWarning "Using ledger peer snapshots is not recommended for block producers")
       else case useLedgerPeers of
         DontUseLedgerPeers ->
           traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))

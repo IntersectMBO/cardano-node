@@ -45,7 +45,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
                    WarmValency (..))
 
 import           Control.Applicative (Alternative (..))
-import           Control.Exception.Safe (Exception (..), IOException)
+import           Control.Exception.Safe (Exception (..), IOException, try)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified "contra-tracer" Control.Tracer as CT
@@ -289,9 +289,15 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
+eitherDecodeFileStrict'' :: FromJSON a => FilePath -> IO (Either String a)
+eitherDecodeFileStrict'' file =
+  (eitherDecodeStrict <=< either handler Right) <$> try (BS.readFile file)
+  where
+    handler :: IOException -> Either String a
+    handler = Left . displayException
+
 readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text LedgerPeerSnapshot)
-readPeerSnapshotFile  (PeerSnapshotFile peerSnapshotFile) =
-  either handler id <$> eitherDecodeFileStrict peerSnapshotFile
+readPeerSnapshotFile (PeerSnapshotFile file) = either handler Right <$> eitherDecodeFileStrict'' file
   where
     handler msg =
       Left . Text.pack

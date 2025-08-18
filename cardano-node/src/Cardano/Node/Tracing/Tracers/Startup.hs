@@ -233,6 +233,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
+  forMachine _dtal (NetworkConfigUpdateWarning msg) =
+      mconcat [ "kind" .= String "NetworkConfigUpdateWarning"
+               , "message" .= String msg ]
   forMachine _dtal (NetworkConfigUpdateInfo msg) =
       mconcat [ "kind" .= String "NetworkConfigUpdateInfo"
                , "message" .= String msg ]
@@ -336,6 +339,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigUpdateUnsupported"]
   namespaceFor NetworkConfigUpdateError {}  =
     Namespace [] ["NetworkConfigUpdateError"]
+  namespaceFor NetworkConfigUpdateWarning {}  =
+    Namespace [] ["NetworkConfigUpdateWarning"]
   namespaceFor NetworkConfigUpdateInfo {}  =
     Namespace [] ["NetworkConfigUpdateInfo"]
   namespaceFor NetworkConfig {}  =
@@ -544,6 +549,7 @@ ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration upda
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
   "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
+ppStartupInfoTrace (NetworkConfigUpdateWarning msg) = msg
 ppStartupInfoTrace (NetworkConfigUpdateInfo msg) = msg
 ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFile) =
     pack
