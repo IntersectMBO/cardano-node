@@ -146,3 +146,11 @@ source-repository-package
     libs/small-steps
     libs/vector-map
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward/
+  -- https://github.com/input-output-hk/ekg-forward/pull/42
+  tag: d99a44f96b821770f4611f826e50452c89a9abe6
+  --sha256: sha256-SHnyp+GvNeR82UXoKeDEgsp1AUE2yF5dGL4HIZm0zK8=
+  subdir:
+    .
