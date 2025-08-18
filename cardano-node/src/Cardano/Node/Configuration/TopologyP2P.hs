@@ -289,18 +289,17 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
-eitherDecodeFileStrict'' :: FromJSON a => FilePath -> IO (Either String a)
-eitherDecodeFileStrict'' file =
-  (eitherDecodeStrict <=< either handler Right) <$> try (BS.readFile file)
-  where
-    handler :: IOException -> Either String a
-    handler = Left . displayException
-
 readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text LedgerPeerSnapshot)
-readPeerSnapshotFile (PeerSnapshotFile file) = either handler Right <$> eitherDecodeFileStrict'' file
+readPeerSnapshotFile (PeerSnapshotFile file) = do
+  content <- first renderException <$> try (BS.readFile file)
+  return $ first handler $ content >>= eitherDecodeStrict
   where
+    renderException :: IOException -> String
+    renderException = displayException
+
+    handler :: String -> Text
     handler msg =
-      Left . Text.pack
+      Text.pack
         $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> msg
 
 --
