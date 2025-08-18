@@ -18,7 +18,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..), NodeId,
-                   UserProvidedData (..), UserProvidedEnv (..), TopologyType (..))
+                   UserProvidedEnv (..), TopologyType (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -36,10 +36,7 @@ hprop_p2p_topology = integrationRetryWorkspace 2 "p2p-topology" $ \tmpDir -> H.r
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  createTestnetEnv
-    testnetOptions genesisOptions createEnvOptions
-    NoUserProvidedData NoUserProvidedData NoUserProvidedData
-    conf
+  createTestnetEnv testnetOptions genesisOptions createEnvOptions conf
 
   -- Check that the topology is indeed P2P
   eTopology <- H.readJsonFile someTopologyFile

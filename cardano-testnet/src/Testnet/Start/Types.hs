@@ -23,7 +23,9 @@ module Testnet.Start.Types
   , eraToString
 
   , CreateEnvOptions(..)
-  , CreateEnvUpdateTime(..)
+  , UpdateTimestamps(..)
+  , TestnetOnChainParams(..)
+  , mainnetParamsRequest
   , NodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
@@ -31,6 +33,7 @@ module Testnet.Start.Types
   , TopologyType(..)
   , UserProvidedData(..)
   , UserProvidedEnv(..)
+  , UserProvidedGeneses(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -41,9 +44,12 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import           Prelude
 
+import           Control.Exception (throw)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
@@ -51,6 +57,7 @@ import           Data.Default.Class
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
+import qualified Network.HTTP.Simple as HTTP
 import           System.FilePath (addTrailingPathSeparator)
 
 import           Testnet.Filepath
@@ -70,6 +77,7 @@ data CardanoTestnetCliOptions = CardanoTestnetCliOptions
   { cliTestnetOptions :: CardanoTestnetOptions
   , cliGenesisOptions :: GenesisOptions
   , cliNodeEnvironment :: UserProvidedEnv
+  , cliUpdateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
 instance Default CardanoTestnetCliOptions where
@@ -77,6 +85,7 @@ instance Default CardanoTestnetCliOptions where
     { cliTestnetOptions = def
     , cliGenesisOptions = def
     , cliNodeEnvironment = def
+    , cliUpdateTimestamps = def
     }
 
 data UserProvidedEnv
@@ -95,24 +104,52 @@ data TopologyType
 instance Default TopologyType where
   def = DirectTopology
 
-data CreateEnvUpdateTime
-  = CreateEnv
-  | UpdateTimeAndExit
+data UpdateTimestamps = UpdateTimestamps | DontUpdateTimestamps
   deriving (Eq, Show)
 
-instance Default CreateEnvUpdateTime where
-  def = CreateEnv
+instance Default UpdateTimestamps where
+  def = DontUpdateTimestamps
 
 data CreateEnvOptions = CreateEnvOptions
-  { ceoTopologyType :: TopologyType
-  , ceoUpdateTime :: CreateEnvUpdateTime
+  { ceoOnChainParams :: TestnetOnChainParams
+  , ceoTopologyType :: TopologyType
   } deriving (Eq, Show)
 
 instance Default CreateEnvOptions where
   def = CreateEnvOptions
-    { ceoTopologyType = def
-    , ceoUpdateTime = def
+    { ceoOnChainParams = def
+    , ceoTopologyType = def
     }
+
+data TestnetOnChainParams
+  = DefaultParams
+  | OnChainParamsFile FilePath
+  -- ^ A file path to a JSON file containing on-chain params, formatted as:
+  -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest
+  | OnChainParamsMainnet
+  deriving (Eq, Show)
+
+instance Default TestnetOnChainParams where
+  def = DefaultParams
+
+data UserProvidedGeneses = UserProvidedGeneses
+  { upgShelleyGenesis :: UserProvidedData ShelleyGenesis
+  , upgAlonzoGenesis :: UserProvidedData AlonzoGenesis
+  , upgConwayGenesis :: UserProvidedData ConwayGenesis
+  } deriving (Eq, Show)
+
+instance Default UserProvidedGeneses where
+  def = UserProvidedGeneses
+    def
+    def
+    def
+
+-- | An HTTP request to get a file containing up-to-date mainnet on-chain parameters.
+-- The file should be formatted with Blockfrost format:
+-- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
+mainnetParamsRequest :: HTTP.Request
+mainnetParamsRequest = either throw id $ HTTP.parseRequest
+  "https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json"
 
 -- | An abstract node id, used as placeholder in topology files
 -- when the actual ports/addresses aren't known yet (i.e. before runtime)
@@ -213,6 +250,10 @@ data NodeOption
 data UserProvidedData a =
     UserProvidedData a
   | NoUserProvidedData
+  deriving (Eq,Show)
+
+instance Default (UserProvidedData a) where
+  def = NoUserProvidedData
 
 isSpoNodeOptions :: NodeOption -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True
@@ -241,9 +282,11 @@ data GenesisHashesPolicy = WithHashes | WithoutHashes
 data Conf = Conf
   { genesisHashesPolicy :: GenesisHashesPolicy
   , tempAbsPath :: TmpAbsolutePath
+  , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled.
+-- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
 -- Logs the argument in the test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
@@ -251,6 +294,7 @@ mkConf tempAbsPath' = withFrozenCallStack $ do
   pure $ Conf
     { genesisHashesPolicy = WithHashes
     , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
+    , updateTimestamps = DontUpdateTimestamps
     }
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@

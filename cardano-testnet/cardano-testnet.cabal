@@ -49,6 +49,7 @@ library
                       , cardano-ledger-binary
                       , cardano-ledger-byron
                       , cardano-ledger-conway
+                      , cardano-ledger-core
                       , cardano-ledger-api
                       , cardano-ledger-conway
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
@@ -70,6 +71,7 @@ library
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.8
+                      , http-conduit
                       , lens-aeson
                       , microlens
                       , monad-control
@@ -102,6 +104,7 @@ library
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
+                        Testnet.Blockfrost
                         Testnet.Components.Configuration
                         Testnet.Components.Query
                         Testnet.Defaults
@@ -222,6 +225,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
+                        Cardano.Testnet.Test.MainnetParams
                         Cardano.Testnet.Test.P2PTopology
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.RunTestnet

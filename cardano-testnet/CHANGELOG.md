@@ -6,6 +6,7 @@
 * [Add an option to dump/load configuration sandbox](https://github.com/IntersectMBO/cardano-node/pull/6239)
 * [Add flag to support P2P topology](https://github.com/IntersectMBO/cardano-node/pull/6263)
 * [Add flag to update time stamps in custom environment](https://github.com/IntersectMBO/cardano-node/pull/6275)
+* [Add option to create configuration sandbox with parameters from mainnet](https://github.com/IntersectMBO/cardano-node/pull/6289)
 
 ## 10.0.0
 

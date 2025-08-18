@@ -18,6 +18,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   [--node-env FILEPATH]
+  [--update-time]
 
   Start a testnet in any era
 
@@ -39,8 +40,8 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   --output DIRECTORY
+  [--params-file FILEPATH | --mainnet]
   [--p2p-topology]
-  [--update-time]
 
   Create a sandbox for Cardano testnet
 
