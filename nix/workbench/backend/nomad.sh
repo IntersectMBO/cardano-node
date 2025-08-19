@@ -2723,10 +2723,10 @@ backend_nomad() {
       local workload=${1:?$usage}; shift
       local task=${1:?$usage}; shift
 
-      msg "$(blue Fetching) $(yellow "\"${workload}\" workload") run files from Nomad $(yellow "Task \"${task}\"") ..."
+      msg "$(blue Fetching) $(yellow "\"${workload}\" workload") entire directory from Nomad $(yellow "Task \"${task}\"") ..."
       # TODO: Add compression, either "--zstd" or "--xz"
-        backend_nomad task-exec-program-run-files-tar-zstd                 \
-          "${dir}" "${task}" "workloads/${workload}"                       \
+        backend_nomad task-exec-directory-tar-zstd \
+        "${dir}" "${task}" "workloads/${workload}" \
       | tar --extract                                                      \
           --directory="${dir}"/workloads/"${workload}"/"${task}"/ --file=- \
           --no-same-owner --no-same-permissions
@@ -2800,10 +2800,10 @@ backend_nomad() {
           then
             msg "$(blue Fetching) $(yellow "\"tracer\"") logRoot from Nomad $(yellow "Task \"${task}\"") ..."
             # TODO: Add compression, either "--zstd" or "--xz"
-              backend_nomad task-exec-tracer-folders-tar-zstd           \
-              "${dir}" "${task}"                                        \
-            | tar --extract                                             \
-                --directory="${dir}"/tracer/ --file=-                   \
+              backend_nomad task-exec-directory-tar-zstd \
+              "${dir}" "${task}" "tracer/logRoot"        \
+            | tar --extract                              \
+                --directory="${dir}"/tracer/ --file=-    \
                 --no-same-owner --no-same-permissions
           fi
         else
@@ -2812,10 +2812,10 @@ backend_nomad() {
           then
             msg "$(blue Fetching) $(yellow "\"tracer\"") logRoot from Nomad $(yellow "Task \"tracer\"") ..."
             # TODO: Add compression, either "--zstd" or "--xz"
-              backend_nomad task-exec-tracer-folders-tar-zstd         \
-              "${dir}" "tracer"                                       \
-            | tar --extract                                           \
-                --directory="${dir}"/tracer/ --file=-                 \
+              backend_nomad task-exec-directory-tar-zstd \
+              "${dir}" "tracer" "tracer/logRoot"         \
+            | tar --extract                              \
+                --directory="${dir}"/tracer/ --file=-    \
                 --no-same-owner --no-same-permissions
           fi
         fi
@@ -3184,38 +3184,35 @@ backend_nomad() {
         "
     ;;
 
-    task-exec-tracer-folders-tar-zstd )
+    # Generic function, gets the entire directory.
+    # May contain huge log files that `nomad exec` can't handle.
+    task-exec-directory-tar-zstd )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
+      local directory=${1:?$usage}; shift
 
       local bash_path="$(jq -r ".containerPkgs.bashInteractive.\"nix-store-path\"" "${dir}"/container-specs.json)"/bin/bash
-      local find_path="$(jq -r ".containerPkgs.findutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/find
       local tar_path="$(jq  -r ".containerPkgs.gnutar.\"nix-store-path\""          "${dir}"/container-specs.json)"/bin/tar
       local cat_path="$(jq  -r ".containerPkgs.coreutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/cat
-      # TODO: Fetch the logRoot
-      local log_root="$(jq -r ".containerPkgs.findutils.\"nix-store-path\""        "${dir}"/container-specs.json)"/bin/find
       # When executing commands the directories used depend on the filesystem
       # isolation mode (AKA chroot or not).
       local state_dir
       state_dir="$(backend_nomad task-workbench-state-dir "${dir}" "${task}")"
-      local tracer_dir="${state_dir}"/tracer/
+      local dir_to_tar="${state_dir}"/"${directory}"
       # TODO: Add compression, either "--zstd" or "--xz"
       # tar (child): zstd: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
       # tar (child): xz: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
-      backend_nomad task-exec "${dir}" "${task}"         \
-        "${bash_path}" -c                                \
-        "                                                \
-          \"${find_path}\" \"${tracer_dir}\"             \
-            -mindepth 1 -type d                          \
-            -printf \"%P\\n\"                            \
-        |                                                \
-          \"${tar_path}\" --create                       \
-            --directory=\"${tracer_dir}\" --files-from=- \
-        |                                                \
-          \"${cat_path}\"                                \
+      backend_nomad task-exec "${dir}" "${task}"     \
+        "${bash_path}" -c                            \
+        "                                            \
+          \"${tar_path}\"                            \
+            --directory=\"${dir_to_tar}\"            \
+            --create .                               \
+        |                                            \
+          \"${cat_path}\"                            \
         "
     ;;
 
