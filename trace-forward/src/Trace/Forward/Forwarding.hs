@@ -27,7 +27,7 @@ import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
-                   makeLocalBearer, LocalAddress)
+                   makeLocalBearer, LocalAddress, socketSnocket, makeSocketBearer, LocalSocket)
 import           Ouroboros.Network.Socket (ConnectToArgs (..),
                    HandshakeCallbacks (..), SomeResponderApplication (..),
                    connectToNode, nullNetworkConnectTracers)
@@ -36,7 +36,6 @@ import qualified Ouroboros.Network.Server.Simple as Server
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async)
 import           Control.Exception (throwIO)
-import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync (wait)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
@@ -317,6 +316,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
     configureSocket
     address
     HandshakeArguments {
+      haBearerTracer = nullTracer,
       haHandshakeTracer = nullTracer,
       haHandshakeCodec = codecHandshake forwardingVersionCodec,
       haVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
@@ -337,11 +337,6 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
     $ \_ serverAsync ->
       wait serverAsync -- Block until async exception.
  where
-  responderApp _ = SomeResponderApplication $
-     forwarderApp [ (forwardEKGMetricsRespRun,                  1)
-                  , (forwardTraceObjectsResp tfConfig  sink,    2)
-                  , (forwardDataPointsResp   dpfConfig dpStore, 3)
-                  ]
   forwarderApp
     :: [(RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
     -> OuroborosApplication 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()

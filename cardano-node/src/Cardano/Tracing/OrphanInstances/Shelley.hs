@@ -23,7 +23,6 @@ import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
@@ -64,7 +63,6 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosChainSelectView (..))
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
@@ -75,13 +73,11 @@ import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 
 {- HLINT ignore "Use :" -}
 
@@ -424,13 +420,18 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
     mconcat [ "kind" .= String "TreasuryWithdrawalReturnAccountsDoNotExist"
             , "invalidAccounts" .= accounts
             ]
+  toObject _ (Conway.UnelectedCommitteeVoters creds) = 
+    mconcat [ "kind" .= String "UnelectedCommitteeVoters"
+            , "unelectedCommitteeVoters" .= creds
+            ]
+
 
 instance
   ( ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => ToObject (Conway.ConwayCertsPredFailure era) where
   toObject verb = \case
     Conway.WithdrawalsNotInRewardsCERTS incorrectWithdrawals ->
-      mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS" , "incorrectWithdrawals" .= incorrectWithdrawals ]
+      mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS" , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals ]
     Conway.CertFailure f -> toObject verb f
 
 
@@ -460,10 +461,6 @@ instance
     mconcat [ "kind" .= String "PPViewHashesDontMatch"
              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
-             ]
-  toObject _ (MissingRequiredSigners missingKeyWitnesses) =
-    mconcat [ "kind" .= String "MissingRequiredSigners"
-             , "witnesses" .= Set.toList missingKeyWitnesses
              ]
   toObject _ (UnspendableUTxONoDatumHash txins) =
     mconcat [ "kind" .= String "MissingRequiredSigners"
@@ -695,7 +692,7 @@ instance
              ]
   toObject _verb (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
     mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "incorrectWithdrawals" .= incorrectWithdrawals
+             , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals
              ]
   toObject verb (DelplFailure f) = toObject verb f
 
@@ -859,9 +856,6 @@ instance
   ) => ToObject (ShelleyNewEpochPredFailure ledgerera) where
   toObject verb (EpochFailure f) = toObject verb f
   toObject verb (MirFailure f) = toObject verb f
-  toObject _verb (CorruptRewardUpdate update) =
-    mconcat [ "kind" .= String "CorruptRewardUpdate"
-             , "update" .= String (textShow update) ]
 
 
 instance
@@ -1326,24 +1320,8 @@ instance ToJSON ShelleyNodeToClientVersion where
   toJSON ShelleyNodeToClientVersion10 = String "ShelleyNodeToClientVersion10"
   toJSON ShelleyNodeToClientVersion11 = String "ShelleyNodeToClientVersion11"
   toJSON ShelleyNodeToClientVersion12 = String "ShelleyNodeToClientVersion12"
-
-instance Core.Crypto c => ToObject (PraosChainSelectView c) where
-  toObject _ PraosChainSelectView {
-      csvChainLength
-    , csvSlotNo
-    , csvIssuer
-    , csvIssueNo
-    , csvTieBreakVRF
-    } =
-      mconcat [ "kind" .= String "PraosChainSelectView"
-              , "chainLength" .= csvChainLength
-              , "slotNo" .= csvSlotNo
-              , "issuerHash" .= hashKey csvIssuer
-              , "issueNo" .= csvIssueNo
-              , "tieBreakVRF" .= renderVRF csvTieBreakVRF
-              ]
-    where
-      renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
+  toJSON ShelleyNodeToClientVersion13 = String "ShelleyNodeToClientVersion13"
+  toJSON ShelleyNodeToClientVersion14 = String "ShelleyNodeToClientVersion14"
 
 --------------------------------------------------------------------------------
 -- Conway related

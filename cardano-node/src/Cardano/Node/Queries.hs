@@ -42,8 +42,10 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
+import qualified Cardano.Ledger.Conway.State as Conway
 import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import qualified Cardano.Ledger.State as Ledger
 import qualified Cardano.Ledger.TxIn as Ledger
 import qualified Cardano.Ledger.UMap as UM
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -241,7 +243,8 @@ instance LedgerQueries Byron.ByronBlock where
   ledgerDRepCount    _ = 0
   ledgerDRepMapSize  _ = 0
 
-instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protocol era) where
+-- TODO should this be ConwayEraCertState constraint? Wouldn't this break queries for older eras?
+instance Conway.ConwayEraCertState era => LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
       (\(Shelley.UTxO xs)-> Map.size xs)
     . Shelley.utxosUtxo
@@ -252,7 +255,9 @@ instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protoco
   ledgerDelegMapSize =
       UM.size
     . UM.SPoolUView
-    . Shelley.dsUnified
+    . undefined -- TODO what should be here?
+    . (^. Conway.accountsMapL)
+    . Ledger.dsAccounts
     . (^. Shelley.certDStateL)
     . Shelley.lsCertState
     . Shelley.esLState
@@ -260,8 +265,8 @@ instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protoco
     . Shelley.shelleyLedgerState
   ledgerDRepCount =
       Map.size
-    . Shelley.vsDReps
-    . (^. Shelley.certVStateL)
+    . Conway.vsDReps
+    . (^. Conway.certVStateL)
     . Shelley.lsCertState
     . Shelley.esLState
     . Shelley.nesEs
@@ -269,7 +274,8 @@ instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protoco
   ledgerDRepMapSize =
       UM.size
     . UM.DRepUView
-    . Shelley.dsUnified
+    . undefined -- TODO what should be here?
+    . Ledger.dsAccounts
     . (^. Shelley.certDStateL)
     . Shelley.lsCertState
     . Shelley.esLState
@@ -283,38 +289,40 @@ instance (LedgerQueries x, NoHardForks x)
   ledgerDRepCount    = ledgerDRepCount    . unFlip . project . Flip
   ledgerDRepMapSize  = ledgerDRepMapSize  . unFlip . project . Flip
 
+-- TODO those states make no sense, since required lenses got moved to Conway
+-- TODO non-exhaustive pattern matches
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
-    Cardano.LedgerStateByron   ledgerByron   -> ledgerUtxoSize ledgerByron
-    Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
-    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
-    Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
-    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerUtxoSize ledgerAlonzo
-    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerUtxoSize ledgerBabbage
+    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerUtxoSize ledgerByron
+    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
+    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
+    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
+    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerUtxoSize ledgerAlonzo
+    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerUtxoSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerUtxoSize ledgerConway
   ledgerDelegMapSize = \case
-    Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
-    Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
-    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
-    Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
-    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
-    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
+    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
+    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
+    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
+    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
+    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
+    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDelegMapSize ledgerConway
   ledgerDRepCount = \case
-    Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepCount ledgerByron
-    Cardano.LedgerStateShelley ledgerShelley -> ledgerDRepCount ledgerShelley
-    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDRepCount ledgerAllegra
-    Cardano.LedgerStateMary    ledgerMary    -> ledgerDRepCount ledgerMary
-    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepCount ledgerAlonzo
-    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepCount ledgerBabbage
+    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepCount ledgerByron
+    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerDRepCount ledgerShelley
+    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDRepCount ledgerAllegra
+    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerDRepCount ledgerMary
+    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepCount ledgerAlonzo
+    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepCount ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepCount ledgerConway
   ledgerDRepMapSize = \case
-    Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepMapSize ledgerByron
-    Cardano.LedgerStateShelley ledgerShelley -> ledgerDRepMapSize ledgerShelley
-    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDRepMapSize ledgerAllegra
-    Cardano.LedgerStateMary    ledgerMary    -> ledgerDRepMapSize ledgerMary
-    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepMapSize ledgerAlonzo
-    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepMapSize ledgerBabbage
+    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepMapSize ledgerByron
+    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerDRepMapSize ledgerShelley
+    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDRepMapSize ledgerAllegra
+    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerDRepMapSize ledgerMary
+    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepMapSize ledgerAlonzo
+    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepMapSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepMapSize ledgerConway
 
 --

@@ -49,7 +49,7 @@ import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..)
 import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import           Ouroboros.Network.ConnectionManager.State (ConnStateId (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
-import           Ouroboros.Network.Diffusion.Types (DNSTrace (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import qualified Ouroboros.Network.Diffusion.Types as Diffusion
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
@@ -245,29 +245,9 @@ instance HasSeverityAnnotation TraceLedgerPeers where
 instance HasPrivacyAnnotation (Mux.WithBearer peer Mux.Trace)
 instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
   getSeverityAnnotation (Mux.WithBearer _ ev) = case ev of
-    Mux.TraceRecvHeaderStart -> Debug
-    Mux.TraceRecvHeaderEnd {} -> Debug
-    Mux.TraceRecvStart {} -> Debug
-    Mux.TraceRecvRaw {} -> Debug
-    Mux.TraceRecvEnd {} -> Debug
-    Mux.TraceSendStart {} -> Debug
-    Mux.TraceSendEnd -> Debug
     Mux.TraceState {} -> Info
     Mux.TraceCleanExit {} -> Notice
     Mux.TraceExceptionExit {} -> Notice
-    Mux.TraceChannelRecvStart {} -> Debug
-    Mux.TraceChannelRecvEnd {} -> Debug
-    Mux.TraceChannelSendStart {} -> Debug
-    Mux.TraceChannelSendEnd {} -> Debug
-    Mux.TraceHandshakeStart -> Debug
-    Mux.TraceHandshakeClientEnd {} -> Info
-    Mux.TraceHandshakeServerEnd -> Debug
-    Mux.TraceHandshakeClientError {} -> Error
-    Mux.TraceHandshakeServerError {} -> Error
-    Mux.TraceRecvDeltaQObservation {} -> Debug
-    Mux.TraceRecvDeltaQSample {} -> Debug
-    Mux.TraceSDUReadTimeoutException -> Notice
-    Mux.TraceSDUWriteTimeoutException -> Notice
     Mux.TraceStartEagerly _ _ -> Info
     Mux.TraceStartOnDemand _ _ -> Info
     Mux.TraceStartedOnDemand _ _ -> Info
@@ -275,7 +255,24 @@ instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
     Mux.TraceTerminating {} -> Debug
     Mux.TraceStopping -> Debug
     Mux.TraceStopped -> Debug
+
+instance HasPrivacyAnnotation (Mux.WithBearer peer Mux.BearerTrace)
+instance HasSeverityAnnotation (Mux.WithBearer peer Mux.BearerTrace) where
+  getSeverityAnnotation (Mux.WithBearer _ ev) = case ev of
+    Mux.TraceRecvHeaderStart -> Debug
+    Mux.TraceRecvHeaderEnd {} -> Debug
+    Mux.TraceRecvStart {} -> Debug
+    Mux.TraceRecvRaw {} -> Debug
+    Mux.TraceRecvEnd {} -> Debug
+    Mux.TraceSendStart {} -> Debug
+    Mux.TraceSendEnd -> Debug
+    Mux.TraceEmitDeltaQ -> Debug
+    Mux.TraceRecvDeltaQObservation {} -> Debug
+    Mux.TraceRecvDeltaQSample {} -> Debug
+    Mux.TraceSDUReadTimeoutException -> Notice
+    Mux.TraceSDUWriteTimeoutException -> Notice
     Mux.TraceTCPInfo {} -> Debug
+
 
 instance HasPrivacyAnnotation CardanoTraceLocalRootPeers
 instance HasSeverityAnnotation CardanoTraceLocalRootPeers where
@@ -371,6 +368,7 @@ instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr lAddr) where
   getSeverityAnnotation ev =
    case ev of
      PeerStatusChanged {}       -> Info
+     PeerHotDuration {}         -> Info
      PeerStatusChangeFailure {} -> Error
      PeerMonitoringError {}     -> Error
      PeerMonitoringResult {}    -> Debug
@@ -1422,7 +1420,7 @@ instance ToObject CardanoTraceLocalRootPeers where
              ]
   toObject _verb (TraceLocalRootError d dexception) =
     mconcat [ "kind" .= String "LocalRootError"
-               -- TODO: `domainAddress` -> `domain` 
+               -- TODO: `domainAddress` -> `domain`
              , "domainAddress" .= String (pack $ show d)
              , "reason" .= displayException dexception
              ]
@@ -1835,6 +1833,11 @@ instance Show lAddr => ToObject (PeerSelectionActionsTrace SockAddr lAddr) where
   toObject _verb (PeerStatusChanged ps) =
     mconcat [ "kind" .= String "PeerStatusChanged"
              , "peerStatusChangeType" .= show ps
+             ]
+  toObject _verb (PeerHotDuration connId dur) =
+    mconcat [ "kind" .= String "PeerHotDuration"
+             , "connectionId" .= connId
+             , "duration" .= show dur
              ]
   toObject _verb (PeerStatusChangeFailure ps f) =
     mconcat [ "kind" .= String "PeerStatusChangeFailure"

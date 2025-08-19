@@ -29,7 +29,7 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraSelectView (..),
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), 
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
@@ -43,7 +43,7 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -427,20 +427,3 @@ instance ToJSON HardForkSpecificNodeToNodeVersion where
 instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion blk) where
     toJSON (WrapNodeToNodeVersion blockNodeToNodeVersion) = toJSON blockNodeToNodeVersion
 
---
--- instances for HardForkSelectView
---
-
-instance All (ToObject `Compose` WrapSelectView) xs => ToObject (HardForkSelectView xs) where
-    -- elide BlockNo as it is already contained in every per-era SelectView
-    toObject verb = toObject verb . dropBlockNo . getHardForkSelectView
-
-instance All (ToObject `Compose` WrapSelectView) xs => ToObject (OneEraSelectView xs) where
-    toObject verb =
-          hcollapse
-        . hcmap (Proxy @(ToObject `Compose` WrapSelectView))
-                (K . toObject verb)
-        . getOneEraSelectView
-
-instance ToObject (SelectView (BlockProtocol blk)) => ToObject (WrapSelectView blk) where
-    toObject verb = toObject verb . unwrapSelectView

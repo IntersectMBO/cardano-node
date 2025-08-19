@@ -22,7 +22,6 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Ledger (fromVRFVerKeyHash)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
@@ -59,7 +58,6 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosChainSelectView (..))
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
@@ -70,12 +68,10 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
-import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
 
 {- HLINT ignore "Use :" -}
 
@@ -361,10 +357,6 @@ instance
              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
              ]
-  forMachine _ (MissingRequiredSigners missingKeyWitnesses) =
-    mconcat [ "kind" .= String "MissingRequiredSigners"
-             , "witnesses" .= Set.toList missingKeyWitnesses
-             ]
   forMachine _ (UnspendableUTxONoDatumHash txins) =
     mconcat [ "kind" .= String "MissingRequiredSigners"
              , "txins" .= Set.toList txins
@@ -596,7 +588,7 @@ instance
              ]
   forMachine _dtal (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
     mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "incorrectWithdrawals" .= incorrectWithdrawals
+             , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals
              ]
   forMachine dtal (DelplFailure f) = forMachine dtal f
 
@@ -740,9 +732,6 @@ instance
   ) => LogFormatting (ShelleyNewEpochPredFailure era) where
   forMachine dtal (EpochFailure f) = forMachine dtal f
   forMachine dtal (MirFailure f) = forMachine dtal f
-  forMachine _dtal (CorruptRewardUpdate update) =
-    mconcat [ "kind" .= String "CorruptRewardUpdate"
-             , "update" .= String (textShow update) ]
 
 
 instance
@@ -1187,13 +1176,18 @@ instance
             , "invalidAccounts" .= accounts
             ]
 
+  forMachine _ (Conway.UnelectedCommitteeVoters voters) =
+    mconcat [ "kind" .= String "UnelectedCommitteeVoters"
+            , "unelectedCommitteeVoters" .= voters
+            ]
+
 instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
   forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
     mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "rewardAccounts" .= rs
+             , "rewardAccounts" .= unWithdrawals rs
             ]
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
@@ -1291,24 +1285,6 @@ instance LogFormatting Praos.PraosEnvelopeError where
                 , "maxBlockSize" .= ledgerViewMaxBlockSize
                 , "blockSize" .= blockSize
                 ]
-
-instance Ledger.Crypto c => LogFormatting (PraosChainSelectView c) where
-  forMachine _ PraosChainSelectView {
-      csvChainLength
-    , csvSlotNo
-    , csvIssuer
-    , csvIssueNo
-    , csvTieBreakVRF
-    } =
-      mconcat [ "kind" .= String "PraosChainSelectView"
-              , "chainLength" .= csvChainLength
-              , "slotNo" .= csvSlotNo
-              , "issuerHash" .= hashKey csvIssuer
-              , "issueNo" .= csvIssueNo
-              , "tieBreakVRF" .= renderVRF csvTieBreakVRF
-              ]
-    where
-      renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
 
 instance
   ( ToJSON (Alonzo.CollectError ledgerera)
