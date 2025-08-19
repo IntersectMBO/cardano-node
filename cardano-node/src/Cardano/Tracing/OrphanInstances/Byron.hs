@@ -21,14 +21,12 @@ import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.Render (renderTxId)
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..), ByronNodeToClientVersion (..),
                    ByronNodeToNodeVersion (..), ByronOtherHeaderEnvelopeError (..), TxId (..),
                    byronHeaderRaw)
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
                    ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
-import           Ouroboros.Consensus.Protocol.PBFT (PBftSelectView (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
@@ -220,11 +218,3 @@ instance ToJSON ByronNodeToClientVersion where
 instance ToJSON ByronNodeToNodeVersion where
   toJSON ByronNodeToNodeVersion1 = String "ByronNodeToNodeVersion1"
   toJSON ByronNodeToNodeVersion2 = String "ByronNodeToNodeVersion2"
-
-instance ToObject PBftSelectView where
-  toObject _verb (PBftSelectView blkNo isEBB) =
-    mconcat
-      [ "kind" .= String "PBftSelectView"
-      , "blockNo" .= blkNo
-      , "isEBB" .= fromIsEBB isEBB
-      ]
