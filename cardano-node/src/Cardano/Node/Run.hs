@@ -129,7 +129,7 @@ import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, get
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
 import qualified Control.Exception as Exception
-import           Control.Monad (forM, forM_, unless, void, when)
+import           Control.Monad (forM, forM_, unless, void, when, join)
 import           Control.Monad.Class.MonadThrow (MonadThrow (..))
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
@@ -169,7 +169,6 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
-import Cardano.Node.Types (hasProtocolFile)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -886,51 +885,50 @@ updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
                          -> STM IO UseLedgerPeers
                          -> (Maybe LedgerPeerSnapshot -> STM IO ())
                          -> IO (Maybe LedgerPeerSnapshot)
-updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode, ncProtocolFiles})
-                         readLedgerPeerPath readUseLedgerVar writeVar = do
+updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) readLedgerPeerPath readUseLedgerVar writeVar = do
   mPeerSnapshotFile <- atomically readLedgerPeerPath
 
-  mLedgerPeerSnapshot <- case (ncConsensusMode, mPeerSnapshotFile) of
-    (GenesisMode, Nothing) ->
-      error "Genesis mode but no peer snapshot file provided"
-    (GenesisMode, Just peerSnapshotFile) -> do
-      snapshot <- liftIO $ readPeerSnapshotFile peerSnapshotFile
-      either (error . Text.unpack) (pure . Just) snapshot
-    (PraosMode, Just peerSnapshotFile) -> do
-      snapshot <- liftIO $ readPeerSnapshotFile peerSnapshotFile
-      either
-        (const $ do
-          traceWith startupTracer
-            (NetworkConfigUpdateInfo "Failed to open the peer snapshot file (ignored).")
+  mLedgerPeerSnapshot <- fmap join $ forM mPeerSnapshotFile $ \peerSnapshotFile -> do
+    snapshot <- liftIO $ readPeerSnapshotFile peerSnapshotFile
+    useLedgerPeers <- atomically readUseLedgerVar
+
+    case snapshot of
+      Left _ ->
+        if useLedgerPeers == DontUseLedgerPeers
+        then pure Nothing
+        else do
+          if ncConsensusMode == GenesisMode
+          then traceWith startupTracer
+            (NetworkConfigUpdateError "Peer snapshot missing")
+          else traceWith startupTracer
+            (NetworkConfigUpdateWarning "Peer snapshot missing")
           pure Nothing
-        )
-        (pure . Just)
-        snapshot
-    _else -> pure Nothing
 
-  forM_ mLedgerPeerSnapshot checkSnapshot
-  atomically . writeVar $ mLedgerPeerSnapshot
+      Right lps@(LedgerPeerSnapshot (wOrigin, _)) -> do
+        case useLedgerPeers of
+          DontUseLedgerPeers -> do
+            traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
+            pure $ Just lps
+          UseLedgerPeers afterSlot
+            | Always <- afterSlot -> do
+                traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
+                pure $ Just lps
+            | After slotNo <- afterSlot ->
+                case wOrigin of
+                  Origin -> do
+                    traceWith startupTracer
+                      (NetworkConfigUpdateError "Unsupported big ledger peer snapshot file: taken at Origin")
+                    pure Nothing
+                  At slotNo' | slotNo' >= slotNo -> do
+                    traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
+                    pure $ Just lps
+                  _otherwise -> do
+                    traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
+                    pure $ Just lps
+
+  atomically $ writeVar mLedgerPeerSnapshot
+
   pure mLedgerPeerSnapshot
-
-  where
-    checkSnapshot (LedgerPeerSnapshot (wOrigin, _)) = do
-      useLedgerPeers <- atomically readUseLedgerVar
-      if hasProtocolFile ncProtocolFiles
-      then traceWith startupTracer
-             (NetworkConfigUpdateWarning "Using ledger peer snapshots is not recommended for block producers")
-      else case useLedgerPeers of
-        DontUseLedgerPeers ->
-          traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
-        UseLedgerPeers afterSlot
-          | Always <- afterSlot ->
-              traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-          | After slotNo <- afterSlot ->
-              case wOrigin of
-                Origin -> error "Unsupported big ledger peer snapshot file: taken at Origin"
-                At slotNo' | slotNo' >= slotNo ->
-                  traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-                _otherwise ->
-                  traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
 
 --------------------------------------------------------------------------------
 -- Helper functions

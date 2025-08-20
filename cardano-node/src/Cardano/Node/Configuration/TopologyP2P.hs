@@ -53,6 +53,7 @@ import           Data.Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Maybe (isJust, isNothing)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
@@ -232,26 +233,61 @@ instance ToJSON adr => ToJSON (NetworkTopology adr) where
 readTopologyFile :: ()
   => forall adr. FromJSON adr
   => NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text (NetworkTopology adr))
-readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode} tracer = runExceptT $ do
+readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode, ncProtocolFiles} tracer = runExceptT $ do
   bs <- handleIOExceptionsLiftWith handler $ BS.readFile topologyFilePath
-  topology@RealNodeTopology{ntUseBootstrapPeers} <-
+  topology@RealNodeTopology{ntUseLedgerPeers, ntUseBootstrapPeers, ntPeerSnapshotPath} <-
     liftEither . first handlerJSON $
       eitherDecode $ LBS.fromStrict bs
 
   unless (isValidTrustedPeerConfiguration topology) $
     throwError handlerBootstrap
 
+  when (isBlockProducer && useLedgerPeers ntUseLedgerPeers) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg "Use of ledger peers not recommended for BP"
+
+  when (isJust ntPeerSnapshotPath && not (useLedgerPeers ntUseLedgerPeers) && isBlockProducer) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateInfo
+           $ createMsg "Ledger peers and peer snapshot, although specified in the topology file, are disabled in line with recommended BP operation"
+
+  when (inPraosMode && isJust ntPeerSnapshotPath &&  not (useLedgerPeers ntUseLedgerPeers) && not isBlockProducer) $
+    if isBlockProducer
+    then liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg
+           $  "Peer snapshot file specified but topology disables ledger peers - ignoring file. "
+           <> "To turn off this message remove peerSnapshotFile from the topology file."
+    else liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg
+           $  "Peer snapshot file specified but topology disables ledger peers - ignoring file. "
+           <> "To turn off this message enable the use of ledger peers or remove peerSnapshotFile from the topology file."
+
+
+  when (inGenesisMode && not (useLedgerPeers ntUseLedgerPeers) && not isBlockProducer) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg "It is recommended to use ledger peers and peer snapshot file for relay operations in Genesis mode"
+
+  when (inGenesisMode && isNothing ntPeerSnapshotPath && useLedgerPeers ntUseLedgerPeers && not isBlockProducer) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg "Peer snapshot recommended"
+
   -- make all relative paths in the topology file relative to the topology file location
   adjustFilePaths (takeDirectory topologyFilePath </>) <$>
     if isGenesisCompatible ncConsensusMode ntUseBootstrapPeers
        then pure topology
        else do
-         liftIO $ CT.traceWith tracer $ NetworkConfigUpdateInfo genesisIncompatible
+         liftIO $ CT.traceWith tracer $ NetworkConfigUpdateWarning genesisIncompatible
          pure $ topology{ntUseBootstrapPeers = DontUseBootstrapPeers}
   where
+    createMsg msg =
+      "Cardano.Node.Configuration.Topology.readTopologyFile: " <> msg
     handler :: IOException -> Text
-    handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                          ++ displayException e
+    handler = Text.pack . createMsg . displayException
     handlerJSON :: String -> Text
     handlerJSON err = mconcat
       [ "Is your topology file formatted correctly? "
@@ -263,8 +299,8 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
       , Text.pack err
       ]
     genesisIncompatible
-      = Text.pack $  "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                  <> "Bootstrap peers (field 'bootstrapPeers') are not compatible "
+      = Text.pack . createMsg $
+                     "Bootstrap peers (field 'bootstrapPeers') are not compatible "
                   <> "with Genesis syncing mode, reverting to 'DontUseBootstrapPeers'. "
                   <> "Big ledger peers will be leveraged for decentralized syncing - it "
                   <> "is recommened to provide an up-to-date big ledger peer snapshot file "
@@ -277,8 +313,13 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
       , "in bootstrap mode. Make sure you provide at least one bootstrap peer "
       , "source. "
       ]
+    useLedgerPeers DontUseLedgerPeers = False
+    useLedgerPeers _ = True
     isGenesisCompatible GenesisMode UseBootstrapPeers{} = False
     isGenesisCompatible _ _ = True
+    inPraosMode = ncConsensusMode == PraosMode
+    inGenesisMode = ncConsensusMode == GenesisMode
+    isBlockProducer = hasProtocolFile ncProtocolFiles
 
 readTopologyFileOrError :: ()
   => forall adr. FromJSON adr
