@@ -35,5 +35,5 @@ profilesNoEraTracerOnly =
   in [
     tracerOnly & P.name "tracer-only"
                . P.desc "Idle scenario:  start only the tracer & detach from tty;  no termination"
-               . P.traceForwardingOn . P.newTracing . P.p2pOff
+               . P.traceForwardingOn . P.newTracing
   ]

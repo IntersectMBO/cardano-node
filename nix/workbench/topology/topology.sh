@@ -243,28 +243,15 @@ case "${op}" in
 
         case "$role" in
         local-bft | local-pool )
-            args=(pool
-                  --baseport $basePort
+            args=(core
                   --node-number $i
+                  --baseport $basePort
                  )
-            if jqtest ".node.verbatim.EnableP2P" <<<$prof
-            then
-              args+=('--enable-p2p')
-            fi
         ;;
         local-explorer )
-           local nodes
-           nodes=$(
-                jq --raw-output \
-                        '  .composition.n_bft_hosts
-                         + .composition.n_pool_hosts
-                         + if .composition.with_proxy          then 1 else 0 end
-                         + if .composition.with_chaindb_server then 1 else 0 end
-                        ' \
-                "$profile")
-            args=(explorer
+            args=(relay
+                  --node-number $i
                   --baseport $basePort
-                  --nodes    $nodes
                  )
         ;;
         local-proxy )

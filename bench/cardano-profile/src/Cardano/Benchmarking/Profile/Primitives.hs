@@ -72,8 +72,6 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Node
   -- LMDB True or False.
   , lmdb
-  -- Node's p2p flag.
-  , p2pOn, p2pOff
   -- Node's tracer flag.
   , traceForwardingOn, traceForwardingOff
   -- Node's tracer type.
@@ -180,7 +178,7 @@ empty = Types.Profile {
   , Types.node = Types.Node {
       Types.utxo_lmdb = False
     , Types.ssd_directory = Nothing
-    , Types.verbatim = Types.NodeVerbatim Nothing
+    , Types.verbatim = Types.NodeVerbatim (Just True)   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = False
     , Types.tracing_backend = ""
     , Types.rts_flags_override = []
@@ -600,24 +598,6 @@ lmdb = node (\n -> n {Types.utxo_lmdb = True})
 ssdDirectory :: String -> Types.Profile -> Types.Profile
 ssdDirectory str = node (\n -> n {Types.ssd_directory = Just str})
 
--- P2P.
--------
-
-p2pOn :: HasCallStack => Types.Profile -> Types.Profile
-p2pOn = node
-  (\n ->
-    if Types.verbatim n /= Types.NodeVerbatim Nothing
-    then error "p2pOn: `verbatim` already set (not Nothing)."
-    else n {Types.verbatim = Types.NodeVerbatim (Just True)}
-  )
-
-p2pOff :: HasCallStack => Types.Profile -> Types.Profile
-p2pOff = node
-  (\n ->
-    if Types.verbatim n /= Types.NodeVerbatim Nothing
-    then error "p2pOff: `verbatim` already set (not Nothing)."
-    else n {Types.verbatim = Types.NodeVerbatim Nothing}
-  )
 
 -- Tracer.
 ----------

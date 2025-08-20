@@ -32,7 +32,6 @@ profilesNoEraK3 =
         . V.datasetCurrent -- 10000000 UTxO (10000kU), 1300000 delegators (1300kD)
         . V.fundsDefault
         . P.shutdownOnOff . P.generatorEpochs 3 . P.initCooldown 5
-        . P.p2pOff
         . P.traceForwardingOn . P.newTracing
         . P.analysisStandard . P.analysisUnitary
   in [
