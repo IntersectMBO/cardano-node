@@ -252,7 +252,7 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
            $ NetworkConfigUpdateInfo
            $ createMsg "Ledger peers and peer snapshot, although specified in the topology file, are disabled in line with recommended BP operation"
 
-  when (inPraosMode && isJust ntPeerSnapshotPath &&  not (useLedgerPeers ntUseLedgerPeers) && not isBlockProducer) $
+  when (inPraosMode && isJust ntPeerSnapshotPath &&  not (useLedgerPeers ntUseLedgerPeers)) $
     if isBlockProducer
     then liftIO $ CT.traceWith tracer
            $ NetworkConfigUpdateWarning
