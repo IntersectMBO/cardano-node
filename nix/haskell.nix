@@ -367,8 +367,8 @@ let
               };
           })
           ({ lib, pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
-            # Remove hsc2hs build-tool dependencies (suitable version will be available as part of the ghc derivation)
-            packages.Win32.components.library.build-tools = lib.mkForce [ ];
+            # TODO: error: The option `packages.Win32' does not exist.
+            #   packages.Win32.components.library.build-tools = lib.mkForce [ ];
             packages.terminal-size.components.library.build-tools = lib.mkForce [ ];
             packages.network.components.library.build-tools = lib.mkForce [ ];
           })
