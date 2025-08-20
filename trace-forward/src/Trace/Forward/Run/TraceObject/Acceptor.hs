@@ -80,7 +80,7 @@ acceptorActions
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
   -> Acceptor.TraceObjectAcceptor lo IO ()
 acceptorActions config@AcceptorConfiguration{whatToRequest, shouldWeStop} loHandler =
-  Acceptor.SendMsgTraceObjectsRequest TokBlocking whatToRequest $ \replyWithTraceObjects -> do
+  Acceptor.SendMsgTraceObjectsRequest TokNonBlocking whatToRequest $ \replyWithTraceObjects -> do
     loHandler $ getTraceObjectsFromReply replyWithTraceObjects
     ifM (readTVarIO shouldWeStop)
       (return $ Acceptor.SendMsgDone $ return ())

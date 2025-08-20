@@ -73,6 +73,7 @@ codecTraceObjectForward encodeRequest   decodeRequest
   decode stateToken = do
     len <- CBOR.decodeListLen
     key <- CBOR.decodeWord
+    let modName = "Trace.Forward.Protocol.TraceObject.Codec"
     case (key, len, stateToken) of
       (1, 3, SingIdle) -> do
         blocking <- CBOR.decodeBool
@@ -100,9 +101,9 @@ codecTraceObjectForward encodeRequest   decodeRequest
 
       -- Failures per protocol state
       (_, _, SingIdle) ->
-        fail (printf "codecTraceObjectForward (%s) unexpected key (%d, %d)" (show stateToken) key len)
+        fail (printf "%s:%d: codecTraceObjectForward (%s) unexpected key (%d, %d)" modName (104 :: Int) (show stateToken) key len)
       (_, _, SingBusy TokBlocking) ->
-        fail (printf "codecTraceObjectForward (%s) unexpected key (%d, %d)" (show stateToken) key len)
+        fail (printf "%s:%d: codecTraceObjectForward (%s) unexpected key (%d, %d)" modName (106 :: Int) (show stateToken) key len)
       (_, _, SingBusy TokNonBlocking) ->
-        fail (printf "codecTraceObjectForward (%s) unexpected key (%d, %d)" (show stateToken) key len)
+        fail (printf "%s:%d: codecTraceObjectForward (%s) unexpected key (%d, %d)" modName (108 :: Int) (show stateToken) key len)
       (_, _, SingDone) -> notActiveState stateToken

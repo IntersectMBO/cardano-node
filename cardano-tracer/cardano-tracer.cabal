@@ -195,6 +195,7 @@ library
                       , stm
                       , string-qq
                       , text
+                      , these
                       , time
                       , trace-dispatcher
                       , trace-forward

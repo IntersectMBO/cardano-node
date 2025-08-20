@@ -20,8 +20,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-error=unused-imports
-                -Wno-error=partial-type-signatures
                 -Wno-error=unused-local-binds
+                -Wno-error=unused-matches
+                -Wno-error=partial-type-signatures
                 -Wno-error=unused-top-binds #-}
 
 module Cardano.Tracer.Acceptors.Utils
@@ -82,17 +83,22 @@ import           Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Bimap as BM
 import qualified Data.ByteString.Lazy as LBS (ByteString, hGet, readFile, splitAt)
 import           Data.Either.Extra (eitherToMaybe, fromEither)
+import           Data.Function (on)
 import           Data.Functor ((<&>))
 import           Data.Kind (Type)
 import           Data.List.Extra (unsnoc)
-import qualified Data.Map.Strict as M
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map (delete, fromList, insert)
+import qualified Data.Map.Merge.Strict as Map (mapMissing, merge, zipWithMatched)
 import           Data.Maybe (fromJust)
 import qualified Data.Set as S
+import           Data.These (These (..))
+import qualified Data.These as These ()
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 #if RTVIEW
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 #endif
-import           Data.Tuple.Extra (both)
+import           Data.Tuple.Extra (both, swap)
 import           GHC.Generics (Generic (..))
 import           Numeric (showHex)
 import qualified System.FilePath as FilePath (splitExtension)
@@ -302,6 +308,30 @@ cmpFileOffsetsSDU filePath1 filePath2
   = liftIO . mapM_ putStrLn . showOffsetPairs label1 label2
             =<< zipDropEqOnM fileOffsetsSDU filePath1 filePath2
 
+cmpFileSDUs :: FilePath -> FilePath -> ExceptT Mux.Error IO (Map Integer (These Mux.SDUHeader Mux.SDUHeader))
+cmpFileSDUs = liftA2 merge' `on` mapOfFile where
+      merge' = Map.merge this' that' these'
+      this'  = Map.mapMissing . const $ This
+      that'  = Map.mapMissing . const $ That
+      these' = Map.zipWithMatched . const $ These
+      mapOfFile f = Map.fromList <$> swap <$$> parseFileSDUs f
+
+deriving instance Eq Mux.SDUHeader
+
+cmpShowSDUs :: String -> String -> Integer -> These Mux.SDUHeader Mux.SDUHeader -> [String]
+cmpShowSDUs label1 label2 offset = \case
+  This sdu -> ((label1 <> ": ") <>) <$> lines (printSDU sdu offset)
+  That sdu -> ((label2 <> ": ") <>) <$> lines (printSDU sdu offset)
+  These sdu1 sdu2
+    | sdu1 /= sdu2 -> undefined
+    | otherwise    -> undefined
+
+diffFileSDUs :: FilePath -> FilePath -> ExceptT Mux.Error IO ()
+diffFileSDUs filePath1 filePath2
+  | (_, label1) <- FilePath.splitExtension filePath1
+  , (_, label2) <- FilePath.splitExtension filePath2
+  = undefined
+
 printSDU :: Mux.SDUHeader -> Integer -> String
 printSDU Mux.SDUHeader {..} offset = unlines is''' where
   Mux.MiniProtocolNum mhNum' = mhNum
@@ -335,7 +365,7 @@ prepareDataPointRequestor TracerEnv{teConnectedNodes, teDPRequestors} connId = d
   addConnectedNode teConnectedNodes connId
   dpRequestor <- initDataPointRequestor
   atomically $
-    modifyTVar' teDPRequestors $ M.insert (connIdToNodeId connId) dpRequestor
+    modifyTVar' teDPRequestors $ Map.insert (connIdToNodeId connId) dpRequestor
   return dpRequestor
 
 prepareMetricsStores
@@ -351,7 +381,7 @@ prepareMetricsStores TracerEnv{teConnectedNodes, teAcceptedMetrics} connId = do
 
   atomically do
     modifyTVar' teAcceptedMetrics do
-      M.insert (connIdToNodeId connId) storesForNewNode
+      Map.insert (connIdToNodeId connId) storesForNewNode
 
   return storesForNewNode
 
@@ -382,8 +412,8 @@ removeDisconnectedNode tracerEnv connId =
   atomically $ do
     modifyTVar' teConnectedNodes      $ S.delete  nodeId
     modifyTVar' teConnectedNodesNames $ BM.delete nodeId
-    modifyTVar' teAcceptedMetrics     $ M.delete  nodeId
-    modifyTVar' teDPRequestors        $ M.delete  nodeId
+    modifyTVar' teAcceptedMetrics     $ Map.delete  nodeId
+    modifyTVar' teDPRequestors        $ Map.delete  nodeId
  where
   TracerEnv{teConnectedNodes, teConnectedNodesNames, teAcceptedMetrics, teDPRequestors} = tracerEnv
   nodeId = connIdToNodeId connId
