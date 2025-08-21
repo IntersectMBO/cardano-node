@@ -114,7 +114,7 @@ pCustomParamsFile = OnChainParamsFile <$> OA.strOption
 
 pMainnetParams :: Parser TestnetOnChainParams
 pMainnetParams = OA.flag' OnChainParamsMainnet
-  (  OA.long "mainnet"
+  (  OA.long "params-mainnet"
   <> OA.help "Use mainnet on-chain parameters"
   )
 
