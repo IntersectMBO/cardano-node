@@ -55,8 +55,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNodes =
+        { cardanoNodes =
           [ SpoNodeOptions []
           , SpoNodeOptions []
           , SpoNodeOptions []

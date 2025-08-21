@@ -43,8 +43,8 @@ data CardanoTestnetCommands
 commands :: EnvCli -> Parser CardanoTestnetCommands
 commands envCli =
   asum
-    [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
-    , fmap CreateTestnetEnv (subparser (cmdCreateEnv envCli))
+    [ fmap StartCardanoTestnet (subparser cmdCardano)
+    , fmap CreateTestnetEnv (subparser cmdCreateEnv)
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref (opts envCli)) (subparser cmdHelp)
     ]

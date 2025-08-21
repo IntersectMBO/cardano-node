@@ -66,8 +66,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def
-        { cardanoNodeEra = asbe
-        , cardanoNodes =
+        { cardanoNodes =
           [ SpoNodeOptions []
           , SpoNodeOptions []
           , SpoNodeOptions []
@@ -151,7 +150,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    asbe
     (verificationKey testDelegatorKeys)
     keyDeposit
     testDelegatorRegCertFp
@@ -257,7 +256,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
+  jsonBS <- Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePort <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $

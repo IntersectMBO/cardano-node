@@ -66,7 +66,6 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
     cEra = AnyCardanoEra era
     eraName = eraToString era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
 
   TestnetRuntime
     { configurationFile
@@ -74,7 +73,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
     , testnetNodes
     , wallets = wallet0 : wallet1 : _
     } <-
-    createAndRunTestnet options def conf
+    createAndRunTestnet def def conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
@@ -214,7 +213,6 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
     cEra = AnyCardanoEra era
     eraName = eraToString era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
 
   TestnetRuntime
     { configurationFile
@@ -222,7 +220,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
     , testnetNodes
     , wallets = wallet0 : wallet1 : _
     } <-
-    createAndRunTestnet options def conf
+    createAndRunTestnet def def conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
@@ -324,7 +322,6 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
     cEra = AnyCardanoEra era
     eraName = eraToString era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
 
   TestnetRuntime
     { configurationFile
@@ -332,7 +329,7 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
     , testnetNodes
     , wallets = wallet0 : wallet1 : _
     } <-
-    createAndRunTestnet options def conf
+    createAndRunTestnet def def conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1

@@ -39,13 +39,11 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
   let tempBaseAbsPath = makeTmpBaseAbsPath $ tempAbsPath conf
 
   let era = ConwayEra
-      sbe = ShelleyBasedEraConway
-      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe } -- TODO: We should only support the latest era and the upcoming era
       shelleyOptions = def { genesisEpochLength = 100
                            , genesisActiveSlotsCoeff = 0.3
                            }
 
-  TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- createAndRunTestnet options shelleyOptions conf
+  TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- createAndRunTestnet def shelleyOptions conf
 
   (execConfig, socketPathAbs) <- do
     TestnetNode{nodeSprocket} <- H.headM testnetNodes

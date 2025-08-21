@@ -73,10 +73,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = 3
-        }
+      fastTestnetOptions = def { cardanoNumDReps = 3 }
       shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime

@@ -47,9 +47,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let cardanoNodeEra = AnyShelleyBasedEra sbe
-      fastTestnetOptions = def { cardanoNodeEra }
-      shelleyOptions = def { genesisEpochLength = 50 } -- 50 * (1/10s) length, i.e. 5 seconds
+  let shelleyOptions = def { genesisEpochLength = 50 } -- 50 * (1/10s) length, i.e. 5 seconds
 
   TestnetRuntime
     { testnetMagic
@@ -57,7 +55,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
     , wallets=wallet0:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet def shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

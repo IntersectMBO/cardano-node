@@ -77,9 +77,8 @@ import qualified Hedgehog.Extras.Test.File as H
 createConfigJson :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
-  -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
   -> m (KeyMap Aeson.Value)
-createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
+createConfigJson (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron-genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
@@ -90,15 +89,14 @@ createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ d
     , shelleyGenesisHash
     , alonzoGenesisHash
     , conwayGenesisHash
-    , Defaults.defaultYamlHardforkViaConfig sbe
+    , Defaults.defaultYamlHardforkViaConfig
     ]
    where
     getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> Defaults.defaultGenesisFilepath e)
 
 createConfigJsonNoHash :: ()
-  => ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> KeyMap Aeson.Value
+  => KeyMap Aeson.Value
 createConfigJsonNoHash = Defaults.defaultYamlHardforkViaConfig
 
 -- Generate hashes for genesis.json files
@@ -133,23 +131,21 @@ getDefaultShelleyGenesis :: ()
   => HasCallStack
   => MonadIO m
   => MonadTest m
-  => AnyShelleyBasedEra
-  -> Word64 -- ^ The max supply
+  => Word64 -- ^ The max supply
   -> GenesisOptions
   -> m ShelleyGenesis
-getDefaultShelleyGenesis asbe maxSupply opts = do
+getDefaultShelleyGenesis maxSupply opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-  return $ Defaults.defaultShelleyGenesis asbe startTime maxSupply opts
+  return $ Defaults.defaultShelleyGenesis startTime maxSupply opts
 
 -- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
 getDefaultAlonzoGenesis :: ()
   => HasCallStack
   => MonadTest m
-  => ShelleyBasedEra era
-  -> m AlonzoGenesis
-getDefaultAlonzoGenesis sbe =
-  H.evalEither $ first prettyError (Defaults.defaultAlonzoGenesis sbe)
+  => m AlonzoGenesis
+getDefaultAlonzoGenesis =
+  H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
@@ -165,7 +161,6 @@ createSPOGenesisAndFiles
   testnetOptions genesisOptions@GenesisOptions{genesisTestnetMagic}
   onChainParams
   (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
-  AnyShelleyBasedEra sbe <- pure cardanoNodeEra
 
   let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
@@ -173,7 +168,7 @@ createSPOGenesisAndFiles
       -- otherwise some won't be representing anybody
       numStakeDelegators = max 3 (fromIntegral cardanoNumDReps) :: Int
 
-  shelleyGenesis'' <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply genesisOptions
+  shelleyGenesis'' <- getDefaultShelleyGenesis cardanoMaxSupply genesisOptions
   -- TODO: Remove this rewrite.
   -- 50 second epochs
   -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
@@ -181,7 +176,7 @@ createSPOGenesisAndFiles
         { sgSecurityParam = unsafeNonZero 5
         , sgUpdateQuorum = 2
         }
-  alonzoGenesis' <- getDefaultAlonzoGenesis sbe
+  alonzoGenesis' <- getDefaultAlonzoGenesis
   let conwayGenesis' = Defaults.defaultConwayGenesis
 
   (alonzoGenesis, conwayGenesis, shelleyGenesis) <- resolveOnChainParams onChainParams
@@ -197,13 +192,13 @@ createSPOGenesisAndFiles
   H.note_ $ "Number of stake delegators: " <> show numStakeDelegators
   H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
 
-  let era = toCardanoEra sbe
+  let era = toCardanoEra ConwayEra
 
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
   execCli_ $
-    [ eraToString sbe, "genesis", "create-testnet-data" ]
+    [ eraToString era, "genesis", "create-testnet-data" ]
     ++ createTestnetDataFlag ShelleyEra
     ++ createTestnetDataFlag AlonzoEra
     ++ createTestnetDataFlag ConwayEra
@@ -234,7 +229,7 @@ createSPOGenesisAndFiles
     inputGenesisAlonzoFp  = genesisInputFilepath AlonzoEra
     inputGenesisConwayFp  = genesisInputFilepath ConwayEra
     nPoolNodes = cardanoNumPools testnetOptions
-    CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply, cardanoNumDReps} = testnetOptions
+    CardanoTestnetOptions{cardanoMaxSupply, cardanoNumDReps} = testnetOptions
     genesisInputFilepath :: Pretty (eon era) => eon era -> FilePath
     genesisInputFilepath e = tempAbsPath </> ("genesis-input." <> eraToString e <> ".json")
     createTestnetDataFlag :: Pretty (eon era) => eon era -> [String]

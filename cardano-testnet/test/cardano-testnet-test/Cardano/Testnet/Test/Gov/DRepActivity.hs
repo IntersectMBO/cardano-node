@@ -61,10 +61,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = 1
-        }
+      fastTestnetOptions = def { cardanoNumDReps = 1 }
       eraName = eraToString sbe
       shelleyOptions = def { genesisEpochLength = 200 }
 

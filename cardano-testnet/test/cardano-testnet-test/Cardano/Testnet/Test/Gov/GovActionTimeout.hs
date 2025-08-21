@@ -52,8 +52,6 @@ hprop_check_gov_action_timeout = integrationRetryWorkspace 2 "gov-action-timeout
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       eraName = eraToString sbe
-      asbe = AnyShelleyBasedEra sbe
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
       shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
@@ -62,7 +60,7 @@ hprop_check_gov_action_timeout = integrationRetryWorkspace 2 "gov-action-timeout
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet def shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

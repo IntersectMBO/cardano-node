@@ -91,10 +91,7 @@ createTestnetEnv :: ()
   -> Conf
   -> H.Integration ()
 createTestnetEnv
-  testnetOptions@CardanoTestnetOptions
-    { cardanoNodeEra=asbe
-    , cardanoNodes
-    }
+  testnetOptions@CardanoTestnetOptions{cardanoNodes}
   genesisOptions
   CreateEnvOptions
     { ceoOnChainParams=onChainParams
@@ -107,7 +104,6 @@ createTestnetEnv
 
   testMinimumConfigurationRequirements testnetOptions
 
-  AnyShelleyBasedEra sbe <- pure asbe
   _ <- createSPOGenesisAndFiles
     testnetOptions genesisOptions onChainParams
     (TmpAbsolutePath tmpAbsPath)
@@ -115,8 +111,8 @@ createTestnetEnv
   configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   config' <- case genesisHashesPolicy of
-    WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-    WithoutHashes -> pure $ createConfigJsonNoHash sbe
+    WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath)
+    WithoutHashes -> pure createConfigJsonNoHash
   -- Setup P2P configuration value
   let config = A.insert
         "EnableP2P"

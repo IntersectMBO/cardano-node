@@ -59,9 +59,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
 
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
       shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
@@ -70,7 +68,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet def shelleyOptions conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
