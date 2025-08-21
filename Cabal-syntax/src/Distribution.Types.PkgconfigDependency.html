@@ -1,0 +1,376 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679400698"><span id="local-6989586621679400699"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.PkgconfigDependency</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier">PkgconfigDependency</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigName.html"><span class="hs-identifier">Distribution.Types.PkgconfigName</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersionRange.html"><span class="hs-identifier">Distribution.Types.PkgconfigVersionRange</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- | Describes a dependency on a pkg-config library</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">data</span><span> </span><span id="PkgconfigDependency"><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-var">PkgconfigDependency</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PkgconfigDependency"><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-var">PkgconfigDependency</span></a></span></span><span>
+</span><span id="line-22"></span><span>                           </span><span class="annot"><a href="Distribution.Types.PkgconfigName.html#PkgconfigName"><span class="hs-identifier hs-type">PkgconfigName</span></a></span><span>
+</span><span id="line-23"></span><span>                           </span><span class="annot"><a href="Distribution.Types.PkgconfigVersionRange.html#PkgconfigVersionRange"><span class="hs-identifier hs-type">PkgconfigVersionRange</span></a></span><span>
+</span><span id="line-24"></span><span>                         </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679400702"><span id="local-6989586621679400704"><span class="annot"><span class="annottext">(forall x. PkgconfigDependency -&gt; Rep PkgconfigDependency x)
+-&gt; (forall x. Rep PkgconfigDependency x -&gt; PkgconfigDependency)
+-&gt; Generic PkgconfigDependency
+forall x. Rep PkgconfigDependency x -&gt; PkgconfigDependency
+forall x. PkgconfigDependency -&gt; Rep PkgconfigDependency x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. PkgconfigDependency -&gt; Rep PkgconfigDependency x
+from :: forall x. PkgconfigDependency -&gt; Rep PkgconfigDependency x
+$cto :: forall x. Rep PkgconfigDependency x -&gt; PkgconfigDependency
+to :: forall x. Rep PkgconfigDependency x -&gt; PkgconfigDependency
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679400708"><span id="local-6989586621679400712"><span id="local-6989586621679400715"><span id="local-6989586621679400726"><span class="annot"><span class="annottext">ReadPrec [PkgconfigDependency]
+ReadPrec PkgconfigDependency
+Int -&gt; ReadS PkgconfigDependency
+ReadS [PkgconfigDependency]
+(Int -&gt; ReadS PkgconfigDependency)
+-&gt; ReadS [PkgconfigDependency]
+-&gt; ReadPrec PkgconfigDependency
+-&gt; ReadPrec [PkgconfigDependency]
+-&gt; Read PkgconfigDependency
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS PkgconfigDependency
+readsPrec :: Int -&gt; ReadS PkgconfigDependency
+$creadList :: ReadS [PkgconfigDependency]
+readList :: ReadS [PkgconfigDependency]
+$creadPrec :: ReadPrec PkgconfigDependency
+readPrec :: ReadPrec PkgconfigDependency
+$creadListPrec :: ReadPrec [PkgconfigDependency]
+readListPrec :: ReadPrec [PkgconfigDependency]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679400730"><span id="local-6989586621679400738"><span id="local-6989586621679400742"><span class="annot"><span class="annottext">Int -&gt; PkgconfigDependency -&gt; ShowS
+[PkgconfigDependency] -&gt; ShowS
+PkgconfigDependency -&gt; String
+(Int -&gt; PkgconfigDependency -&gt; ShowS)
+-&gt; (PkgconfigDependency -&gt; String)
+-&gt; ([PkgconfigDependency] -&gt; ShowS)
+-&gt; Show PkgconfigDependency
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PkgconfigDependency -&gt; ShowS
+showsPrec :: Int -&gt; PkgconfigDependency -&gt; ShowS
+$cshow :: PkgconfigDependency -&gt; String
+show :: PkgconfigDependency -&gt; String
+$cshowList :: [PkgconfigDependency] -&gt; ShowS
+showList :: [PkgconfigDependency] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679400746"><span id="local-6989586621679400752"><span class="annot"><span class="annottext">PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+(PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool)
+-&gt; (PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool)
+-&gt; Eq PkgconfigDependency
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+== :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+$c/= :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+/= :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679400759"><span id="local-6989586621679400765"><span id="local-6989586621679400769"><span id="local-6989586621679400773"><span id="local-6989586621679400776"><span id="local-6989586621679400779"><span id="local-6989586621679400782"><span class="annot"><span class="annottext">Eq PkgconfigDependency
+Eq PkgconfigDependency =&gt;
+(PkgconfigDependency -&gt; PkgconfigDependency -&gt; Ordering)
+-&gt; (PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool)
+-&gt; (PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool)
+-&gt; (PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool)
+-&gt; (PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool)
+-&gt; (PkgconfigDependency
+    -&gt; PkgconfigDependency -&gt; PkgconfigDependency)
+-&gt; (PkgconfigDependency
+    -&gt; PkgconfigDependency -&gt; PkgconfigDependency)
+-&gt; Ord PkgconfigDependency
+PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+PkgconfigDependency -&gt; PkgconfigDependency -&gt; Ordering
+PkgconfigDependency -&gt; PkgconfigDependency -&gt; PkgconfigDependency
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Ordering
+compare :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Ordering
+$c&lt; :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+&lt; :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+$c&lt;= :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+&lt;= :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+$c&gt; :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+&gt; :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+$c&gt;= :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+&gt;= :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; Bool
+$cmax :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; PkgconfigDependency
+max :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; PkgconfigDependency
+$cmin :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; PkgconfigDependency
+min :: PkgconfigDependency -&gt; PkgconfigDependency -&gt; PkgconfigDependency
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679400788"><span id="local-6989586621679400794"><span id="local-6989586621679400798"><span id="local-6989586621679400800"><span id="local-6989586621679400802"><span id="local-6989586621679400808"><span id="local-6989586621679400813"><span id="local-6989586621679400816"><span id="local-6989586621679400819"><span id="local-6989586621679400822"><span id="local-6989586621679400825"><span id="local-6989586621679400828"><span id="local-6989586621679400833"><span id="local-6989586621679400838"><span class="annot"><span class="annottext">Typeable PkgconfigDependency
+Typeable PkgconfigDependency =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; PkgconfigDependency
+ -&gt; c PkgconfigDependency)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigDependency)
+-&gt; (PkgconfigDependency -&gt; Constr)
+-&gt; (PkgconfigDependency -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigDependency))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c PkgconfigDependency))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; PkgconfigDependency -&gt; PkgconfigDependency)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PkgconfigDependency -&gt; m PkgconfigDependency)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PkgconfigDependency -&gt; m PkgconfigDependency)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PkgconfigDependency -&gt; m PkgconfigDependency)
+-&gt; Data PkgconfigDependency
+PkgconfigDependency -&gt; Constr
+PkgconfigDependency -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; PkgconfigDependency -&gt; PkgconfigDependency
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigDependency
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; PkgconfigDependency
+-&gt; c PkgconfigDependency
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigDependency)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PkgconfigDependency)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; PkgconfigDependency
+-&gt; c PkgconfigDependency
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; PkgconfigDependency
+-&gt; c PkgconfigDependency
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigDependency
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigDependency
+$ctoConstr :: PkgconfigDependency -&gt; Constr
+toConstr :: PkgconfigDependency -&gt; Constr
+$cdataTypeOf :: PkgconfigDependency -&gt; DataType
+dataTypeOf :: PkgconfigDependency -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigDependency)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigDependency)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PkgconfigDependency)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PkgconfigDependency)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; PkgconfigDependency -&gt; PkgconfigDependency
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; PkgconfigDependency -&gt; PkgconfigDependency
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigDependency -&gt; r
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; [u]
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigDependency -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679400844"><span id="local-6989586621679400851"><span id="local-6989586621679400857"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span></span></span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679400887"><span id="local-6989586621679400894"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span></span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679400946"><span class="annot"><span class="annottext">rnf :: PkgconfigDependency -&gt; ()
+</span><a href="#local-6989586621679400946"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PkgconfigDependency -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679400951"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>    </span><span id="local-6989586621679400960"><span class="annot"><span class="annottext">pretty :: PkgconfigDependency -&gt; Doc
+</span><a href="#local-6989586621679400960"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span><span> </span><span id="local-6989586621679400962"><span class="annot"><span class="annottext">PkgconfigName
+</span><a href="#local-6989586621679400962"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="annot"><span class="annottext">PkgconfigVersionRange
+</span><a href="Distribution.Types.PkgconfigVersionRange.html#PcAnyVersion"><span class="hs-identifier hs-var">PcAnyVersion</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PkgconfigName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigName
+</span><a href="#local-6989586621679400962"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span><span> </span><span id="local-6989586621679400964"><span class="annot"><span class="annottext">PkgconfigName
+</span><a href="#local-6989586621679400964"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679400965"><span class="annot"><span class="annottext">PkgconfigVersionRange
+</span><a href="#local-6989586621679400965"><span class="hs-identifier hs-var">ver</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PkgconfigName -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigName
+</span><a href="#local-6989586621679400964"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#%3C%2B%3E/Text.PrettyPrint.HughesPJ.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigVersionRange -&gt; Doc
+forall a. Pretty a =&gt; a -&gt; Doc
+</span><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigVersionRange
+</span><a href="#local-6989586621679400965"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-type">PkgconfigDependency</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679400994"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m PkgconfigDependency
+</span><a href="#local-6989586621679400994"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>        </span><span id="local-6989586621679400996"><span class="annot"><span class="annottext">PkgconfigName
+</span><a href="#local-6989586621679400996"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m PkgconfigName
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m PkgconfigName
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). CharParsing m =&gt; m ()
+</span><a href="Distribution.Compat.CharParsing.html#spaces"><span class="hs-identifier hs-var">P.spaces</span></a></span><span>
+</span><span id="line-38"></span><span>        </span><span id="local-6989586621679400998"><span class="annot"><span class="annottext">PkgconfigVersionRange
+</span><a href="#local-6989586621679400998"><span class="hs-identifier hs-var">verRange</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m PkgconfigVersionRange
+forall a (m :: * -&gt; *). (Parsec a, CabalParsing m) =&gt; m a
+forall (m :: * -&gt; *). CabalParsing m =&gt; m PkgconfigVersionRange
+</span><a href="Distribution.Parsec.html#parsec"><span class="hs-identifier hs-var">parsec</span></a></span><span> </span><span class="annot"><span class="annottext">m PkgconfigVersionRange
+-&gt; m PkgconfigVersionRange -&gt; m PkgconfigVersionRange
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%7C%3E/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigVersionRange -&gt; m PkgconfigVersionRange
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigVersionRange
+</span><a href="Distribution.Types.PkgconfigVersionRange.html#anyPkgconfigVersion"><span class="hs-identifier hs-var">anyPkgconfigVersion</span></a></span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><span class="annottext">PkgconfigDependency -&gt; m PkgconfigDependency
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(PkgconfigDependency -&gt; m PkgconfigDependency)
+-&gt; PkgconfigDependency -&gt; m PkgconfigDependency
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigName -&gt; PkgconfigVersionRange -&gt; PkgconfigDependency
+</span><a href="Distribution.Types.PkgconfigDependency.html#PkgconfigDependency"><span class="hs-identifier hs-var">PkgconfigDependency</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigName
+</span><a href="#local-6989586621679400996"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">PkgconfigVersionRange
+</span><a href="#local-6989586621679400998"><span class="hs-identifier hs-var">verRange</span></a></span><span>
+</span><span id="line-40"></span></pre></body></html>
