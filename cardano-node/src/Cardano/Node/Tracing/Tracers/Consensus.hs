@@ -2095,21 +2095,32 @@ instance ( LogFormatting selection
 
   forHuman = showT
 
+  asMetrics =
+    \case
+      GsmEventEnterCaughtUp {}       -> [caughtUp]
+      GsmEventLeaveCaughtUp {}       -> [preSyncing]
+      GsmEventPreSyncingToSyncing {} -> [syncing]
+      GsmEventSyncingToPreSyncing {} -> [preSyncing]
+    where
+      preSyncing = IntM "GSM.state" 0
+      syncing    = IntM "GSM.state" 1
+      caughtUp   = IntM "GSM.state" 2
+
 instance MetaTrace (TraceGsmEvent selection) where
   namespaceFor =
     \case
       GsmEventEnterCaughtUp {}        -> Namespace [] ["EnterCaughtUp"]
       GsmEventLeaveCaughtUp {}        -> Namespace [] ["LeaveCaughtUp"]
-      GsmEventPreSyncingToSyncing {}  -> Namespace [] ["GsmEventPreSyncingToSyncing"]
-      GsmEventSyncingToPreSyncing {}  -> Namespace [] ["GsmEventSyncingToPreSyncing"]
+      GsmEventPreSyncingToSyncing {}  -> Namespace [] ["PreSyncingToSyncing"]
+      GsmEventSyncingToPreSyncing {}  -> Namespace [] ["SyncingToPreSyncing"]
 
   severityFor ns _ =
     case ns of
-      Namespace _ ["EnterCaughtUp"]               -> Just Info
-      Namespace _ ["LeaveCaughtUp"]               -> Just Info
-      Namespace _ ["GsmEventPreSyncingToSyncing"] -> Just Info
-      Namespace _ ["GsmEventSyncingToPreSyncing"] -> Just Info
-      Namespace _ _                               -> Nothing
+      Namespace _ ["EnterCaughtUp"]       -> Just Notice
+      Namespace _ ["LeaveCaughtUp"]       -> Just Warning
+      Namespace _ ["PreSyncingToSyncing"] -> Just Notice
+      Namespace _ ["SyncingToPreSyncing"] -> Just Notice
+      Namespace _ _                       -> Nothing
 
   documentFor = \case
     Namespace _ ["EnterCaughtUp"] ->
@@ -2117,19 +2128,32 @@ instance MetaTrace (TraceGsmEvent selection) where
     Namespace _ ["LeaveCaughtUp"] ->
       Just "Node is not caught up"
 
-    Namespace _ ["GsmEventPreSyncingToSyncing"] ->
+    Namespace _ ["PreSyncingToSyncing"] ->
       Just "The Honest Availability Assumption is now satisfied"
-    Namespace _ ["GsmEventSyncingToPreSyncing"] ->
+    Namespace _ ["SyncingToPreSyncing"] ->
       Just "The Honest Availability Assumption is no longer satisfied"
 
     Namespace _ _ ->
       Nothing
 
+  metricsDocFor = \case
+    Namespace _ ["EnterCaughtUp"]       -> doc
+    Namespace _ ["LeaveCaughtUp"]       -> doc
+    Namespace _ ["PreSyncingToSyncing"] -> doc
+    Namespace _ ["SyncingToPreSyncing"] -> doc
+    Namespace _ _                       -> []
+    where
+      doc =
+        [ ("GSM.state"
+          , "The state of the Genesis State Machine. 0 = PreSyncing, 1 = Syncing, 2 = CaughtUp."
+          )
+        ]
+
   allNamespaces =
     [ Namespace [] ["EnterCaughtUp"]
     , Namespace [] ["LeaveCaughtUp"]
-    , Namespace [] ["GsmEventPreSyncingToSyncing"]
-    , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    , Namespace [] ["PreSyncingToSyncing"]
+    , Namespace [] ["SyncingToPreSyncing"]
     ]
 
 --------------------------------------------------------------------------------
