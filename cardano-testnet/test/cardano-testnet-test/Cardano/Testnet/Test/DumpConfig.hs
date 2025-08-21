@@ -69,6 +69,6 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
 
   -- Run testnet with generated config
-  runtime <- cardanoTestnet testnetOptions genesisOptions conf
+  runtime <- cardanoTestnet testnetOptions conf
 
   nodesProduceBlocks tmpDir runtime
