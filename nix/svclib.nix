@@ -238,7 +238,8 @@ let
     };
     systemdCompat.options = {
       systemd.services = mkOption {};
-      assertions = [];
+      assertions = mkOption {};
+      warnings = mkOption {};
       users = mkOption {};
       environment = mkOption {};
     };
