@@ -1882,7 +1882,7 @@ EOF
             then
               "${msgoff}" || msg "${client_name}: /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.high"
               wb_nomad clients ssh "${client_name}" \
-                "echo 6000000000 > /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.high"
+                "echo 6500000000 > /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.high"
               wb_nomad clients ssh "${client_name}" \
                 "cat /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.high"
             fi
