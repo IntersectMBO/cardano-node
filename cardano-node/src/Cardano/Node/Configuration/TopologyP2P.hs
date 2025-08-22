@@ -274,7 +274,9 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
   when (inGenesisMode && isNothing ntPeerSnapshotPath && useLedgerPeers ntUseLedgerPeers && not isBlockProducer) $
     liftIO $ CT.traceWith tracer
            $ NetworkConfigUpdateWarning
-           $ createMsg "Peer snapshot recommended"
+           $ createMsg
+           $  "It is recommended to specify an up-to-date ledger peer snapshot file for relay operations in Genesis mode "
+           <> "when the use of ledger peers is enabled."
 
   -- make all relative paths in the topology file relative to the topology file location
   adjustFilePaths (takeDirectory topologyFilePath </>) <$>
