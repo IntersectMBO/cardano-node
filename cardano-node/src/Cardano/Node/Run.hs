@@ -133,7 +133,8 @@ import           Control.Monad (forM, forM_, unless, void, when, join)
 import           Control.Monad.Class.MonadThrow (MonadThrow (..))
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
-import           Control.Monad.Trans.Except.Extra (left)
+import           Control.Monad.Trans.Except.Extra (left, hushM)
+import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
 import           "contra-tracer" Control.Tracer
 import           Data.Bits
 import           Data.Either (partitionEithers)
@@ -886,49 +887,40 @@ updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
                          -> (Maybe LedgerPeerSnapshot -> STM IO ())
                          -> IO (Maybe LedgerPeerSnapshot)
 updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) readLedgerPeerPath readUseLedgerVar writeVar = do
-  mPeerSnapshotFile <- atomically readLedgerPeerPath
+  (mPeerSnapshotFile, useLedgerPeers)
+    <- atomically $ (,) <$> readLedgerPeerPath <*> readUseLedgerVar
 
-  mLedgerPeerSnapshot <- fmap join $ forM mPeerSnapshotFile $ \peerSnapshotFile -> do
-    snapshot <- liftIO $ readPeerSnapshotFile peerSnapshotFile
-    useLedgerPeers <- atomically readUseLedgerVar
+  let trace    = traceWith startupTracer
+      traceL   = liftIO . trace
+      nothing' = MaybeT $ pure Nothing
 
-    case snapshot of
-      Left _ ->
-        if useLedgerPeers == DontUseLedgerPeers
-        then pure Nothing
-        else do
-          if ncConsensusMode == GenesisMode
-          then traceWith startupTracer
-            (NetworkConfigUpdateError "Peer snapshot missing")
-          else traceWith startupTracer
-            (NetworkConfigUpdateWarning "Peer snapshot missing")
-          pure Nothing
+  mLedgerPeerSnapshot <- runMaybeT $ do
+    case useLedgerPeers of
+      DontUseLedgerPeers       -> nothing'
+      UseLedgerPeers afterSlot -> do
+        eSnapshot
+          <- liftIO . readPeerSnapshotFile =<< hoistMaybe mPeerSnapshotFile
+        lps@(LedgerPeerSnapshot (wOrigin, _)) <-
+          case ncConsensusMode of
+            GenesisMode ->
+              MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateError)
+            PraosMode  ->
+              MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateWarning)
+        case afterSlot of
+          Always -> do
+            traceL $ LedgerPeerSnapshotLoaded . Right $ wOrigin
+            return lps
+          After ledgerSlotNo
+            | fileSlot >= ledgerSlotNo -> do
+                traceL $ LedgerPeerSnapshotLoaded . Right $ wOrigin
+                pure lps
+            | otherwise -> do
+                traceL $ LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin)
+                nothing'
+            where
+              fileSlot = case wOrigin of; Origin -> 0; At slot -> slot
 
-      Right lps@(LedgerPeerSnapshot (wOrigin, _)) -> do
-        case useLedgerPeers of
-          DontUseLedgerPeers -> do
-            traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
-            pure $ Just lps
-          UseLedgerPeers afterSlot
-            | Always <- afterSlot -> do
-                traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-                pure $ Just lps
-            | After slotNo <- afterSlot ->
-                case wOrigin of
-                  Origin -> do
-                    traceWith startupTracer
-                      (NetworkConfigUpdateError "Unsupported big ledger peer snapshot file: taken at Origin")
-                    pure Nothing
-                  At slotNo' | slotNo' >= slotNo -> do
-                    traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-                    pure $ Just lps
-                  _otherwise -> do
-                    traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
-                    pure $ Just lps
-
-  atomically $ writeVar mLedgerPeerSnapshot
-
-  pure mLedgerPeerSnapshot
+  mLedgerPeerSnapshot <$ atomically (writeVar mLedgerPeerSnapshot)
 
 --------------------------------------------------------------------------------
 -- Helper functions
