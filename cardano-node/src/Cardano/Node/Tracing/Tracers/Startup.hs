@@ -364,7 +364,7 @@ instance MetaTrace  (StartupTrace blk) where
 
   severityFor (Namespace _ ["SocketConfigError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdate"]) _ = Just Notice
-  severityFor (Namespace _ ["NetworkConfigUpdateInfo"]) _ = Just Notice
+  severityFor (Namespace _ ["NetworkConfigUpdateInfo"]) _ = Just Info
   severityFor (Namespace _ ["NetworkConfigUpdateWarning"]) _ = Just Warning
   severityFor (Namespace _ ["NetworkConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdateUnsupported"]) _ = Just Warning
