@@ -245,7 +245,7 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
   when (isBlockProducer && useLedgerPeers ntUseLedgerPeers) $
     liftIO $ CT.traceWith tracer
            $ NetworkConfigUpdateWarning
-           $ createMsg "Use of ledger peers not recommended for BP"
+           $ createMsg "Use of ledger peers is not recommended for BP operation"
 
   when (isJust ntPeerSnapshotPath && not (useLedgerPeers ntUseLedgerPeers) && isBlockProducer) $
     liftIO $ CT.traceWith tracer
