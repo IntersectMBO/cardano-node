@@ -120,6 +120,7 @@ profilesNoEraPlayground =
                  . P.analysisSizeFull
                  . P.dreps  10000 . P.newTracing . P.p2pOn
                  . P.workloadAppend C.cgroupMemoryWorkload
+                 . P.rtsHeapLimit 3533 . P.heapLimit 3533
   , baseVoltaire & P.name "value-volt-lmdb-lite"
                  . P.uniCircle . V.hosts 2 . P.loopback
                  . V.valueCloud . V.datasetOct2021 . V.fundsDouble
@@ -130,7 +131,7 @@ profilesNoEraPlayground =
                  . P.dreps  10000 . P.newTracing . P.p2pOn
                  . P.workloadAppend C.cgroupMemoryWorkload
                  . P.lmdb . P.ssdDirectory "/tmp/lmdb"
-                 -- . P.rtsHeapLimit 4000 . P.heapLimit 4000
+                 . P.rtsHeapLimit 3532 . P.heapLimit 3532
   -- Budget profiles.
   , ciBenchLike & P.name "calibrate-volt"
   , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt"      . mem15x
