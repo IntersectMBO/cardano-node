@@ -173,6 +173,14 @@ profilesNoEraCloud =
   , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn        . cgmem
   , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb . cgmem
+  , P.empty   & P.name "value-volt-10-cgmem-nomadperf"                     . P.dreps  10000 . P.newTracing . P.p2pOn        . cgmem
+              . baseVoltaire . V.valueCloud . V.fundsDouble . valueDuration  . nomadPerf
+              . P.utxo 10000000 . P.delegators 1000000
+              . valueDesc
+  , P.empty   & P.name "value-volt-10-lmdb-cgmem-nomadperf"                . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb . cgmem
+              . baseVoltaire . V.valueCloud . V.fundsDouble . valueDuration  . nomadPerf
+              . P.utxo 10000000 . P.delegators 1000000
+              . valueDesc
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
   , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
