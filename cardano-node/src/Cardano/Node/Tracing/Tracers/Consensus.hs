@@ -2060,6 +2060,14 @@ instance ( LogFormatting selection
          ) => LogFormatting (TraceGsmEvent selection) where
   forMachine dtal =
     \case
+      GsmEventInitializedInCaughtUp ->
+        mconcat
+          [ "kind" .= String "GsmEventInitializedInCaughtUp"
+          ]
+      GsmEventInitializedInPreSyncing ->
+        mconcat
+          [ "kind" .= String "GsmEventInitializedInPreSyncing"
+          ]
       GsmEventEnterCaughtUp i s ->
         mconcat
           [ "kind" .= String "GsmEventEnterCaughtUp"
@@ -2097,6 +2105,8 @@ instance ( LogFormatting selection
 instance MetaTrace (TraceGsmEvent selection) where
   namespaceFor =
     \case
+      GsmEventInitializedInCaughtUp   -> Namespace [] ["InitializedInCaughtUp"]
+      GsmEventInitializedInPreSyncing -> Namespace [] ["InitializedInPreSyncing"]
       GsmEventEnterCaughtUp {}        -> Namespace [] ["EnterCaughtUp"]
       GsmEventLeaveCaughtUp {}        -> Namespace [] ["LeaveCaughtUp"]
       GsmEventPreSyncingToSyncing {}  -> Namespace [] ["PreSyncingToSyncing"]
@@ -2104,13 +2114,18 @@ instance MetaTrace (TraceGsmEvent selection) where
 
   severityFor ns _ =
     case ns of
-      Namespace _ ["EnterCaughtUp"]       -> Just Notice
-      Namespace _ ["LeaveCaughtUp"]       -> Just Warning
-      Namespace _ ["PreSyncingToSyncing"] -> Just Notice
-      Namespace _ ["SyncingToPreSyncing"] -> Just Notice
-      Namespace _ _                       -> Nothing
+      Namespace _ ["InitializedInCaughtUp"]       -> Just Info
+      Namespace _ ["InitializedInPreSyncing"]     -> Just Info
+      Namespace _ ["EnterCaughtUp"]               -> Just Info
+      Namespace _ ["LeaveCaughtUp"]               -> Just Info
+      Namespace _ ["GsmEventPreSyncingToSyncing"] -> Just Info
+      Namespace _ ["GsmEventSyncingToPreSyncing"] -> Just Info
+      Namespace _ _                               -> Nothing
 
   documentFor = \case
+    Namespace _ ["InitializedInCaughtUp"] -> Just "The GSM was initialized in the 'CaughtUp' state"
+    Namespace _ ["InitializedInPreSyncing"] -> Just "The GSM was initialized in the 'PreSyncing' state"
+
     Namespace _ ["EnterCaughtUp"] ->
       Just "Node is caught up"
     Namespace _ ["LeaveCaughtUp"] ->
@@ -2138,7 +2153,9 @@ instance MetaTrace (TraceGsmEvent selection) where
         ]
 
   allNamespaces =
-    [ Namespace [] ["EnterCaughtUp"]
+    [ Namespace [] ["InitializedInCaughtUp"]
+    , Namespace [] ["InitializedInPreSyncing"]
+    , Namespace [] ["EnterCaughtUp"]
     , Namespace [] ["LeaveCaughtUp"]
     , Namespace [] ["PreSyncingToSyncing"]
     , Namespace [] ["SyncingToPreSyncing"]
