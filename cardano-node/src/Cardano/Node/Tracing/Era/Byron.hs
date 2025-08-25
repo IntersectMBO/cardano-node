@@ -17,6 +17,7 @@ import           Cardano.Api (textShow)
 
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
                    ChainValidationError (..), delegationCertificate)
+import           Ouroboros.Consensus.Protocol.PBFT (PBft, PBftTiebreakerView(..))
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)
@@ -210,4 +211,11 @@ instance LogFormatting ByronOtherHeaderEnvelopeError where
     mconcat
       [ "kind" .= String "UnexpectedEBBInSlot"
       , "slot" .= slot
+      ]
+
+instance LogFormatting PBftTiebreakerView where
+  forMachine _dtal (PBftTiebreakerView isEBB) =
+    mconcat
+      [ "kind" .= String "PBftSelectView"
+      , "isEBB" .= fromIsEBB isEBB
       ]

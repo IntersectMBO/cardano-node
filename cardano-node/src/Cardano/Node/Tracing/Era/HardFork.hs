@@ -23,10 +23,10 @@ import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeSta
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..), OneEraTiebreakerView (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), 
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..),
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History
@@ -36,7 +36,7 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, TiebreakerView(..), SelectView(..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -345,3 +345,25 @@ instance All (LogFormatting `Compose` WrapForgeStateUpdateError) xs => LogFormat
 instance LogFormatting (ForgeStateUpdateError blk) => LogFormatting (WrapForgeStateUpdateError blk) where
     forMachine dtal = forMachine dtal . unwrapForgeStateUpdateError
 
+--
+-- instances for HardForkSelectView
+--
+
+instance All (LogFormatting `Compose` WrapTiebreakerView) xs => LogFormatting (HardForkTiebreakerView xs) where
+    forMachine dtal = forMachine dtal . getHardForkTiebreakerView
+
+instance LogFormatting (TiebreakerView protocol) => LogFormatting (SelectView protocol) where
+    forMachine dtal sv = mconcat
+        [ "blockNo"  .= svBlockNo sv
+        , forMachine dtal (svTiebreakerView sv)
+        ]
+
+instance All (LogFormatting `Compose` WrapTiebreakerView) xs => LogFormatting (OneEraTiebreakerView xs) where
+    forMachine dtal =
+          hcollapse
+        . hcmap (Proxy @(LogFormatting `Compose` WrapTiebreakerView))
+                (K . forMachine dtal)
+        . getOneEraTiebreakerView
+
+instance LogFormatting (TiebreakerView (BlockProtocol blk)) => LogFormatting (WrapTiebreakerView blk) where
+  forMachine dtal  = forMachine dtal  . unwrapTiebreakerView

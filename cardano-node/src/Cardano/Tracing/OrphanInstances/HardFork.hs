@@ -22,14 +22,14 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
-                   ForgeStateUpdateError)
+                   ForgeStateUpdateError, BlockSupportsProtocol (tiebreakerView))
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
-                   OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), 
+                   OneEraForgeStateUpdateError (..), OneEraLedgerError (..), OneEraTiebreakerView (..),
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..),
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
@@ -43,9 +43,10 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, SelectView (svTiebreakerView, svBlockNo), ConsensusProtocol (TiebreakerView))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
+import Ouroboros.Consensus.Cardano (ProtocolByron)
 
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as Base16
@@ -427,3 +428,25 @@ instance ToJSON HardForkSpecificNodeToNodeVersion where
 instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion blk) where
     toJSON (WrapNodeToNodeVersion blockNodeToNodeVersion) = toJSON blockNodeToNodeVersion
 
+--
+-- instances for HardForkSelectView
+--
+
+instance All (ToObject `Compose` WrapTiebreakerView) xs => ToObject (HardForkTiebreakerView xs) where
+    toObject verb = toObject verb . getHardForkTiebreakerView
+
+instance ToObject (TiebreakerView protocol) => ToObject (SelectView protocol) where
+    toObject verb sv = mconcat
+        [ "blockNo"  .= svBlockNo sv
+        , toObject verb (svTiebreakerView sv)
+        ]
+
+instance All (ToObject `Compose` WrapTiebreakerView) xs => ToObject (OneEraTiebreakerView xs) where
+    toObject verb =
+          hcollapse
+        . hcmap (Proxy @(ToObject `Compose` WrapTiebreakerView))
+                (K . toObject verb)
+        . getOneEraTiebreakerView
+
+instance ToObject (TiebreakerView (BlockProtocol blk)) => ToObject (WrapTiebreakerView blk) where
+    toObject verb = toObject verb . unwrapTiebreakerView
