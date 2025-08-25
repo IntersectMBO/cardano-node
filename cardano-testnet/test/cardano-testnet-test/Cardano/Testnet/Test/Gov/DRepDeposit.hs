@@ -45,10 +45,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = 0
-        }
+      fastTestnetOptions = def { cardanoNumDReps = 0 }
       shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime

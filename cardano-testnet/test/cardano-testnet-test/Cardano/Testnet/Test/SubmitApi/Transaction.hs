@@ -60,8 +60,6 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
       eraString = eraToString sbe
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
       options = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-        }
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 

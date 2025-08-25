@@ -78,10 +78,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = fromIntegral nDrepVotes
-        }
+      fastTestnetOptions = def { cardanoNumDReps = fromIntegral nDrepVotes }
       shelleyOptions = def { genesisEpochLength = 200 }
   H.annotateShow drepVotes
   H.noteShow_ nDrepVotes

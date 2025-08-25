@@ -66,14 +66,13 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
-      cTestnetOptions = def { cardanoNodeEra = asbe }
 
   runTime@TestnetRuntime
     { configurationFile
     , testnetMagic
     , wallets=wallet0:_
     , testnetNodes
-    } <- createAndRunTestnet cTestnetOptions def conf
+    } <- createAndRunTestnet def def conf
   node1sprocket <- H.headM $ testnetSprockets runTime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
@@ -146,7 +145,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    asbe
     (verificationKey testDelegatorKeys)
     keyDeposit
     testDelegatorRegCertFp
@@ -255,7 +254,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
+  jsonBS <- Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePortNumber <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $

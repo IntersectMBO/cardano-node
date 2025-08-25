@@ -178,7 +178,6 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | Options controlling how many nodes to create and of which type.
     cardanoNodes :: [NodeOption]
-  , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
@@ -214,7 +213,6 @@ newtype NumDReps = NumDReps Int
 instance Default CardanoTestnetOptions where
   def = CardanoTestnetOptions
     { cardanoNodes = cardanoDefaultTestnetNodeOptions
-    , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraConway
     , cardanoMaxSupply = 100_000_020_000_000 -- 100 000 billions Lovelace, so 100 millions ADA. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3

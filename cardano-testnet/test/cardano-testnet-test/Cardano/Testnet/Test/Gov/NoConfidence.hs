@@ -63,10 +63,8 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def { cardanoNodeEra = asbe  }
       genesisOptions = def { genesisEpochLength = 200 }
 
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
@@ -102,7 +100,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
-  createTestnetEnv fastTestnetOptions genesisOptions def conf
+  createTestnetEnv def genesisOptions def conf
 
   H.rewriteJsonFile (tempAbsBasePath' </> "conway-genesis.json") $
     \conwayGenesis -> conwayGenesis { L.cgCommittee = committee }
@@ -112,7 +110,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
     , testnetNodes
     , wallets=wallet0:_wallet1:_
     , configurationFile
-    } <- cardanoTestnet fastTestnetOptions genesisOptions conf
+    } <- cardanoTestnet def genesisOptions conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1

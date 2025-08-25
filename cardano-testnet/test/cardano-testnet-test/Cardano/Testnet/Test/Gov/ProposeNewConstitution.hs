@@ -79,10 +79,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString sbe
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = fromIntegral numVotes
-        }
+      fastTestnetOptions = def { cardanoNumDReps = fromIntegral numVotes }
       shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
