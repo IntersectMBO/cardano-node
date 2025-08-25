@@ -1293,21 +1293,15 @@ instance
       [ "kind" .= String "TraceMempoolAttemptingAdd"
       , "tx" .= forMachine dtal tx
       ]
-  forMachine dtal (TraceMempoolLedgerFound p) =
-    mconcat
-      [ "kind" .= String "TraceMempoolLedgerFound"
-      , "tip" .= forMachine dtal p
-      ]
-  forMachine dtal (TraceMempoolLedgerNotFound p) =
-    mconcat
-      [ "kind" .= String "TraceMempoolLedgerNotFound"
-      , "tip" .= forMachine dtal p
-      ]
 
   forMachine _dtal (TraceMempoolSynced et) =
     mconcat
       [ "kind" .= String "TraceMempoolSynced"
       , "enclosingTime" .= et
+      ]
+  forMachine _dtal TraceMempoolTipMovedBetweenSTMBlocks =
+    mconcat
+      [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
       ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
@@ -1334,8 +1328,8 @@ instance
 
   asMetrics TraceMempoolSyncNotNeeded {} = []
   asMetrics TraceMempoolAttemptingAdd {} = []
-  asMetrics TraceMempoolLedgerFound {} = []
-  asMetrics TraceMempoolLedgerNotFound {} = []
+
+  asMetrics TraceMempoolTipMovedBetweenSTMBlocks {} = []
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
@@ -1353,8 +1347,8 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolSynced {} = Namespace [] ["Synced"]
     namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["SyncNotNeeded"]
     namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["AttemptAdd"]
-    namespaceFor TraceMempoolLedgerFound {} = Namespace [] ["LedgerFound"]
-    namespaceFor TraceMempoolLedgerNotFound {} = Namespace [] ["LedgerNotFound"]
+    namespaceFor TraceMempoolTipMovedBetweenSTMBlocks {} = Namespace [] ["TipMovedBetweenSTMBlocks"]
+
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
@@ -1363,8 +1357,7 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Warning
     severityFor (Namespace _ ["SyncNotNeeded"]) _ = Just Debug
     severityFor (Namespace _ ["AttemptAdd"]) _ = Just Debug
-    severityFor (Namespace _ ["LedgerFound"]) _ = Just Debug
-    severityFor (Namespace _ ["LedgerNotFound"]) _ = Just Debug
+    severityFor (Namespace [] ["TipMovedBetweenSTMBlocks"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1408,12 +1401,8 @@ instance MetaTrace (TraceEventMempool blk) where
       "The mempool and the LedgerDB are syncing or in sync depending on the argument on the trace."
     documentFor (Namespace _ ["AttemptAdd"]) = Just
       "Mempool is about to try to validate and add a transaction."
-    documentFor (Namespace _ ["LedgerNotFound"]) = Just $ mconcat
-      [ "Ledger state requested by the mempool no longer in LedgerDB."
-      , " Will have to re-sync."
-      ]
-    documentFor (Namespace _ ["LedgerFound"]) = Just
-      "Ledger state requested by the mempool is in the LedgerDB."
+    documentFor (Namespace _ ["TipMovedBetweenSTMBlocks"]) = Just
+      "LedgerDB moved to an alternative fork between two reads during re-sync."
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1424,8 +1413,7 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["Synced"]
       , Namespace [] ["SyncNotNeeded"]
       , Namespace [] ["AttemptAdd"]
-      , Namespace [] ["LedgerNotFound"]
-      , Namespace [] ["LedgerFound"]
+      , Namespace [] ["TipMovedBetweenSTMBlocks"]
       ]
 
 --------------------------------------------------------------------------------
