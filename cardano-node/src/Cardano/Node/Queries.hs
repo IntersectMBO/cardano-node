@@ -290,40 +290,44 @@ instance (LedgerQueries x, NoHardForks x)
   ledgerDRepMapSize  = ledgerDRepMapSize  . unFlip . project . Flip
 
 -- TODO those states make no sense, since required lenses got moved to Conway
--- TODO non-exhaustive pattern matches
+-- TODO(geo2a): fill in TODOs following the pattern, after adding missing instances
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
-    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerUtxoSize ledgerByron
-    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
-    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
-    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
-    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerUtxoSize ledgerAlonzo
-    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerUtxoSize ledgerBabbage
-    Cardano.LedgerStateConway  ledgerConway  -> ledgerUtxoSize ledgerConway
+    Cardano.LedgerStateByron     ledgerByron    -> ledgerUtxoSize ledgerByron
+    Cardano.LedgerStateShelley   _ledgerShelley  -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAllegra   _ledgerAllegra  -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateMary      _ledgerMary     -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAlonzo    _ledgerAlonzo   -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateBabbage   _ledgerBabbage  -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateConway    ledgerConway   -> ledgerUtxoSize ledgerConway
+    Cardano.LedgerStateDijkstra  ledgerDijkstra -> ledgerUtxoSize ledgerDijkstra
   ledgerDelegMapSize = \case
-    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
-    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
-    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
-    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
-    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
-    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
+    Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
+    Cardano.LedgerStateShelley _ledgerShelley -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAllegra _ledgerAllegra -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateMary    _ledgerMary    -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateBabbage _ledgerBabbage -> undefined -- TODO(geo2a)
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDelegMapSize ledgerConway
+    Cardano.LedgerStateDijkstra  ledgerDijkstra  -> ledgerDelegMapSize ledgerDijkstra
   ledgerDRepCount = \case
-    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepCount ledgerByron
-    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerDRepCount ledgerShelley
-    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDRepCount ledgerAllegra
-    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerDRepCount ledgerMary
-    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepCount ledgerAlonzo
-    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepCount ledgerBabbage
+    Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepCount ledgerByron
+    Cardano.LedgerStateShelley _ledgerShelley -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAllegra _ledgerAllegra -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateMary    _ledgerMary    -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateBabbage _ledgerBabbage -> undefined -- TODO(geo2a)
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepCount ledgerConway
+    Cardano.LedgerStateDijkstra  ledgerDijkstra  -> ledgerDRepCount ledgerDijkstra
   ledgerDRepMapSize = \case
-    -- Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepMapSize ledgerByron
-    -- Cardano.LedgerStateShelley ledgerShelley -> ledgerDRepMapSize ledgerShelley
-    -- Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDRepMapSize ledgerAllegra
-    -- Cardano.LedgerStateMary    ledgerMary    -> ledgerDRepMapSize ledgerMary
-    -- Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepMapSize ledgerAlonzo
-    -- Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepMapSize ledgerBabbage
+    Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepMapSize ledgerByron
+    Cardano.LedgerStateShelley _ledgerShelley -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAllegra _ledgerAllegra -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateMary    _ledgerMary    -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateBabbage _ledgerBabbage -> undefined -- TODO(geo2a)
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepMapSize ledgerConway
+    Cardano.LedgerStateDijkstra  ledgerDijkstra  -> ledgerDRepMapSize ledgerDijkstra
 
 --
 -- * Node kernel
