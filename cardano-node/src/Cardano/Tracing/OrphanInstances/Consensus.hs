@@ -548,8 +548,8 @@ instance ( ConvertRawHash blk
           "ChainDB LoE debug event"
         ChainDB.PoppingFromQueue ->
           "Popping block from queue"
-        ChainDB.PoppedBlockFromQueue (RealPoint slotNo _headerHash) ->
-          "Popped block from queue at " <> Text.show slotNo
+        ChainDB.PoppedBlockFromQueue pt ->
+          "Popped block from queue: " <> renderRealPointAsPhrase pt
         ChainDB.StoreButDontChange pt ->
           "Ignoring block: " <> renderRealPointAsPhrase pt
         ChainDB.TryAddToCurrentChain pt ->
