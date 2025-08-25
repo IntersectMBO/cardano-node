@@ -181,6 +181,9 @@ profilesNoEraCloud =
               . baseVoltaire . V.valueCloud . V.fundsDouble . valueDuration  . nomadPerf
               . P.utxo 10000000 . P.delegators 1000000
               . valueDesc
+              -- Heap from sample LMDB run goes from 11,200,000,000 bytes to 11,250,000,000 bytes.
+              -- Using 11,450,000,000 bytes, as 1024-base megabytes, to force the garbage collector during genesis reading.
+              . P.rtsHeapLimit 10920 . P.heapLimit 10920
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
   , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
