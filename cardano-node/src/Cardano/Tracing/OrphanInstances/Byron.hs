@@ -12,6 +12,9 @@ module Cardano.Tracing.OrphanInstances.Byron () where
 
 import           Cardano.Api (textShow)
 
+import           Ouroboros.Consensus.Protocol.Abstract (SelectView (..))
+import           Ouroboros.Consensus.Protocol.PBFT (PBft, PBftTiebreakerView(..))
+import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
                    ChainValidationError (..), delegationCertificate)
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
@@ -218,3 +221,10 @@ instance ToJSON ByronNodeToClientVersion where
 instance ToJSON ByronNodeToNodeVersion where
   toJSON ByronNodeToNodeVersion1 = String "ByronNodeToNodeVersion1"
   toJSON ByronNodeToNodeVersion2 = String "ByronNodeToNodeVersion2"
+
+instance ToObject PBftTiebreakerView where
+  toObject _verb (PBftTiebreakerView isEBB) =
+    mconcat
+      [ "kind" .= String "PBftTiebreakerView"
+      , "isEBB" .= fromIsEBB isEBB
+      ]
