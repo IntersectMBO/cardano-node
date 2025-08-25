@@ -109,35 +109,40 @@ test-suite trace-dispatcher-test
                         Cardano.Logging.Test.Config
                         Cardano.Logging.Test.Tracer
                         Cardano.Logging.Test.Script
-                        Cardano.Logging.Test.Unit.TestObjects
                         Cardano.Logging.Test.Unit.Aggregation
-                        Cardano.Logging.Test.Unit.Trivial
-                        Cardano.Logging.Test.Unit.Routing
-                        Cardano.Logging.Test.Unit.EKG
                         Cardano.Logging.Test.Unit.Configuration
                         Cardano.Logging.Test.Unit.DataPoint
-                        Cardano.Logging.Test.Unit.FrequencyLimiting
                         Cardano.Logging.Test.Unit.Documentation
+                        Cardano.Logging.Test.Unit.EKG
+                        Cardano.Logging.Test.Unit.FrequencyLimiting
+                        Cardano.Logging.Test.Unit.PrometheusSimple
+                        Cardano.Logging.Test.Unit.Routing
+                        Cardano.Logging.Test.Unit.TestObjects
+                        Cardano.Logging.Test.Unit.Trivial
 
   build-depends:        base >=4.12 && <5
                       , aeson
+                      , async
                       , bytestring
                       , containers
                       , deepseq
                       , ekg-core
                       , generic-data
                       , hostname
-                      , text
+                      , http-client == 0.7.19
                       , stm
                       , tasty
                       , tasty-hunit
                       , tasty-quickcheck
+                      , text
                       , time
                       , trace-dispatcher
                       , unordered-containers
                       , utf8-string
+                      , unix
                       , yaml
                       , QuickCheck
+                      , cardano-prometheus-tracker
 
 
 benchmark trace-dispatcher-bench
