@@ -230,9 +230,6 @@ Note that once ledger state is converted, the cardano-node container will need
 to be run with a node configuration aligned with the new ledger state type,
 otherwise ledger replay from genesis will re-occur.
 
-For more info, see the [UTxO Migration Guide](https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/utxo-hd/migrating/).
-
-
 ## Legacy Tracing System
 Cardano-node now defaults to using the new tracing system.  The legacy tracing
 system is deprecated and will be removed in a future node version.  While still
