@@ -1832,6 +1832,7 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forMachine _dtals LedgerDB.ForkerReadStatistics = mempty
   forMachine _dtals LedgerDB.ForkerPushStart = mempty
   forMachine _dtals LedgerDB.ForkerPushEnd = mempty
+  forMachine _dtals LedgerDB.DanglingForkerClosed = mempty
 
   forHuman LedgerDB.ForkerOpen = "Opened forker"
   forHuman LedgerDB.ForkerCloseUncommitted = "Forker closed without committing"
@@ -1843,6 +1844,7 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forHuman LedgerDB.ForkerReadStatistics = "Gathering statistics"
   forHuman LedgerDB.ForkerPushStart = "Started to push"
   forHuman LedgerDB.ForkerPushEnd = "Pushed"
+  forHuman LedgerDB.DanglingForkerClosed = "Closed dangling forker"
 
 instance MetaTrace LedgerDB.TraceForkerEventWithKey where
   namespaceFor (LedgerDB.TraceForkerEventWithKey _ ev) =
@@ -1865,6 +1867,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
   namespaceFor LedgerDB.ForkerReadStatistics = Namespace [] ["Statistics"]
   namespaceFor LedgerDB.ForkerPushStart = Namespace [] ["StartPush"]
   namespaceFor LedgerDB.ForkerPushEnd = Namespace [] ["FinishPush"]
+  namespaceFor LedgerDB.DanglingForkerClosed = Namespace [] ["DanglingForkerClosed"]
 
   severityFor _ _ = Just Debug
 
@@ -1882,6 +1885,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
   documentFor (Namespace _ ("Statistics" : _tl)) = Just "Statistics were gathered from the forker"
   documentFor (Namespace _ ("StartPush" : _tl)) = Just "A ledger state is going to be pushed to the forker"
   documentFor (Namespace _ ("FinishPush" : _tl)) = Just "A ledger state was pushed to the forker"
+  documentFor (Namespace _ ("DanglingForkerClosed" : _tl)) = Just "A dangling forker was closed"
   documentFor _ = Nothing
 
   allNamespaces = [
@@ -1895,6 +1899,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
     , Namespace [] ["Statistics"]
     , Namespace [] ["StartPush"]
     , Namespace [] ["FinishPush"]
+    , Namespace [] ["DanglingForkerClosed"]
     ]
 
 --------------------------------------------------------------------------------
