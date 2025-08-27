@@ -208,12 +208,10 @@ createTestnetEnv
 cardanoTestnet :: ()
   => HasCallStack
   => CardanoTestnetOptions -- ^ The options to use
-  -> GenesisOptions
   -> Conf -- ^ Path to the test sandbox
   -> H.Integration TestnetRuntime
 cardanoTestnet
   testnetOptions
-  GenesisOptions{genesisTestnetMagic=testnetMagic}
   Conf
     { tempAbsPath=TmpAbsolutePath tmpAbsPath
     , updateTimestamps
@@ -225,8 +223,13 @@ cardanoTestnet
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
       nodeConfigFile = tmpAbsPath </> "configuration.yaml"
+      byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
+      shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
 
   H.note_ OS.os
+
+  shelleyGenesis@ShelleyGenesis{sgNetworkMagic} <- H.readJsonFileOk shelleyGenesisFile
+  let testnetMagic :: Int = fromIntegral sgNetworkMagic
 
   wallets <- forM [1..3] $ \idx -> do
     let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
@@ -306,9 +309,6 @@ cardanoTestnet
   -- This is a QoL feature so that users who edit their configuration files don't
   -- have to manually set up the start times themselves.
   when (updateTimestamps == UpdateTimestamps) $ do
-    let byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
-        shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
-
     currentTime <- H.noteShowIO DTC.getCurrentTime
     startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
@@ -318,11 +318,9 @@ cardanoTestnet
     let byronGenesis = byronGenesis'{gdStartTime = startTime}
     H.lbsWriteFile byronGenesisFile $ canonicalEncodePretty byronGenesis
 
-    -- Update start time in Shelley genesis file
-    eShelley <- H.readJsonFile shelleyGenesisFile
-    shelleyGenesis' :: ShelleyGenesis <- H.leftFail eShelley
-    let shelleyGenesis = shelleyGenesis'{sgSystemStart = startTime}
-    H.lbsWriteFile shelleyGenesisFile $ A.encodePretty shelleyGenesis
+    -- Update start time in Shelley genesis file (which has been read already)
+    let shelleyGenesis' = shelleyGenesis{sgSystemStart = startTime}
+    H.lbsWriteFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
 
   eTestnetNodes <- H.forConcurrently (zip [1..] portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
     let nodeName = Defaults.defaultNodeName i
@@ -426,7 +424,7 @@ createAndRunTestnet testnetOptions genesisOptions conf = do
   createTestnetEnv
     testnetOptions genesisOptions def
     conf
-  cardanoTestnet testnetOptions genesisOptions conf
+  cardanoTestnet testnetOptions conf
 
 -- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
 retryOnAddressInUseError
