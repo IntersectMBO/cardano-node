@@ -87,12 +87,11 @@ runCardanoOptions CardanoTestnetCliOptions
           createTestnetEnv
             testnetOptions genesisOptions def
             conf
-          cardanoTestnet testnetOptions genesisOptions conf
+          cardanoTestnet testnetOptions conf
       UserProvidedEnv nodeEnvPath ->
         -- Run cardano-testnet in the sandbox provided by the user
         -- In that case, 'cardanoOutputDir' is not used
         runTestnet (UserProvidedEnv nodeEnvPath) $ \conf ->
           cardanoTestnet
             testnetOptions
-            genesisOptions
             conf{updateTimestamps=updateTimestamps}

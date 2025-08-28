@@ -45,7 +45,7 @@ hprop_mainnet_params = integrationRetryWorkspace 2 "mainnet-params" $ \tmpDir ->
   TestnetRuntime
     { testnetNodes
     , testnetMagic
-    } <- cardanoTestnet testnetOptions genesisOptions conf
+    } <- cardanoTestnet testnetOptions conf
 
   -- Get a running node
   TestnetNode{nodeSprocket} <- H.headM testnetNodes
