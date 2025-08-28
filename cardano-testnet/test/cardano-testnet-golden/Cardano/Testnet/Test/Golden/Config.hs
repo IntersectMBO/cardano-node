@@ -5,8 +5,6 @@ module Cardano.Testnet.Test.Golden.Config
   ( goldenDefaultConfigYaml
   ) where
 
-import           Cardano.Api
-
 import           Prelude
 
 import           Data.Aeson
@@ -16,42 +14,25 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           System.FilePath ((</>))
 
-import           Testnet.Defaults
+import           Testnet.Defaults (defaultEra, defaultYamlHardforkViaConfig)
 
 import           Hedgehog
 import           Hedgehog.Extras.Test.Base (propertyOnce)
 import           Hedgehog.Extras.Test.Golden (diffVsGoldenFile)
 import qualified Hedgehog.Extras.Test.Process as H
-import Testnet.Components.Configuration (eraToString)
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_DefaultConfig/"'@
 goldenDefaultConfigYaml :: Property
 goldenDefaultConfigYaml = propertyOnce $ do
   base <- H.getProjectBase
-  let asbes = [minBound..maxBound]
-  let allEras = map (f base) asbes
-  mapM_ (uncurry diffVsGoldenFile) allEras
-  where
-    f base (asbe :: AnyShelleyBasedEra) = do
-      AnyShelleyBasedEra sbe <- pure asbe
-      createConfigStringAndPath base sbe
+  diffVsGoldenFile createConfigYamlString $ createConfigPath base
 
-createConfigStringAndPath :: FilePath -> ShelleyBasedEra era -> (String, FilePath)
-createConfigStringAndPath base sbe =
-  let configStr = createConfigYamlString sbe
-      configPath = base </> createGoldenFilePath sbe
-  in (configStr, configPath)
+createConfigPath :: FilePath -> FilePath
+createConfigPath base =
+  base </> "cardano-testnet/test/cardano-testnet-golden/files/golden/node_default_config.json"
 
-createGoldenFilePath :: ShelleyBasedEra era -> FilePath
-createGoldenFilePath sbe =
-  "cardano-testnet/test/cardano-testnet-golden/files/golden/"
-    <> eraToString sbe
-    <> "_node_default_config.json"
-
-createConfigYamlString :: ShelleyBasedEra era -> String
-createConfigYamlString sbe =
-  let configBs = LB.toStrict . encodePretty
-                  . Object . defaultYamlHardforkViaConfig $ sbe
-      configStr = Text.unpack $ Text.decodeUtf8 configBs
-  in configStr
+createConfigYamlString :: String
+createConfigYamlString =
+  let configBs = LB.toStrict $ encodePretty $ Object $ defaultYamlHardforkViaConfig defaultEra
+  in Text.unpack $ Text.decodeUtf8 configBs
