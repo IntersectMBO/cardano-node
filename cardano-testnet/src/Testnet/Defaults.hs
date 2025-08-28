@@ -21,6 +21,7 @@ module Testnet.Defaults
   , defaultDRepSkeyFp
   , defaultDRepKeyPair
   , defaultDelegatorStakeKeyPair
+  , defaultEra
   , defaultNodeName
   , defaultNodeDataDir
   , defaultP2PTopology
@@ -166,7 +167,11 @@ defaultConwayGenesis =
       , cgInitialDReps = mempty
       }
 
-
+-- | The only era supported by cardano-testnet for the moment.
+-- It's important to keep the era parameterization everywhere, for ease of development
+-- when new eras roll out.
+defaultEra :: ShelleyBasedEra Api.ConwayEra
+defaultEra = ShelleyBasedEraConway
 
 -- | Configuration value that allows you to hardfork to any Cardano era
 -- at epoch 0.
