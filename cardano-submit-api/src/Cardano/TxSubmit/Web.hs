@@ -78,7 +78,7 @@ runTxSubmitServer
   -> SocketPath
   -> IO ()
 runTxSubmitServer trace metrics webserverConfig protocol networkId socketPath = do
-  logException trace "tx-submit-webapi." $
+  logException trace "TxSubmit WebAPI: " $
     Web.runSettings trace (toWarpSettings webserverConfig) $ txSubmitApp trace metrics protocol networkId socketPath
   logInfo trace "txSubmitApp: exiting"
 

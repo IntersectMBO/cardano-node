@@ -8,7 +8,7 @@ import           Cardano.BM.Trace (Trace, logError)
 
 import           Prelude
 
-import           Control.Exception (SomeException, catch, throwIO)
+import           Control.Exception.Safe (SomeException, catch, throwIO)
 import           Data.Text (Text)
 
 -- | ouroboros-network catches 'SomeException' and if a 'nullTracer' is passed into that
