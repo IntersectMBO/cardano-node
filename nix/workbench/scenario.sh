@@ -36,6 +36,7 @@ case "$op" in
         # Trap start
         ############
         backend start-nodes          "$dir"
+        backend wait-pools-stopped   "$dir"
         # Trap end
         ##########
         scenario_cleanup_termination
