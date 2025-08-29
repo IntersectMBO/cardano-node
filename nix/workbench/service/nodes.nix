@@ -125,6 +125,7 @@ let
                   LedgerDB = {
                     Backend = "V1LMDB";
                     LiveTablesPath = liveTablesPath i;
+                    FlushFrequency = 1;
                   };
                 })
               (if __hasAttr "preset" profile && profile.preset != null
