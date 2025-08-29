@@ -1875,20 +1875,6 @@ EOF
             local client_name=$(echo "${status_response}" | jq .NodeName -r )
             # TODO: Also contains .DeploymentID , .EvalID and .FollowupEvalID
             "${msgoff}" || msg "Nomad $(yellow "Task \"${task_name}\"") was placed on Nomad $(yellow "client named \"${client_name}\"") with ID \"${client_id}\""
-            ########
-            # HACK #
-            ########
-            if ! test "${task_name}" = "explorer"
-            then
-              "${msgoff}" || msg "${client_name}: /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.high"
-              wb_nomad clients ssh "${client_name}" \
-                "echo 12000000000 > /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.high"
-              wb_nomad clients ssh "${client_name}" \
-                "cat /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.high"
-            fi
-            ########
-            # HACK #
-            ########
           fi
         ;;
 ####### job -> task-name-allocation-id )########################################
