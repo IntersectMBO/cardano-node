@@ -32,6 +32,11 @@ packages:
   trace-resources
   trace-forward
 
+source-repository-package
+  type: git
+  location: https://github.com/jutaro/cardano-prometheus-tracker.git
+  tag: af73c6217850ac6bf07ad26d8faa985f391eddf3
+
 -- Needed when cross compiling
 extra-packages: alex
 
