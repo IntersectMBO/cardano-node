@@ -29,7 +29,7 @@ type CreateAndStore m era           = L.Coin -> (TxOut CtxTx era, TxIx -> TxId -
 -- | 'CreateAndStoreList' is meant to represent building a transaction
 -- and presenting a function to carry out the needed side effects.
 -- This type alias is also only used in "Cardano.Benchmarking.Wallet".
--- The @split@ parameter seems to actualy be used for not much more
+-- The @split@ parameter seems to actually be used for not much more
 -- than lists and records containing lists.
 type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 

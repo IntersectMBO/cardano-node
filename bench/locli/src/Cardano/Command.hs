@@ -761,7 +761,7 @@ runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
       & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
-  ["multi-run cluster preformance stats"]
+  ["multi-run cluster performance stats"]
 
 runChainCommand s c@ComputeSummary = do
   progress "summary" (Q "summarising a run")
