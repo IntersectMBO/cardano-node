@@ -177,14 +177,14 @@ profilesNoEraCloud =
               . baseVoltaire . V.valueCloud . V.fundsDouble . valueDuration  . nomadPerf
               . P.utxo 10000000 . P.delegators 1000000
               . valueDesc
-              -- Using 7,000,000,000 bytes, as 1024-base megabytes.
-              . P.rtsHeapLimit 6676 . P.heapLimit 6676
+              -- Using 8,000,000,000 bytes, as 1024-base megabytes.
+              . P.rtsHeapLimit 7629 . P.heapLimit 7629
   , P.empty   & P.name "value-volt-10-lmdb-cgmem-nomadperf"                . P.dreps  10000 . P.newTracing . P.p2pOn . lmdb . cgmem
               . baseVoltaire . V.valueCloud . V.fundsDouble . valueDuration  . nomadPerf
               . P.utxo 10000000 . P.delegators 1000000
               . valueDesc
-              -- Using 7,000,000,000 bytes, as 1024-base megabytes.
-              . P.rtsHeapLimit 6676 . P.heapLimit 6676
+              -- Using 8,000,000,000 bytes, as 1024-base megabytes.
+              . P.rtsHeapLimit 7629 . P.heapLimit 7629
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
   , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
