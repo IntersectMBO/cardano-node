@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.TxSubmit</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.html#runTxSubmitWebapi"><span class="hs-identifier">runTxSubmitWebapi</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#opts"><span class="hs-identifier">opts</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitCommand"><span class="hs-identifier">TxSubmitCommand</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Setup</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Logging</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Trace</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Trace</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">logInfo</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Trace</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Logging</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html"><span class="hs-identifier">Cardano.TxSubmit.CLI.Parsers</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#opts"><span class="hs-identifier">opts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html"><span class="hs-identifier">Cardano.TxSubmit.CLI.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#ConfigFile"><span class="hs-identifier">ConfigFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#unConfigFile"><span class="hs-identifier">unConfigFile</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitCommand"><span class="hs-identifier">TxSubmitCommand</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>                   </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitNodeParams"><span class="hs-identifier">TxSubmitNodeParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxSubmit.Config.html"><span class="hs-identifier">Cardano.TxSubmit.Config</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier">GenTxSubmitNodeConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#ToggleLogging"><span class="hs-identifier">ToggleLogging</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>                   </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#TxSubmitNodeConfig"><span class="hs-identifier">TxSubmitNodeConfig</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#readTxSubmitNodeConfig"><span class="hs-identifier">readTxSubmitNodeConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxSubmit.Metrics.html"><span class="hs-identifier">Cardano.TxSubmit.Metrics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.Metrics.html#registerMetricsServer"><span class="hs-identifier">registerMetricsServer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxSubmit.Web.html"><span class="hs-identifier">Cardano.TxSubmit.Web</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.Web.html#runTxSubmitServer"><span class="hs-identifier">runTxSubmitServer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/9psrhvkjr8s3lgappscgnnb5kixcb5vi-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Control.Concurrent.Async.html"><span class="hs-identifier">Control.Concurrent.Async</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Async</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.TxSubmit.html#runTxSubmitWebapi"><span class="hs-identifier hs-type">runTxSubmitWebapi</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitNodeParams"><span class="hs-identifier hs-type">TxSubmitNodeParams</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span id="runTxSubmitWebapi"><span class="annot"><span class="annottext">runTxSubmitWebapi :: TxSubmitNodeParams -&gt; IO ()
+</span><a href="Cardano.TxSubmit.html#runTxSubmitWebapi"><span class="hs-identifier hs-var hs-var">runTxSubmitWebapi</span></a></span></span><span> </span><span id="local-6989586621679398013"><span class="annot"><span class="annottext">TxSubmitNodeParams
+</span><a href="#local-6989586621679398013"><span class="hs-identifier hs-var">tsnp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-27"></span><span>    </span><span id="local-6989586621679398014"><span class="annot"><span class="annottext">TxSubmitNodeConfig
+</span><a href="#local-6989586621679398014"><span class="hs-identifier hs-var">tsnc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO TxSubmitNodeConfig
+</span><a href="Cardano.TxSubmit.Config.html#readTxSubmitNodeConfig"><span class="hs-identifier hs-var">readTxSubmitNodeConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigFile -&gt; FilePath
+</span><a href="Cardano.TxSubmit.CLI.Types.html#unConfigFile"><span class="hs-identifier hs-var">unConfigFile</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigFile
+</span><a href="#local-6989586621679398015"><span class="hs-identifier hs-var">tspConfigFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>    </span><span id="local-6989586621679398016"><span class="annot"><span class="annottext">Trace IO Text
+</span><a href="#local-6989586621679398016"><span class="hs-identifier hs-var">trce</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeConfig -&gt; IO (Trace IO Text)
+</span><a href="Cardano.TxSubmit.html#mkTracer"><span class="hs-identifier hs-var">mkTracer</span></a></span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeConfig
+</span><a href="#local-6989586621679398014"><span class="hs-identifier hs-var">tsnc</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679398018"><span class="annot"><span class="annottext">TxSubmitMetrics
+</span><a href="#local-6989586621679398018"><span class="hs-identifier hs-var">metrics</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398019"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679398019"><span class="hs-identifier hs-var">runMetricsServer</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Trace IO Text -&gt; Int -&gt; IO (TxSubmitMetrics, IO ())
+</span><a href="Cardano.TxSubmit.Metrics.html#registerMetricsServer"><span class="hs-identifier hs-var">registerMetricsServer</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO Text
+</span><a href="#local-6989586621679398016"><span class="hs-identifier hs-var">trce</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679398020"><span class="hs-identifier hs-var">tspMetricsPort</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (Async a -&gt; IO b) -&gt; IO b
+</span><span class="hs-identifier hs-var">Async.withAsync</span></span><span>
+</span><span id="line-31"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Trace IO Text
+-&gt; TxSubmitMetrics
+-&gt; WebserverConfig
+-&gt; ConsensusModeParams
+-&gt; NetworkId
+-&gt; SocketPath
+-&gt; IO ()
+</span><a href="Cardano.TxSubmit.Web.html#runTxSubmitServer"><span class="hs-identifier hs-var">runTxSubmitServer</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO Text
+</span><a href="#local-6989586621679398016"><span class="hs-identifier hs-var">trce</span></a></span><span> </span><span class="annot"><span class="annottext">TxSubmitMetrics
+</span><a href="#local-6989586621679398018"><span class="hs-identifier hs-var">metrics</span></a></span><span> </span><span class="annot"><span class="annottext">WebserverConfig
+</span><a href="#local-6989586621679398022"><span class="hs-identifier hs-var">tspWebserverConfig</span></a></span><span> </span><span class="annot"><span class="annottext">ConsensusModeParams
+</span><a href="#local-6989586621679398023"><span class="hs-identifier hs-var">tspProtocol</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679398024"><span class="hs-identifier hs-var">tspNetworkId</span></a></span><span> </span><span class="annot"><span class="annottext">SocketPath
+</span><a href="#local-6989586621679398025"><span class="hs-identifier hs-var">tspSocketPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>      </span><span class="annot"><span class="annottext">((Async () -&gt; IO ()) -&gt; IO ()) -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679398026"><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679398026"><span class="hs-identifier hs-var">txSubmitServer</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-33"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (Async a -&gt; IO b) -&gt; IO b
+</span><span class="hs-identifier hs-var">Async.withAsync</span></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679398019"><span class="hs-identifier hs-var">runMetricsServer</span></a></span><span> </span><span class="annot"><span class="annottext">((Async () -&gt; IO ()) -&gt; IO ()) -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Async ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-34"></span><span>          </span><span class="annot"><span class="annottext">Async () -&gt; IO ()
+forall a. Async a -&gt; IO a
+</span><span class="hs-identifier hs-var">Async.wait</span></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679398026"><span class="hs-identifier hs-var">txSubmitServer</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">Trace IO Text -&gt; Text -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">logInfo</span></span><span> </span><span class="annot"><span class="annottext">Trace IO Text
+</span><a href="#local-6989586621679398016"><span class="hs-identifier hs-var">trce</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;runTxSubmitWebapi: Stopping TxSubmit API&quot;</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitNodeParams"><span class="hs-identifier hs-type">TxSubmitNodeParams</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679398023"><span class="annot"><span class="annottext">ConsensusModeParams
+tspProtocol :: ConsensusModeParams
+tspProtocol :: TxSubmitNodeParams -&gt; ConsensusModeParams
+</span><a href="#local-6989586621679398023"><span class="hs-identifier hs-var hs-var">tspProtocol</span></a></span></span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398024"><span class="annot"><span class="annottext">NetworkId
+tspNetworkId :: NetworkId
+tspNetworkId :: TxSubmitNodeParams -&gt; NetworkId
+</span><a href="#local-6989586621679398024"><span class="hs-identifier hs-var hs-var">tspNetworkId</span></a></span></span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398025"><span class="annot"><span class="annottext">SocketPath
+tspSocketPath :: SocketPath
+tspSocketPath :: TxSubmitNodeParams -&gt; SocketPath
+</span><a href="#local-6989586621679398025"><span class="hs-identifier hs-var hs-var">tspSocketPath</span></a></span></span><span>
+</span><span id="line-41"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398022"><span class="annot"><span class="annottext">WebserverConfig
+tspWebserverConfig :: WebserverConfig
+tspWebserverConfig :: TxSubmitNodeParams -&gt; WebserverConfig
+</span><a href="#local-6989586621679398022"><span class="hs-identifier hs-var hs-var">tspWebserverConfig</span></a></span></span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398020"><span class="annot"><span class="annottext">Int
+tspMetricsPort :: Int
+tspMetricsPort :: TxSubmitNodeParams -&gt; Int
+</span><a href="#local-6989586621679398020"><span class="hs-identifier hs-var hs-var">tspMetricsPort</span></a></span></span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398015"><span class="annot"><span class="annottext">ConfigFile
+tspConfigFile :: ConfigFile
+tspConfigFile :: TxSubmitNodeParams -&gt; ConfigFile
+</span><a href="#local-6989586621679398015"><span class="hs-identifier hs-var hs-var">tspConfigFile</span></a></span></span><span>
+</span><span id="line-44"></span><span>      </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeParams
+</span><a href="#local-6989586621679398013"><span class="hs-identifier hs-var">tsnp</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.TxSubmit.html#mkTracer"><span class="hs-identifier hs-type">mkTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#TxSubmitNodeConfig"><span class="hs-identifier hs-type">TxSubmitNodeConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Trace</span></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span id="mkTracer"><span class="annot"><span class="annottext">mkTracer :: TxSubmitNodeConfig -&gt; IO (Trace IO Text)
+</span><a href="Cardano.TxSubmit.html#mkTracer"><span class="hs-identifier hs-var hs-var">mkTracer</span></a></span></span><span> </span><span id="local-6989586621679398035"><span class="annot"><span class="annottext">TxSubmitNodeConfig
+</span><a href="#local-6989586621679398035"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeConfig -&gt; ToggleLogging
+forall a. GenTxSubmitNodeConfig a -&gt; ToggleLogging
+</span><a href="Cardano.TxSubmit.Config.html#tscToggleLogging"><span class="hs-identifier hs-var">tscToggleLogging</span></a></span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeConfig
+</span><a href="#local-6989586621679398035"><span class="hs-identifier hs-var">enc</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">ToggleLogging
+</span><a href="Cardano.TxSubmit.Config.html#LoggingOn"><span class="hs-identifier hs-var">LoggingOn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO (Trace IO Text) -&gt; IO (Trace IO Text)
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Trace IO Text) -&gt; IO (Trace IO Text))
+-&gt; IO (Trace IO Text) -&gt; IO (Trace IO Text)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Either FilePath Configuration -&gt; Text -&gt; IO (Trace IO Text)
+forall (m :: * -&gt; *) a.
+(MonadIO m, ToJSON a, FromJSON a, ToObject a) =&gt;
+Either FilePath Configuration -&gt; Text -&gt; m (Trace m a)
+</span><span class="hs-identifier hs-var">Logging.setupTrace</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Configuration -&gt; Either FilePath Configuration
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(Configuration -&gt; Either FilePath Configuration)
+-&gt; Configuration -&gt; Either FilePath Configuration
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeConfig -&gt; Configuration
+forall a. GenTxSubmitNodeConfig a -&gt; a
+</span><a href="Cardano.TxSubmit.Config.html#tscLoggingConfig"><span class="hs-identifier hs-var">tscLoggingConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeConfig
+</span><a href="#local-6989586621679398035"><span class="hs-identifier hs-var">enc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;cardano-tx-submit&quot;</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">ToggleLogging
+</span><a href="Cardano.TxSubmit.Config.html#LoggingOff"><span class="hs-identifier hs-var">LoggingOff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Trace IO Text -&gt; IO (Trace IO Text)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO Text
+forall (m :: * -&gt; *) a. Applicative m =&gt; Tracer m a
+</span><a href="file:///nix/store/gyxcklcf4c8k6ngyp95msgp8p873f2q4-contra-tracer-lib-contra-tracer-0.1.0.1-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#nullTracer"><span class="hs-identifier hs-var">Logging.nullTracer</span></a></span><span>
+</span><span id="line-50"></span></pre></body></html>

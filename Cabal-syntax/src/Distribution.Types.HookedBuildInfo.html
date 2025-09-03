@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.HookedBuildInfo</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.HookedBuildInfo.html#HookedBuildInfo"><span class="hs-identifier">HookedBuildInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.HookedBuildInfo.html#emptyHookedBuildInfo"><span class="hs-identifier">emptyHookedBuildInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- import Distribution.Compat.Prelude</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html"><span class="hs-identifier">Distribution.Types.BuildInfo</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html"><span class="hs-identifier">Distribution.Types.UnqualComponentName</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- | 'HookedBuildInfo' is mechanism that hooks can use to</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- override the 'BuildInfo's inside packages.  One example</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- use-case (which is used in core libraries today) is as</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- a way of passing flags which are computed by a configure</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- script into Cabal.  In this case, the autoconf build type adds</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- hooks to read in a textual 'HookedBuildInfo' format prior</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- to doing any operations.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- Quite honestly, this mechanism is a massive hack since we shouldn't</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- be editing the 'PackageDescription' data structure (it's easy</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- to assume that this data structure shouldn't change and</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- run into bugs, see for example 1c20a6328579af9e37677d507e2e9836ef70ab9d).</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- But it's a bit convenient, because there isn't another data</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- structure that allows adding extra 'BuildInfo' style things.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- In any case, a lot of care has to be taken to make sure the</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- 'HookedBuildInfo' is applied to the 'PackageDescription'.  In</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- general this process occurs in &quot;Distribution.Simple&quot;, which is</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- responsible for orchestrating the hooks mechanism.  The</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- general strategy:</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--      1. We run the pre-hook, which produces a 'HookedBuildInfo'</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--         (e.g., in the Autoconf case, it reads it out from a file).</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--      2. We sanity-check the hooked build info with</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--         'sanityCheckHookedBuildInfo'.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--      3. We update our 'PackageDescription' (either freshly read</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--         or cached from 'LocalBuildInfo') with 'updatePackageDescription'.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--         In principle, we are also supposed to update the copy of</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--         the 'PackageDescription' stored in 'LocalBuildInfo'</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--         at 'localPkgDescr'.  Unfortunately, in practice, there</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--         are lots of Custom setup scripts which fail to update</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--         'localPkgDescr' so you really shouldn't rely on it.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--         It's not DEPRECATED because there are legitimate uses</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--         for it, but... yeah.  Sharp knife.  See</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--         &lt;https://github.com/haskell/cabal/issues/3606&gt;</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--         for more information on the issue.</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- It is not well-specified whether or not a 'HookedBuildInfo' applied</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- at configure time is persistent to the 'LocalBuildInfo'.  The</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- fact that 'HookedBuildInfo' is passed to 'confHook' MIGHT SUGGEST</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- that the 'HookedBuildInfo' is applied at this time, but actually</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- since 9317b67e6122ab14e53f81b573bd0ecb388eca5a it has been ONLY used</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- to create a modified package description that we check for problems:</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- it is never actually saved to the LBI.  Since 'HookedBuildInfo' is</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- applied monoidally to the existing build infos (and it is not an</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- idempotent monoid), it could break things to save it, since we</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- are obligated to apply any new 'HookedBuildInfo' and then we'd</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- get the effect twice.  But this does mean we have to re-apply</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- it every time. Hey, it's more flexibility.</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">type</span><span> </span><span id="HookedBuildInfo"><span class="annot"><a href="Distribution.Types.HookedBuildInfo.html#HookedBuildInfo"><span class="hs-identifier hs-var">HookedBuildInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Distribution.Types.HookedBuildInfo.html#emptyHookedBuildInfo"><span class="hs-identifier hs-type">emptyHookedBuildInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.HookedBuildInfo.html#HookedBuildInfo"><span class="hs-identifier hs-type">HookedBuildInfo</span></a></span><span>
+</span><span id="line-66"></span><span id="emptyHookedBuildInfo"><span class="annot"><span class="annottext">emptyHookedBuildInfo :: HookedBuildInfo
+</span><a href="Distribution.Types.HookedBuildInfo.html#emptyHookedBuildInfo"><span class="hs-identifier hs-var hs-var">emptyHookedBuildInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe BuildInfo
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span></pre></body></html>

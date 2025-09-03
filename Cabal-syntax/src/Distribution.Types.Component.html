@@ -1,0 +1,512 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.Component</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier">Component</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier">foldComponent</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#componentBuildInfo"><span class="hs-identifier">componentBuildInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#componentBuildable"><span class="hs-identifier">componentBuildable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#componentName"><span class="hs-identifier">componentName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#partitionComponents"><span class="hs-identifier">partitionComponents</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html"><span class="hs-identifier">Distribution.Types.Library</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLib.html"><span class="hs-identifier">Distribution.Types.ForeignLib</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Executable.html"><span class="hs-identifier">Distribution.Types.Executable</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.TestSuite.html"><span class="hs-identifier">Distribution.Types.TestSuite</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html"><span class="hs-identifier">Distribution.Types.Benchmark</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html"><span class="hs-identifier">Distribution.Types.ComponentName</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html"><span class="hs-identifier">Distribution.Types.BuildInfo</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html"><span class="hs-identifier">Distribution.Types.BuildInfo.Lens</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">data</span><span> </span><span id="Component"><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-var">Component</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CLib"><span class="annot"><a href="Distribution.Types.Component.html#CLib"><span class="hs-identifier hs-var">CLib</span></a></span></span><span>   </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span>
+</span><span id="line-27"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="CFLib"><span class="annot"><a href="Distribution.Types.Component.html#CFLib"><span class="hs-identifier hs-var">CFLib</span></a></span></span><span>  </span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span>
+</span><span id="line-28"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="CExe"><span class="annot"><a href="Distribution.Types.Component.html#CExe"><span class="hs-identifier hs-var">CExe</span></a></span></span><span>   </span><span class="annot"><a href="Distribution.Types.Executable.html#Executable"><span class="hs-identifier hs-type">Executable</span></a></span><span>
+</span><span id="line-29"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="CTest"><span class="annot"><a href="Distribution.Types.Component.html#CTest"><span class="hs-identifier hs-var">CTest</span></a></span></span><span>  </span><span class="annot"><a href="Distribution.Types.TestSuite.html#TestSuite"><span class="hs-identifier hs-type">TestSuite</span></a></span><span>
+</span><span id="line-30"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="CBench"><span class="annot"><a href="Distribution.Types.Component.html#CBench"><span class="hs-identifier hs-var">CBench</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span>
+</span><span id="line-31"></span><span>               </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679445554"><span id="local-6989586621679445572"><span id="local-6989586621679445576"><span class="annot"><span class="annottext">Int -&gt; Component -&gt; ShowS
+[Component] -&gt; ShowS
+Component -&gt; String
+(Int -&gt; Component -&gt; ShowS)
+-&gt; (Component -&gt; String)
+-&gt; ([Component] -&gt; ShowS)
+-&gt; Show Component
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Component -&gt; ShowS
+showsPrec :: Int -&gt; Component -&gt; ShowS
+$cshow :: Component -&gt; String
+show :: Component -&gt; String
+$cshowList :: [Component] -&gt; ShowS
+showList :: [Component] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679445580"><span id="local-6989586621679445592"><span class="annot"><span class="annottext">Component -&gt; Component -&gt; Bool
+(Component -&gt; Component -&gt; Bool)
+-&gt; (Component -&gt; Component -&gt; Bool) -&gt; Eq Component
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Component -&gt; Component -&gt; Bool
+== :: Component -&gt; Component -&gt; Bool
+$c/= :: Component -&gt; Component -&gt; Bool
+/= :: Component -&gt; Component -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679445597"><span id="local-6989586621679445601"><span id="local-6989586621679445604"><span id="local-6989586621679445632"><span class="annot"><span class="annottext">ReadPrec [Component]
+ReadPrec Component
+Int -&gt; ReadS Component
+ReadS [Component]
+(Int -&gt; ReadS Component)
+-&gt; ReadS [Component]
+-&gt; ReadPrec Component
+-&gt; ReadPrec [Component]
+-&gt; Read Component
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS Component
+readsPrec :: Int -&gt; ReadS Component
+$creadList :: ReadS [Component]
+readList :: ReadS [Component]
+$creadPrec :: ReadPrec Component
+readPrec :: ReadPrec Component
+$creadListPrec :: ReadPrec [Component]
+readListPrec :: ReadPrec [Component]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679445637"><span id="local-6989586621679445641"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-type">Component</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#CLib"><span class="hs-identifier hs-type">CLib</span></a></span><span>   </span><span id="local-6989586621679445658"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445658"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679445659"><span class="annot"><span class="annottext">&lt;&gt; :: Component -&gt; Component -&gt; Component
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#CLib"><span class="hs-identifier hs-type">CLib</span></a></span><span>   </span><span id="local-6989586621679445660"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445660"><span class="hs-identifier hs-var">l'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; Component
+</span><a href="Distribution.Types.Component.html#CLib"><span class="hs-identifier hs-var">CLib</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445658"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; Library -&gt; Library
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445660"><span class="hs-identifier hs-var">l'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#CFLib"><span class="hs-identifier hs-type">CFLib</span></a></span><span>  </span><span id="local-6989586621679445661"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445661"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#CFLib"><span class="hs-identifier hs-type">CFLib</span></a></span><span>  </span><span id="local-6989586621679445662"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445662"><span class="hs-identifier hs-var">l'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; Component
+</span><a href="Distribution.Types.Component.html#CFLib"><span class="hs-identifier hs-var">CFLib</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445661"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; ForeignLib -&gt; ForeignLib
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445662"><span class="hs-identifier hs-var">l'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#CExe"><span class="hs-identifier hs-type">CExe</span></a></span><span>   </span><span id="local-6989586621679445663"><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445663"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#CExe"><span class="hs-identifier hs-type">CExe</span></a></span><span>   </span><span id="local-6989586621679445664"><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445664"><span class="hs-identifier hs-var">e'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Executable -&gt; Component
+</span><a href="Distribution.Types.Component.html#CExe"><span class="hs-identifier hs-var">CExe</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445663"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Executable -&gt; Executable -&gt; Executable
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445664"><span class="hs-identifier hs-var">e'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#CTest"><span class="hs-identifier hs-type">CTest</span></a></span><span>  </span><span id="local-6989586621679445665"><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445665"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#CTest"><span class="hs-identifier hs-type">CTest</span></a></span><span>  </span><span id="local-6989586621679445666"><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445666"><span class="hs-identifier hs-var">t'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; Component
+</span><a href="Distribution.Types.Component.html#CTest"><span class="hs-identifier hs-var">CTest</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445665"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; TestSuite -&gt; TestSuite
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445666"><span class="hs-identifier hs-var">t'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="Distribution.Types.Component.html#CBench"><span class="hs-identifier hs-type">CBench</span></a></span><span> </span><span id="local-6989586621679445667"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445667"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#CBench"><span class="hs-identifier hs-type">CBench</span></a></span><span> </span><span id="local-6989586621679445668"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445668"><span class="hs-identifier hs-var">b'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; Component
+</span><a href="Distribution.Types.Component.html#CBench"><span class="hs-identifier hs-var">CBench</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445667"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; Benchmark -&gt; Benchmark
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445668"><span class="hs-identifier hs-var">b'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="annottext">Component
+</span><span class="hs-identifier">_</span></span><span>        </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Component
+</span><span class="hs-identifier">_</span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Component
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Err.html#error/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Cannot merge Component&quot;</span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679445672"><span id="local-6989586621679445678"><span id="local-6989586621679445683"><span id="local-6989586621679445688"><span id="local-6989586621679445693"><span id="local-6989586621679445698"><span id="local-6989586621679445703"><span id="local-6989586621679445708"><span id="local-6989586621679445713"><span id="local-6989586621679445718"><span id="local-6989586621679445723"><span id="local-6989586621679445728"><span id="local-6989586621679445733"><span id="local-6989586621679445738"><span id="local-6989586621679445743"><span id="local-6989586621679445748"><span id="local-6989586621679445753"><span id="local-6989586621679445758"><span id="local-6989586621679445763"><span id="local-6989586621679445768"><span id="local-6989586621679445773"><span id="local-6989586621679445778"><span id="local-6989586621679445783"><span id="local-6989586621679445788"><span id="local-6989586621679445793"><span id="local-6989586621679445798"><span id="local-6989586621679445803"><span id="local-6989586621679445808"><span id="local-6989586621679445813"><span id="local-6989586621679445818"><span id="local-6989586621679445823"><span id="local-6989586621679445828"><span id="local-6989586621679445833"><span id="local-6989586621679445838"><span id="local-6989586621679445843"><span id="local-6989586621679445848"><span id="local-6989586621679445853"><span id="local-6989586621679445858"><span id="local-6989586621679445863"><span id="local-6989586621679445868"><span id="local-6989586621679445873"><span id="local-6989586621679445878"><span id="local-6989586621679445883"><span id="local-6989586621679445888"><span id="local-6989586621679445893"><span id="local-6989586621679445898"><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#HasBuildInfo"><span class="hs-identifier hs-type">L.HasBuildInfo</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-type">Component</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679445924"><span class="annot"><span class="annottext">buildInfo :: Lens' Component BuildInfo
+</span><a href="#local-6989586621679445924"><span class="hs-identifier hs-var hs-var hs-var hs-var">buildInfo</span></a></span></span><span> </span><span id="local-6989586621679445926"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445926"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CLib"><span class="hs-identifier hs-type">CLib</span></a></span><span> </span><span id="local-6989586621679445927"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445927"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; Component
+</span><a href="Distribution.Types.Component.html#CLib"><span class="hs-identifier hs-var">CLib</span></a></span><span> </span><span class="annot"><span class="annottext">(Library -&gt; Component) -&gt; f Library -&gt; f Component
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike f Library Library BuildInfo BuildInfo
+forall a. HasBuildInfo a =&gt; Lens' a BuildInfo
+Lens' Library BuildInfo
+</span><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">L.buildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445926"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445927"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">buildInfo</span></a></span><span> </span><span id="local-6989586621679445929"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445929"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CFLib"><span class="hs-identifier hs-type">CFLib</span></a></span><span> </span><span id="local-6989586621679445930"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445930"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; Component
+</span><a href="Distribution.Types.Component.html#CFLib"><span class="hs-identifier hs-var">CFLib</span></a></span><span> </span><span class="annot"><span class="annottext">(ForeignLib -&gt; Component) -&gt; f ForeignLib -&gt; f Component
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike f ForeignLib ForeignLib BuildInfo BuildInfo
+forall a. HasBuildInfo a =&gt; Lens' a BuildInfo
+Lens' ForeignLib BuildInfo
+</span><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">L.buildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445929"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445930"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">buildInfo</span></a></span><span> </span><span id="local-6989586621679445931"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445931"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CExe"><span class="hs-identifier hs-type">CExe</span></a></span><span> </span><span id="local-6989586621679445932"><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445932"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Executable -&gt; Component
+</span><a href="Distribution.Types.Component.html#CExe"><span class="hs-identifier hs-var">CExe</span></a></span><span> </span><span class="annot"><span class="annottext">(Executable -&gt; Component) -&gt; f Executable -&gt; f Component
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike f Executable Executable BuildInfo BuildInfo
+forall a. HasBuildInfo a =&gt; Lens' a BuildInfo
+Lens' Executable BuildInfo
+</span><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">L.buildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445931"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445932"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">buildInfo</span></a></span><span> </span><span id="local-6989586621679445933"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445933"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CTest"><span class="hs-identifier hs-type">CTest</span></a></span><span> </span><span id="local-6989586621679445934"><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445934"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; Component
+</span><a href="Distribution.Types.Component.html#CTest"><span class="hs-identifier hs-var">CTest</span></a></span><span> </span><span class="annot"><span class="annottext">(TestSuite -&gt; Component) -&gt; f TestSuite -&gt; f Component
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike f TestSuite TestSuite BuildInfo BuildInfo
+forall a. HasBuildInfo a =&gt; Lens' a BuildInfo
+Lens' TestSuite BuildInfo
+</span><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">L.buildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445933"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445934"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">buildInfo</span></a></span><span> </span><span id="local-6989586621679445935"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445935"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CBench"><span class="hs-identifier hs-type">CBench</span></a></span><span> </span><span id="local-6989586621679445936"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445936"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; Component
+</span><a href="Distribution.Types.Component.html#CBench"><span class="hs-identifier hs-var">CBench</span></a></span><span> </span><span class="annot"><span class="annottext">(Benchmark -&gt; Component) -&gt; f Benchmark -&gt; f Component
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike f Benchmark Benchmark BuildInfo BuildInfo
+forall a. HasBuildInfo a =&gt; Lens' a BuildInfo
+Lens' Benchmark BuildInfo
+</span><a href="Distribution.Types.BuildInfo.Lens.html#buildInfo"><span class="hs-identifier hs-var">L.buildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445935"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445936"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span id="local-6989586621679445504"><span class="annot"><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-type">foldComponent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679445504"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679445504"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Executable.html#Executable"><span class="hs-identifier hs-type">Executable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679445504"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.TestSuite.html#TestSuite"><span class="hs-identifier hs-type">TestSuite</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679445504"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679445504"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-type">Component</span></a></span><span>
+</span><span id="line-54"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679445504"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-55"></span><span id="foldComponent"><span class="annot"><span class="annottext">foldComponent :: forall a.
+(Library -&gt; a)
+-&gt; (ForeignLib -&gt; a)
+-&gt; (Executable -&gt; a)
+-&gt; (TestSuite -&gt; a)
+-&gt; (Benchmark -&gt; a)
+-&gt; Component
+-&gt; a
+</span><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var hs-var">foldComponent</span></a></span></span><span> </span><span id="local-6989586621679445937"><span class="annot"><span class="annottext">Library -&gt; a
+</span><a href="#local-6989586621679445937"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Executable -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CLib"><span class="hs-identifier hs-type">CLib</span></a></span><span>   </span><span id="local-6989586621679445938"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445938"><span class="hs-identifier hs-var">lib</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; a
+</span><a href="#local-6989586621679445937"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679445938"><span class="hs-identifier hs-var">lib</span></a></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var">foldComponent</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679445939"><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><a href="#local-6989586621679445939"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><span class="annottext">Executable -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CFLib"><span class="hs-identifier hs-type">CFLib</span></a></span><span>  </span><span id="local-6989586621679445940"><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445940"><span class="hs-identifier hs-var">flib</span></a></span></span><span class="hs-special">)</span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><a href="#local-6989586621679445939"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+</span><a href="#local-6989586621679445940"><span class="hs-identifier hs-var">flib</span></a></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var">foldComponent</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679445941"><span class="annot"><span class="annottext">Executable -&gt; a
+</span><a href="#local-6989586621679445941"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CExe"><span class="hs-identifier hs-type">CExe</span></a></span><span>   </span><span id="local-6989586621679445942"><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445942"><span class="hs-identifier hs-var">exe</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Executable -&gt; a
+</span><a href="#local-6989586621679445941"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Executable
+</span><a href="#local-6989586621679445942"><span class="hs-identifier hs-var">exe</span></a></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var">foldComponent</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Executable -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679445943"><span class="annot"><span class="annottext">TestSuite -&gt; a
+</span><a href="#local-6989586621679445943"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CTest"><span class="hs-identifier hs-type">CTest</span></a></span><span>  </span><span id="local-6989586621679445944"><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445944"><span class="hs-identifier hs-var">tst</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; a
+</span><a href="#local-6989586621679445943"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">TestSuite
+</span><a href="#local-6989586621679445944"><span class="hs-identifier hs-var">tst</span></a></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var">foldComponent</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Executable -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679445945"><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><a href="#local-6989586621679445945"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Component.html#CBench"><span class="hs-identifier hs-type">CBench</span></a></span><span> </span><span id="local-6989586621679445946"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445946"><span class="hs-identifier hs-var">bch</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><a href="#local-6989586621679445945"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445946"><span class="hs-identifier hs-var">bch</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Distribution.Types.Component.html#componentBuildInfo"><span class="hs-identifier hs-type">componentBuildInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-type">Component</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span>
+</span><span id="line-62"></span><span id="componentBuildInfo"><span class="annot"><span class="annottext">componentBuildInfo :: Component -&gt; BuildInfo
+</span><a href="Distribution.Types.Component.html#componentBuildInfo"><span class="hs-identifier hs-var hs-var">componentBuildInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">(Library -&gt; BuildInfo)
+-&gt; (ForeignLib -&gt; BuildInfo)
+-&gt; (Executable -&gt; BuildInfo)
+-&gt; (TestSuite -&gt; BuildInfo)
+-&gt; (Benchmark -&gt; BuildInfo)
+-&gt; Component
+-&gt; BuildInfo
+forall a.
+(Library -&gt; a)
+-&gt; (ForeignLib -&gt; a)
+-&gt; (Executable -&gt; a)
+-&gt; (TestSuite -&gt; a)
+-&gt; (Benchmark -&gt; a)
+-&gt; Component
+-&gt; a
+</span><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var">foldComponent</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; BuildInfo
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibBuildInfo"><span class="hs-identifier hs-var">foreignLibBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Executable -&gt; BuildInfo
+</span><a href="Distribution.Types.Executable.html#buildInfo"><span class="hs-identifier hs-var">buildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; BuildInfo
+</span><a href="Distribution.Types.TestSuite.html#testBuildInfo"><span class="hs-identifier hs-var">testBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; BuildInfo
+</span><a href="Distribution.Types.Benchmark.html#benchmarkBuildInfo"><span class="hs-identifier hs-var">benchmarkBuildInfo</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | Is a component buildable (i.e., not marked with @buildable: False@)?</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- See also this note in</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- &quot;Distribution.Types.ComponentRequestedSpec#buildable_vs_enabled_components&quot;.</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- @since 2.0.0.2</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Distribution.Types.Component.html#componentBuildable"><span class="hs-identifier hs-type">componentBuildable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-type">Component</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-72"></span><span id="componentBuildable"><span class="annot"><span class="annottext">componentBuildable :: Component -&gt; Bool
+</span><a href="Distribution.Types.Component.html#componentBuildable"><span class="hs-identifier hs-var hs-var">componentBuildable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; Bool
+</span><a href="Distribution.Types.BuildInfo.html#buildable"><span class="hs-identifier hs-var">buildable</span></a></span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; Bool)
+-&gt; (Component -&gt; BuildInfo) -&gt; Component -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Component -&gt; BuildInfo
+</span><a href="Distribution.Types.Component.html#componentBuildInfo"><span class="hs-identifier hs-var">componentBuildInfo</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="annot"><a href="Distribution.Types.Component.html#componentName"><span class="hs-identifier hs-type">componentName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-type">Component</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.ComponentName.html#ComponentName"><span class="hs-identifier hs-type">ComponentName</span></a></span><span>
+</span><span id="line-75"></span><span id="componentName"><span class="annot"><span class="annottext">componentName :: Component -&gt; ComponentName
+</span><a href="Distribution.Types.Component.html#componentName"><span class="hs-identifier hs-var hs-var">componentName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">(Library -&gt; ComponentName)
+-&gt; (ForeignLib -&gt; ComponentName)
+-&gt; (Executable -&gt; ComponentName)
+-&gt; (TestSuite -&gt; ComponentName)
+-&gt; (Benchmark -&gt; ComponentName)
+-&gt; Component
+-&gt; ComponentName
+forall a.
+(Library -&gt; a)
+-&gt; (ForeignLib -&gt; a)
+-&gt; (Executable -&gt; a)
+-&gt; (TestSuite -&gt; a)
+-&gt; (Benchmark -&gt; a)
+-&gt; Component
+-&gt; a
+</span><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var">foldComponent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LibraryName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CLibName"><span class="hs-identifier hs-var">CLibName</span></a></span><span> </span><span class="annot"><span class="annottext">(LibraryName -&gt; ComponentName)
+-&gt; (Library -&gt; LibraryName) -&gt; Library -&gt; ComponentName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; LibraryName
+</span><a href="Distribution.Types.Library.html#libName"><span class="hs-identifier hs-var">libName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CFLibName"><span class="hs-identifier hs-var">CFLibName</span></a></span><span>  </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; (ForeignLib -&gt; UnqualComponentName)
+-&gt; ForeignLib
+-&gt; ComponentName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib -&gt; UnqualComponentName
+</span><a href="Distribution.Types.ForeignLib.html#foreignLibName"><span class="hs-identifier hs-var">foreignLibName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CExeName"><span class="hs-identifier hs-var">CExeName</span></a></span><span>   </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; (Executable -&gt; UnqualComponentName)
+-&gt; Executable
+-&gt; ComponentName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Executable -&gt; UnqualComponentName
+</span><a href="Distribution.Types.Executable.html#exeName"><span class="hs-identifier hs-var">exeName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CTestName"><span class="hs-identifier hs-var">CTestName</span></a></span><span>  </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; (TestSuite -&gt; UnqualComponentName) -&gt; TestSuite -&gt; ComponentName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TestSuite -&gt; UnqualComponentName
+</span><a href="Distribution.Types.TestSuite.html#testName"><span class="hs-identifier hs-var">testName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnqualComponentName -&gt; ComponentName
+</span><a href="Distribution.Types.ComponentName.html#CBenchName"><span class="hs-identifier hs-var">CBenchName</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; ComponentName)
+-&gt; (Benchmark -&gt; UnqualComponentName) -&gt; Benchmark -&gt; ComponentName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="Distribution.Types.Benchmark.html#benchmarkName"><span class="hs-identifier hs-var">benchmarkName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Distribution.Types.Component.html#partitionComponents"><span class="hs-identifier hs-type">partitionComponents</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Component.html#Component"><span class="hs-identifier hs-type">Component</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.ForeignLib.html#ForeignLib"><span class="hs-identifier hs-type">ForeignLib</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Executable.html#Executable"><span class="hs-identifier hs-type">Executable</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.TestSuite.html#TestSuite"><span class="hs-identifier hs-type">TestSuite</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span id="partitionComponents"><span class="annot"><span class="annottext">partitionComponents :: [Component]
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+</span><a href="Distribution.Types.Component.html#partitionComponents"><span class="hs-identifier hs-var hs-var">partitionComponents</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Component
+ -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+     [Benchmark])
+ -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+     [Benchmark]))
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+-&gt; [Component]
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#foldr/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Library
+ -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+     [Benchmark])
+ -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+     [Benchmark]))
+-&gt; (ForeignLib
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark])
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark]))
+-&gt; (Executable
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark])
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark]))
+-&gt; (TestSuite
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark])
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark]))
+-&gt; (Benchmark
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark])
+    -&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+        [Benchmark]))
+-&gt; Component
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+forall a.
+(Library -&gt; a)
+-&gt; (ForeignLib -&gt; a)
+-&gt; (Executable -&gt; a)
+-&gt; (TestSuite -&gt; a)
+-&gt; (Benchmark -&gt; a)
+-&gt; Component
+-&gt; a
+</span><a href="Distribution.Types.Component.html#foldComponent"><span class="hs-identifier hs-var">foldComponent</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+forall {a} {b} {c} {d} {e}.
+a -&gt; ([a], b, c, d, e) -&gt; ([a], b, c, d, e)
+</span><a href="#local-6989586621679445965"><span class="hs-identifier hs-var">fa</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLib
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+forall {a} {a} {c} {d} {e}.
+a -&gt; (a, [a], c, d, e) -&gt; (a, [a], c, d, e)
+</span><a href="#local-6989586621679445966"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Executable
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+forall {a} {a} {b} {d} {e}.
+a -&gt; (a, b, [a], d, e) -&gt; (a, b, [a], d, e)
+</span><a href="#local-6989586621679445967"><span class="hs-identifier hs-var">fc</span></a></span><span> </span><span class="annot"><span class="annottext">TestSuite
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+forall {a} {a} {b} {c} {e}.
+a -&gt; (a, b, c, [a], e) -&gt; (a, b, c, [a], e)
+</span><a href="#local-6989586621679445968"><span class="hs-identifier hs-var">fd</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+-&gt; ([Library], [ForeignLib], [Executable], [TestSuite],
+    [Benchmark])
+forall {a} {a} {b} {c} {d}.
+a -&gt; (a, b, c, d, [a]) -&gt; (a, b, c, d, [a])
+</span><a href="#local-6989586621679445969"><span class="hs-identifier hs-var">fe</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679445965"><span class="annot"><span class="annottext">fa :: a -&gt; ([a], b, c, d, e) -&gt; ([a], b, c, d, e)
+</span><a href="#local-6989586621679445965"><span class="hs-identifier hs-var hs-var">fa</span></a></span></span><span> </span><span id="local-6989586621679445970"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445970"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679445971"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445971"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445972"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445972"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445973"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445973"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445974"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445974"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445975"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445975"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445970"><span class="hs-identifier hs-var">x</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445971"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445972"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445973"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445974"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445975"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>    </span><span id="local-6989586621679445966"><span class="annot"><span class="annottext">fb :: a -&gt; (a, [a], c, d, e) -&gt; (a, [a], c, d, e)
+</span><a href="#local-6989586621679445966"><span class="hs-identifier hs-var hs-var">fb</span></a></span></span><span> </span><span id="local-6989586621679445976"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445976"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679445977"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445977"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445978"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445978"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445979"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445979"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445980"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445980"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445981"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445981"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445977"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445976"><span class="hs-identifier hs-var">x</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445978"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445979"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445980"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445981"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>    </span><span id="local-6989586621679445967"><span class="annot"><span class="annottext">fc :: a -&gt; (a, b, [a], d, e) -&gt; (a, b, [a], d, e)
+</span><a href="#local-6989586621679445967"><span class="hs-identifier hs-var hs-var">fc</span></a></span></span><span> </span><span id="local-6989586621679445982"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445982"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679445983"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445983"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445984"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445984"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445985"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445985"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445986"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445986"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445987"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445987"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445983"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445984"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445982"><span class="hs-identifier hs-var">x</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445985"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445986"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445987"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>    </span><span id="local-6989586621679445968"><span class="annot"><span class="annottext">fd :: a -&gt; (a, b, c, [a], e) -&gt; (a, b, c, [a], e)
+</span><a href="#local-6989586621679445968"><span class="hs-identifier hs-var hs-var">fd</span></a></span></span><span> </span><span id="local-6989586621679445988"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445988"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679445989"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445989"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445990"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445990"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445991"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445991"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445992"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445992"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445993"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445993"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445989"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445990"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445991"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445988"><span class="hs-identifier hs-var">x</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445992"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679445993"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679445969"><span class="annot"><span class="annottext">fe :: a -&gt; (a, b, c, d, [a]) -&gt; (a, b, c, d, [a])
+</span><a href="#local-6989586621679445969"><span class="hs-identifier hs-var hs-var">fe</span></a></span></span><span> </span><span id="local-6989586621679445994"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445994"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679445995"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445995"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445996"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445996"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445997"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445997"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445998"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445998"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679445999"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445999"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445995"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679445996"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679445997"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679445998"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679445994"><span class="hs-identifier hs-var">x</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679445999"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span></pre></body></html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.TxSubmit.Config</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#TxSubmitNodeConfig"><span class="hs-identifier">TxSubmitNodeConfig</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier">GenTxSubmitNodeConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#readTxSubmitNodeConfig"><span class="hs-identifier">readTxSubmitNodeConfig</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#ToggleLogging"><span class="hs-identifier">ToggleLogging</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#ToggleMetrics"><span class="hs-identifier">ToggleMetrics</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Configuration</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Logging</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Configuration.Model</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Logging</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Configuration</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Logging</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.Exception.html#IOException"><span class="hs-identifier">IOException</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#catch"><span class="hs-identifier">catch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Object</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.:)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Parser</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Bool.html"><span class="hs-identifier">Data.Bool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Bool.html#bool"><span class="hs-identifier">bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B8</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/3a3igx6dzcdhfl09acas4mwcy4hi6cpf-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.html"><span class="hs-identifier">Data.Yaml</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Yaml</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">type</span><span> </span><span id="TxSubmitNodeConfig"><span class="annot"><a href="Cardano.TxSubmit.Config.html#TxSubmitNodeConfig"><span class="hs-identifier hs-var">TxSubmitNodeConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier hs-type">GenTxSubmitNodeConfig</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logging.Configuration</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">data</span><span> </span><span id="ToggleLogging"><span class="annot"><a href="Cardano.TxSubmit.Config.html#ToggleLogging"><span class="hs-identifier hs-var">ToggleLogging</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LoggingOn"><span class="annot"><a href="Cardano.TxSubmit.Config.html#LoggingOn"><span class="hs-identifier hs-var">LoggingOn</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="LoggingOff"><span class="annot"><a href="Cardano.TxSubmit.Config.html#LoggingOff"><span class="hs-identifier hs-var">LoggingOff</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679395779"><span id="local-6989586621679395781"><span class="annot"><span class="annottext">ToggleLogging -&gt; ToggleLogging -&gt; Bool
+(ToggleLogging -&gt; ToggleLogging -&gt; Bool)
+-&gt; (ToggleLogging -&gt; ToggleLogging -&gt; Bool) -&gt; Eq ToggleLogging
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ToggleLogging -&gt; ToggleLogging -&gt; Bool
+== :: ToggleLogging -&gt; ToggleLogging -&gt; Bool
+$c/= :: ToggleLogging -&gt; ToggleLogging -&gt; Bool
+/= :: ToggleLogging -&gt; ToggleLogging -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679395786"><span id="local-6989586621679395788"><span id="local-6989586621679395792"><span class="annot"><span class="annottext">Int -&gt; ToggleLogging -&gt; ShowS
+[ToggleLogging] -&gt; ShowS
+ToggleLogging -&gt; [Char]
+(Int -&gt; ToggleLogging -&gt; ShowS)
+-&gt; (ToggleLogging -&gt; [Char])
+-&gt; ([ToggleLogging] -&gt; ShowS)
+-&gt; Show ToggleLogging
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ToggleLogging -&gt; ShowS
+showsPrec :: Int -&gt; ToggleLogging -&gt; ShowS
+$cshow :: ToggleLogging -&gt; [Char]
+show :: ToggleLogging -&gt; [Char]
+$cshowList :: [ToggleLogging] -&gt; ShowS
+showList :: [ToggleLogging] -&gt; ShowS
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="ToggleMetrics"><span class="annot"><a href="Cardano.TxSubmit.Config.html#ToggleMetrics"><span class="hs-identifier hs-var">ToggleMetrics</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MetricsOn"><span class="annot"><a href="Cardano.TxSubmit.Config.html#MetricsOn"><span class="hs-identifier hs-var">MetricsOn</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="MetricsOff"><span class="annot"><a href="Cardano.TxSubmit.Config.html#MetricsOff"><span class="hs-identifier hs-var">MetricsOff</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679395798"><span id="local-6989586621679395800"><span class="annot"><span class="annottext">ToggleMetrics -&gt; ToggleMetrics -&gt; Bool
+(ToggleMetrics -&gt; ToggleMetrics -&gt; Bool)
+-&gt; (ToggleMetrics -&gt; ToggleMetrics -&gt; Bool) -&gt; Eq ToggleMetrics
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ToggleMetrics -&gt; ToggleMetrics -&gt; Bool
+== :: ToggleMetrics -&gt; ToggleMetrics -&gt; Bool
+$c/= :: ToggleMetrics -&gt; ToggleMetrics -&gt; Bool
+/= :: ToggleMetrics -&gt; ToggleMetrics -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679395804"><span id="local-6989586621679395806"><span id="local-6989586621679395810"><span class="annot"><span class="annottext">Int -&gt; ToggleMetrics -&gt; ShowS
+[ToggleMetrics] -&gt; ShowS
+ToggleMetrics -&gt; [Char]
+(Int -&gt; ToggleMetrics -&gt; ShowS)
+-&gt; (ToggleMetrics -&gt; [Char])
+-&gt; ([ToggleMetrics] -&gt; ShowS)
+-&gt; Show ToggleMetrics
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ToggleMetrics -&gt; ShowS
+showsPrec :: Int -&gt; ToggleMetrics -&gt; ShowS
+$cshow :: ToggleMetrics -&gt; [Char]
+show :: ToggleMetrics -&gt; [Char]
+$cshowList :: [ToggleMetrics] -&gt; ShowS
+showList :: [ToggleMetrics] -&gt; ShowS
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="GenTxSubmitNodeConfig"><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier hs-var">GenTxSubmitNodeConfig</span></a></span></span><span> </span><span id="local-6989586621679395702"><span class="annot"><a href="#local-6989586621679395702"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenTxSubmitNodeConfig"><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier hs-var">GenTxSubmitNodeConfig</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tscLoggingConfig"><span class="annot"><span class="annottext">forall a. GenTxSubmitNodeConfig a -&gt; a
+</span><a href="Cardano.TxSubmit.Config.html#tscLoggingConfig"><span class="hs-identifier hs-var hs-var">tscLoggingConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679395702"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tscToggleLogging"><span class="annot"><span class="annottext">forall a. GenTxSubmitNodeConfig a -&gt; ToggleLogging
+</span><a href="Cardano.TxSubmit.Config.html#tscToggleLogging"><span class="hs-identifier hs-var hs-var">tscToggleLogging</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.TxSubmit.Config.html#ToggleLogging"><span class="hs-identifier hs-type">ToggleLogging</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tscToggleMetrics"><span class="annot"><span class="annottext">forall a. GenTxSubmitNodeConfig a -&gt; ToggleMetrics
+</span><a href="Cardano.TxSubmit.Config.html#tscToggleMetrics"><span class="hs-identifier hs-var hs-var">tscToggleMetrics</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.TxSubmit.Config.html#ToggleMetrics"><span class="hs-identifier hs-type">ToggleMetrics</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.TxSubmit.Config.html#readTxSubmitNodeConfig"><span class="hs-identifier hs-type">readTxSubmitNodeConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#TxSubmitNodeConfig"><span class="hs-identifier hs-type">TxSubmitNodeConfig</span></a></span><span>
+</span><span id="line-38"></span><span id="readTxSubmitNodeConfig"><span class="annot"><span class="annottext">readTxSubmitNodeConfig :: [Char] -&gt; IO TxSubmitNodeConfig
+</span><a href="Cardano.TxSubmit.Config.html#readTxSubmitNodeConfig"><span class="hs-identifier hs-var hs-var">readTxSubmitNodeConfig</span></a></span></span><span> </span><span id="local-6989586621679395817"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679395817"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679395818"><span class="annot"><span class="annottext">Either ParseException (GenTxSubmitNodeConfig Representation)
+</span><a href="#local-6989586621679395818"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; Either ParseException (GenTxSubmitNodeConfig Representation)
+forall a. FromJSON a =&gt; ByteString -&gt; Either ParseException a
+</span><a href="file:///nix/store/3a3igx6dzcdhfl09acas4mwcy4hi6cpf-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.html#decodeEither%27"><span class="hs-identifier hs-var">Yaml.decodeEither'</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString
+ -&gt; Either ParseException (GenTxSubmitNodeConfig Representation))
+-&gt; IO ByteString
+-&gt; IO
+     (Either ParseException (GenTxSubmitNodeConfig Representation))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString
+</span><a href="#local-6989586621679395821"><span class="hs-identifier hs-var">readLoggingConfig</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either ParseException (GenTxSubmitNodeConfig Representation)
+</span><a href="#local-6989586621679395818"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679395822"><span class="annot"><span class="annottext">ParseException
+</span><a href="#local-6989586621679395822"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO TxSubmitNodeConfig
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO TxSubmitNodeConfig)
+-&gt; [Char] -&gt; IO TxSubmitNodeConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;readTxSubmitNodeConfig: Error parsing config: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParseException -&gt; [Char]
+</span><a href="file:///nix/store/3a3igx6dzcdhfl09acas4mwcy4hi6cpf-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.Internal.html#prettyPrintParseException"><span class="hs-identifier hs-var">Yaml.prettyPrintParseException</span></a></span><span> </span><span class="annot"><span class="annottext">ParseException
+</span><a href="#local-6989586621679395822"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679395825"><span class="annot"><span class="annottext">GenTxSubmitNodeConfig Representation
+</span><a href="#local-6989586621679395825"><span class="hs-identifier hs-var">icr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenTxSubmitNodeConfig Representation -&gt; IO TxSubmitNodeConfig
+</span><a href="Cardano.TxSubmit.Config.html#convertLogging"><span class="hs-identifier hs-var">convertLogging</span></a></span><span> </span><span class="annot"><span class="annottext">GenTxSubmitNodeConfig Representation
+</span><a href="#local-6989586621679395825"><span class="hs-identifier hs-var">icr</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><a href="#local-6989586621679395821"><span class="hs-identifier hs-type">readLoggingConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621679395821"><span class="annot"><span class="annottext">readLoggingConfig :: IO ByteString
+</span><a href="#local-6989586621679395821"><span class="hs-identifier hs-var hs-var">readLoggingConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">IO ByteString -&gt; (IOException -&gt; IO ByteString) -&gt; IO ByteString
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#catch"><span class="hs-identifier hs-var">catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; IO ByteString
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">B8.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679395817"><span class="hs-identifier hs-var">fp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((IOException -&gt; IO ByteString) -&gt; IO ByteString)
+-&gt; (IOException -&gt; IO ByteString) -&gt; IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">IOException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.Exception.html#IOException"><span class="hs-identifier hs-type">IOException</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>        </span><span class="annot"><span class="annottext">[Char] -&gt; IO ByteString
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO ByteString) -&gt; [Char] -&gt; IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Cannot find the logging configuration file at : &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679395817"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Cardano.TxSubmit.Config.html#convertLogging"><span class="hs-identifier hs-type">convertLogging</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier hs-type">GenTxSubmitNodeConfig</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logging.Representation</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#TxSubmitNodeConfig"><span class="hs-identifier hs-type">TxSubmitNodeConfig</span></a></span><span>
+</span><span id="line-50"></span><span id="convertLogging"><span class="annot"><span class="annottext">convertLogging :: GenTxSubmitNodeConfig Representation -&gt; IO TxSubmitNodeConfig
+</span><a href="Cardano.TxSubmit.Config.html#convertLogging"><span class="hs-identifier hs-var hs-var">convertLogging</span></a></span></span><span> </span><span id="local-6989586621679395828"><span class="annot"><span class="annottext">GenTxSubmitNodeConfig Representation
+</span><a href="#local-6989586621679395828"><span class="hs-identifier hs-var">tsc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679395829"><span class="annot"><span class="annottext">Configuration
+</span><a href="#local-6989586621679395829"><span class="hs-identifier hs-var">lc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Representation -&gt; IO Configuration
+</span><span class="hs-identifier hs-var">Logging.setupFromRepresentation</span></span><span> </span><span class="annot"><span class="annottext">(Representation -&gt; IO Configuration)
+-&gt; Representation -&gt; IO Configuration
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GenTxSubmitNodeConfig Representation -&gt; Representation
+forall a. GenTxSubmitNodeConfig a -&gt; a
+</span><a href="Cardano.TxSubmit.Config.html#tscLoggingConfig"><span class="hs-identifier hs-var">tscLoggingConfig</span></a></span><span> </span><span class="annot"><span class="annottext">GenTxSubmitNodeConfig Representation
+</span><a href="#local-6989586621679395828"><span class="hs-identifier hs-var">tsc</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">TxSubmitNodeConfig -&gt; IO TxSubmitNodeConfig
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TxSubmitNodeConfig -&gt; IO TxSubmitNodeConfig)
+-&gt; TxSubmitNodeConfig -&gt; IO TxSubmitNodeConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GenTxSubmitNodeConfig Representation
+</span><a href="#local-6989586621679395828"><span class="hs-identifier hs-var">tsc</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.Config.html#tscLoggingConfig"><span class="hs-identifier hs-var">tscLoggingConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679395829"><span class="hs-identifier hs-type">lc</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">---------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679395833"><span id="local-6989586621679395836"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier hs-type">GenTxSubmitNodeConfig</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logging.Representation</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679395839"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (GenTxSubmitNodeConfig Representation)
+</span><a href="#local-6989586621679395839"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+-&gt; (Object -&gt; Parser (GenTxSubmitNodeConfig Representation))
+-&gt; Value
+-&gt; Parser (GenTxSubmitNodeConfig Representation)
+forall a. [Char] -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withObject</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;top-level&quot;</span></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser (GenTxSubmitNodeConfig Representation)
+</span><a href="Cardano.TxSubmit.Config.html#parseGenTxSubmitNodeConfig"><span class="hs-identifier hs-var">parseGenTxSubmitNodeConfig</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.TxSubmit.Config.html#parseGenTxSubmitNodeConfig"><span class="hs-identifier hs-type">parseGenTxSubmitNodeConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier hs-type">GenTxSubmitNodeConfig</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logging.Representation</span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span id="parseGenTxSubmitNodeConfig"><span class="annot"><span class="annottext">parseGenTxSubmitNodeConfig :: Object -&gt; Parser (GenTxSubmitNodeConfig Representation)
+</span><a href="Cardano.TxSubmit.Config.html#parseGenTxSubmitNodeConfig"><span class="hs-identifier hs-var hs-var">parseGenTxSubmitNodeConfig</span></a></span></span><span> </span><span id="local-6989586621679395843"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679395843"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Representation
+-&gt; ToggleLogging
+-&gt; ToggleMetrics
+-&gt; GenTxSubmitNodeConfig Representation
+forall a.
+a -&gt; ToggleLogging -&gt; ToggleMetrics -&gt; GenTxSubmitNodeConfig a
+</span><a href="Cardano.TxSubmit.Config.html#GenTxSubmitNodeConfig"><span class="hs-identifier hs-var">GenTxSubmitNodeConfig</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">(Representation
+ -&gt; ToggleLogging
+ -&gt; ToggleMetrics
+ -&gt; GenTxSubmitNodeConfig Representation)
+-&gt; Parser Representation
+-&gt; Parser
+     (ToggleLogging
+      -&gt; ToggleMetrics -&gt; GenTxSubmitNodeConfig Representation)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser Representation
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; Value
+</span><span class="hs-identifier hs-var">Object</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679395843"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (ToggleLogging
+   -&gt; ToggleMetrics -&gt; GenTxSubmitNodeConfig Representation)
+-&gt; Parser ToggleLogging
+-&gt; Parser (ToggleMetrics -&gt; GenTxSubmitNodeConfig Representation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; ToggleLogging) -&gt; Parser Bool -&gt; Parser ToggleLogging
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ToggleLogging -&gt; ToggleLogging -&gt; Bool -&gt; ToggleLogging
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">ToggleLogging
+</span><a href="Cardano.TxSubmit.Config.html#LoggingOff"><span class="hs-identifier hs-var">LoggingOff</span></a></span><span> </span><span class="annot"><span class="annottext">ToggleLogging
+</span><a href="Cardano.TxSubmit.Config.html#LoggingOn"><span class="hs-identifier hs-var">LoggingOn</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679395843"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Bool
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;EnableLogging&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">Parser (ToggleMetrics -&gt; GenTxSubmitNodeConfig Representation)
+-&gt; Parser ToggleMetrics
+-&gt; Parser (GenTxSubmitNodeConfig Representation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; ToggleMetrics) -&gt; Parser Bool -&gt; Parser ToggleMetrics
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ToggleMetrics -&gt; ToggleMetrics -&gt; Bool -&gt; ToggleMetrics
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">ToggleMetrics
+</span><a href="Cardano.TxSubmit.Config.html#MetricsOff"><span class="hs-identifier hs-var">MetricsOff</span></a></span><span> </span><span class="annot"><span class="annottext">ToggleMetrics
+</span><a href="Cardano.TxSubmit.Config.html#MetricsOn"><span class="hs-identifier hs-var">MetricsOn</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679395843"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Bool
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;EnableLogMetrics&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span></pre></body></html>

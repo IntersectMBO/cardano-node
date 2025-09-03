@@ -1,0 +1,751 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DuplicateRecordFields #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Testnet.Property.Assert</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#assertByDeadlineIOCustom"><span class="hs-identifier">assertByDeadlineIOCustom</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#readJsonLines"><span class="hs-identifier">readJsonLines</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#assertChainExtended"><span class="hs-identifier">assertChainExtended</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#getRelevantSlots"><span class="hs-identifier">getRelevantSlots</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#assertExpectedSposInLedgerState"><span class="hs-identifier">assertExpectedSposInLedgerState</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#assertErasEqual"><span class="hs-identifier">assertErasEqual</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.6/cardano-api-10.17.1.0-ba0f40e131833559d935924360573d0afd7b3d495e246c107f73abb89a5cea2e/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.6/cardano-api-10.17.1.0-ba0f40e131833559d935924360573d0afd7b3d495e246c107f73abb89a5cea2e/share/doc/html/src/Cardano.Api.Value.Internal.html#Value"><span class="hs-identifier">Value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.OldList.html#lines"><span class="hs-identifier">lines</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html"><span class="hs-identifier">Control.Monad.Catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier">MonadCatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html"><span class="hs-identifier">Control.Monad.Trans.Reader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier">ReaderT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/33ljpp1xjs9plf850ylrvspzkd808zh4-resourcet-lib-resourcet-1.3.0-haddock-doc/share/doc/resourcet/html/src/Control.Monad.Trans.Resource.html"><span class="hs-identifier">Control.Monad.Trans.Resource</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/33ljpp1xjs9plf850ylrvspzkd808zh4-resourcet-lib-resourcet-1.3.0-haddock-doc/share/doc/resourcet/html/src/Control.Monad.Trans.Resource.Internal.html#ResourceT"><span class="hs-identifier">ResourceT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.:)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier">mapMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Maybe</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DTC</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Type.Equality.html"><span class="hs-identifier">Data.Type.Equality</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word8"><span class="hs-identifier">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GHC</span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Process.Run.html"><span class="hs-identifier">Testnet.Process.Run</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Types.html"><span class="hs-identifier">Testnet.Start.Types</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier">MonadTest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Internal.Test.Integration.html"><span class="hs-identifier">Hedgehog.Extras.Internal.Test.Integration</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Internal.Test.Integration.html#IntegrationState"><span class="hs-identifier">IntegrationState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.File.html"><span class="hs-identifier">Hedgehog.Extras.Stock.IO.File</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html"><span class="hs-identifier">Hedgehog.Extras.Test.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Prim.html#failMessage"><span class="hs-identifier">failMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html"><span class="hs-identifier">Hedgehog.Extras.Test.Base</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.File.html"><span class="hs-identifier">Hedgehog.Extras.Test.File</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Process.html"><span class="hs-identifier">Hedgehog.Extras.Test.Process</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Process.html#ExecConfig"><span class="hs-identifier">ExecConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Testnet.Property.Assert.html#newlineBytes"><span class="hs-identifier hs-type">newlineBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>
+</span><span id="line-56"></span><span id="newlineBytes"><span class="annot"><span class="annottext">newlineBytes :: Word8
+</span><a href="Testnet.Property.Assert.html#newlineBytes"><span class="hs-identifier hs-var hs-var">newlineBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span id="local-6989586621679559228"><span class="annot"><a href="Testnet.Property.Assert.html#readJsonLines"><span class="hs-identifier hs-type">readJsonLines</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559228"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559228"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679559228"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">]</span></span><span>
+</span><span id="line-59"></span><span id="readJsonLines"><span class="annot"><span class="annottext">readJsonLines :: forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+FilePath -&gt; m [Value]
+</span><a href="Testnet.Property.Assert.html#readJsonLines"><span class="hs-identifier hs-var hs-var">readJsonLines</span></a></span></span><span> </span><span id="local-6989586621679559428"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559428"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m [Value]) -&gt; m [Value]
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m [Value]) -&gt; m [Value])
+-&gt; (HasCallStack =&gt; m [Value]) -&gt; m [Value]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe Value) -&gt; [ByteString] -&gt; [Value]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Aeson.decode</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; [Value])
+-&gt; (ByteString -&gt; [ByteString]) -&gt; ByteString -&gt; [Value]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#split"><span class="hs-identifier hs-var">LBS.split</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Testnet.Property.Assert.html#newlineBytes"><span class="hs-identifier hs-var">newlineBytes</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; [Value]) -&gt; m ByteString -&gt; m [Value]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; m ByteString
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#readFile"><span class="hs-identifier hs-var">LBS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559428"><span class="hs-identifier hs-var">fp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Testnet.Property.Assert.html#fileJsonGrep"><span class="hs-identifier hs-type">fileJsonGrep</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-62"></span><span id="fileJsonGrep"><span class="annot"><span class="annottext">fileJsonGrep :: FilePath -&gt; (Value -&gt; Bool) -&gt; IO Bool
+</span><a href="Testnet.Property.Assert.html#fileJsonGrep"><span class="hs-identifier hs-var hs-var">fileJsonGrep</span></a></span></span><span> </span><span id="local-6989586621679559444"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559444"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621679559445"><span class="annot"><span class="annottext">Value -&gt; Bool
+</span><a href="#local-6989586621679559445"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679559446"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679559446"><span class="hs-identifier hs-var">lines</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#split"><span class="hs-identifier hs-var">LBS.split</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Testnet.Property.Assert.html#newlineBytes"><span class="hs-identifier hs-var">newlineBytes</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; [ByteString]) -&gt; IO ByteString -&gt; IO [ByteString]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#readFile"><span class="hs-identifier hs-var">LBS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559444"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679559447"><span class="annot"><span class="annottext">jsons :: [Value]
+</span><a href="#local-6989586621679559447"><span class="hs-identifier hs-var hs-var">jsons</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe Value) -&gt; [ByteString] -&gt; [Value]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Aeson.decode</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679559446"><span class="hs-identifier hs-var">lines</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; IO Bool) -&gt; Bool -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Bool) -&gt; [Value] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">L.any</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Bool
+</span><a href="#local-6989586621679559445"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679559447"><span class="hs-identifier hs-var">jsons</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span id="local-6989586621679559253"><span class="annot"><a href="Testnet.Property.Assert.html#assertByDeadlineIOCustom"><span class="hs-identifier hs-type">assertByDeadlineIOCustom</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559253"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559253"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">DTC.UTCTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679559253"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-70"></span><span id="assertByDeadlineIOCustom"><span class="annot"><span class="annottext">assertByDeadlineIOCustom :: forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+FilePath -&gt; UTCTime -&gt; IO Bool -&gt; m ()
+</span><a href="Testnet.Property.Assert.html#assertByDeadlineIOCustom"><span class="hs-identifier hs-var hs-var">assertByDeadlineIOCustom</span></a></span></span><span> </span><span id="local-6989586621679559456"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559456"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span id="local-6989586621679559457"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559457"><span class="hs-identifier hs-var">deadline</span></a></span></span><span> </span><span id="local-6989586621679559458"><span class="annot"><span class="annottext">IO Bool
+</span><a href="#local-6989586621679559458"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679559496"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679559496"><span class="hs-identifier hs-var">success</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; m Bool
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="#local-6989586621679559458"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679559496"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679559498"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559498"><span class="hs-identifier hs-var">currentTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO UTCTime -&gt; m UTCTime
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO UTCTime
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html#getCurrentTime"><span class="hs-identifier hs-var">DTC.getCurrentTime</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559498"><span class="hs-identifier hs-var">currentTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559457"><span class="hs-identifier hs-var">deadline</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">IO.threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1_000_000</span></span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">FilePath -&gt; UTCTime -&gt; IO Bool -&gt; m ()
+forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+FilePath -&gt; UTCTime -&gt; IO Bool -&gt; m ()
+</span><a href="Testnet.Property.Assert.html#assertByDeadlineIOCustom"><span class="hs-identifier hs-var">assertByDeadlineIOCustom</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559456"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559457"><span class="hs-identifier hs-var">deadline</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="#local-6989586621679559458"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><span class="annottext">UTCTime -&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#annotateShow"><span class="hs-identifier hs-var">H.annotateShow</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559498"><span class="hs-identifier hs-var">currentTime</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">CallStack -&gt; FilePath -&gt; m ()
+forall (m :: * -&gt; *) a. MonadTest m =&gt; CallStack -&gt; FilePath -&gt; m a
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Prim.html#failMessage"><span class="hs-identifier hs-var">H.failMessage</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+HasCallStack =&gt; CallStack
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html#callStack"><span class="hs-identifier hs-var">GHC.callStack</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; m ()) -&gt; FilePath -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Condition not met by deadline: &quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559456"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><span class="hs-comment">-- | A sanity check that confirms that there are the expected number of SPOs in the ledger state</span></span><span>
+</span><span id="line-83"></span><span id="local-6989586621679559268"><span class="annot"><a href="Testnet.Property.Assert.html#assertExpectedSposInLedgerState"><span class="hs-identifier hs-type">assertExpectedSposInLedgerState</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559268"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier hs-type">MonadCatch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559268"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559268"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Stake pools query output filepath</span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NumPools"><span class="hs-identifier hs-type">NumPools</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Process.html#ExecConfig"><span class="hs-identifier hs-type">ExecConfig</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679559268"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-89"></span><span id="assertExpectedSposInLedgerState"><span class="annot"><span class="annottext">assertExpectedSposInLedgerState :: forall (m :: * -&gt; *).
+(MonadTest m, MonadCatch m, MonadIO m, HasCallStack) =&gt;
+FilePath -&gt; NumPools -&gt; ExecConfig -&gt; m ()
+</span><a href="Testnet.Property.Assert.html#assertExpectedSposInLedgerState"><span class="hs-identifier hs-var hs-var">assertExpectedSposInLedgerState</span></a></span></span><span> </span><span id="local-6989586621679559513"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559513"><span class="hs-identifier hs-var">output</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Start.Types.html#NumPools"><span class="hs-identifier hs-type">NumPools</span></a></span><span> </span><span id="local-6989586621679559515"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559515"><span class="hs-identifier hs-var">numExpectedPools</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679559516"><span class="annot"><span class="annottext">ExecConfig
+</span><a href="#local-6989586621679559516"><span class="hs-identifier hs-var">execConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><span class="annottext">m FilePath -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m FilePath -&gt; m ()) -&gt; m FilePath -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ExecConfig -&gt; [FilePath] -&gt; m FilePath
+forall (m :: * -&gt; *).
+(MonadTest m, MonadCatch m, MonadIO m, HasCallStack) =&gt;
+ExecConfig -&gt; [FilePath] -&gt; m FilePath
+</span><a href="Testnet.Process.Run.html#execCli%27"><span class="hs-identifier hs-var">execCli'</span></a></span><span> </span><span class="annot"><span class="annottext">ExecConfig
+</span><a href="#local-6989586621679559516"><span class="hs-identifier hs-var">execConfig</span></a></span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;latest&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;query&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;stake-pools&quot;</span></span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;--out-file&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559513"><span class="hs-identifier hs-var">output</span></a></span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621679559558"><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621679559558"><span class="hs-identifier hs-var">poolSet</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either FilePath (Set PoolId) -&gt; m (Set PoolId)
+forall (m :: * -&gt; *) x a.
+(MonadTest m, Show x, HasCallStack) =&gt;
+Either x a -&gt; m a
+</span><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalEither"><span class="hs-identifier hs-var">H.evalEither</span></a></span><span> </span><span class="annot"><span class="annottext">(Either FilePath (Set PoolId) -&gt; m (Set PoolId))
+-&gt; m (Either FilePath (Set PoolId)) -&gt; m (Set PoolId)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either FilePath (Set PoolId))
+-&gt; m (Either FilePath (Set PoolId))
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; FilePath -&gt; IO (Either FilePath a)
+</span><span class="hs-identifier hs-var">Aeson.eitherDecodeFileStrict'</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.6/cardano-api-10.17.1.0-ba0f40e131833559d935924360573d0afd7b3d495e246c107f73abb89a5cea2e/share/doc/html/src/Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559513"><span class="hs-identifier hs-var">output</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; m ()
+forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+FilePath -&gt; m ()
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.File.html#cat"><span class="hs-identifier hs-var">H.cat</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559513"><span class="hs-identifier hs-var">output</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679559563"><span class="annot"><span class="annottext">numPoolsInLedgerState :: Int
+</span><a href="#local-6989586621679559563"><span class="hs-identifier hs-var hs-var">numPoolsInLedgerState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set PoolId -&gt; Int
+forall a. Set a -&gt; Int
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#size"><span class="hs-identifier hs-var">Set.size</span></a></span><span> </span><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621679559558"><span class="hs-identifier hs-var">poolSet</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559563"><span class="hs-identifier hs-var">numPoolsInLedgerState</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559515"><span class="hs-identifier hs-var">numExpectedPools</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">CallStack -&gt; FilePath -&gt; m ()
+forall (m :: * -&gt; *) a. MonadTest m =&gt; CallStack -&gt; FilePath -&gt; m a
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Prim.html#failMessage"><span class="hs-identifier hs-var">failMessage</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+HasCallStack =&gt; CallStack
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html#callStack"><span class="hs-identifier hs-var">GHC.callStack</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">(FilePath -&gt; m ()) -&gt; FilePath -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[FilePath] -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Expected number of stake pools not found in ledger state&quot;</span></span><span>
+</span><span id="line-103"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Expected: &quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559515"><span class="hs-identifier hs-var">numExpectedPools</span></a></span><span>
+</span><span id="line-104"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Actual: &quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559563"><span class="hs-identifier hs-var">numPoolsInLedgerState</span></a></span><span>
+</span><span id="line-105"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span id="local-6989586621679559290"><span class="annot"><a href="Testnet.Property.Assert.html#assertChainExtended"><span class="hs-identifier hs-type">assertChainExtended</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">H.MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559290"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559290"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">DTC.UTCTime</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormat"><span class="hs-identifier hs-type">NodeLoggingFormat</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679559290"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-115"></span><span id="assertChainExtended"><span class="annot"><span class="annottext">assertChainExtended :: forall (m :: * -&gt; *).
+(HasCallStack, MonadTest m, MonadIO m) =&gt;
+UTCTime -&gt; NodeLoggingFormat -&gt; FilePath -&gt; m ()
+</span><a href="Testnet.Property.Assert.html#assertChainExtended"><span class="hs-identifier hs-var hs-var">assertChainExtended</span></a></span></span><span> </span><span id="local-6989586621679559572"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559572"><span class="hs-identifier hs-var">deadline</span></a></span></span><span> </span><span id="local-6989586621679559573"><span class="annot"><span class="annottext">NodeLoggingFormat
+</span><a href="#local-6989586621679559573"><span class="hs-identifier hs-var">nodeLoggingFormat</span></a></span></span><span> </span><span id="local-6989586621679559574"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559574"><span class="hs-identifier hs-var">nodeStdoutFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; UTCTime -&gt; IO Bool -&gt; m ()
+forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+FilePath -&gt; UTCTime -&gt; IO Bool -&gt; m ()
+</span><a href="Testnet.Property.Assert.html#assertByDeadlineIOCustom"><span class="hs-identifier hs-var">assertByDeadlineIOCustom</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Chain not extended&quot;</span></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679559572"><span class="hs-identifier hs-var">deadline</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; m ()) -&gt; IO Bool -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">NodeLoggingFormat
+</span><a href="#local-6989586621679559573"><span class="hs-identifier hs-var">nodeLoggingFormat</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#NodeLoggingFormatAsText"><span class="hs-identifier hs-var">NodeLoggingFormatAsText</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; IO Bool
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.File.html#fileContains"><span class="hs-identifier hs-var">IO.fileContains</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Chain extended, new tip&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559574"><span class="hs-identifier hs-var">nodeStdoutFile</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#NodeLoggingFormatAsJson"><span class="hs-identifier hs-var">NodeLoggingFormatAsJson</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; (Value -&gt; Bool) -&gt; IO Bool
+</span><a href="Testnet.Property.Assert.html#fileJsonGrep"><span class="hs-identifier hs-var">fileJsonGrep</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559574"><span class="hs-identifier hs-var">nodeStdoutFile</span></a></span><span> </span><span class="annot"><span class="annottext">((Value -&gt; Bool) -&gt; IO Bool) -&gt; (Value -&gt; Bool) -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679559594"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679559594"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-120"></span><span>                                    </span><span class="annot"><span class="annottext">(Value -&gt; Parser (LogEntry Kind)) -&gt; Value -&gt; Maybe (LogEntry Kind)
+forall a b. (a -&gt; Parser b) -&gt; a -&gt; Maybe b
+</span><span class="hs-identifier hs-var">Aeson.parseMaybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.parseJSON</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Property.Assert.html#LogEntry"><span class="hs-identifier hs-type">LogEntry</span></a></span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679559594"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (LogEntry Kind) -&gt; Maybe (LogEntry Kind) -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">LogEntry Kind -&gt; Maybe (LogEntry Kind)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kind -&gt; LogEntry Kind
+forall a. a -&gt; LogEntry a
+</span><a href="Testnet.Property.Assert.html#LogEntry"><span class="hs-identifier hs-var">LogEntry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Kind
+</span><a href="Testnet.Property.Assert.html#Kind"><span class="hs-identifier hs-var">Kind</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;AddedToCurrentChain&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-keyword">newtype</span><span> </span><span id="LogEntry"><span class="annot"><a href="Testnet.Property.Assert.html#LogEntry"><span class="hs-identifier hs-var">LogEntry</span></a></span></span><span> </span><span id="local-6989586621679559301"><span class="annot"><a href="#local-6989586621679559301"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LogEntry"><span class="annot"><a href="Testnet.Property.Assert.html#LogEntry"><span class="hs-identifier hs-var">LogEntry</span></a></span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="%24sel%3AunLogEntry%3ALogEntry"><span class="annot"><span class="annottext">forall a. LogEntry a -&gt; a
+</span><a href="Testnet.Property.Assert.html#%24sel%3AunLogEntry%3ALogEntry"><span class="hs-identifier hs-var hs-var">unLogEntry</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679559301"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679559602"><span id="local-6989586621679559606"><span class="annot"><span class="annottext">LogEntry a -&gt; LogEntry a -&gt; Bool
+(LogEntry a -&gt; LogEntry a -&gt; Bool)
+-&gt; (LogEntry a -&gt; LogEntry a -&gt; Bool) -&gt; Eq (LogEntry a)
+forall a. Eq a =&gt; LogEntry a -&gt; LogEntry a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; LogEntry a -&gt; LogEntry a -&gt; Bool
+== :: LogEntry a -&gt; LogEntry a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; LogEntry a -&gt; LogEntry a -&gt; Bool
+/= :: LogEntry a -&gt; LogEntry a -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679559612"><span id="local-6989586621679559616"><span id="local-6989586621679559620"><span class="annot"><span class="annottext">Int -&gt; LogEntry a -&gt; FilePath -&gt; FilePath
+[LogEntry a] -&gt; FilePath -&gt; FilePath
+LogEntry a -&gt; FilePath
+(Int -&gt; LogEntry a -&gt; FilePath -&gt; FilePath)
+-&gt; (LogEntry a -&gt; FilePath)
+-&gt; ([LogEntry a] -&gt; FilePath -&gt; FilePath)
+-&gt; Show (LogEntry a)
+forall a. Show a =&gt; Int -&gt; LogEntry a -&gt; FilePath -&gt; FilePath
+forall a. Show a =&gt; [LogEntry a] -&gt; FilePath -&gt; FilePath
+forall a. Show a =&gt; LogEntry a -&gt; FilePath
+forall a.
+(Int -&gt; a -&gt; FilePath -&gt; FilePath)
+-&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; FilePath -&gt; FilePath) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; LogEntry a -&gt; FilePath -&gt; FilePath
+showsPrec :: Int -&gt; LogEntry a -&gt; FilePath -&gt; FilePath
+$cshow :: forall a. Show a =&gt; LogEntry a -&gt; FilePath
+show :: LogEntry a -&gt; FilePath
+$cshowList :: forall a. Show a =&gt; [LogEntry a] -&gt; FilePath -&gt; FilePath
+showList :: [LogEntry a] -&gt; FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679559227"><span id="local-6989586621679559626"><span id="local-6989586621679559629"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679559227"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Property.Assert.html#LogEntry"><span class="hs-identifier hs-type">LogEntry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559227"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679559637"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (LogEntry a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; (Object -&gt; Parser (LogEntry a)) -&gt; Value -&gt; Parser (LogEntry a)
+forall a. FilePath -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withObject</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;LogEntry&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser (LogEntry a)) -&gt; Value -&gt; Parser (LogEntry a))
+-&gt; (Object -&gt; Parser (LogEntry a)) -&gt; Value -&gt; Parser (LogEntry a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679559639"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679559639"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; LogEntry a
+forall a. a -&gt; LogEntry a
+</span><a href="Testnet.Property.Assert.html#LogEntry"><span class="hs-identifier hs-var">LogEntry</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; LogEntry a) -&gt; Parser a -&gt; Parser (LogEntry a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679559639"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser a
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;data&quot;</span></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">newtype</span><span> </span><span id="Kind"><span class="annot"><a href="Testnet.Property.Assert.html#Kind"><span class="hs-identifier hs-var">Kind</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Kind"><span class="annot"><a href="Testnet.Property.Assert.html#Kind"><span class="hs-identifier hs-var">Kind</span></a></span></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="%24sel%3Akind%3AKind"><span class="annot"><span class="annottext">Kind -&gt; Text
+</span><a href="Testnet.Property.Assert.html#%24sel%3Akind%3AKind"><span class="hs-identifier hs-var hs-var">kind</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679559642"><span id="local-6989586621679559647"><span class="annot"><span class="annottext">Kind -&gt; Kind -&gt; Bool
+(Kind -&gt; Kind -&gt; Bool) -&gt; (Kind -&gt; Kind -&gt; Bool) -&gt; Eq Kind
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Kind -&gt; Kind -&gt; Bool
+== :: Kind -&gt; Kind -&gt; Bool
+$c/= :: Kind -&gt; Kind -&gt; Bool
+/= :: Kind -&gt; Kind -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679559651"><span id="local-6989586621679559656"><span id="local-6989586621679559660"><span class="annot"><span class="annottext">Int -&gt; Kind -&gt; FilePath -&gt; FilePath
+[Kind] -&gt; FilePath -&gt; FilePath
+Kind -&gt; FilePath
+(Int -&gt; Kind -&gt; FilePath -&gt; FilePath)
+-&gt; (Kind -&gt; FilePath)
+-&gt; ([Kind] -&gt; FilePath -&gt; FilePath)
+-&gt; Show Kind
+forall a.
+(Int -&gt; a -&gt; FilePath -&gt; FilePath)
+-&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; FilePath -&gt; FilePath) -&gt; Show a
+$cshowsPrec :: Int -&gt; Kind -&gt; FilePath -&gt; FilePath
+showsPrec :: Int -&gt; Kind -&gt; FilePath -&gt; FilePath
+$cshow :: Kind -&gt; FilePath
+show :: Kind -&gt; FilePath
+$cshowList :: [Kind] -&gt; FilePath -&gt; FilePath
+showList :: [Kind] -&gt; FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-keyword">data</span><span> </span><span id="TraceNode"><span class="annot"><a href="Testnet.Property.Assert.html#TraceNode"><span class="hs-identifier hs-var">TraceNode</span></a></span></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="TraceNode"><span class="annot"><a href="Testnet.Property.Assert.html#TraceNode"><span class="hs-identifier hs-var">TraceNode</span></a></span></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3AisLeader%3ATraceNode"><span class="annot"><span class="annottext">TraceNode -&gt; Bool
+</span><a href="Testnet.Property.Assert.html#%24sel%3AisLeader%3ATraceNode"><span class="hs-identifier hs-var hs-var">isLeader</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3Akind%3ATraceNode"><span class="annot"><span class="annottext">TraceNode -&gt; Text
+</span><a href="Testnet.Property.Assert.html#%24sel%3Akind%3ATraceNode"><span class="hs-identifier hs-var hs-var">kind</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3Aslot%3ATraceNode"><span class="annot"><span class="annottext">TraceNode -&gt; Int
+</span><a href="Testnet.Property.Assert.html#%24sel%3Aslot%3ATraceNode"><span class="hs-identifier hs-var hs-var">slot</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679559667"><span id="local-6989586621679559673"><span class="annot"><span class="annottext">TraceNode -&gt; TraceNode -&gt; Bool
+(TraceNode -&gt; TraceNode -&gt; Bool)
+-&gt; (TraceNode -&gt; TraceNode -&gt; Bool) -&gt; Eq TraceNode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TraceNode -&gt; TraceNode -&gt; Bool
+== :: TraceNode -&gt; TraceNode -&gt; Bool
+$c/= :: TraceNode -&gt; TraceNode -&gt; Bool
+/= :: TraceNode -&gt; TraceNode -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679559677"><span id="local-6989586621679559684"><span id="local-6989586621679559688"><span class="annot"><span class="annottext">Int -&gt; TraceNode -&gt; FilePath -&gt; FilePath
+[TraceNode] -&gt; FilePath -&gt; FilePath
+TraceNode -&gt; FilePath
+(Int -&gt; TraceNode -&gt; FilePath -&gt; FilePath)
+-&gt; (TraceNode -&gt; FilePath)
+-&gt; ([TraceNode] -&gt; FilePath -&gt; FilePath)
+-&gt; Show TraceNode
+forall a.
+(Int -&gt; a -&gt; FilePath -&gt; FilePath)
+-&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; FilePath -&gt; FilePath) -&gt; Show a
+$cshowsPrec :: Int -&gt; TraceNode -&gt; FilePath -&gt; FilePath
+showsPrec :: Int -&gt; TraceNode -&gt; FilePath -&gt; FilePath
+$cshow :: TraceNode -&gt; FilePath
+show :: TraceNode -&gt; FilePath
+$cshowList :: [TraceNode] -&gt; FilePath -&gt; FilePath
+showList :: [TraceNode] -&gt; FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679559692"><span id="local-6989586621679559695"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#TraceNode"><span class="hs-identifier hs-type">TraceNode</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621679559726"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser TraceNode
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; (Object -&gt; Parser TraceNode) -&gt; Value -&gt; Parser TraceNode
+forall a. FilePath -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withObject</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;TraceNode&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser TraceNode) -&gt; Value -&gt; Parser TraceNode)
+-&gt; (Object -&gt; Parser TraceNode) -&gt; Value -&gt; Parser TraceNode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679559727"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679559727"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-144"></span><span>    </span><span id="local-6989586621679559728"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679559728"><span class="hs-identifier hs-var">kind'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679559727"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Object
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;val&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser Object -&gt; (Object -&gt; Parser Text) -&gt; Parser Text
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679559729"><span class="annot"><span class="annottext">slotP :: Parser Int
+</span><a href="#local-6989586621679559729"><span class="hs-identifier hs-var hs-var">slotP</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679559727"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Object
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;val&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser Object -&gt; (Object -&gt; Parser Int) -&gt; Parser Int
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Int
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;slot&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679559728"><span class="hs-identifier hs-var">kind'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TraceNodeIsLeader&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; Int -&gt; TraceNode
+</span><a href="Testnet.Property.Assert.html#TraceNode"><span class="hs-identifier hs-var">TraceNode</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679559728"><span class="hs-identifier hs-var">kind'</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; TraceNode) -&gt; Parser Int -&gt; Parser TraceNode
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Int
+</span><a href="#local-6989586621679559729"><span class="hs-identifier hs-var">slotP</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TraceNodeNotLeader&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; Int -&gt; TraceNode
+</span><a href="Testnet.Property.Assert.html#TraceNode"><span class="hs-identifier hs-var">TraceNode</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679559728"><span class="hs-identifier hs-var">kind'</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; TraceNode) -&gt; Parser Int -&gt; Parser TraceNode
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Int
+</span><a href="#local-6989586621679559729"><span class="hs-identifier hs-var">slotP</span></a></span><span>
+</span><span id="line-149"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Parser TraceNode
+forall a. FilePath -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; FilePath -&gt; m a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; Parser TraceNode) -&gt; FilePath -&gt; Parser TraceNode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Expected kind was TraceNodeIsLeader, found &quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679559728"><span class="hs-identifier hs-var">kind'</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;instead&quot;</span></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679559732"><span id="local-6989586621679559735"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Testnet.Property.Assert.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621679559740"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser Kind
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; (Object -&gt; Parser Kind) -&gt; Value -&gt; Parser Kind
+forall a. FilePath -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withObject</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser Kind) -&gt; Value -&gt; Parser Kind)
+-&gt; (Object -&gt; Parser Kind) -&gt; Value -&gt; Parser Kind
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679559741"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679559741"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Kind
+</span><a href="Testnet.Property.Assert.html#Kind"><span class="hs-identifier hs-var">Kind</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Kind) -&gt; Parser Text -&gt; Parser Kind
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679559741"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Testnet.Property.Assert.html#getRelevantSlots"><span class="hs-identifier hs-type">getRelevantSlots</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ymj1ll7asnwcnwh7qbyka5k19fxl2h6k-hedgehog-lib-hedgehog-1.5-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#PropertyT"><span class="hs-identifier hs-type">H.PropertyT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Internal.Test.Integration.html#IntegrationState"><span class="hs-identifier hs-type">IntegrationState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/33ljpp1xjs9plf850ylrvspzkd808zh4-resourcet-lib-resourcet-1.3.0-haddock-doc/share/doc/resourcet/html/src/Control.Monad.Trans.Resource.Internal.html#ResourceT"><span class="hs-identifier hs-type">ResourceT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span id="getRelevantSlots"><span class="annot"><span class="annottext">getRelevantSlots :: FilePath
+-&gt; Int
+-&gt; PropertyT
+     (ReaderT IntegrationState (ResourceT IO)) ([Int], [Int])
+</span><a href="Testnet.Property.Assert.html#getRelevantSlots"><span class="hs-identifier hs-var hs-var">getRelevantSlots</span></a></span></span><span> </span><span id="local-6989586621679559742"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559742"><span class="hs-identifier hs-var">poolNodeStdoutFile</span></a></span></span><span> </span><span id="local-6989586621679559743"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559743"><span class="hs-identifier hs-var">slotLowerBound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-157"></span><span>  </span><span id="local-6989586621679559744"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679559744"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Value]
+forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+FilePath -&gt; m [Value]
+</span><a href="Testnet.Property.Assert.html#readJsonLines"><span class="hs-identifier hs-var">readJsonLines</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679559742"><span class="hs-identifier hs-var">poolNodeStdoutFile</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679559745"><span class="annot"><span class="annottext">slots :: [TraceNode]
+</span><a href="#local-6989586621679559745"><span class="hs-identifier hs-var hs-var">slots</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LogEntry TraceNode -&gt; TraceNode)
+-&gt; [LogEntry TraceNode] -&gt; [TraceNode]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#map"><span class="hs-identifier hs-var">L.map</span></a></span><span> </span><span class="annot"><span class="annottext">LogEntry TraceNode -&gt; TraceNode
+forall a. LogEntry a -&gt; a
+</span><a href="Testnet.Property.Assert.html#%24sel%3AunLogEntry%3ALogEntry"><span class="hs-identifier hs-var">unLogEntry</span></a></span><span> </span><span class="annot"><span class="annottext">([LogEntry TraceNode] -&gt; [TraceNode])
+-&gt; [LogEntry TraceNode] -&gt; [TraceNode]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Maybe (LogEntry TraceNode))
+-&gt; [Value] -&gt; [LogEntry TraceNode]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">Maybe.mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Value -&gt; Parser (LogEntry TraceNode))
+-&gt; Value -&gt; Maybe (LogEntry TraceNode)
+forall a b. (a -&gt; Parser b) -&gt; a -&gt; Maybe b
+</span><span class="hs-identifier hs-var">Aeson.parseMaybe</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser (LogEntry TraceNode)
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.parseJSON</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679559744"><span class="hs-identifier hs-var">vs</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span>  </span><span id="local-6989586621679559746"><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559746"><span class="hs-identifier hs-var">leaderSlots</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack, Show a) =&gt;
+a -&gt; m a
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#noteShow"><span class="hs-identifier hs-var">H.noteShow</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="annottext">([Int]
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int])
+-&gt; [Int]
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceNode -&gt; Int) -&gt; [TraceNode] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">TraceNode -&gt; Int
+</span><a href="Testnet.Property.Assert.html#%24sel%3Aslot%3ATraceNode"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><span class="annottext">([TraceNode] -&gt; [Int]) -&gt; [TraceNode] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceNode -&gt; Bool) -&gt; [TraceNode] -&gt; [TraceNode]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="annot"><span class="annottext">TraceNode -&gt; Bool
+</span><a href="Testnet.Property.Assert.html#%24sel%3AisLeader%3ATraceNode"><span class="hs-identifier hs-var">isLeader</span></a></span><span> </span><span class="annot"><span class="annottext">[TraceNode]
+</span><a href="#local-6989586621679559745"><span class="hs-identifier hs-var">slots</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621679559748"><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559748"><span class="hs-identifier hs-var">notLeaderSlots</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack, Show a) =&gt;
+a -&gt; m a
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#noteShow"><span class="hs-identifier hs-var">H.noteShow</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">([Int]
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int])
+-&gt; [Int]
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceNode -&gt; Int) -&gt; [TraceNode] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">TraceNode -&gt; Int
+</span><a href="Testnet.Property.Assert.html#%24sel%3Aslot%3ATraceNode"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><span class="annottext">([TraceNode] -&gt; [Int]) -&gt; [TraceNode] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceNode -&gt; Bool) -&gt; [TraceNode] -&gt; [TraceNode]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (TraceNode -&gt; Bool) -&gt; TraceNode -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TraceNode -&gt; Bool
+</span><a href="Testnet.Property.Assert.html#%24sel%3AisLeader%3ATraceNode"><span class="hs-identifier hs-var">isLeader</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[TraceNode]
+</span><a href="#local-6989586621679559745"><span class="hs-identifier hs-var">slots</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span>  </span><span id="local-6989586621679559750"><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559750"><span class="hs-identifier hs-var">relevantLeaderSlots</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack, Show a) =&gt;
+a -&gt; m a
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#noteShow"><span class="hs-identifier hs-var">H.noteShow</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><span class="annottext">([Int]
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int])
+-&gt; [Int]
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; [Int] -&gt; [Int]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.List.html#filter"><span class="hs-identifier hs-var">L.filter</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559743"><span class="hs-identifier hs-var">slotLowerBound</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>    </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559746"><span class="hs-identifier hs-var">leaderSlots</span></a></span><span>
+</span><span id="line-170"></span><span>  </span><span id="local-6989586621679559751"><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559751"><span class="hs-identifier hs-var">relevantNotLeaderSlots</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack, Show a) =&gt;
+a -&gt; m a
+</span><a href="file:///nix/store/rx41hnfkssp4vrdkw21jf4wk6x4cpsjr-hedgehog-extras-lib-hedgehog-extras-0.8.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#noteShow"><span class="hs-identifier hs-var">H.noteShow</span></a></span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><span class="annottext">([Int]
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int])
+-&gt; [Int]
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; [Int] -&gt; [Int]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.List.html#filter"><span class="hs-identifier hs-var">L.filter</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679559743"><span class="hs-identifier hs-var">slotLowerBound</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559748"><span class="hs-identifier hs-var">notLeaderSlots</span></a></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><span class="annottext">([Int], [Int])
+-&gt; PropertyT
+     (ReaderT IntegrationState (ResourceT IO)) ([Int], [Int])
+forall a.
+a -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559750"><span class="hs-identifier hs-var">relevantLeaderSlots</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679559751"><span class="hs-identifier hs-var">relevantNotLeaderSlots</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span id="local-6989586621679559323"><span id="local-6989586621679559325"><span id="local-6989586621679559326"><span id="local-6989586621679559327"><span class="annot"><a href="Testnet.Property.Assert.html#assertErasEqual"><span class="hs-identifier hs-type">assertErasEqual</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Type.Equality.html#TestEquality"><span class="hs-identifier hs-type">TestEquality</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559323"><span class="hs-identifier hs-type">eon</span></a></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679559323"><span class="hs-identifier hs-type">eon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559325"><span class="hs-identifier hs-type">expectedEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679559323"><span class="hs-identifier hs-type">eon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559326"><span class="hs-identifier hs-type">receivedEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/mtl-2.3.1/src/Control.Monad.Error.Class.html#MonadError"><span class="hs-identifier hs-type">MonadError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559327"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679559323"><span class="hs-identifier hs-type">eon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559325"><span class="hs-identifier hs-type">expectedEra</span></a></span><span>
+</span><span id="line-183"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679559323"><span class="hs-identifier hs-type">eon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559326"><span class="hs-identifier hs-type">receivedEra</span></a></span><span>
+</span><span id="line-184"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679559327"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679559325"><span class="hs-identifier hs-type">expectedEra</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Type.Equality.html#%3A~%3A"><span class="hs-operator hs-type">:~:</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679559326"><span class="hs-identifier hs-type">receivedEra</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-185"></span><span id="assertErasEqual"><span class="annot"><span class="annottext">assertErasEqual :: forall (eon :: * -&gt; *) expectedEra receivedEra (m :: * -&gt; *).
+(HasCallStack, TestEquality eon, Show (eon expectedEra),
+ Show (eon receivedEra), MonadError FilePath m) =&gt;
+eon expectedEra
+-&gt; eon receivedEra -&gt; m (expectedEra :~: receivedEra)
+</span><a href="Testnet.Property.Assert.html#assertErasEqual"><span class="hs-identifier hs-var hs-var">assertErasEqual</span></a></span></span><span> </span><span id="local-6989586621679559762"><span class="annot"><span class="annottext">eon expectedEra
+</span><a href="#local-6989586621679559762"><span class="hs-identifier hs-var">expectedEra</span></a></span></span><span> </span><span id="local-6989586621679559763"><span class="annot"><span class="annottext">eon receivedEra
+</span><a href="#local-6989586621679559763"><span class="hs-identifier hs-var">receivedEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m (expectedEra :~: receivedEra))
+-&gt; m (expectedEra :~: receivedEra)
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m (expectedEra :~: receivedEra))
+ -&gt; m (expectedEra :~: receivedEra))
+-&gt; (HasCallStack =&gt; m (expectedEra :~: receivedEra))
+-&gt; m (expectedEra :~: receivedEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">eon expectedEra
+-&gt; eon receivedEra -&gt; Maybe (expectedEra :~: receivedEra)
+forall a b. eon a -&gt; eon b -&gt; Maybe (a :~: b)
+forall {k} (f :: k -&gt; *) (a :: k) (b :: k).
+TestEquality f =&gt;
+f a -&gt; f b -&gt; Maybe (a :~: b)
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Type.Equality.html#testEquality"><span class="hs-identifier hs-var">testEquality</span></a></span><span> </span><span class="annot"><span class="annottext">eon expectedEra
+</span><a href="#local-6989586621679559762"><span class="hs-identifier hs-var">expectedEra</span></a></span><span> </span><span class="annot"><span class="annottext">eon receivedEra
+</span><a href="#local-6989586621679559763"><span class="hs-identifier hs-var">receivedEra</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">expectedEra :~: receivedEra
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(expectedEra :~: receivedEra) -&gt; m (expectedEra :~: receivedEra)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">expectedEra :~: expectedEra
+expectedEra :~: receivedEra
+forall {k} (a :: k). a :~: a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><span class="annottext">Maybe (expectedEra :~: receivedEra)
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-189"></span><span>      </span><span class="annot"><span class="annottext">FilePath -&gt; m (expectedEra :~: receivedEra)
+forall a. FilePath -&gt; m a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/mtl-2.3.1/src/Control.Monad.Error.Class.html#throwError"><span class="hs-identifier hs-var">throwError</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; m (expectedEra :~: receivedEra))
+-&gt; FilePath -&gt; m (expectedEra :~: receivedEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Eras mismatch! expected: &quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">eon expectedEra -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">eon expectedEra
+</span><a href="#local-6989586621679559762"><span class="hs-identifier hs-var">expectedEra</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;, received era: &quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">eon receivedEra -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q976m622jbq42nf9zkhq5axjca5xj9w0-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">eon receivedEra
+</span><a href="#local-6989586621679559763"><span class="hs-identifier hs-var">receivedEra</span></a></span><span>
+</span><span id="line-190"></span></pre></body></html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679419636"><span id="local-6989586621679419637"><span id="local-6989586621679419638"><span id="local-6989586621679419639"></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.TestSuiteInterface</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteInterface"><span class="hs-identifier">TestSuiteInterface</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html"><span class="hs-identifier">Distribution.Types.TestType</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Version.html"><span class="hs-identifier">Distribution.Version</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | The test suite interfaces that are currently defined.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- More interfaces may be defined in future, either new revisions or totally</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- new interfaces.</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="TestSuiteInterface"><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteInterface"><span class="hs-identifier hs-var">TestSuiteInterface</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>     </span><span class="hs-comment">-- | Test interface \&quot;exitcode-stdio-1.0\&quot;. The test-suite takes the form</span><span>
+</span><span id="line-23"></span><span>     </span><span class="hs-comment">-- of an executable. It returns a zero exit code for success, non-zero for</span><span>
+</span><span id="line-24"></span><span>     </span><span class="hs-comment">-- failure. The stdout and stderr channels may be logged. Test tooling may</span><span>
+</span><span id="line-25"></span><span>     </span><span class="hs-comment">-- pass command line arguments and/or connect the stdin channel to the test.</span><span>
+</span><span id="line-26"></span><span>     </span><span class="hs-comment">--</span><span>
+</span><span id="line-27"></span><span>     </span><span id="TestSuiteExeV10"><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteExeV10"><span class="hs-identifier hs-var">TestSuiteExeV10</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>     </span><span class="hs-comment">-- | Test interface \&quot;detailed-0.9\&quot;. The test-suite takes the form of a</span><span>
+</span><span id="line-30"></span><span>     </span><span class="hs-comment">-- library containing a designated module that exports \&quot;tests :: [Test]\&quot;.</span><span>
+</span><span id="line-31"></span><span>     </span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span>   </span><span class="hs-glyph">|</span><span> </span><span id="TestSuiteLibV09"><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteLibV09"><span class="hs-identifier hs-var">TestSuiteLibV09</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>     </span><span class="hs-comment">-- | A test suite that does not conform to one of the above interfaces for</span><span>
+</span><span id="line-35"></span><span>     </span><span class="hs-comment">-- the given reason (e.g. unknown test type).</span><span>
+</span><span id="line-36"></span><span>     </span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span>   </span><span class="hs-glyph">|</span><span> </span><span id="TestSuiteUnsupported"><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteUnsupported"><span class="hs-identifier hs-var">TestSuiteUnsupported</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.TestType.html#TestType"><span class="hs-identifier hs-type">TestType</span></a></span><span>
+</span><span id="line-38"></span><span>   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679419644"><span id="local-6989586621679419656"><span class="annot"><span class="annottext">TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+(TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool)
+-&gt; (TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool)
+-&gt; Eq TestSuiteInterface
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+== :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+$c/= :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+/= :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419664"><span id="local-6989586621679419676"><span id="local-6989586621679419684"><span id="local-6989586621679419688"><span id="local-6989586621679419691"><span id="local-6989586621679419694"><span id="local-6989586621679419697"><span class="annot"><span class="annottext">Eq TestSuiteInterface
+Eq TestSuiteInterface =&gt;
+(TestSuiteInterface -&gt; TestSuiteInterface -&gt; Ordering)
+-&gt; (TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool)
+-&gt; (TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool)
+-&gt; (TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool)
+-&gt; (TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool)
+-&gt; (TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface)
+-&gt; (TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface)
+-&gt; Ord TestSuiteInterface
+TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+TestSuiteInterface -&gt; TestSuiteInterface -&gt; Ordering
+TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Ordering
+compare :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Ordering
+$c&lt; :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+&lt; :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+$c&lt;= :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+&lt;= :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+$c&gt; :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+&gt; :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+$c&gt;= :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+&gt;= :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; Bool
+$cmax :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+max :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+$cmin :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+min :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419702"><span id="local-6989586621679419704"><span class="annot"><span class="annottext">(forall x. TestSuiteInterface -&gt; Rep TestSuiteInterface x)
+-&gt; (forall x. Rep TestSuiteInterface x -&gt; TestSuiteInterface)
+-&gt; Generic TestSuiteInterface
+forall x. Rep TestSuiteInterface x -&gt; TestSuiteInterface
+forall x. TestSuiteInterface -&gt; Rep TestSuiteInterface x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TestSuiteInterface -&gt; Rep TestSuiteInterface x
+from :: forall x. TestSuiteInterface -&gt; Rep TestSuiteInterface x
+$cto :: forall x. Rep TestSuiteInterface x -&gt; TestSuiteInterface
+to :: forall x. Rep TestSuiteInterface x -&gt; TestSuiteInterface
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419708"><span id="local-6989586621679419712"><span id="local-6989586621679419715"><span id="local-6989586621679419739"><span class="annot"><span class="annottext">ReadPrec [TestSuiteInterface]
+ReadPrec TestSuiteInterface
+Int -&gt; ReadS TestSuiteInterface
+ReadS [TestSuiteInterface]
+(Int -&gt; ReadS TestSuiteInterface)
+-&gt; ReadS [TestSuiteInterface]
+-&gt; ReadPrec TestSuiteInterface
+-&gt; ReadPrec [TestSuiteInterface]
+-&gt; Read TestSuiteInterface
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS TestSuiteInterface
+readsPrec :: Int -&gt; ReadS TestSuiteInterface
+$creadList :: ReadS [TestSuiteInterface]
+readList :: ReadS [TestSuiteInterface]
+$creadPrec :: ReadPrec TestSuiteInterface
+readPrec :: ReadPrec TestSuiteInterface
+$creadListPrec :: ReadPrec [TestSuiteInterface]
+readListPrec :: ReadPrec [TestSuiteInterface]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419744"><span id="local-6989586621679419760"><span id="local-6989586621679419764"><span class="annot"><span class="annottext">Int -&gt; TestSuiteInterface -&gt; ShowS
+[TestSuiteInterface] -&gt; ShowS
+TestSuiteInterface -&gt; FilePath
+(Int -&gt; TestSuiteInterface -&gt; ShowS)
+-&gt; (TestSuiteInterface -&gt; FilePath)
+-&gt; ([TestSuiteInterface] -&gt; ShowS)
+-&gt; Show TestSuiteInterface
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TestSuiteInterface -&gt; ShowS
+showsPrec :: Int -&gt; TestSuiteInterface -&gt; ShowS
+$cshow :: TestSuiteInterface -&gt; FilePath
+show :: TestSuiteInterface -&gt; FilePath
+$cshowList :: [TestSuiteInterface] -&gt; ShowS
+showList :: [TestSuiteInterface] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679419771"><span id="local-6989586621679419783"><span id="local-6989586621679419791"><span id="local-6989586621679419793"><span id="local-6989586621679419795"><span id="local-6989586621679419801"><span id="local-6989586621679419806"><span id="local-6989586621679419809"><span id="local-6989586621679419812"><span id="local-6989586621679419815"><span id="local-6989586621679419818"><span id="local-6989586621679419821"><span id="local-6989586621679419826"><span id="local-6989586621679419831"><span class="annot"><span class="annottext">Typeable TestSuiteInterface
+Typeable TestSuiteInterface =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; TestSuiteInterface
+ -&gt; c TestSuiteInterface)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestSuiteInterface)
+-&gt; (TestSuiteInterface -&gt; Constr)
+-&gt; (TestSuiteInterface -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestSuiteInterface))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c TestSuiteInterface))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; TestSuiteInterface -&gt; TestSuiteInterface)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; TestSuiteInterface -&gt; m TestSuiteInterface)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; TestSuiteInterface -&gt; m TestSuiteInterface)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; TestSuiteInterface -&gt; m TestSuiteInterface)
+-&gt; Data TestSuiteInterface
+TestSuiteInterface -&gt; Constr
+TestSuiteInterface -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; TestSuiteInterface -&gt; TestSuiteInterface
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestSuiteInterface
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; TestSuiteInterface
+-&gt; c TestSuiteInterface
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestSuiteInterface)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c TestSuiteInterface)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; TestSuiteInterface
+-&gt; c TestSuiteInterface
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; TestSuiteInterface
+-&gt; c TestSuiteInterface
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestSuiteInterface
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TestSuiteInterface
+$ctoConstr :: TestSuiteInterface -&gt; Constr
+toConstr :: TestSuiteInterface -&gt; Constr
+$cdataTypeOf :: TestSuiteInterface -&gt; DataType
+dataTypeOf :: TestSuiteInterface -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestSuiteInterface)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TestSuiteInterface)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c TestSuiteInterface)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c TestSuiteInterface)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; TestSuiteInterface -&gt; TestSuiteInterface
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; TestSuiteInterface -&gt; TestSuiteInterface
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TestSuiteInterface -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TestSuiteInterface -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; TestSuiteInterface -&gt; m TestSuiteInterface
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679419838"><span id="local-6989586621679419845"><span id="local-6989586621679419851"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteInterface"><span class="hs-identifier hs-type">TestSuiteInterface</span></a></span></span></span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679419924"><span id="local-6989586621679419931"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteInterface"><span class="hs-identifier hs-type">TestSuiteInterface</span></a></span></span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteInterface"><span class="hs-identifier hs-type">TestSuiteInterface</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679420024"><span class="annot"><span class="annottext">rnf :: TestSuiteInterface -&gt; ()
+</span><a href="#local-6989586621679420024"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSuiteInterface -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679420033"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteInterface"><span class="hs-identifier hs-type">TestSuiteInterface</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>    </span><span id="local-6989586621679420039"><span class="annot"><span class="annottext">mempty :: TestSuiteInterface
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">TestType -&gt; TestSuiteInterface
+</span><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteUnsupported"><span class="hs-identifier hs-var">TestSuiteUnsupported</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Version -&gt; TestType
+</span><a href="Distribution.Types.TestType.html#TestTypeUnknown"><span class="hs-identifier hs-var">TestTypeUnknown</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Distribution.Types.Version.html#nullVersion"><span class="hs-identifier hs-var">nullVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span id="local-6989586621679420043"><span class="annot"><span class="annottext">mappend :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679420046"><span id="local-6989586621679420049"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteInterface"><span class="hs-identifier hs-type">TestSuiteInterface</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621679420054"><span class="annot"><span class="annottext">TestSuiteInterface
+</span><a href="#local-6989586621679420054"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679420055"><span class="annot"><span class="annottext">&lt;&gt; :: TestSuiteInterface -&gt; TestSuiteInterface -&gt; TestSuiteInterface
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.TestSuiteInterface.html#TestSuiteUnsupported"><span class="hs-identifier hs-type">TestSuiteUnsupported</span></a></span><span> </span><span class="annot"><span class="annottext">TestType
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSuiteInterface
+</span><a href="#local-6989586621679420054"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">TestSuiteInterface
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span id="local-6989586621679420056"><span class="annot"><span class="annottext">TestSuiteInterface
+</span><a href="#local-6989586621679420056"><span class="hs-identifier hs-var">b</span></a></span></span><span>                        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSuiteInterface
+</span><a href="#local-6989586621679420056"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-52"></span></pre></body></html>

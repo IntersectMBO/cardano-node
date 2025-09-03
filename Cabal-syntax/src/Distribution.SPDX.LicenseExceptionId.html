@@ -1,0 +1,1221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679412418"><span id="local-6989586621679412419"><span id="local-6989586621679412420"><span id="local-6989586621679412421"><span id="local-6989586621679412422"><span id="local-6989586621679412423"><span id="local-6989586621679412424"><span id="local-6989586621679412425"><span id="local-6989586621679412426"><span id="local-6989586621679412427"><span id="local-6989586621679412428"><span id="local-6989586621679412429"><span id="local-6989586621679412430"><span id="local-6989586621679412431"><span id="local-6989586621679412432"><span id="local-6989586621679412433"><span id="local-6989586621679412434"><span id="local-6989586621679412435"><span id="local-6989586621679412436"><span id="local-6989586621679412437"><span id="local-6989586621679412438"><span id="local-6989586621679412439"><span id="local-6989586621679412440"><span id="local-6989586621679412441"><span id="local-6989586621679412442"><span id="local-6989586621679412443"><span id="local-6989586621679412444"><span id="local-6989586621679412445"><span id="local-6989586621679412446"><span id="local-6989586621679412447"><span id="local-6989586621679412448"><span id="local-6989586621679412449"><span id="local-6989586621679412450"><span id="local-6989586621679412451"><span id="local-6989586621679412452"><span id="local-6989586621679412453"><span id="local-6989586621679412454"><span id="local-6989586621679412455"><span id="local-6989586621679412456"><span id="local-6989586621679412457"><span id="local-6989586621679412458"><span id="local-6989586621679412459"><span id="local-6989586621679412460"><span id="local-6989586621679412461"></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-comment">-- This file is generated. See Makefile's spdx rule</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.SPDX.LicenseExceptionId</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier">LicenseExceptionId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier">licenseExceptionId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier">licenseExceptionName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier">mkLicenseExceptionId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier">licenseExceptionIdList</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Lens.html"><span class="hs-identifier">Distribution.Compat.Lens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Lens.html#set"><span class="hs-identifier">set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier">isAsciiAlphaNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Structured.html"><span class="hs-identifier">Distribution.Utils.Structured</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier">Structured</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Utils.Structured.html#nominalStructure"><span class="hs-identifier">nominalStructure</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Utils.Structured.html#typeVersion"><span class="hs-identifier">typeVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html"><span class="hs-identifier">Distribution.SPDX.LicenseListVersion</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Get.html#/Data.Binary.Get.html"><span class="hs-identifier">Data.Binary.Get</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Binary</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#/Data.Binary.Put.html"><span class="hs-identifier">Data.Binary.Put</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Binary</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Strict.html#/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- LicenseExceptionId</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | SPDX License Exceptions identifiers list v3.16</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">data</span><span> </span><span id="LicenseExceptionId"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-var">LicenseExceptionId</span></a></span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="DS389_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#DS389_exception"><span class="hs-identifier hs-var">DS389_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @389-exception@, 389 Directory Server Exception</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Autoconf_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_2_0"><span class="hs-identifier hs-var">Autoconf_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Autoconf-exception-2.0@, Autoconf exception 2.0</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Autoconf_exception_3_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_3_0"><span class="hs-identifier hs-var">Autoconf_exception_3_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Autoconf-exception-3.0@, Autoconf exception 3.0</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Bison_exception_2_2"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Bison_exception_2_2"><span class="hs-identifier hs-var">Bison_exception_2_2</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Bison-exception-2.2@, Bison exception 2.2</span></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Bootloader_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Bootloader_exception"><span class="hs-identifier hs-var">Bootloader_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Bootloader-exception@, Bootloader Distribution Exception</span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Classpath_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Classpath_exception_2_0"><span class="hs-identifier hs-var">Classpath_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Classpath-exception-2.0@, Classpath exception 2.0</span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CLISP_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#CLISP_exception_2_0"><span class="hs-identifier hs-var">CLISP_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @CLISP-exception-2.0@, CLISP exception 2.0</span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="DigiRule_FOSS_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#DigiRule_FOSS_exception"><span class="hs-identifier hs-var">DigiRule_FOSS_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @DigiRule-FOSS-exception@, DigiRule FOSS License Exception</span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ECos_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#ECos_exception_2_0"><span class="hs-identifier hs-var">ECos_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @eCos-exception-2.0@, eCos exception 2.0</span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Fawkes_Runtime_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Fawkes_Runtime_exception"><span class="hs-identifier hs-var">Fawkes_Runtime_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Fawkes-Runtime-exception@, Fawkes Runtime Exception</span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="FLTK_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#FLTK_exception"><span class="hs-identifier hs-var">FLTK_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @FLTK-exception@, FLTK exception</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Font_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Font_exception_2_0"><span class="hs-identifier hs-var">Font_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Font-exception-2.0@, Font exception 2.0</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Freertos_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Freertos_exception_2_0"><span class="hs-identifier hs-var">Freertos_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @freertos-exception-2.0@, FreeRTOS Exception 2.0</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="GCC_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_2_0"><span class="hs-identifier hs-var">GCC_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @GCC-exception-2.0@, GCC Runtime Library exception 2.0</span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="GCC_exception_3_1"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_3_1"><span class="hs-identifier hs-var">GCC_exception_3_1</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @GCC-exception-3.1@, GCC Runtime Library exception 3.1</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Gnu_javamail_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Gnu_javamail_exception"><span class="hs-identifier hs-var">Gnu_javamail_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @gnu-javamail-exception@, GNU JavaMail exception</span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="GPL_3_0_linking_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @GPL-3.0-linking-exception@, GPL-3.0 Linking Exception, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="GPL_3_0_linking_source_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_source_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_source_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @GPL-3.0-linking-source-exception@, GPL-3.0 Linking Exception (with Corresponding Source), SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="GPL_CC_1_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_CC_1_0"><span class="hs-identifier hs-var">GPL_CC_1_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @GPL-CC-1.0@, GPL Cooperation Commitment 1.0, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="I2p_gpl_java_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#I2p_gpl_java_exception"><span class="hs-identifier hs-var">I2p_gpl_java_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @i2p-gpl-java-exception@, i2p GPL+Java Exception</span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LGPL_3_0_linking_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LGPL_3_0_linking_exception"><span class="hs-identifier hs-var">LGPL_3_0_linking_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @LGPL-3.0-linking-exception@, LGPL-3.0 Linking Exception, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Libtool_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Libtool_exception"><span class="hs-identifier hs-var">Libtool_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Libtool-exception@, Libtool Exception</span></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Linux_syscall_note"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Linux_syscall_note"><span class="hs-identifier hs-var">Linux_syscall_note</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Linux-syscall-note@, Linux Syscall Note</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LLVM_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @LLVM-exception@, LLVM Exception, SPDX License List 3.2, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LZMA_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LZMA_exception"><span class="hs-identifier hs-var">LZMA_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @LZMA-exception@, LZMA exception</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Mif_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Mif_exception"><span class="hs-identifier hs-var">Mif_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @mif-exception@, Macros and Inline Functions Exception</span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Nokia_Qt_exception_1_1"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Nokia_Qt_exception_1_1"><span class="hs-identifier hs-var">Nokia_Qt_exception_1_1</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Nokia-Qt-exception-1.1@, Nokia Qt LGPL exception 1.1, SPDX License List 3.0, SPDX License List 3.2</span></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="OCaml_LGPL_linking_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#OCaml_LGPL_linking_exception"><span class="hs-identifier hs-var">OCaml_LGPL_linking_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @OCaml-LGPL-linking-exception@, OCaml LGPL Linking Exception, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="OCCT_exception_1_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#OCCT_exception_1_0"><span class="hs-identifier hs-var">OCCT_exception_1_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @OCCT-exception-1.0@, Open CASCADE Exception 1.0</span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="OpenJDK_assembly_exception_1_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @OpenJDK-assembly-exception-1.0@, OpenJDK Assembly exception 1.0, SPDX License List 3.2, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Openvpn_openssl_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Openvpn_openssl_exception"><span class="hs-identifier hs-var">Openvpn_openssl_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @openvpn-openssl-exception@, OpenVPN OpenSSL Exception</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="PS_or_PDF_font_exception_20170817"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @PS-or-PDF-font-exception-20170817@, PS/PDF font exception (2017-08-17), SPDX License List 3.2, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Qt_GPL_exception_1_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Qt-GPL-exception-1.0@, Qt GPL exception 1.0, SPDX License List 3.2, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Qt_LGPL_exception_1_1"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Qt-LGPL-exception-1.1@, Qt LGPL exception 1.1, SPDX License List 3.2, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Qwt_exception_1_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Qwt_exception_1_0"><span class="hs-identifier hs-var">Qwt_exception_1_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Qwt-exception-1.0@, Qwt exception 1.0</span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="SHL_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_0"><span class="hs-identifier hs-var">SHL_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @SHL-2.0@, Solderpad Hardware License v2.0, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="SHL_2_1"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_1"><span class="hs-identifier hs-var">SHL_2_1</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @SHL-2.1@, Solderpad Hardware License v2.1, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Swift_exception"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Swift_exception"><span class="hs-identifier hs-var">Swift_exception</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Swift-exception@, Swift Exception, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="U_boot_exception_2_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#U_boot_exception_2_0"><span class="hs-identifier hs-var">U_boot_exception_2_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @u-boot-exception-2.0@, U-Boot exception 2.0</span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Universal_FOSS_exception_1_0"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#Universal_FOSS_exception_1_0"><span class="hs-identifier hs-var">Universal_FOSS_exception_1_0</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @Universal-FOSS-exception-1.0@, Universal FOSS Exception, Version 1.0, SPDX License List 3.6, SPDX License List 3.9, SPDX License List 3.10, SPDX License List 3.16</span></span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="WxWindows_exception_3_1"><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#WxWindows_exception_3_1"><span class="hs-identifier hs-var">WxWindows_exception_3_1</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @WxWindows-exception-3.1@, WxWindows Library Exception 3.1</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679412527"><span id="local-6989586621679412529"><span class="annot"><span class="annottext">LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+(LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool)
+-&gt; Eq LicenseExceptionId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+== :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+$c/= :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+/= :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679412536"><span id="local-6989586621679412538"><span id="local-6989586621679412540"><span id="local-6989586621679412544"><span id="local-6989586621679412547"><span id="local-6989586621679412550"><span id="local-6989586621679412553"><span class="annot"><span class="annottext">Eq LicenseExceptionId
+Eq LicenseExceptionId =&gt;
+(LicenseExceptionId -&gt; LicenseExceptionId -&gt; Ordering)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId -&gt; LicenseExceptionId)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId -&gt; LicenseExceptionId)
+-&gt; Ord LicenseExceptionId
+LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+LicenseExceptionId -&gt; LicenseExceptionId -&gt; Ordering
+LicenseExceptionId -&gt; LicenseExceptionId -&gt; LicenseExceptionId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Ordering
+compare :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Ordering
+$c&lt; :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+&lt; :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+$c&lt;= :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+&lt;= :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+$c&gt; :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+&gt; :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+$c&gt;= :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+&gt;= :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; Bool
+$cmax :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; LicenseExceptionId
+max :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; LicenseExceptionId
+$cmin :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; LicenseExceptionId
+min :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; LicenseExceptionId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679412557"><span id="local-6989586621679412565"><span id="local-6989586621679412571"><span id="local-6989586621679412581"><span id="local-6989586621679412583"><span id="local-6989586621679412587"><span id="local-6989586621679412591"><span id="local-6989586621679412595"><span class="annot"><span class="annottext">Int -&gt; LicenseExceptionId
+LicenseExceptionId -&gt; Int
+LicenseExceptionId -&gt; [LicenseExceptionId]
+LicenseExceptionId -&gt; LicenseExceptionId
+LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+LicenseExceptionId
+-&gt; LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+(LicenseExceptionId -&gt; LicenseExceptionId)
+-&gt; (LicenseExceptionId -&gt; LicenseExceptionId)
+-&gt; (Int -&gt; LicenseExceptionId)
+-&gt; (LicenseExceptionId -&gt; Int)
+-&gt; (LicenseExceptionId -&gt; [LicenseExceptionId])
+-&gt; (LicenseExceptionId
+    -&gt; LicenseExceptionId -&gt; [LicenseExceptionId])
+-&gt; (LicenseExceptionId
+    -&gt; LicenseExceptionId -&gt; [LicenseExceptionId])
+-&gt; (LicenseExceptionId
+    -&gt; LicenseExceptionId
+    -&gt; LicenseExceptionId
+    -&gt; [LicenseExceptionId])
+-&gt; Enum LicenseExceptionId
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: LicenseExceptionId -&gt; LicenseExceptionId
+succ :: LicenseExceptionId -&gt; LicenseExceptionId
+$cpred :: LicenseExceptionId -&gt; LicenseExceptionId
+pred :: LicenseExceptionId -&gt; LicenseExceptionId
+$ctoEnum :: Int -&gt; LicenseExceptionId
+toEnum :: Int -&gt; LicenseExceptionId
+$cfromEnum :: LicenseExceptionId -&gt; Int
+fromEnum :: LicenseExceptionId -&gt; Int
+$cenumFrom :: LicenseExceptionId -&gt; [LicenseExceptionId]
+enumFrom :: LicenseExceptionId -&gt; [LicenseExceptionId]
+$cenumFromThen :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+enumFromThen :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+$cenumFromTo :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+enumFromTo :: LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+$cenumFromThenTo :: LicenseExceptionId
+-&gt; LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+enumFromThenTo :: LicenseExceptionId
+-&gt; LicenseExceptionId -&gt; LicenseExceptionId -&gt; [LicenseExceptionId]
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#Enum/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679412599"><span id="local-6989586621679412601"><span class="annot"><span class="annottext">LicenseExceptionId
+LicenseExceptionId
+-&gt; LicenseExceptionId -&gt; Bounded LicenseExceptionId
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: LicenseExceptionId
+minBound :: LicenseExceptionId
+$cmaxBound :: LicenseExceptionId
+maxBound :: LicenseExceptionId
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#Bounded/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679412605"><span id="local-6989586621679412607"><span id="local-6989586621679412611"><span class="annot"><span class="annottext">Int -&gt; LicenseExceptionId -&gt; ShowS
+[LicenseExceptionId] -&gt; ShowS
+LicenseExceptionId -&gt; String
+(Int -&gt; LicenseExceptionId -&gt; ShowS)
+-&gt; (LicenseExceptionId -&gt; String)
+-&gt; ([LicenseExceptionId] -&gt; ShowS)
+-&gt; Show LicenseExceptionId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LicenseExceptionId -&gt; ShowS
+showsPrec :: Int -&gt; LicenseExceptionId -&gt; ShowS
+$cshow :: LicenseExceptionId -&gt; String
+show :: LicenseExceptionId -&gt; String
+$cshowList :: [LicenseExceptionId] -&gt; ShowS
+showList :: [LicenseExceptionId] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679412615"><span id="local-6989586621679412619"><span id="local-6989586621679412622"><span id="local-6989586621679412666"><span class="annot"><span class="annottext">ReadPrec [LicenseExceptionId]
+ReadPrec LicenseExceptionId
+Int -&gt; ReadS LicenseExceptionId
+ReadS [LicenseExceptionId]
+(Int -&gt; ReadS LicenseExceptionId)
+-&gt; ReadS [LicenseExceptionId]
+-&gt; ReadPrec LicenseExceptionId
+-&gt; ReadPrec [LicenseExceptionId]
+-&gt; Read LicenseExceptionId
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS LicenseExceptionId
+readsPrec :: Int -&gt; ReadS LicenseExceptionId
+$creadList :: ReadS [LicenseExceptionId]
+readList :: ReadS [LicenseExceptionId]
+$creadPrec :: ReadPrec LicenseExceptionId
+readPrec :: ReadPrec LicenseExceptionId
+$creadListPrec :: ReadPrec [LicenseExceptionId]
+readListPrec :: ReadPrec [LicenseExceptionId]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679412672"><span id="local-6989586621679412674"><span id="local-6989586621679412676"><span id="local-6989586621679412678"><span id="local-6989586621679412680"><span id="local-6989586621679412686"><span id="local-6989586621679412691"><span id="local-6989586621679412694"><span id="local-6989586621679412697"><span id="local-6989586621679412700"><span id="local-6989586621679412703"><span id="local-6989586621679412706"><span id="local-6989586621679412711"><span id="local-6989586621679412716"><span class="annot"><span class="annottext">Typeable LicenseExceptionId
+Typeable LicenseExceptionId =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; LicenseExceptionId
+ -&gt; c LicenseExceptionId)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseExceptionId)
+-&gt; (LicenseExceptionId -&gt; Constr)
+-&gt; (LicenseExceptionId -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseExceptionId))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c LicenseExceptionId))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; LicenseExceptionId -&gt; LicenseExceptionId)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; LicenseExceptionId -&gt; m LicenseExceptionId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; LicenseExceptionId -&gt; m LicenseExceptionId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; LicenseExceptionId -&gt; m LicenseExceptionId)
+-&gt; Data LicenseExceptionId
+LicenseExceptionId -&gt; Constr
+LicenseExceptionId -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; LicenseExceptionId -&gt; LicenseExceptionId
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseExceptionId
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; LicenseExceptionId
+-&gt; c LicenseExceptionId
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseExceptionId)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LicenseExceptionId)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; LicenseExceptionId
+-&gt; c LicenseExceptionId
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; LicenseExceptionId
+-&gt; c LicenseExceptionId
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseExceptionId
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LicenseExceptionId
+$ctoConstr :: LicenseExceptionId -&gt; Constr
+toConstr :: LicenseExceptionId -&gt; Constr
+$cdataTypeOf :: LicenseExceptionId -&gt; DataType
+dataTypeOf :: LicenseExceptionId -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseExceptionId)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LicenseExceptionId)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LicenseExceptionId)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LicenseExceptionId)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; LicenseExceptionId -&gt; LicenseExceptionId
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; LicenseExceptionId -&gt; LicenseExceptionId
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LicenseExceptionId -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LicenseExceptionId -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; LicenseExceptionId -&gt; m LicenseExceptionId
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679412722"><span id="local-6989586621679412724"><span class="annot"><span class="annottext">(forall x. LicenseExceptionId -&gt; Rep LicenseExceptionId x)
+-&gt; (forall x. Rep LicenseExceptionId x -&gt; LicenseExceptionId)
+-&gt; Generic LicenseExceptionId
+forall x. Rep LicenseExceptionId x -&gt; LicenseExceptionId
+forall x. LicenseExceptionId -&gt; Rep LicenseExceptionId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. LicenseExceptionId -&gt; Rep LicenseExceptionId x
+from :: forall x. LicenseExceptionId -&gt; Rep LicenseExceptionId x
+$cto :: forall x. Rep LicenseExceptionId x -&gt; LicenseExceptionId
+to :: forall x. Rep LicenseExceptionId x -&gt; LicenseExceptionId
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679412730"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679412739"><span class="annot"><span class="annottext">put :: LicenseExceptionId -&gt; Put
+</span><a href="#local-6989586621679412739"><span class="hs-identifier hs-var hs-var hs-var hs-var">put</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Put
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Put.html#putWord8/Data.Binary.Put.html#putWord8"><span class="hs-identifier hs-var">Binary.putWord8</span></a></span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Put)
+-&gt; (LicenseExceptionId -&gt; Word8) -&gt; LicenseExceptionId -&gt; Put
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Real.html#fromIntegral/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8)
+-&gt; (LicenseExceptionId -&gt; Int) -&gt; LicenseExceptionId -&gt; Word8
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#fromEnum/GHC.Enum.html#fromEnum"><span class="hs-identifier hs-var">fromEnum</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span id="local-6989586621679412759"><span class="annot"><span class="annottext">get :: Get LicenseExceptionId
+</span><a href="#local-6989586621679412759"><span class="hs-identifier hs-var hs-var hs-var hs-var">get</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-80"></span><span>        </span><span id="local-6989586621679412761"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679412761"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get Word8
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Get.html#getWord8/Data.Binary.Get.html#getWord8"><span class="hs-identifier hs-var">Binary.getWord8</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679412761"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Real.html#fromIntegral/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#fromEnum/GHC.Enum.html#fromEnum"><span class="hs-identifier hs-var">fromEnum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId
+forall a. Bounded a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#maxBound/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">String -&gt; Get LicenseExceptionId
+forall a. String -&gt; Get a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="../../base-4.18.2.1/src/Control.Monad.Fail.html#fail/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Too large LicenseExceptionId tag&quot;</span></span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; Get LicenseExceptionId
+forall a. a -&gt; Get a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; LicenseExceptionId
+forall a. Enum a =&gt; Int -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#toEnum/GHC.Enum.html#toEnum"><span class="hs-identifier hs-var">toEnum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Real.html#fromIntegral/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679412761"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- note: remember to bump version each time the definition changes</span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679412770"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679412779"><span class="annot"><span class="annottext">structure :: Proxy LicenseExceptionId -&gt; Structure
+</span><a href="#local-6989586621679412779"><span class="hs-identifier hs-var hs-var hs-var hs-var">structure</span></a></span></span><span> </span><span id="local-6989586621679412781"><span class="annot"><span class="annottext">Proxy LicenseExceptionId
+</span><a href="#local-6989586621679412781"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ASetter Structure Structure TypeVersion TypeVersion
+-&gt; TypeVersion -&gt; Structure -&gt; Structure
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="Distribution.Compat.Lens.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ASetter Structure Structure TypeVersion TypeVersion
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(TypeVersion -&gt; f TypeVersion) -&gt; Structure -&gt; f Structure
+</span><a href="Distribution.Utils.Structured.html#typeVersion"><span class="hs-identifier hs-var">typeVersion</span></a></span><span> </span><span class="annot"><span class="annottext">TypeVersion
+</span><span class="hs-number">306</span></span><span> </span><span class="annot"><span class="annottext">(Structure -&gt; Structure) -&gt; Structure -&gt; Structure
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy LicenseExceptionId -&gt; Structure
+forall {k} (a :: k). Typeable a =&gt; Proxy a -&gt; Structure
+</span><a href="Distribution.Utils.Structured.html#nominalStructure"><span class="hs-identifier hs-var">nominalStructure</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy LicenseExceptionId
+</span><a href="#local-6989586621679412781"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679412784"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>    </span><span id="local-6989586621679412788"><span class="annot"><span class="annottext">pretty :: LicenseExceptionId -&gt; Doc
+</span><a href="#local-6989586621679412788"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc)
+-&gt; (LicenseExceptionId -&gt; String) -&gt; LicenseExceptionId -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679412815"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m LicenseExceptionId
+</span><a href="#local-6989586621679412815"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>        </span><span id="local-6989586621679412817"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412817"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Char -&gt; m String
+forall a. m a -&gt; m [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#some/GHC.Base.html#some"><span class="hs-identifier hs-var">some</span></a></span><span> </span><span class="annot"><span class="annottext">(m Char -&gt; m String) -&gt; m Char -&gt; m String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m Char
+</span><a href="Distribution.Compat.CharParsing.html#satisfy"><span class="hs-identifier hs-var">P.satisfy</span></a></span><span> </span><span class="annot"><span class="annottext">((Char -&gt; Bool) -&gt; m Char) -&gt; (Char -&gt; Bool) -&gt; m Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679412820"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679412820"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier hs-var">isAsciiAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679412820"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679412820"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679412820"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span>
+</span><span id="line-95"></span><span>        </span><span id="local-6989586621679412822"><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679412822"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m CabalSpecVersion
+forall (m :: * -&gt; *). CabalParsing m =&gt; m CabalSpecVersion
+</span><a href="Distribution.Parsec.html#askCabalSpecVersion"><span class="hs-identifier hs-var">askCabalSpecVersion</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">m LicenseExceptionId
+-&gt; (LicenseExceptionId -&gt; m LicenseExceptionId)
+-&gt; Maybe LicenseExceptionId
+-&gt; m LicenseExceptionId
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../base-4.18.2.1/src/Data.Maybe.html#maybe/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; m LicenseExceptionId
+forall a. String -&gt; m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="../../base-4.18.2.1/src/Control.Monad.Fail.html#fail/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m LicenseExceptionId) -&gt; String -&gt; m LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unknown SPDX license exception identifier: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412817"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; m LicenseExceptionId
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe LicenseExceptionId -&gt; m LicenseExceptionId)
+-&gt; Maybe LicenseExceptionId -&gt; m LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-97"></span><span>            </span><span class="annot"><span class="annottext">LicenseListVersion -&gt; String -&gt; Maybe LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-var">mkLicenseExceptionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CabalSpecVersion -&gt; LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-var">cabalSpecVersionToSPDXListVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="#local-6989586621679412822"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412817"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>    </span><span id="local-6989586621679412829"><span class="annot"><span class="annottext">rnf :: LicenseExceptionId -&gt; ()
+</span><a href="#local-6989586621679412829"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span id="local-6989586621679412831"><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412831"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412831"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- License Data</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><span class="hs-comment">-- | License SPDX identifier, e.g. @&quot;BSD-3-Clause&quot;@.</span></span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-type">licenseExceptionId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-108"></span><span id="licenseExceptionId"><span class="annot"><span class="annottext">licenseExceptionId :: LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var hs-var">licenseExceptionId</span></a></span></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#DS389_exception"><span class="hs-identifier hs-var">DS389_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;389-exception&quot;</span></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_2_0"><span class="hs-identifier hs-var">Autoconf_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Autoconf-exception-2.0&quot;</span></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_3_0"><span class="hs-identifier hs-var">Autoconf_exception_3_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Autoconf-exception-3.0&quot;</span></span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Bison_exception_2_2"><span class="hs-identifier hs-var">Bison_exception_2_2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Bison-exception-2.2&quot;</span></span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Bootloader_exception"><span class="hs-identifier hs-var">Bootloader_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Bootloader-exception&quot;</span></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Classpath_exception_2_0"><span class="hs-identifier hs-var">Classpath_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Classpath-exception-2.0&quot;</span></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#CLISP_exception_2_0"><span class="hs-identifier hs-var">CLISP_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CLISP-exception-2.0&quot;</span></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#DigiRule_FOSS_exception"><span class="hs-identifier hs-var">DigiRule_FOSS_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DigiRule-FOSS-exception&quot;</span></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#ECos_exception_2_0"><span class="hs-identifier hs-var">ECos_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;eCos-exception-2.0&quot;</span></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Fawkes_Runtime_exception"><span class="hs-identifier hs-var">Fawkes_Runtime_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Fawkes-Runtime-exception&quot;</span></span><span>
+</span><span id="line-118"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#FLTK_exception"><span class="hs-identifier hs-var">FLTK_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;FLTK-exception&quot;</span></span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Font_exception_2_0"><span class="hs-identifier hs-var">Font_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Font-exception-2.0&quot;</span></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Freertos_exception_2_0"><span class="hs-identifier hs-var">Freertos_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;freertos-exception-2.0&quot;</span></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_2_0"><span class="hs-identifier hs-var">GCC_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GCC-exception-2.0&quot;</span></span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_3_1"><span class="hs-identifier hs-var">GCC_exception_3_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GCC-exception-3.1&quot;</span></span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Gnu_javamail_exception"><span class="hs-identifier hs-var">Gnu_javamail_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gnu-javamail-exception&quot;</span></span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GPL-3.0-linking-exception&quot;</span></span><span>
+</span><span id="line-125"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_source_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_source_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GPL-3.0-linking-source-exception&quot;</span></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_CC_1_0"><span class="hs-identifier hs-var">GPL_CC_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GPL-CC-1.0&quot;</span></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#I2p_gpl_java_exception"><span class="hs-identifier hs-var">I2p_gpl_java_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;i2p-gpl-java-exception&quot;</span></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LGPL_3_0_linking_exception"><span class="hs-identifier hs-var">LGPL_3_0_linking_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LGPL-3.0-linking-exception&quot;</span></span><span>
+</span><span id="line-129"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Libtool_exception"><span class="hs-identifier hs-var">Libtool_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Libtool-exception&quot;</span></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Linux_syscall_note"><span class="hs-identifier hs-var">Linux_syscall_note</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Linux-syscall-note&quot;</span></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LLVM-exception&quot;</span></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LZMA_exception"><span class="hs-identifier hs-var">LZMA_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LZMA-exception&quot;</span></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Mif_exception"><span class="hs-identifier hs-var">Mif_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mif-exception&quot;</span></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Nokia_Qt_exception_1_1"><span class="hs-identifier hs-var">Nokia_Qt_exception_1_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Nokia-Qt-exception-1.1&quot;</span></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCaml_LGPL_linking_exception"><span class="hs-identifier hs-var">OCaml_LGPL_linking_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OCaml-LGPL-linking-exception&quot;</span></span><span>
+</span><span id="line-136"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCCT_exception_1_0"><span class="hs-identifier hs-var">OCCT_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OCCT-exception-1.0&quot;</span></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OpenJDK-assembly-exception-1.0&quot;</span></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Openvpn_openssl_exception"><span class="hs-identifier hs-var">Openvpn_openssl_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;openvpn-openssl-exception&quot;</span></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;PS-or-PDF-font-exception-20170817&quot;</span></span><span>
+</span><span id="line-140"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Qt-GPL-exception-1.0&quot;</span></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Qt-LGPL-exception-1.1&quot;</span></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qwt_exception_1_0"><span class="hs-identifier hs-var">Qwt_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Qwt-exception-1.0&quot;</span></span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_0"><span class="hs-identifier hs-var">SHL_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;SHL-2.0&quot;</span></span><span>
+</span><span id="line-144"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_1"><span class="hs-identifier hs-var">SHL_2_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;SHL-2.1&quot;</span></span><span>
+</span><span id="line-145"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Swift_exception"><span class="hs-identifier hs-var">Swift_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Swift-exception&quot;</span></span><span>
+</span><span id="line-146"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#U_boot_exception_2_0"><span class="hs-identifier hs-var">U_boot_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;u-boot-exception-2.0&quot;</span></span><span>
+</span><span id="line-147"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Universal_FOSS_exception_1_0"><span class="hs-identifier hs-var">Universal_FOSS_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Universal-FOSS-exception-1.0&quot;</span></span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#WxWindows_exception_3_1"><span class="hs-identifier hs-var">WxWindows_exception_3_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;WxWindows-exception-3.1&quot;</span></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="annot"><span class="hs-comment">-- | License name, e.g. @&quot;GNU General Public License v2.0 only&quot;@</span></span><span>
+</span><span id="line-151"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-type">licenseExceptionName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-152"></span><span id="licenseExceptionName"><span class="annot"><span class="annottext">licenseExceptionName :: LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var hs-var">licenseExceptionName</span></a></span></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#DS389_exception"><span class="hs-identifier hs-var">DS389_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;389 Directory Server Exception&quot;</span></span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_2_0"><span class="hs-identifier hs-var">Autoconf_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Autoconf exception 2.0&quot;</span></span><span>
+</span><span id="line-154"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_3_0"><span class="hs-identifier hs-var">Autoconf_exception_3_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Autoconf exception 3.0&quot;</span></span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Bison_exception_2_2"><span class="hs-identifier hs-var">Bison_exception_2_2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Bison exception 2.2&quot;</span></span><span>
+</span><span id="line-156"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Bootloader_exception"><span class="hs-identifier hs-var">Bootloader_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Bootloader Distribution Exception&quot;</span></span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Classpath_exception_2_0"><span class="hs-identifier hs-var">Classpath_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Classpath exception 2.0&quot;</span></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#CLISP_exception_2_0"><span class="hs-identifier hs-var">CLISP_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CLISP exception 2.0&quot;</span></span><span>
+</span><span id="line-159"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#DigiRule_FOSS_exception"><span class="hs-identifier hs-var">DigiRule_FOSS_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DigiRule FOSS License Exception&quot;</span></span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#ECos_exception_2_0"><span class="hs-identifier hs-var">ECos_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;eCos exception 2.0&quot;</span></span><span>
+</span><span id="line-161"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Fawkes_Runtime_exception"><span class="hs-identifier hs-var">Fawkes_Runtime_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Fawkes Runtime Exception&quot;</span></span><span>
+</span><span id="line-162"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#FLTK_exception"><span class="hs-identifier hs-var">FLTK_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;FLTK exception&quot;</span></span><span>
+</span><span id="line-163"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Font_exception_2_0"><span class="hs-identifier hs-var">Font_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Font exception 2.0&quot;</span></span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Freertos_exception_2_0"><span class="hs-identifier hs-var">Freertos_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;FreeRTOS Exception 2.0&quot;</span></span><span>
+</span><span id="line-165"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_2_0"><span class="hs-identifier hs-var">GCC_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GCC Runtime Library exception 2.0&quot;</span></span><span>
+</span><span id="line-166"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_3_1"><span class="hs-identifier hs-var">GCC_exception_3_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GCC Runtime Library exception 3.1&quot;</span></span><span>
+</span><span id="line-167"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Gnu_javamail_exception"><span class="hs-identifier hs-var">Gnu_javamail_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GNU JavaMail exception&quot;</span></span><span>
+</span><span id="line-168"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GPL-3.0 Linking Exception&quot;</span></span><span>
+</span><span id="line-169"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_source_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_source_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GPL-3.0 Linking Exception (with Corresponding Source)&quot;</span></span><span>
+</span><span id="line-170"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_CC_1_0"><span class="hs-identifier hs-var">GPL_CC_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GPL Cooperation Commitment 1.0&quot;</span></span><span>
+</span><span id="line-171"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#I2p_gpl_java_exception"><span class="hs-identifier hs-var">I2p_gpl_java_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;i2p GPL+Java Exception&quot;</span></span><span>
+</span><span id="line-172"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LGPL_3_0_linking_exception"><span class="hs-identifier hs-var">LGPL_3_0_linking_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LGPL-3.0 Linking Exception&quot;</span></span><span>
+</span><span id="line-173"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Libtool_exception"><span class="hs-identifier hs-var">Libtool_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Libtool Exception&quot;</span></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Linux_syscall_note"><span class="hs-identifier hs-var">Linux_syscall_note</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Linux Syscall Note&quot;</span></span><span>
+</span><span id="line-175"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LLVM Exception&quot;</span></span><span>
+</span><span id="line-176"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LZMA_exception"><span class="hs-identifier hs-var">LZMA_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LZMA exception&quot;</span></span><span>
+</span><span id="line-177"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Mif_exception"><span class="hs-identifier hs-var">Mif_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Macros and Inline Functions Exception&quot;</span></span><span>
+</span><span id="line-178"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Nokia_Qt_exception_1_1"><span class="hs-identifier hs-var">Nokia_Qt_exception_1_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Nokia Qt LGPL exception 1.1&quot;</span></span><span>
+</span><span id="line-179"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCaml_LGPL_linking_exception"><span class="hs-identifier hs-var">OCaml_LGPL_linking_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OCaml LGPL Linking Exception&quot;</span></span><span>
+</span><span id="line-180"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCCT_exception_1_0"><span class="hs-identifier hs-var">OCCT_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Open CASCADE Exception 1.0&quot;</span></span><span>
+</span><span id="line-181"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OpenJDK Assembly exception 1.0&quot;</span></span><span>
+</span><span id="line-182"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Openvpn_openssl_exception"><span class="hs-identifier hs-var">Openvpn_openssl_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OpenVPN OpenSSL Exception&quot;</span></span><span>
+</span><span id="line-183"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;PS/PDF font exception (2017-08-17)&quot;</span></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Qt GPL exception 1.0&quot;</span></span><span>
+</span><span id="line-185"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Qt LGPL exception 1.1&quot;</span></span><span>
+</span><span id="line-186"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qwt_exception_1_0"><span class="hs-identifier hs-var">Qwt_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Qwt exception 1.0&quot;</span></span><span>
+</span><span id="line-187"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_0"><span class="hs-identifier hs-var">SHL_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Solderpad Hardware License v2.0&quot;</span></span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_1"><span class="hs-identifier hs-var">SHL_2_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Solderpad Hardware License v2.1&quot;</span></span><span>
+</span><span id="line-189"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Swift_exception"><span class="hs-identifier hs-var">Swift_exception</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Swift Exception&quot;</span></span><span>
+</span><span id="line-190"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#U_boot_exception_2_0"><span class="hs-identifier hs-var">U_boot_exception_2_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;U-Boot exception 2.0&quot;</span></span><span>
+</span><span id="line-191"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Universal_FOSS_exception_1_0"><span class="hs-identifier hs-var">Universal_FOSS_exception_1_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Universal FOSS Exception, Version 1.0&quot;</span></span><span>
+</span><span id="line-192"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionName"><span class="hs-identifier hs-var">licenseExceptionName</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#WxWindows_exception_3_1"><span class="hs-identifier hs-var">WxWindows_exception_3_1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;WxWindows Library Exception 3.1&quot;</span></span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- Creation</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-type">licenseExceptionIdList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion"><span class="hs-identifier hs-type">LicenseListVersion</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-199"></span><span id="licenseExceptionIdList"><span class="annot"><span class="annottext">licenseExceptionIdList :: LicenseListVersion -&gt; [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var hs-var">licenseExceptionIdList</span></a></span></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_0"><span class="hs-identifier hs-var">LicenseListVersion_3_0</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Nokia_Qt_exception_1_1"><span class="hs-identifier hs-var">Nokia_Qt_exception_1_1</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+-&gt; [LicenseExceptionId] -&gt; [LicenseExceptionId]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-var">bulkOfLicenses</span></a></span><span>
+</span><span id="line-203"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_2"><span class="hs-identifier hs-var">LicenseListVersion_3_2</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-204"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Nokia_Qt_exception_1_1"><span class="hs-identifier hs-var">Nokia_Qt_exception_1_1</span></a></span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span><span>
+</span><span id="line-207"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span><span>
+</span><span id="line-208"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span><span>
+</span><span id="line-209"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-211"></span><span>    </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+-&gt; [LicenseExceptionId] -&gt; [LicenseExceptionId]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-var">bulkOfLicenses</span></a></span><span>
+</span><span id="line-212"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_6"><span class="hs-identifier hs-var">LicenseListVersion_3_6</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-213"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_CC_1_0"><span class="hs-identifier hs-var">GPL_CC_1_0</span></a></span><span>
+</span><span id="line-214"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span><span>
+</span><span id="line-215"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCaml_LGPL_linking_exception"><span class="hs-identifier hs-var">OCaml_LGPL_linking_exception</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span><span>
+</span><span id="line-218"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span><span>
+</span><span id="line-220"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Swift_exception"><span class="hs-identifier hs-var">Swift_exception</span></a></span><span>
+</span><span id="line-221"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Universal_FOSS_exception_1_0"><span class="hs-identifier hs-var">Universal_FOSS_exception_1_0</span></a></span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-223"></span><span>    </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+-&gt; [LicenseExceptionId] -&gt; [LicenseExceptionId]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-var">bulkOfLicenses</span></a></span><span>
+</span><span id="line-224"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_9"><span class="hs-identifier hs-var">LicenseListVersion_3_9</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_exception</span></a></span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_source_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_source_exception</span></a></span><span>
+</span><span id="line-227"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_CC_1_0"><span class="hs-identifier hs-var">GPL_CC_1_0</span></a></span><span>
+</span><span id="line-228"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LGPL_3_0_linking_exception"><span class="hs-identifier hs-var">LGPL_3_0_linking_exception</span></a></span><span>
+</span><span id="line-229"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span><span>
+</span><span id="line-230"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCaml_LGPL_linking_exception"><span class="hs-identifier hs-var">OCaml_LGPL_linking_exception</span></a></span><span>
+</span><span id="line-231"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span><span>
+</span><span id="line-232"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span><span>
+</span><span id="line-233"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span><span>
+</span><span id="line-234"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span><span>
+</span><span id="line-235"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_0"><span class="hs-identifier hs-var">SHL_2_0</span></a></span><span>
+</span><span id="line-236"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_1"><span class="hs-identifier hs-var">SHL_2_1</span></a></span><span>
+</span><span id="line-237"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Swift_exception"><span class="hs-identifier hs-var">Swift_exception</span></a></span><span>
+</span><span id="line-238"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Universal_FOSS_exception_1_0"><span class="hs-identifier hs-var">Universal_FOSS_exception_1_0</span></a></span><span>
+</span><span id="line-239"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-240"></span><span>    </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+-&gt; [LicenseExceptionId] -&gt; [LicenseExceptionId]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-var">bulkOfLicenses</span></a></span><span>
+</span><span id="line-241"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_10"><span class="hs-identifier hs-var">LicenseListVersion_3_10</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-242"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_exception</span></a></span><span>
+</span><span id="line-243"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_source_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_source_exception</span></a></span><span>
+</span><span id="line-244"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_CC_1_0"><span class="hs-identifier hs-var">GPL_CC_1_0</span></a></span><span>
+</span><span id="line-245"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LGPL_3_0_linking_exception"><span class="hs-identifier hs-var">LGPL_3_0_linking_exception</span></a></span><span>
+</span><span id="line-246"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span><span>
+</span><span id="line-247"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCaml_LGPL_linking_exception"><span class="hs-identifier hs-var">OCaml_LGPL_linking_exception</span></a></span><span>
+</span><span id="line-248"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span><span>
+</span><span id="line-249"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span><span>
+</span><span id="line-250"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span><span>
+</span><span id="line-251"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span><span>
+</span><span id="line-252"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_0"><span class="hs-identifier hs-var">SHL_2_0</span></a></span><span>
+</span><span id="line-253"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_1"><span class="hs-identifier hs-var">SHL_2_1</span></a></span><span>
+</span><span id="line-254"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Swift_exception"><span class="hs-identifier hs-var">Swift_exception</span></a></span><span>
+</span><span id="line-255"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Universal_FOSS_exception_1_0"><span class="hs-identifier hs-var">Universal_FOSS_exception_1_0</span></a></span><span>
+</span><span id="line-256"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-257"></span><span>    </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+-&gt; [LicenseExceptionId] -&gt; [LicenseExceptionId]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-var">bulkOfLicenses</span></a></span><span>
+</span><span id="line-258"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_16"><span class="hs-identifier hs-var">LicenseListVersion_3_16</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-259"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_exception</span></a></span><span>
+</span><span id="line-260"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_3_0_linking_source_exception"><span class="hs-identifier hs-var">GPL_3_0_linking_source_exception</span></a></span><span>
+</span><span id="line-261"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GPL_CC_1_0"><span class="hs-identifier hs-var">GPL_CC_1_0</span></a></span><span>
+</span><span id="line-262"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LGPL_3_0_linking_exception"><span class="hs-identifier hs-var">LGPL_3_0_linking_exception</span></a></span><span>
+</span><span id="line-263"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LLVM_exception"><span class="hs-identifier hs-var">LLVM_exception</span></a></span><span>
+</span><span id="line-264"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCaml_LGPL_linking_exception"><span class="hs-identifier hs-var">OCaml_LGPL_linking_exception</span></a></span><span>
+</span><span id="line-265"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OpenJDK_assembly_exception_1_0"><span class="hs-identifier hs-var">OpenJDK_assembly_exception_1_0</span></a></span><span>
+</span><span id="line-266"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#PS_or_PDF_font_exception_20170817"><span class="hs-identifier hs-var">PS_or_PDF_font_exception_20170817</span></a></span><span>
+</span><span id="line-267"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_GPL_exception_1_0"><span class="hs-identifier hs-var">Qt_GPL_exception_1_0</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qt_LGPL_exception_1_1"><span class="hs-identifier hs-var">Qt_LGPL_exception_1_1</span></a></span><span>
+</span><span id="line-269"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_0"><span class="hs-identifier hs-var">SHL_2_0</span></a></span><span>
+</span><span id="line-270"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#SHL_2_1"><span class="hs-identifier hs-var">SHL_2_1</span></a></span><span>
+</span><span id="line-271"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Swift_exception"><span class="hs-identifier hs-var">Swift_exception</span></a></span><span>
+</span><span id="line-272"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Universal_FOSS_exception_1_0"><span class="hs-identifier hs-var">Universal_FOSS_exception_1_0</span></a></span><span>
+</span><span id="line-273"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-274"></span><span>    </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+-&gt; [LicenseExceptionId] -&gt; [LicenseExceptionId]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-var">bulkOfLicenses</span></a></span><span>
+</span><span id="line-275"></span><span>
+</span><span id="line-276"></span><span class="annot"><span class="hs-comment">-- | Create a 'LicenseExceptionId' from a 'String'.</span></span><span>
+</span><span id="line-277"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-type">mkLicenseExceptionId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion"><span class="hs-identifier hs-type">LicenseListVersion</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span>
+</span><span id="line-278"></span><span id="mkLicenseExceptionId"><span class="annot"><span class="annottext">mkLicenseExceptionId :: LicenseListVersion -&gt; String -&gt; Maybe LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-var hs-var">mkLicenseExceptionId</span></a></span></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_0"><span class="hs-identifier hs-var">LicenseListVersion_3_0</span></a></span><span>  </span><span id="local-6989586621679412839"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412839"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Map String LicenseExceptionId -&gt; Maybe LicenseExceptionId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412839"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_0"><span class="hs-identifier hs-var">stringLookup_3_0</span></a></span><span>
+</span><span id="line-279"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-var">mkLicenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_2"><span class="hs-identifier hs-var">LicenseListVersion_3_2</span></a></span><span>  </span><span id="local-6989586621679412842"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412842"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Map String LicenseExceptionId -&gt; Maybe LicenseExceptionId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412842"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_2"><span class="hs-identifier hs-var">stringLookup_3_2</span></a></span><span>
+</span><span id="line-280"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-var">mkLicenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_6"><span class="hs-identifier hs-var">LicenseListVersion_3_6</span></a></span><span>  </span><span id="local-6989586621679412844"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412844"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Map String LicenseExceptionId -&gt; Maybe LicenseExceptionId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412844"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_6"><span class="hs-identifier hs-var">stringLookup_3_6</span></a></span><span>
+</span><span id="line-281"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-var">mkLicenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_9"><span class="hs-identifier hs-var">LicenseListVersion_3_9</span></a></span><span>  </span><span id="local-6989586621679412846"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412846"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Map String LicenseExceptionId -&gt; Maybe LicenseExceptionId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412846"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_9"><span class="hs-identifier hs-var">stringLookup_3_9</span></a></span><span>
+</span><span id="line-282"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-var">mkLicenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_10"><span class="hs-identifier hs-var">LicenseListVersion_3_10</span></a></span><span> </span><span id="local-6989586621679412848"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412848"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Map String LicenseExceptionId -&gt; Maybe LicenseExceptionId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412848"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_10"><span class="hs-identifier hs-var">stringLookup_3_10</span></a></span><span>
+</span><span id="line-283"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#mkLicenseExceptionId"><span class="hs-identifier hs-var">mkLicenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_16"><span class="hs-identifier hs-var">LicenseListVersion_3_16</span></a></span><span> </span><span id="local-6989586621679412850"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412850"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Map String LicenseExceptionId -&gt; Maybe LicenseExceptionId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="../../containers-0.6.7/src/Data.Map.Internal.html#lookup/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679412850"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_16"><span class="hs-identifier hs-var">stringLookup_3_16</span></a></span><span>
+</span><span id="line-284"></span><span>
+</span><span id="line-285"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_0"><span class="hs-identifier hs-type">stringLookup_3_0</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span>
+</span><span id="line-286"></span><span id="stringLookup_3_0"><span class="annot"><span class="annottext">stringLookup_3_0 :: Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_0"><span class="hs-identifier hs-var hs-var">stringLookup_3_0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId)
+-&gt; [(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LicenseExceptionId -&gt; (String, LicenseExceptionId))
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679412853"><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412853"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412853"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412853"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LicenseExceptionId] -&gt; [(String, LicenseExceptionId)])
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-287"></span><span>    </span><span class="annot"><span class="annottext">LicenseListVersion -&gt; [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_0"><span class="hs-identifier hs-var">LicenseListVersion_3_0</span></a></span><span>
+</span><span id="line-288"></span><span>
+</span><span id="line-289"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_2"><span class="hs-identifier hs-type">stringLookup_3_2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span>
+</span><span id="line-290"></span><span id="stringLookup_3_2"><span class="annot"><span class="annottext">stringLookup_3_2 :: Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_2"><span class="hs-identifier hs-var hs-var">stringLookup_3_2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId)
+-&gt; [(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LicenseExceptionId -&gt; (String, LicenseExceptionId))
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679412854"><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412854"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412854"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412854"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LicenseExceptionId] -&gt; [(String, LicenseExceptionId)])
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-291"></span><span>    </span><span class="annot"><span class="annottext">LicenseListVersion -&gt; [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_2"><span class="hs-identifier hs-var">LicenseListVersion_3_2</span></a></span><span>
+</span><span id="line-292"></span><span>
+</span><span id="line-293"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_6"><span class="hs-identifier hs-type">stringLookup_3_6</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span>
+</span><span id="line-294"></span><span id="stringLookup_3_6"><span class="annot"><span class="annottext">stringLookup_3_6 :: Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_6"><span class="hs-identifier hs-var hs-var">stringLookup_3_6</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId)
+-&gt; [(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LicenseExceptionId -&gt; (String, LicenseExceptionId))
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679412855"><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412855"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412855"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412855"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LicenseExceptionId] -&gt; [(String, LicenseExceptionId)])
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-295"></span><span>    </span><span class="annot"><span class="annottext">LicenseListVersion -&gt; [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_6"><span class="hs-identifier hs-var">LicenseListVersion_3_6</span></a></span><span>
+</span><span id="line-296"></span><span>
+</span><span id="line-297"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_9"><span class="hs-identifier hs-type">stringLookup_3_9</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span>
+</span><span id="line-298"></span><span id="stringLookup_3_9"><span class="annot"><span class="annottext">stringLookup_3_9 :: Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_9"><span class="hs-identifier hs-var hs-var">stringLookup_3_9</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId)
+-&gt; [(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LicenseExceptionId -&gt; (String, LicenseExceptionId))
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679412856"><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412856"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412856"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412856"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LicenseExceptionId] -&gt; [(String, LicenseExceptionId)])
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-299"></span><span>    </span><span class="annot"><span class="annottext">LicenseListVersion -&gt; [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_9"><span class="hs-identifier hs-var">LicenseListVersion_3_9</span></a></span><span>
+</span><span id="line-300"></span><span>
+</span><span id="line-301"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_10"><span class="hs-identifier hs-type">stringLookup_3_10</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span>
+</span><span id="line-302"></span><span id="stringLookup_3_10"><span class="annot"><span class="annottext">stringLookup_3_10 :: Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_10"><span class="hs-identifier hs-var hs-var">stringLookup_3_10</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId)
+-&gt; [(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LicenseExceptionId -&gt; (String, LicenseExceptionId))
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679412857"><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412857"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412857"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412857"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LicenseExceptionId] -&gt; [(String, LicenseExceptionId)])
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-303"></span><span>    </span><span class="annot"><span class="annottext">LicenseListVersion -&gt; [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_10"><span class="hs-identifier hs-var">LicenseListVersion_3_10</span></a></span><span>
+</span><span id="line-304"></span><span>
+</span><span id="line-305"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_16"><span class="hs-identifier hs-type">stringLookup_3_16</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.6.7/src/Data.Map.Internal.html#Map/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span>
+</span><span id="line-306"></span><span id="stringLookup_3_16"><span class="annot"><span class="annottext">stringLookup_3_16 :: Map String LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#stringLookup_3_16"><span class="hs-identifier hs-var hs-var">stringLookup_3_16</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="../../containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId)
+-&gt; [(String, LicenseExceptionId)] -&gt; Map String LicenseExceptionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LicenseExceptionId -&gt; (String, LicenseExceptionId))
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#map/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679412858"><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412858"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LicenseExceptionId -&gt; String
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionId"><span class="hs-identifier hs-var">licenseExceptionId</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412858"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="#local-6989586621679412858"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LicenseExceptionId] -&gt; [(String, LicenseExceptionId)])
+-&gt; [LicenseExceptionId] -&gt; [(String, LicenseExceptionId)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-307"></span><span>    </span><span class="annot"><span class="annottext">LicenseListVersion -&gt; [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#licenseExceptionIdList"><span class="hs-identifier hs-var">licenseExceptionIdList</span></a></span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_16"><span class="hs-identifier hs-var">LicenseListVersion_3_16</span></a></span><span>
+</span><span id="line-308"></span><span>
+</span><span id="line-309"></span><span class="hs-comment">--  | License exceptions in all SPDX License lists</span><span>
+</span><span id="line-310"></span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-type">bulkOfLicenses</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.SPDX.LicenseExceptionId.html#LicenseExceptionId"><span class="hs-identifier hs-type">LicenseExceptionId</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-311"></span><span id="bulkOfLicenses"><span class="annot"><span class="annottext">bulkOfLicenses :: [LicenseExceptionId]
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#bulkOfLicenses"><span class="hs-identifier hs-var hs-var">bulkOfLicenses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-312"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#DS389_exception"><span class="hs-identifier hs-var">DS389_exception</span></a></span><span>
+</span><span id="line-313"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_2_0"><span class="hs-identifier hs-var">Autoconf_exception_2_0</span></a></span><span>
+</span><span id="line-314"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Autoconf_exception_3_0"><span class="hs-identifier hs-var">Autoconf_exception_3_0</span></a></span><span>
+</span><span id="line-315"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Bison_exception_2_2"><span class="hs-identifier hs-var">Bison_exception_2_2</span></a></span><span>
+</span><span id="line-316"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Bootloader_exception"><span class="hs-identifier hs-var">Bootloader_exception</span></a></span><span>
+</span><span id="line-317"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Classpath_exception_2_0"><span class="hs-identifier hs-var">Classpath_exception_2_0</span></a></span><span>
+</span><span id="line-318"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#CLISP_exception_2_0"><span class="hs-identifier hs-var">CLISP_exception_2_0</span></a></span><span>
+</span><span id="line-319"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#DigiRule_FOSS_exception"><span class="hs-identifier hs-var">DigiRule_FOSS_exception</span></a></span><span>
+</span><span id="line-320"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#ECos_exception_2_0"><span class="hs-identifier hs-var">ECos_exception_2_0</span></a></span><span>
+</span><span id="line-321"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Fawkes_Runtime_exception"><span class="hs-identifier hs-var">Fawkes_Runtime_exception</span></a></span><span>
+</span><span id="line-322"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#FLTK_exception"><span class="hs-identifier hs-var">FLTK_exception</span></a></span><span>
+</span><span id="line-323"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Font_exception_2_0"><span class="hs-identifier hs-var">Font_exception_2_0</span></a></span><span>
+</span><span id="line-324"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Freertos_exception_2_0"><span class="hs-identifier hs-var">Freertos_exception_2_0</span></a></span><span>
+</span><span id="line-325"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_2_0"><span class="hs-identifier hs-var">GCC_exception_2_0</span></a></span><span>
+</span><span id="line-326"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#GCC_exception_3_1"><span class="hs-identifier hs-var">GCC_exception_3_1</span></a></span><span>
+</span><span id="line-327"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Gnu_javamail_exception"><span class="hs-identifier hs-var">Gnu_javamail_exception</span></a></span><span>
+</span><span id="line-328"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#I2p_gpl_java_exception"><span class="hs-identifier hs-var">I2p_gpl_java_exception</span></a></span><span>
+</span><span id="line-329"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Libtool_exception"><span class="hs-identifier hs-var">Libtool_exception</span></a></span><span>
+</span><span id="line-330"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Linux_syscall_note"><span class="hs-identifier hs-var">Linux_syscall_note</span></a></span><span>
+</span><span id="line-331"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#LZMA_exception"><span class="hs-identifier hs-var">LZMA_exception</span></a></span><span>
+</span><span id="line-332"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Mif_exception"><span class="hs-identifier hs-var">Mif_exception</span></a></span><span>
+</span><span id="line-333"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#OCCT_exception_1_0"><span class="hs-identifier hs-var">OCCT_exception_1_0</span></a></span><span>
+</span><span id="line-334"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Openvpn_openssl_exception"><span class="hs-identifier hs-var">Openvpn_openssl_exception</span></a></span><span>
+</span><span id="line-335"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#Qwt_exception_1_0"><span class="hs-identifier hs-var">Qwt_exception_1_0</span></a></span><span>
+</span><span id="line-336"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#U_boot_exception_2_0"><span class="hs-identifier hs-var">U_boot_exception_2_0</span></a></span><span>
+</span><span id="line-337"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LicenseExceptionId
+</span><a href="Distribution.SPDX.LicenseExceptionId.html#WxWindows_exception_3_1"><span class="hs-identifier hs-var">WxWindows_exception_3_1</span></a></span><span>
+</span><span id="line-338"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-339"></span></pre></body></html>
