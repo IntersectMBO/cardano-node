@@ -54,7 +54,9 @@ pSocketPath' =
 pMetricsPort :: Int -> Parser Int
 pMetricsPort defaultValue = Opt.option Opt.auto
   (   Opt.long "metrics-port"
-  <>  Opt.help "Metrics port"
+  <>  Opt.help ("Port for exposing metrics. If unavailable, the next free port is used. If no port can be allocated, "
+      <> "the transaction submission API starts without metrics endpoint.")
   <>  Opt.metavar "PORT"
   <>  Opt.value defaultValue
+  <>  Opt.showDefault
   )

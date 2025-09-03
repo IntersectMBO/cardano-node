@@ -52,6 +52,7 @@ library
                       , ouroboros-network ^>= 0.21.2
                       , ouroboros-network-protocols
                       , prometheus >= 2.2.4
+                      , safe-exceptions
                       , servant
                       , servant-server
                       , streaming-commons
