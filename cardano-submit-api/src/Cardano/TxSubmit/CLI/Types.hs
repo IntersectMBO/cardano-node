@@ -1,12 +1,17 @@
 module Cardano.TxSubmit.CLI.Types
   ( ConfigFile (..)
   , GenesisFile (..)
+  , TxSubmitCommand(..)
   , TxSubmitNodeParams (..)
   ) where
 
 import           Cardano.Api (ConsensusModeParams, NetworkId (..), SocketPath)
 
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig)
+
+data TxSubmitCommand
+  = TxSubmitRun !TxSubmitNodeParams
+  | TxSubmitVersion
 
 -- | The product type of all command line arguments
 data TxSubmitNodeParams = TxSubmitNodeParams
