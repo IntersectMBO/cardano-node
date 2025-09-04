@@ -1,6 +1,6 @@
 FROM debian:stable-slim as build
 RUN apt-get update -y \
-    && apt-get install -y liblmdb-dev automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev curl python3 htop nload \
+    && apt-get install -y liblmdb-dev automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw6 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev curl python3 htop nload \
     && apt-get clean
 RUN mkdir secp256k1-sources && cd secp256k1-sources && git clone https://github.com/bitcoin-core/secp256k1.git && cd secp256k1 && git reset --hard ac83be33d0956faf6b7f61a60ab524ef7d6a473a && ./autogen.sh && ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental && make && make check && make install
 RUN git clone https://github.com/input-output-hk/libsodium && cd libsodium && git checkout $(curl -L https://github.com/input-output-hk/iohk-nix/releases/latest/download/INFO | awk '$1 == "debian.libsodium-vrf.deb" { rev = gensub(/.*-(.*)\.deb/, "\\1", "g", $2); print rev }') && ./autogen.sh && ./configure && make && make check && make install
@@ -27,7 +27,7 @@ COPY --from=build /root/.local/bin/ /bin/
 COPY --from=build /usr/local/lib/ /lib/
 RUN apt-get update && apt-get install git  -y
 RUN apt-get -y install libsodium23 libsodium-dev
-RUN apt-get install -y liblmdb-dev automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev
+RUN apt-get install -y liblmdb-dev automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw6 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev
 RUN mkdir secp256k1-sources && cd secp256k1-sources && git clone https://github.com/bitcoin-core/secp256k1.git && cd secp256k1 && git reset --hard ac83be33d0956faf6b7f61a60ab524ef7d6a473a && ./autogen.sh && ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental && make && make check && make install
 RUN groupadd -g 1001 cardano
 RUN useradd -rm -d /home/cardano -s /bin/bash -g 1001 -G sudo -u 1001 cardano
