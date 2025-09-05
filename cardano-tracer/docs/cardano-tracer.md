@@ -191,7 +191,7 @@ where:
 
 - `/tmp/forwarder.sock` is a path to the local socket on machine `A` _and_ a path to the local socket on machine `D`,
 - `john` is a user name you use to login on machine `D`,
-- `109.75.33.121` is an IP-adress of machine `D`.
+- `109.75.33.121` is an IP-address of machine `D`.
 
 Now run the same command on machines `B` and `C` to connect corresponding nodes with the same `cardano-tracer` working on machine `D`.
 
@@ -251,7 +251,7 @@ As you see, the tag in `network` field is `ConnectTo` now, which means that `car
 
 `AcceptTo` and `ConnectTo` are mirrored by the reciprocal CLI option on the node `--tracer-socket-path-connect` / `--tracer-socket-path-accept`. If you choose one on the node, you choose the opposite on the tracer. This only makes a difference to which entity initiates the handshake; after the handshake the configuration is identical
 
-Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario. The reason is easier maintainance. Suppose you have 3 working nodes, and they are connected to the same `cardano-tracer`. And then you want to connect 4-th node to it. If `cardano-tracer` is configured using `AcceptAt`, you shouldn't change its configuration - you just connect your 4-th node to it. But if `cardano-tracer` is configured using `ConnectTo`, you should add path to 4-th socket in its configuration file and then restart `cardano-tracer` process.
+Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario. The reason is easier maintenance. Suppose you have 3 working nodes, and they are connected to the same `cardano-tracer`. And then you want to connect 4-th node to it. If `cardano-tracer` is configured using `AcceptAt`, you shouldn't change its configuration - you just connect your 4-th node to it. But if `cardano-tracer` is configured using `ConnectTo`, you should add path to 4-th socket in its configuration file and then restart `cardano-tracer` process.
 
 ## Forwarding over TCP
 

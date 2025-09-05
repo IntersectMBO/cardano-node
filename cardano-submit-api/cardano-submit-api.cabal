@@ -52,6 +52,7 @@ library
                       , ouroboros-network ^>= 0.21.2
                       , ouroboros-network-protocols
                       , prometheus >= 2.2.4
+                      , safe-exceptions
                       , servant
                       , servant-server
                       , streaming-commons
@@ -86,7 +87,11 @@ executable cardano-submit-api
                       , optparse-applicative-fork
                       , cardano-cli
                       , cardano-crypto-class
+                      , cardano-git-rev ^>=0.2.2
                       , cardano-submit-api
+                      , text
+  other-modules:        Paths_cardano_submit_api
+  autogen-modules:      Paths_cardano_submit_api
 
 test-suite unit
   import:               project-config

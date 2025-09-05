@@ -146,6 +146,12 @@
                (set-git-rev cli)
                {passthru = {noGitRev = cli;};}
         ;
+        cardano-submit-api =
+          let submit-api = project.exes.cardano-submit-api;
+          in recursiveUpdate
+               (set-git-rev submit-api)
+               {passthru = {noGitRev = submit-api;};}
+        ;
       } // optionalAttrs (project.exes ? tx-generator) {
         tx-generator =
           let tx-gen = project.exes.tx-generator;
