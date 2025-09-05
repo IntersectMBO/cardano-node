@@ -5,7 +5,8 @@ module Parsers.Cardano
   , cmdCreateEnv
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..))
+import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), prettyShow)
+import           Cardano.Api.Era (ShelleyBasedEra (..))
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
@@ -52,10 +53,10 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   <*> pAnyShelleyBasedEra'
   <*> pMaxLovelaceSupply
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
-      (   OA.long "nodeLoggingFormat"
+      (   OA.long "node-logging-format"
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
-      <>  OA.showDefault
+      <>  OA.showDefaultWith prettyShow
       <>  OA.value (cardanoNodeLoggingFormat def)
       )
   <*> OA.option OA.auto
@@ -65,7 +66,7 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value 3
       )
-  <*> OA.flag False True
+  <*> OA.switch
       (   OA.long "enable-new-epoch-state-logging"
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
@@ -75,10 +76,15 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
       <>  OA.metavar "DIRECTORY"
       )))
+  <*> OA.switch
+      (   OA.long "enable-grpc"
+      <>  OA.help "[EXPERIMENTAL] Enable gRPC endpoint on all of testnet nodes. The listening socket file will be the same directory as node's N2C socket."
+      <>  OA.showDefault
+      )
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
-      pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+      pure $ AnyShelleyBasedEra ShelleyBasedEraConway -- TODO remove this hardcode
 
 pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =
