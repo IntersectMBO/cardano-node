@@ -62,7 +62,6 @@ import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
-import           RIO (runRIO)
 
 import           Hedgehog
 import qualified Hedgehog as H
