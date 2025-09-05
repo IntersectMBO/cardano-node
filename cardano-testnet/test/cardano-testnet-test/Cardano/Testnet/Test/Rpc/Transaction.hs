@@ -82,7 +82,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) req
 
     utxos' <- do
-      let req = def & #addresses . #items .~ [T.encodeUtf8 addrTxt0]
+      let req = def & #cardanoAddresses . #items .~ [T.encodeUtf8 addrTxt0]
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) req
     pure (pparams', utxos')
 
@@ -128,7 +128,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
 
     utxos <-
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) $
-        def & #addresses . #items .~ [T.encodeUtf8 addrTxt1]
+        def & #cardanoAddresses . #items .~ [T.encodeUtf8 addrTxt1]
     pure (utxos, submitResponse)
 
   submittedTxIds <- forM (submitResponse ^. #results) $ \res -> do

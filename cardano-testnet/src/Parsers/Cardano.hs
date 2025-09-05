@@ -10,9 +10,9 @@ import           Cardano.Api (AnyShelleyBasedEra (..))
 import           Cardano.Api (AnyShelleyBasedEra(..))
 import           Cardano.CLI.EraBased.Common.Option (bounded, command')
 import           Cardano.Api (AnyShelleyBasedEra (..), EraInEon (..), prettyShow)
+import           Cardano.Api.Era (AnyShelleyBasedEra (..))
+import           Cardano.Api.Pretty
 
-import           Cardano.CLI.Environment
-import           Cardano.CLI.EraBased.Common.Option (bounded, command')
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
 
 import           Prelude
@@ -84,10 +84,6 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.help "[EXPERIMENTAL] Enable gRPC endpoint on all of testnet nodes. The listening socket file will be the same directory as node's N2C socket."
       <>  OA.showDefault
       )
-  where
-    pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
-    pAnyShelleyBasedEra' =
-      pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
 
 pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =
