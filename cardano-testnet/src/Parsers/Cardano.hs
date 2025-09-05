@@ -6,6 +6,7 @@ module Parsers.Cardano
   ) where
 
 import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), prettyShow)
+import           Cardano.Api.Era (ShelleyBasedEra (..))
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
@@ -83,7 +84,7 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
-      pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+      pure $ AnyShelleyBasedEra ShelleyBasedEraConway -- TODO remove this hardcode
 
 pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =
