@@ -156,7 +156,6 @@ test-suite trace-dispatcher-test
                       , ekg-core
                       , generic-data
                       , hostname
-                      , http-client == 0.7.19
                       , stm
                       , tasty
                       , tasty-hunit
