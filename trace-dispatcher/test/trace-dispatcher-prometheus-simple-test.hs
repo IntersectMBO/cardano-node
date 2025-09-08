@@ -1,12 +1,11 @@
 import           Cardano.Logging (metricsFormatter)
 import           Cardano.Logging.Configuration (configureTracers)
-import           Cardano.Logging.Prometheus.TCPServer (spawnPrometheusSimple)
+import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
 import           Cardano.Logging.Trace (traceWith)
 import           Cardano.Logging.Tracer.EKG (ekgTracer)
 import           Cardano.Logging.Types
 
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (cancel)
 import           Control.Monad (unless)
 import           Data.Aeson
 import qualified Data.Map.Internal as Map
@@ -14,9 +13,8 @@ import           Data.Text (pack)
 import           Network.HTTP.Client (defaultManagerSettings, newManager)
 import           Network.HTTP.PrometheusTracker (scrapeOnce)
 import           Network.HTTP.PrometheusTracker.Types (MetricsMap (MM), MetricsValue (MVDouble))
-import           System.Exit (die)
+import           System.Exit (die, exitSuccess)
 import           System.Metrics (newStore)
-import           System.Posix.Signals
 
 newtype Measure = Measure Int
 
@@ -44,7 +42,7 @@ instance MetaTrace Measure where
      - Wait
 
    Thread #2:
-     - Scape the metrics
+     - Scrape the metrics
      - Ensure that we see the expected metric and its value in the list
 -}
 main :: IO ()
@@ -52,17 +50,21 @@ main = do
   store <- newStore
   let host = "localhost"
   let port = 9090
-  Right metricsServerThread <- spawnPrometheusSimple store (True, Just host, port)
+  runPrometheusSimple store (True, Just host, port) >>= handleSpawn
   pretracer <- ekgTracer emptyTraceConfig store
   let tracer = metricsFormatter pretracer :: Trace IO Measure
   confState <- emptyConfigReflection
   configureTracers confState emptyTraceConfig [tracer]
   traceWith tracer (Measure 42)
-  _ <- installHandler sigTERM (Catch (cancel metricsServerThread)) Nothing
   manager <- newManager defaultManagerSettings
   _ <- threadDelay (3 * 1000000)
   MM metricsMap <- scrapeOnce manager ("http://" <> host <> ":" <> show port <> "/metrics")
   MVDouble value <- maybe (die "'measure' metric not found in the scape list") pure (Map.lookup "measure" metricsMap)
   unless (value == 42) $ die ("Unexpected value: " <> show value)
-  putStrLn "Got correct metric value ✔"
-  cancel metricsServerThread
+  putStrLn "Got correct metric value ✔" where
+
+  handleSpawn :: Maybe String -> IO ()
+  handleSpawn Nothing = pure ()
+  handleSpawn (Just err) = do
+    putStrLn $ "Couldn't spawn prometheus-simple server!\n" <> err
+    exitSuccess

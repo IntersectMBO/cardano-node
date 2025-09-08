@@ -1,16 +1,15 @@
 -- | Run a simple Prometheus TCP server, responding *only* to the '/metrics' URL with current Node metrics
-module Cardano.Logging.Prometheus.TCPServer (spawnPrometheusSimple, runPrometheusSimple) where
+module Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple) where
 
 import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSample)
 import           Cardano.Logging.Prometheus.NetworkRun
 
-import           Control.Concurrent.Async (Async, async, link)
+import           Control.Concurrent.Async (async, link)
 import qualified Control.Exception as E
 import           Control.Monad (when)
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Builder
 import qualified Data.ByteString.Char8 as BC
-import           Data.Functor (($>))
 import           Data.Int (Int64)
 import           Data.List (find, intersperse)
 import           Data.Text.Lazy (Text)
@@ -24,22 +23,16 @@ import           System.Metrics as EKG (Store, sampleAll)
 import           System.Posix.Types (EpochTime)
 import           System.PosixCompat.Time (epochTime)
 
-spawnPrometheusSimple :: EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO (Either String (Async ()))
-spawnPrometheusSimple ekgStore (noSuffixes, mHost, portNo) =
-  E.try createRunner >>= \case
-    Left (E.SomeException e) -> pure (Left $ E.displayException e)
-    Right runner             -> Right <$> async runner
-  where
-    getCurrentExposition = renderExpositionFromSample noSuffixes <$> sampleAll ekgStore
-    createRunner         =
-      putStrLn ("Port Number: " <> show portNo) >>
-        mkTCPServerRunner (defaultRunParams "PrometheusSimple") mHost portNo (serveAccepted getCurrentExposition)
 
 -- Will provide a 'Just errormessage' iff creating the Prometheus server failed
 runPrometheusSimple :: EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO (Maybe String)
-runPrometheusSimple ekgStore args = spawnPrometheusSimple ekgStore args >>= \case
-  Left err -> pure $ Just err
-  Right as -> link as $> Nothing
+runPrometheusSimple ekgStore (noSuffixes, mHost, portNo) =
+  E.try createRunner >>= \case
+    Left (E.SomeException e) -> pure (Just $ E.displayException e)
+    Right runner             -> async runner >>= link >> pure Nothing
+  where
+    getCurrentExposition = renderExpositionFromSample noSuffixes <$> sampleAll ekgStore
+    createRunner         = mkTCPServerRunner (defaultRunParams "PrometheusSimple") mHost portNo (serveAccepted getCurrentExposition)
 
 -- serves an incoming connection; will release socket upon remote close, inactivity timeout or runRecvMaxSize bytes received
 serveAccepted :: IO Text -> TimeoutServer ()

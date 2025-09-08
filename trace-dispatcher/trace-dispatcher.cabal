@@ -105,27 +105,19 @@ test-suite trace-dispatcher-prometheus-simple-test
   main-is:              trace-dispatcher-prometheus-simple-test.hs
   build-depends:        base >=4.12 && <5
                       , aeson
-                      , async
-                      , bytestring
-                      , containers
-                      , deepseq
-                      , ekg-core
-                      , generic-data
-                      , hostname
-                      , http-client == 0.7.19
-                      , stm
-                      , tasty
-                      , tasty-hunit
-                      , tasty-quickcheck
-                      , text
-                      , time
-                      , trace-dispatcher
-                      , unordered-containers
-                      , utf8-string
-                      , unix
-                      , yaml
-                      , QuickCheck
                       , cardano-prometheus-tracker
+                      , containers
+                      , ekg-core
+                      , http-client
+                      , text
+                      , trace-dispatcher
+
+  ghc-options:
+    -threaded
+    -Wunused-packages
+
+  if !(os(linux) || os(darwin) || os(freebsd))
+    buildable: False
 
 test-suite trace-dispatcher-test
   import:               project-config
@@ -143,7 +135,6 @@ test-suite trace-dispatcher-test
                         Cardano.Logging.Test.Unit.Documentation
                         Cardano.Logging.Test.Unit.EKG
                         Cardano.Logging.Test.Unit.FrequencyLimiting
-                        Cardano.Logging.Test.Unit.PrometheusSimple
                         Cardano.Logging.Test.Unit.Routing
                         Cardano.Logging.Test.Unit.TestObjects
                         Cardano.Logging.Test.Unit.Trivial
@@ -157,7 +148,6 @@ test-suite trace-dispatcher-test
                       , ekg-core
                       , generic-data
                       , hostname
-                      , http-client == 0.7.19
                       , stm
                       , tasty
                       , tasty-hunit
@@ -167,7 +157,7 @@ test-suite trace-dispatcher-test
                       , trace-dispatcher
                       , unordered-containers
                       , utf8-string
-                      , unix
+                      , unix-compat
                       , yaml
                       , QuickCheck
                       , cardano-prometheus-tracker

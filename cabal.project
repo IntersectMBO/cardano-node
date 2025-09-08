@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-06-24T21:06:59Z
-  , cardano-haskell-packages 2025-09-18T12:21:32Z
+  , cardano-haskell-packages 2025-10-07T11:20:00Z
 
 packages:
   cardano-node
@@ -31,11 +31,6 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-
-source-repository-package
-  type: git
-  location: https://github.com/jutaro/cardano-prometheus-tracker.git
-  tag: af73c6217850ac6bf07ad26d8faa985f391eddf3
 
 -- Needed when cross compiling
 extra-packages: alex
