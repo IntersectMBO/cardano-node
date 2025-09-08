@@ -143,7 +143,6 @@ test-suite trace-dispatcher-test
                         Cardano.Logging.Test.Unit.Documentation
                         Cardano.Logging.Test.Unit.EKG
                         Cardano.Logging.Test.Unit.FrequencyLimiting
-                        Cardano.Logging.Test.Unit.PrometheusSimple
                         Cardano.Logging.Test.Unit.Routing
                         Cardano.Logging.Test.Unit.TestObjects
                         Cardano.Logging.Test.Unit.Trivial
