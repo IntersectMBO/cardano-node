@@ -42,6 +42,7 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wwarn=deprecations
+                        -fdefer-typed-holes -Wno-typed-holes
 
 library
   import:               project-config
