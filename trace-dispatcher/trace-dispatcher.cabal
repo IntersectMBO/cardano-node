@@ -168,10 +168,8 @@ test-suite trace-dispatcher-test
                       , trace-dispatcher
                       , unordered-containers
                       , utf8-string
-                      , unix
                       , yaml
                       , QuickCheck
-                      , cardano-prometheus-tracker
 
 
 benchmark trace-dispatcher-bench
