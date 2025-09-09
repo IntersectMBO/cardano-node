@@ -127,6 +127,9 @@ test-suite trace-dispatcher-prometheus-simple-test
                       , QuickCheck
                       , cardano-prometheus-tracker
 
+  if !(os(linux) || os(darwin) || os(freebsd))
+    buildable: False
+
 test-suite trace-dispatcher-test
   import:               project-config
   type:                 exitcode-stdio-1.0
