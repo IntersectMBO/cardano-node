@@ -247,30 +247,33 @@ instance Aeson.FromJSON Topology where
 
 --------------------------------------------------------------------------------
 
-data Era = Shelley | Allegra | Mary | Alonzo | Babbage | Conway
+data Era = Shelley | Allegra | Mary | Alonzo | Babbage | Conway | Dijkstra
   deriving (Show, Eq, Ord, Generic)
 
 instance Aeson.ToJSON Era where
-  toJSON Allegra = Aeson.toJSON ("allegra" :: Text.Text)
-  toJSON Shelley = Aeson.toJSON ("shelley" :: Text.Text)
-  toJSON Mary    = Aeson.toJSON ("mary"    :: Text.Text)
-  toJSON Alonzo  = Aeson.toJSON ("alonzo"  :: Text.Text)
-  toJSON Babbage = Aeson.toJSON ("babbage" :: Text.Text)
-  toJSON Conway  = Aeson.toJSON ("conway"  :: Text.Text)
+  toJSON Allegra   = Aeson.toJSON ("allegra"   :: Text.Text)
+  toJSON Shelley   = Aeson.toJSON ("shelley"   :: Text.Text)
+  toJSON Mary      = Aeson.toJSON ("mary"      :: Text.Text)
+  toJSON Alonzo    = Aeson.toJSON ("alonzo"    :: Text.Text)
+  toJSON Babbage   = Aeson.toJSON ("babbage"   :: Text.Text)
+  toJSON Conway    = Aeson.toJSON ("conway"    :: Text.Text)
+  toJSON Dijkstra  = Aeson.toJSON ("dijkstra"  :: Text.Text)
 
 instance Aeson.FromJSON Era where
   parseJSON = Aeson.withText "Era" $ \t -> case t of
-    "allegra" -> return Allegra
-    "shelley" -> return Shelley
-    "mary"    -> return Mary
-    "alonzo"  -> return Alonzo
-    "babbage" -> return Babbage
-    "conway"  -> return Conway
-    _         -> fail $ "Unknown Era: \"" ++ Text.unpack t ++ "\""
+    "allegra"   -> return Allegra
+    "shelley"   -> return Shelley
+    "mary"      -> return Mary
+    "alonzo"    -> return Alonzo
+    "babbage"   -> return Babbage
+    "conway"    -> return Conway
+    "dijkstra"  -> return Dijkstra
+    _           -> fail $ "Unknown Era: \"" ++ Text.unpack t ++ "\""
 
 -- | Minimal major protocol version per era
 firstEraForMajorVersion :: Int -> Era
 firstEraForMajorVersion pv
+  | pv >= _   = Dijkstra -- TODO: (@russoul)
   | pv >= 9   = Conway
   | pv >= 7   = Babbage
   | pv >= 5   = Alonzo
@@ -296,6 +299,7 @@ cf. https://github.com/cardano-foundation/CIPs/blob/master/CIP-0059/feature-tabl
 | 2024/09 | Voltaire | Conway  |   133660855 |          507 |              9,0 | Praos           | Ouroboros Genesis/Praos | Chang HF           |
 | 2025/01 | Voltaire | Conway  |   146620809 |          537 |             10,0 | Praos           | Ouroboros Genesis/Praos | Plomin HF          |
 -}
+-- TODO: Update the table (@russoul)
 
 --------------------------------------------------------------------------------
 
@@ -311,6 +315,7 @@ data Genesis = Genesis
   , shelley :: KM.KeyMap Aeson.Value
   , alonzo :: KM.KeyMap Aeson.Value
   , conway :: Maybe (KM.KeyMap Aeson.Value) -- TODO: Remove the null.
+  -- TODO: Should anything be added for Dijkstra (@russoul)?
 
   -- Absolute durations:
   , slot_duration :: Time.NominalDiffTime
@@ -367,7 +372,7 @@ instance Aeson.FromJSON ChainDB where
     (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data Chunks = Chunks
-  { 
+  {
     chaindb_server :: Integer
   , explorer_chunk :: Integer
   }
@@ -390,7 +395,7 @@ instance Aeson.FromJSON Chunks where
 --------------------------------------------------------------------------------
 
 data Node = Node
-  { 
+  {
     utxo_lmdb :: Bool
   , ssd_directory :: Maybe String
 
