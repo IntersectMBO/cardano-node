@@ -273,7 +273,7 @@ instance Aeson.FromJSON Era where
 -- | Minimal major protocol version per era
 firstEraForMajorVersion :: Int -> Era
 firstEraForMajorVersion pv
-  | pv >= _   = Dijkstra -- TODO: (@russoul)
+  | pv >= 11  = Dijkstra -- TODO: Once Dijkstra era is out, re-check the value
   | pv >= 9   = Conway
   | pv >= 7   = Babbage
   | pv >= 5   = Alonzo
@@ -299,7 +299,6 @@ cf. https://github.com/cardano-foundation/CIPs/blob/master/CIP-0059/feature-tabl
 | 2024/09 | Voltaire | Conway  |   133660855 |          507 |              9,0 | Praos           | Ouroboros Genesis/Praos | Chang HF           |
 | 2025/01 | Voltaire | Conway  |   146620809 |          537 |             10,0 | Praos           | Ouroboros Genesis/Praos | Plomin HF          |
 -}
--- TODO: Update the table (@russoul)
 
 --------------------------------------------------------------------------------
 
@@ -315,7 +314,7 @@ data Genesis = Genesis
   , shelley :: KM.KeyMap Aeson.Value
   , alonzo :: KM.KeyMap Aeson.Value
   , conway :: Maybe (KM.KeyMap Aeson.Value) -- TODO: Remove the null.
-  -- TODO: Should anything be added for Dijkstra (@russoul)?
+  , dijkstra :: Maybe (KM.KeyMap Aeson.Value)
 
   -- Absolute durations:
   , slot_duration :: Time.NominalDiffTime

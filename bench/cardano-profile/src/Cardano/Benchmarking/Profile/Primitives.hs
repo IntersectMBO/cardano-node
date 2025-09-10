@@ -157,6 +157,7 @@ empty = Types.Profile {
     , Types.shelley = mempty
     , Types.alonzo = mempty
     , Types.conway = Nothing
+    , Types.dijkstra = Nothing
     , Types.slot_duration = 0
     , Types.epoch_length = 0
     , Types.active_slots_coeff = 0
