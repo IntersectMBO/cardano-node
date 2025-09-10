@@ -84,6 +84,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import qualified Ouroboros.Cardano.PeerSelection.PeerSelectionActions as Cardano
 import           Ouroboros.Cardano.PeerSelection.Churn (peerChurnGovernor)
 import           Ouroboros.Cardano.Network.Types (ChurnMode (..))
@@ -124,15 +125,17 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
+import           Control.Applicative (empty)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
 import qualified Control.Exception as Exception
-import           Control.Monad (forM, forM_, unless, void, when)
+import           Control.Monad (forM, forM_, unless, void, when, join)
 import           Control.Monad.Class.MonadThrow (MonadThrow (..))
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
-import           Control.Monad.Trans.Except.Extra (left)
+import           Control.Monad.Trans.Except.Extra (left, hushM)
+import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
 import           "contra-tracer" Control.Tracer
 import           Data.Bits
 import           Data.Either (partitionEithers)
@@ -486,6 +489,13 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                                 publicRoots
                                 ntUseLedgerPeers
                                 ntPeerSnapshotPath
+        case ncPeerSharing nc of
+          PeerSharingEnabled
+            | hasProtocolFile (ncProtocolFiles nc) ->
+                traceWith (startupTracer tracers) . NetworkConfigUpdateWarning . Text.pack $
+                     "Mainnet block producers may not meet the Praos performance guarantees "
+                  <> "and host IP address will be leaked since peer sharing is enabled."
+          _otherwise -> pure ()
         localRootsVar   <- newTVarIO localRoots
         publicRootsVar  <- newTVarIO publicRoots
         useLedgerVar    <- newTVarIO ntUseLedgerPeers
@@ -493,6 +503,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         ledgerPeerSnapshotPathVar <- newTVarIO ntPeerSnapshotPath
         ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
                                                 (startupTracer tracers)
+                                                nc
                                                 (readTVar ledgerPeerSnapshotPathVar)
                                                 (readTVar useLedgerVar)
                                                 (const . pure $ ())
@@ -534,6 +545,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   ledgerPeerSnapshotPathVar
                 void $ updateLedgerPeerSnapshot
                   (startupTracer tracers)
+                  nc
                   (readTVar ledgerPeerSnapshotPathVar)
                   (readTVar useLedgerVar)
                   (writeTVar ledgerPeerSnapshotVar)
@@ -763,6 +775,7 @@ installP2PSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publ
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
                startupTracer
+               nc
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
@@ -854,7 +867,7 @@ updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
 updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
                             useBootsrapPeersVar ledgerPeerSnapshotPathVar = do
     traceWith startupTracer NetworkConfigUpdate
-    result <- try $ readTopologyFileOrError nc startupTracer
+    result <- try $ TopologyP2P.readTopologyFileOrError nc startupTracer
     case result of
       Left (FatalError err) ->
         traceWith startupTracer
@@ -876,31 +889,45 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
 #endif
 
 updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
+                         -> NodeConfiguration
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> STM IO UseLedgerPeers
                          -> (Maybe LedgerPeerSnapshot -> STM IO ())
                          -> IO (Maybe LedgerPeerSnapshot)
-updateLedgerPeerSnapshot startupTracer readLedgerPeerPath readUseLedgerVar writeVar = do
-  mPeerSnapshotFile <- atomically readLedgerPeerPath
-  mLedgerPeerSnapshot <- forM mPeerSnapshotFile $ \f -> do
-    lps@(LedgerPeerSnapshot (wOrigin, _)) <- readPeerSnapshotFile f
-    useLedgerPeers <- atomically readUseLedgerVar
+updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) readLedgerPeerPath readUseLedgerVar writeVar = do
+  (mPeerSnapshotFile, useLedgerPeers)
+    <- atomically $ (,) <$> readLedgerPeerPath <*> readUseLedgerVar
+
+  let trace    = traceWith startupTracer
+      traceL   = liftIO . trace
+
+  mLedgerPeerSnapshot <- runMaybeT $ do
     case useLedgerPeers of
-      DontUseLedgerPeers ->
-        traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
-      UseLedgerPeers afterSlot
-        | Always <- afterSlot ->
-            traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-        | After slotNo <- afterSlot ->
-            case wOrigin of
-              Origin -> error "Unsupported big ledger peer snapshot file: taken at Origin"
-              At slotNo' | slotNo' >= slotNo ->
-                traceWith startupTracer (LedgerPeerSnapshotLoaded . Right $ wOrigin)
-              _otherwise ->
-                traceWith startupTracer (LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin))
-    return lps
-  atomically . writeVar $ mLedgerPeerSnapshot
-  pure mLedgerPeerSnapshot
+      DontUseLedgerPeers       -> empty
+      UseLedgerPeers afterSlot -> do
+        eSnapshot
+          <- liftIO . readPeerSnapshotFile =<< hoistMaybe mPeerSnapshotFile
+        lps@(LedgerPeerSnapshot (wOrigin, _)) <-
+          case ncConsensusMode of
+            GenesisMode ->
+              MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateError)
+            PraosMode  ->
+              MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateWarning)
+        case afterSlot of
+          Always -> do
+            traceL $ LedgerPeerSnapshotLoaded . Right $ wOrigin
+            return lps
+          After ledgerSlotNo
+            | fileSlot >= ledgerSlotNo -> do
+                traceL $ LedgerPeerSnapshotLoaded . Right $ wOrigin
+                pure lps
+            | otherwise -> do
+                traceL $ LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin)
+                empty
+            where
+              fileSlot = case wOrigin of; Origin -> 0; At slot -> slot
+
+  mLedgerPeerSnapshot <$ atomically (writeVar mLedgerPeerSnapshot)
 
 --------------------------------------------------------------------------------
 -- Helper functions
