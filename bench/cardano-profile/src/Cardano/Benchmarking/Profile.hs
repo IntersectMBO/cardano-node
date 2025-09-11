@@ -202,7 +202,7 @@ overlay profile =
 -- "derive" needs above "shelley", "alonzo" and "conway" properties.
 derive :: Types.Profile -> Types.Profile
 derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ _ ana _ _ _ _) =
-  let 
+  let
       -- Absolute/epoch durations:
       ----------------------------
       slot_duration      = Types.slot_duration gsis -- NominalDiffTime
@@ -403,7 +403,7 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
         ++
         if Types.dense_pool_density comp /= 1
         then
-          [ 
+          [
             Aeson.String "--bulk-pool-cred-files", Aeson.Number $ fromInteger $ Types.n_dense_hosts comp
           , Aeson.String "--bulk-pools-per-file",  Aeson.Number $ fromInteger $ Types.dense_pool_density comp
           ]
@@ -480,12 +480,13 @@ addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
 addEras = foldMap
   (\profile -> Map.fromList $
       catMaybes
-        [ addEra profile Types.Shelley "shey"
-        , addEra profile Types.Allegra "alra"
-        , addEra profile Types.Mary    "mary"
-        , addEra profile Types.Alonzo  "alzo"
-        , addEra profile Types.Babbage "bage"
-        , addEra profile Types.Conway  "coay"
+        [ addEra profile Types.Shelley  "shey"
+        , addEra profile Types.Allegra  "alra"
+        , addEra profile Types.Mary     "mary"
+        , addEra profile Types.Alonzo   "alzo"
+        , addEra profile Types.Babbage  "bage"
+        , addEra profile Types.Conway   "coay"
+        , addEra profile Types.Dijkstra "dira"
         ]
   )
 
