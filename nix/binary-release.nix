@@ -35,6 +35,7 @@ let
       } // lib.optionalAttrs (env.nodeConfig ? CheckpointsFile) {
         CheckpointsFile = "checkpoints.json";
       };
+
       nodeConfig = pkgs.writeText
         "config.json"
         (builtins.toJSON
@@ -44,6 +45,10 @@ let
         "config-legacy.json"
         (builtins.toJSON
           (env.nodeConfigLegacy // genesisAttrs));
+
+      submitApiConfig = pkgs.writeText
+        "submit-api-config.json"
+        (builtins.toJSON env.submitApiConfig);
 
       tracerConfig = pkgs.writeText
         "tracer-config.json"
@@ -64,6 +69,7 @@ let
         mkdir -p "share/${name}"
         jq . < "${nodeConfig}" > share/${name}/config.json
         jq . < "${nodeConfigLegacy}" > share/${name}/config-legacy.json
+        jq . < "${submitApiConfig}" > share/${name}/submit-api-config.json
         jq . < "${tracerConfig}" > share/${name}/tracer-config.json
         jq . < "${peerSnapshot}" > share/${name}/peer-snapshot.json
         jq '.peerSnapshotFile = "peer-snapshot.json"' < "${topologyConfig}" > share/${name}/topology.json
