@@ -18,7 +18,14 @@ let
           inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
         };
       targetNodes = targetNodesList cfg.targetNodes;
-      era = capitalise cfg.era;
+      era = capitalise
+        (
+          if cfg.era == "dijkstra"
+          then # TODO: (@russoul) Get rid of this once tx-generator supports dijkstra
+            builtins.trace "Falling back to conway era in place of dijkstra for now..." "conway"
+          else
+            cfg.era
+        );
       inherit
         add_tx_size
         debugMode

@@ -77,7 +77,7 @@ case "$op" in
         if genesis cache-test "$cache_path"; then
           cache_hit=t
           cache_hit_desc='hit'
-        else 
+        else
           cache_hit=
           cache_hit_desc='miss'
         fi
@@ -691,6 +691,11 @@ genesis-create-testnet-data() {
         --out-dir      "$dir"
         "${args[@]}"
     )
+    if [ "$era" = "dijkstra" ]; then
+      era="conway" # TODO: (@russoul) Get rid of this once cardano-cli supports dijkstra
+      warn genesis "Falling back to conway in place of dijkstra for the time being..."
+    fi
+    # TODO Just fallback to conway + print a message to not forget to implement dira
     progress genesis "$(colorise cardano-cli "$era" create-testnet-data "${create_testnet_data_args[@]}")"
     cardano-cli "$era" genesis create-testnet-data "${create_testnet_data_args[@]}"
 
