@@ -23,9 +23,14 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AsType 
 import           Cardano.Binary (DecoderError (..))
 import           Cardano.BM.Trace (Trace, logInfo)
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Logging.Trace (traceWith)
+import           Cardano.Logging.Types (SeverityS (Info))
+import qualified Cardano.Logging.Types as TraceD
 import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
+import           Cardano.TxSubmit.Tracing.Message (Message (Message),
+                   MetricAction (MetricActionNone))
 import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError (..),
                    TxCmdError (..), TxSubmitApi, TxSubmitApiRecord (..),
                    TxSubmitWebApiError (TxSubmitFail), renderTxCmdError)
@@ -71,30 +76,33 @@ import           Servant.Server.Generic (AsServerT)
 
 runTxSubmitServer
   :: Trace IO Text
+  -> TraceD.Trace IO Message
   -> TxSubmitMetrics
   -> WebserverConfig
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
   -> IO ()
-runTxSubmitServer trace metrics webserverConfig protocol networkId socketPath = do
-  logException trace "TxSubmit WebAPI: " $
-    Web.runSettings trace (toWarpSettings webserverConfig) $ txSubmitApp trace metrics protocol networkId socketPath
+runTxSubmitServer trace trace' metrics webserverConfig protocol networkId socketPath = do
+  logException trace trace' "TxSubmit WebAPI: " $
+    Web.runSettings trace trace' (toWarpSettings webserverConfig) $ txSubmitApp trace trace' metrics protocol networkId socketPath
   logInfo trace "txSubmitApp: exiting"
+  traceWith trace' (Message Info "txSubmitApp: exiting" MetricActionNone)
 
 txSubmitApp
   :: Trace IO Text
+  -> TraceD.Trace IO Message
   -> TxSubmitMetrics
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
   -> Application
-txSubmitApp trace metrics connectInfo networkId socketPath =
+txSubmitApp trace trace' metrics connectInfo networkId socketPath =
     Servant.serve (Proxy :: Proxy TxSubmitApi) (toServant handlers)
   where
     handlers :: TxSubmitApiRecord (AsServerT Handler)
     handlers = TxSubmitApiRecord
-      { _txSubmitPost = txSubmitPost trace metrics connectInfo networkId socketPath
+      { _txSubmitPost = txSubmitPost trace trace' metrics connectInfo networkId socketPath
       }
 
 deserialiseOne :: forall b. ()
@@ -125,13 +133,14 @@ readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyO
 
 txSubmitPost
   :: Trace IO Text
+  -> TraceD.Trace IO Message
   -> TxSubmitMetrics
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
   -> ByteString
   -> Handler TxId
-txSubmitPost trace metrics p@(CardanoModeParams cModeParams) networkId socketPath txBytes =
+txSubmitPost trace trace' metrics p@(CardanoModeParams cModeParams) networkId socketPath txBytes =
   handle $ do
     InAnyShelleyBasedEra sbe tx <- readByteStringTx txBytes
     let txInMode = TxInMode sbe tx
@@ -166,12 +175,22 @@ txSubmitPost trace metrics p@(CardanoModeParams cModeParams) networkId socketPat
             liftIO $ logInfo trace $
               "txSubmitPost: failed to submit transaction: "
                 <> renderTxCmdError err
+            liftIO $ traceWith trace' $ Message
+              Info
+              ("txSubmitPost: failed to submit transaction: " <> renderTxCmdError err)
+              MetricActionNone
+            -- TODO: (@russoul) Next step is to tie the metric action (Gauge.inc) to the trace message
             liftIO $ Gauge.inc (tsmFailCount metrics)
             errorResponse (TxSubmitFail err)
           Right txid -> do
             liftIO $ logInfo trace $
               "txSubmitPost: successfully submitted transaction "
                 <> renderMediumTxId txid
+            liftIO $ traceWith trace' $ Message
+              Info
+              ("txSubmitPost: successfully submitted transaction " <> renderMediumTxId txid)
+              MetricActionNone
+            -- TODO: (@russoul) Next step is to tie the metric action (Gauge.inc) to the trace message
             liftIO $ Gauge.inc (tsmCount metrics)
             pure txid
 

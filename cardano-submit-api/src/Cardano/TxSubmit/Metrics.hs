@@ -12,6 +12,10 @@ import           Cardano.Api.Pretty (textShow)
 
 import           Cardano.BM.Data.Trace (Trace)
 import           Cardano.BM.Trace (logError, logInfo, logWarning)
+import           Cardano.Logging.Trace (traceWith)
+import           Cardano.Logging.Types (SeverityS (Error, Info, Warning))
+import qualified Cardano.Logging.Types as TraceD
+import           Cardano.TxSubmit.Tracing.Message (Message (..), MetricAction (..))
 
 import           Control.Exception.Safe
 import           Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT))
@@ -31,15 +35,17 @@ data TxSubmitMetrics = TxSubmitMetrics
 -- be passed to 'withAsync'.
 registerMetricsServer
   :: Trace IO Text
+  -> TraceD.Trace IO Message
   -> Int
   -> IO (TxSubmitMetrics, IO ())
-registerMetricsServer tracer metricsPort =
+registerMetricsServer tracer tracer' metricsPort =
   runRegistryT $ do
     metrics <- makeMetrics
     registry <- RegistryT ask
     let runServer =
           tryWithPort metricsPort $ \port -> do
             logInfo tracer $ "Starting metrics server on port " <> textShow port
+            traceWith tracer' $ Message Info ("Starting metrics server on port " <> textShow port) MetricActionNone
             flip runReaderT registry . unRegistryT $ serveMetricsT port []
     pure (metrics, runServer)
  where
@@ -50,14 +56,24 @@ registerMetricsServer tracer metricsPort =
     go port = do
       catch @_ @IOException (f port) $ \e -> do
         logWarning tracer $ T.pack $ "Metrics server error: " <> displayException e
+        traceWith tracer' $ Message Warning (T.pack $ "Metrics server error: " <> displayException e) MetricActionNone
         if port <= (startingPort + 1000)
           then do
             logWarning tracer $ "Could not allocate metrics server port " <> textShow port <> " - trying next available..."
+            traceWith tracer' $
+              Message
+                 Warning
+                ("Could not allocate metrics server port " <> textShow port <> " - trying next available...")
+                MetricActionNone
             go $ port + 1
           else do
             logError tracer $
               "Could not allocate any metrics port until " <> textShow port <> " - metrics endpoint disabled"
-            pure ()
+            traceWith tracer' $
+              Message
+                Error
+                ("Could not allocate any metrics port until " <> textShow port <> " - metrics endpoint disabled")
+                MetricActionNone
 
 makeMetrics :: RegistryT IO TxSubmitMetrics
 makeMetrics =

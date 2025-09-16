@@ -5,6 +5,11 @@ module Cardano.TxSubmit.Util
 import           Cardano.Api (textShow)
 
 import           Cardano.BM.Trace (Trace, logError)
+import           Cardano.Logging.Trace (traceWith)
+import           Cardano.Logging.Types (SeverityS (Error))
+import qualified Cardano.Logging.Types as TraceD
+import           Cardano.TxSubmit.Tracing.Message (Message (Message),
+                   MetricAction (MetricActionNone))
 
 import           Prelude
 
@@ -15,12 +20,13 @@ import           Data.Text (Text)
 -- code, the caught exception will not be logged. Therefore wrap all tx submission code that
 -- is called from network with an exception logger so at least the exception will be
 -- logged (instead of silently swallowed) and then rethrown.
-logException :: Trace IO Text -> Text -> IO a -> IO a
-logException tracer txt action = action `catch` logger
+logException :: Trace IO Text -> TraceD.Trace IO Message -> Text -> IO a -> IO a
+logException tracer tracer' txt action = action `catch` logger
   where
     logger :: SomeException -> IO a
     logger e = do
       logError tracer $ txt <> textShow e
+      traceWith tracer' (Message Error (txt <> textShow e) MetricActionNone)
       throwIO e
 
 

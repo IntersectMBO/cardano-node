@@ -23,6 +23,8 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Yaml as Yaml
 
+-- TODO: (@russoul) Logging.Configuration shall be first accompanied with trace-dispatcher compatible configuration
+-- and then completely replaced by the other
 type TxSubmitNodeConfig = GenTxSubmitNodeConfig Logging.Configuration
 
 data ToggleLogging = LoggingOn | LoggingOff deriving (Eq, Show)

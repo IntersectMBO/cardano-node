@@ -32,6 +32,8 @@ common project-config
                         -Wunused-packages
                         -fwarn-incomplete-patterns
                         -fwarn-redundant-constraints
+                        -Wno-typed-holes
+                        -fno-defer-type-errors
 
 library
   import:               project-config
@@ -43,6 +45,7 @@ library
                       , cardano-binary
                       , cardano-cli ^>= 10.11.1
                       , cardano-crypto-class ^>= 2.2
+                      , containers
                       , http-media
                       , iohk-monitoring
                       , mtl
@@ -58,6 +61,7 @@ library
                       , streaming-commons
                       , text
                       , transformers-except
+                      , trace-dispatcher
                       , warp
                       , yaml
 
@@ -74,6 +78,7 @@ library
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
                       , Cardano.TxSubmit.Tracing.ToObjectOrphans
+                      , Cardano.TxSubmit.Tracing.Message
                       , Cardano.TxSubmit.Types
                       , Cardano.TxSubmit.Util
                       , Cardano.TxSubmit.Web
