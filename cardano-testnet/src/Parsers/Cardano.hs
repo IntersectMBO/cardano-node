@@ -12,14 +12,12 @@ import           Cardano.Api ( AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
-
 import           Prelude
 
 import           Control.Applicative((<|>), optional)
 import           Data.Default.Class (def)
 import qualified Data.List as L
-import           Data.Maybe
-import           Data.Typeable
+import           Data.Maybe (fromMaybe, maybeToList)
 import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
@@ -28,6 +26,8 @@ import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
+import qualified Options.Applicative as Opt
+import Cardano.Prelude (Typeable)
 
 
 optsTestnet :: Parser CardanoTestnetCliOptions
