@@ -5,18 +5,17 @@ module Parsers.Cardano
   , cmdCreateEnv
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..))
+import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), ShelleyBasedEra (..), Convert (..), Eon, AnyCardanoEra (..), forEraInEonMaybe)
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
-
 import           Prelude
 
 import           Control.Applicative
 import           Data.Default.Class
 import           Data.Functor
 import qualified Data.List as L
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe, maybeToList)
 import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
@@ -24,6 +23,8 @@ import qualified Options.Applicative as OA
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
+import qualified Options.Applicative as Opt
+import Cardano.Prelude (Typeable)
 
 optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
 optsTestnet envCli = CardanoTestnetCliOptions
@@ -78,7 +79,35 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
-      pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+      pAnyShelleyBasedEra <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+      where
+      deprecationText :: String
+      deprecationText = " - DEPRECATED - will be removed in the future"
+
+      envCliAnyEon :: Typeable eon => Eon eon => EnvCli -> Maybe (EraInEon eon)
+      envCliAnyEon envCli' = do
+        AnyCardanoEra era <- envCliAnyCardanoEra envCli'
+        forEraInEonMaybe era EraInEon
+
+      pAnyShelleyBasedEra  =
+        asum $
+          mconcat
+            [
+              [ Opt.flag' (EraInEon ShelleyBasedEraShelley) $
+                  mconcat [Opt.long "shelley-era", Opt.help $ "Specify the Shelley era" <> deprecationText]
+              , Opt.flag' (EraInEon ShelleyBasedEraAllegra) $
+                  mconcat [Opt.long "allegra-era", Opt.help $ "Specify the Allegra era" <> deprecationText]
+              , Opt.flag' (EraInEon ShelleyBasedEraMary) $
+                  mconcat [Opt.long "mary-era", Opt.help $ "Specify the Mary era" <> deprecationText]
+              , Opt.flag' (EraInEon ShelleyBasedEraAlonzo) $
+                  mconcat [Opt.long "alonzo-era", Opt.help $ "Specify the Alonzo era" <> deprecationText]
+              , Opt.flag' (EraInEon ShelleyBasedEraBabbage) $
+                  mconcat [Opt.long "babbage-era", Opt.help $ "Specify the Babbage era (default)" <> deprecationText]
+              , EraInEon . convert <$> pConwayEra envCli
+              ]
+            , maybeToList $ pure <$> envCliAnyEon envCli
+            , pure $ pure $ EraInEon ShelleyBasedEraConway
+            ]
 
 pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =
