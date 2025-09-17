@@ -86,7 +86,8 @@ import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Peras.SelectView
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
@@ -554,6 +555,8 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.gsmTracer = nullTracer
       , Consensus.csjTracer = nullTracer
       , Consensus.dbfTracer = nullTracer
+      , Consensus.perasCertDiffusionInboundTracer = nullTracer
+      , Consensus.perasCertDiffusionOutboundTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -569,6 +572,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       , NodeToNode.tKeepAliveTracer = nullTracer
       , NodeToNode.tPeerSharingTracer = nullTracer
+      , NodeToNode.tPerasCertDiffusionTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -597,7 +601,7 @@ teeTraceChainTip
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (WeightedSelectView (BlockProtocol blk))
      )
   => BlockConfig blk
   -> ForgingStats
@@ -621,7 +625,7 @@ teeTraceChainTipElide
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (WeightedSelectView (BlockProtocol blk))
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -860,6 +864,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
     , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr
+      -- TODO plug in
+    , Consensus.perasCertDiffusionInboundTracer = Tracer $ \_ -> pure ()
+    , Consensus.perasCertDiffusionOutboundTracer = Tracer $ \_ -> pure ()
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1511,6 +1518,8 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tPeerSharingTracer =
       tracerOnOff (tracePeerSharingProtocol trSel)
                   verb "PeerSharingPrototocol" tr
+    -- TODO plug in
+  , NodeToNode.tPerasCertDiffusionTracer = Tracer $ \_ -> pure ()
   }
 
 -- TODO @ouroboros-network

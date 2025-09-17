@@ -58,6 +58,7 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Peras.SelectView
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
@@ -517,7 +518,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk)))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -922,7 +923,7 @@ instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk)))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject _verb ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
@@ -963,10 +964,10 @@ instance ( ConvertRawHash blk
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint extended)
                , "chainLengthDelta" .= extended `chainLengthΔ` base
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
@@ -979,10 +980,10 @@ instance ( ConvertRawHash blk
                , "chainLengthDelta" .= new `chainLengthΔ` old
                -- Check that the SwitchedToAFork event was triggered by a proper fork.
                , "realFork" .= not (AF.withinFragmentBounds (AF.headPoint old) new)
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]

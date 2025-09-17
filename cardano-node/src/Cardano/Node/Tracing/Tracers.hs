@@ -408,6 +408,9 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusCsjTr
       , Consensus.dbfTracer = Tracer $
           traceWith consensusDbfTr
+        -- TODO plug these in
+      , Consensus.perasCertDiffusionInboundTracer = Tracer $ \_ -> pure ()
+      , Consensus.perasCertDiffusionOutboundTracer = Tracer $ \_ -> pure ()
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -517,6 +520,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith keepAliveTracer
       , NtN.tPeerSharingTracer = Tracer $
           traceWith peerSharingTracer
+        -- TODO plug in
+      , NtN.tPerasCertDiffusionTracer = Tracer $ \_ -> pure ()
       }
 
 mkDiffusionTracers

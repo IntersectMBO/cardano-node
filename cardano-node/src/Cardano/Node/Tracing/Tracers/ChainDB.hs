@@ -28,7 +28,8 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError (..))
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Peras.SelectView
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
@@ -79,7 +80,7 @@ withAddedToCurrentChainEmptyLimited tr = do
 instance (  LogFormatting (Header blk)
           , LogFormatting (LedgerEvent blk)
           , LogFormatting (RealPoint blk)
-          , LogFormatting (SelectView (BlockProtocol blk))
+          , LogFormatting (WeightedSelectView (BlockProtocol blk))
           , ConvertRawHash blk
           , ConvertRawHash (Header blk)
           , LedgerSupportsProtocol blk
@@ -103,6 +104,7 @@ instance (  LogFormatting (Header blk)
           "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) ->
           "Chain Selection was unstarved by " <> renderRealPoint pt
+  forHuman _ = "TODO"
 
   forMachine _ ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "LastShutdownUnclean" ]
@@ -132,6 +134,10 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
+  forMachine _details (ChainDB.TracePerasCertDbEvent _v) =
+    mempty -- TODO fill in
+  forMachine _details (ChainDB.TraceAddPerasCertEvent _v) =
+    mempty -- TODO fill in
 
   asMetrics ChainDB.TraceLastShutdownUnclean         = []
   asMetrics (ChainDB.TraceChainSelStarvationEvent _) = []
@@ -145,6 +151,9 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceLedgerDBEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
+  -- TODO defer to v
+  asMetrics (ChainDB.TracePerasCertDbEvent _v)      = []
+  asMetrics (ChainDB.TraceAddPerasCertEvent _v)     = []
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
@@ -172,6 +181,9 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
+  -- TODO defer to ev
+  namespaceFor (ChainDB.TracePerasCertDbEvent _ev) = Namespace [] ["PerasCertDbEvent"]
+  namespaceFor (ChainDB.TraceAddPerasCertEvent _ev) = Namespace [] ["AddPerasCertEvent"]
 
   severityFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Info
   severityFor (Namespace _ ["ChainSelStarvationEvent"]) _ = Just Debug
@@ -392,7 +404,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
 instance ( LogFormatting (Header blk)
          , LogFormatting (LedgerEvent blk)
          , LogFormatting (RealPoint blk)
-         , LogFormatting (SelectView (BlockProtocol blk))
+         , LogFormatting (WeightedSelectView (BlockProtocol blk))
          , ConvertRawHash blk
          , ConvertRawHash (Header blk)
          , LedgerSupportsProtocol blk
@@ -486,10 +498,10 @@ instance ( LogFormatting (Header blk)
       in mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails DDetailed (AF.headPoint extended)
-               , "newTipSelectView" .= forMachine DDetailed (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine DDetailed (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine DDetailed oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine DDetailed oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (forMachine DDetailed `map` addedHdrsNewChain base extended)
                ]
@@ -502,10 +514,10 @@ instance ( LogFormatting (Header blk)
       mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint extended)
-               , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine dtal (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine dtal oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
@@ -521,10 +533,10 @@ instance ( LogFormatting (Header blk)
       in mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails DDetailed (AF.headPoint new)
-               , "newTipSelectView" .= forMachine DDetailed (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine DDetailed (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine DDetailed oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine DDetailed oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (forMachine DDetailed `map` addedHdrsNewChain old new)
                ]
@@ -537,10 +549,10 @@ instance ( LogFormatting (Header blk)
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint new)
-               , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine dtal (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine dtal oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
