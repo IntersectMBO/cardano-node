@@ -10,15 +10,13 @@ import           Cardano.Api ( AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
-
 import           Prelude
 
 import           Control.Applicative
 import           Data.Default.Class
 import           Data.Functor
 import qualified Data.List as L
-import           Data.Maybe
-import           Data.Typeable
+import           Data.Maybe (fromMaybe, maybeToList)
 import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
@@ -26,6 +24,8 @@ import qualified Options.Applicative as OA
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
+import qualified Options.Applicative as Opt
+import Cardano.Prelude (Typeable)
 
 optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
 optsTestnet envCli = CardanoTestnetCliOptions
@@ -80,7 +80,36 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
-      pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+      pAnyShelleyBasedEra <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+
+pAnyShelleyBasedEra :: EnvCli -> Parser (EraInEon ShelleyBasedEra)
+pAnyShelleyBasedEra envCli =
+  asum $
+    mconcat
+      [
+        [ OA.flag' (EraInEon ShelleyBasedEraShelley) $
+            mconcat [OA.long "shelley-era", OA.help $ "Specify the Shelley era" <> deprecationText]
+        , OA.flag' (EraInEon ShelleyBasedEraAllegra) $
+            mconcat [OA.long "allegra-era", OA.help $ "Specify the Allegra era" <> deprecationText]
+        , OA.flag' (EraInEon ShelleyBasedEraMary) $
+            mconcat [OA.long "mary-era", OA.help $ "Specify the Mary era" <> deprecationText]
+        , OA.flag' (EraInEon ShelleyBasedEraAlonzo) $
+            mconcat [OA.long "alonzo-era", OA.help $ "Specify the Alonzo era" <> deprecationText]
+        , OA.flag' (EraInEon ShelleyBasedEraBabbage) $
+            mconcat [OA.long "babbage-era", OA.help $ "Specify the Babbage era (default)" <> deprecationText]
+        , fmap (EraInEon . convert) $ pConwayEra envCli
+        ]
+      , maybeToList $ pure <$> envCliAnyEon envCli
+      , pure $ pure $ EraInEon ShelleyBasedEraConway
+      ]
+ where
+  deprecationText :: String
+  deprecationText = " - DEPRECATED - will be removed in the future"
+
+  envCliAnyEon :: Typeable eon => Eon eon => EnvCli -> Maybe (EraInEon eon)
+  envCliAnyEon envCli' = do
+    AnyCardanoEra era <- envCliAnyCardanoEra envCli'
+    forEraInEonMaybe era EraInEon
 
 pAnyShelleyBasedEra :: EnvCli -> Parser (EraInEon ShelleyBasedEra)
 pAnyShelleyBasedEra envCli =
