@@ -62,6 +62,7 @@ import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
+import           RIO (runRIO)
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -481,7 +482,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   readVerificationKeyFromFile
     :: ( HasCallStack
        , MonadIO m
-       , MonadCatch m
        , MonadTest m
        , HasTextEnvelope (VerificationKey keyrole)
        , SerialiseAsBech32 (VerificationKey keyrole)
@@ -490,7 +490,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     -> File content direction
     -> m (VerificationKey keyrole)
   readVerificationKeyFromFile work =
-    H.evalEitherM . liftIO . runExceptT . readVerificationKeyOrFile . VerificationKeyFilePath . File . (work </>) . unFile
+    H.evalIO . runRIO () . readVerificationKeyOrFile . VerificationKeyFilePath . File . (work </>) . unFile
 
   _verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
   _verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
