@@ -147,7 +147,7 @@ instance ConvertRawHash blk => ConvertRawHash (HeaderWithTime blk) where
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK {} -> Info
+    ChainDB.IgnoreBlockOlderThanImmTip {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
     ChainDB.AddedBlockToQueue {} -> Debug
@@ -166,7 +166,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.ValidCandidate {} -> Info
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.PipeliningEvent {} -> Debug
-    ChainDB.AddedReprocessLoEBlocksToQueue -> Debug
+    ChainDB.AddedReprocessLoEBlocksToQueue _ -> Debug
     ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
     ChainDB.ChainSelectionLoEDebug _ _ -> Debug
 
@@ -528,7 +528,7 @@ instance ( ConvertRawHash blk
     formatText tev _obj = case tev of
       ChainDB.TraceLastShutdownUnclean -> "ChainDB is not clean. Validating all immutable chunks"
       ChainDB.TraceAddBlockEvent ev -> case ev of
-        ChainDB.IgnoreBlockOlderThanK pt ->
+        ChainDB.IgnoreBlockOlderThanImmTip pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
           "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
@@ -540,18 +540,14 @@ instance ( ConvertRawHash blk
               "About to add block to queue: " <> renderRealPointAsPhrase pt
             FallingEdgeWith sz ->
               "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
-        ChainDB.AddedReprocessLoEBlocksToQueue ->
+        ChainDB.AddedReprocessLoEBlocksToQueue _ ->
           "Added request to queue to reprocess blocks postponed by LoE."
         ChainDB.PoppedReprocessLoEBlocksFromQueue ->
           "Poppped request from queue to reprocess blocks postponed by LoE."
         ChainDB.ChainSelectionLoEDebug {} ->
           "ChainDB LoE debug event"
 
-        ChainDB.PoppedBlockFromQueue edgePt ->
-          case edgePt of
-            RisingEdge ->
-              "Popping block from queue"
-            FallingEdgeWith pt ->
+        ChainDB.PoppedBlockFromQueue pt ->
               "Popped block from queue: " <> renderRealPointAsPhrase pt
         ChainDB.StoreButDontChange pt ->
           "Ignoring block: " <> renderRealPointAsPhrase pt
@@ -931,8 +927,8 @@ instance ( ConvertRawHash blk
   toObject _verb ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK pt ->
-      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
+    ChainDB.IgnoreBlockOlderThanImmTip pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanImmTip"
                , "block" .= toObject verb pt ]
     ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
@@ -947,11 +943,9 @@ instance ( ConvertRawHash blk
                , case edgeSz of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
-    ChainDB.PoppedBlockFromQueue edgePt ->
+    ChainDB.PoppedBlockFromQueue pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of
-                   RisingEdge         -> "risingEdge" .= True
-                   FallingEdgeWith pt -> "block" .= toObject verb pt ]
+               , "block" .= toObject verb pt ]
     ChainDB.StoreButDontChange pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.StoreButDontChange"
                , "block" .= toObject verb pt ]
@@ -1027,7 +1021,7 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
                  , "block" .= renderPointForVerbosity verb (blockPoint hdr)
                  ]
-    ChainDB.AddedReprocessLoEBlocksToQueue ->
+    ChainDB.AddedReprocessLoEBlocksToQueue _ ->
        mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
     ChainDB.PoppedReprocessLoEBlocksFromQueue ->
        mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]

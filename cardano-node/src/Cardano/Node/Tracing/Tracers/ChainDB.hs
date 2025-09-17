@@ -399,7 +399,7 @@ instance ( LogFormatting (Header blk)
          , InspectLedger blk
          , HasIssuer blk
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
-  forHuman (ChainDB.IgnoreBlockOlderThanK pt) =
+  forHuman (ChainDB.IgnoreBlockOlderThanImmTip pt) =
     "Ignoring block older than K: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
       "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
@@ -411,11 +411,8 @@ instance ( LogFormatting (Header blk)
           "About to add block to queue: " <> renderRealPointAsPhrase pt
         FallingEdgeWith sz ->
           "Block added to queue: " <> renderRealPointAsPhrase pt <> ", queue size " <> condenseT sz
-  forHuman (ChainDB.PoppedBlockFromQueue edgePt) =
-      case edgePt of
-        RisingEdge ->
-          "Popping block from queue"
-        FallingEdgeWith pt ->
+  forHuman ChainDB.PoppingFromQueue = "Popping from queue"
+  forHuman (ChainDB.PoppedBlockFromQueue pt) =
           "Popped block from queue: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.StoreButDontChange pt) =
       "Ignoring block: " <> renderRealPointAsPhrase pt
@@ -437,14 +434,14 @@ instance ( LogFormatting (Header blk)
         RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
         FallingEdge -> "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHumanOrMachine ev'
-  forHuman ChainDB.AddedReprocessLoEBlocksToQueue =
+  forHuman ChainDB.AddedReprocessLoEBlocksToQueue{} =
       "Added request to queue to reprocess blocks postponed by LoE."
   forHuman ChainDB.PoppedReprocessLoEBlocksFromQueue =
       "Poppped request from queue to reprocess blocks postponed by LoE."
   forHuman ChainDB.ChainSelectionLoEDebug{} =
       "ChainDB LoE debug event"
-  forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
-      mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
+  forMachine dtal (ChainDB.IgnoreBlockOlderThanImmTip pt) =
+      mconcat [ "kind" .= String "IgnoreBlockOlderThanImmTip"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
       mconcat [ "kind" .= String "IgnoreBlockAlreadyInVolatileDB"
@@ -459,11 +456,12 @@ instance ( LogFormatting (Header blk)
                , case edgeSz of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
-  forMachine dtal (ChainDB.PoppedBlockFromQueue edgePt) =
+  forMachine _ ChainDB.PoppingFromQueue =
+      mconcat [ "kind" .= String "TraceAddBlockEvent.PoppingFromQueue"
+              ]
+  forMachine dtal (ChainDB.PoppedBlockFromQueue pt) =
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of
-                   RisingEdge         -> "risingEdge" .= True
-                   FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
+               , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.StoreButDontChange pt) =
       mconcat [ "kind" .= String "StoreButDontChange"
                , "block" .= forMachine dtal pt ]
@@ -556,7 +554,7 @@ instance ( LogFormatting (Header blk)
                 <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
-  forMachine _dtal ChainDB.AddedReprocessLoEBlocksToQueue =
+  forMachine _dtal ChainDB.AddedReprocessLoEBlocksToQueue{} =
       mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
   forMachine _dtal ChainDB.PoppedReprocessLoEBlocksFromQueue =
       mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
@@ -619,14 +617,16 @@ instance ( LogFormatting (Header blk)
 
 
 instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
-  namespaceFor ChainDB.IgnoreBlockOlderThanK {} =
-    Namespace [] ["IgnoreBlockOlderThanK"]
+  namespaceFor ChainDB.IgnoreBlockOlderThanImmTip {} =
+    Namespace [] ["IgnoreBlockOlderThanImmTip"]
   namespaceFor ChainDB.IgnoreBlockAlreadyInVolatileDB {} =
     Namespace [] ["IgnoreBlockAlreadyInVolatileDB"]
   namespaceFor ChainDB.IgnoreInvalidBlock {} =
     Namespace [] ["IgnoreInvalidBlock"]
   namespaceFor ChainDB.AddedBlockToQueue {} =
     Namespace [] ["AddedBlockToQueue"]
+  namespaceFor ChainDB.PoppingFromQueue =
+    Namespace [] ["PoppingFromQueue"]
   namespaceFor ChainDB.PoppedBlockFromQueue {} =
     Namespace [] ["PoppedBlockFromQueue"]
   namespaceFor ChainDB.AddedBlockToVolatileDB {} =
@@ -647,14 +647,14 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     nsPrependInner "AddBlockValidation" (namespaceFor ev')
   namespaceFor (ChainDB.PipeliningEvent ev') =
     nsPrependInner "PipeliningEvent" (namespaceFor ev')
-  namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue =
+  namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue{} =
     Namespace [] ["AddedReprocessLoEBlocksToQueue"]
   namespaceFor ChainDB.PoppedReprocessLoEBlocksFromQueue =
     Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
   namespaceFor ChainDB.ChainSelectionLoEDebug {} =
     Namespace [] ["ChainSelectionLoEDebug"]
 
-  severityFor (Namespace _ ["IgnoreBlockOlderThanK"]) _ = Just Info
+  severityFor (Namespace _ ["IgnoreBlockOlderThanImmTip"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreInvalidBlock"]) _ = Just Info
   severityFor (Namespace _ ["AddedBlockToQueue"]) _ = Just Debug
@@ -764,7 +764,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
         ]
   metricsDocFor _ = []
 
-  documentFor (Namespace _ ["IgnoreBlockOlderThanK"]) = Just $ mconcat
+  documentFor (Namespace _ ["IgnoreBlockOlderThanImmTip"]) = Just $ mconcat
     [ "A block with a 'BlockNo' more than @k@ back than the current tip"
     , " was ignored."
     ]
@@ -814,7 +814,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
 
 
   allNamespaces =
-    [ Namespace [] ["IgnoreBlockOlderThanK"]
+    [ Namespace [] ["IgnoreBlockOlderThanImmTip"]
     , Namespace [] ["IgnoreBlockAlreadyInVolatileDB"]
     , Namespace [] ["IgnoreInvalidBlock"]
     , Namespace [] ["AddedBlockToQueue"]
@@ -1821,6 +1821,7 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forMachine _dtals LedgerDB.ForkerReadStatistics = mempty
   forMachine _dtals LedgerDB.ForkerPushStart = mempty
   forMachine _dtals LedgerDB.ForkerPushEnd = mempty
+  forMachine _dtals LedgerDB.DanglingForkerClosed = mempty
 
   forHuman LedgerDB.ForkerOpen = "Opened forker"
   forHuman LedgerDB.ForkerCloseUncommitted = "Forker closed without committing"
@@ -1832,6 +1833,7 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forHuman LedgerDB.ForkerReadStatistics = "Gathering statistics"
   forHuman LedgerDB.ForkerPushStart = "Started to push"
   forHuman LedgerDB.ForkerPushEnd = "Pushed"
+  forHuman LedgerDB.DanglingForkerClosed = "Dangling forker closed"
 
 instance MetaTrace LedgerDB.TraceForkerEventWithKey where
   namespaceFor (LedgerDB.TraceForkerEventWithKey _ ev) =
@@ -1854,6 +1856,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
   namespaceFor LedgerDB.ForkerReadStatistics = Namespace [] ["Statistics"]
   namespaceFor LedgerDB.ForkerPushStart = Namespace [] ["StartPush"]
   namespaceFor LedgerDB.ForkerPushEnd = Namespace [] ["FinishPush"]
+  namespaceFor LedgerDB.DanglingForkerClosed = Namespace [] ["DanglingForkerClosed"]
 
   severityFor _ _ = Just Debug
 
