@@ -29,7 +29,7 @@ import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
 import           Cardano.TxSubmit.Tracing.Message
-                   (Message (..))
+                   (TraceSubmitApi (..))
 import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError (..),
                    TxCmdError (..), TxSubmitApi, TxSubmitApiRecord (..),
                    TxSubmitWebApiError (TxSubmitFail), renderTxCmdError)
@@ -75,7 +75,7 @@ import           Servant.Server.Generic (AsServerT)
 
 runTxSubmitServer
   :: Trace IO Text
-  -> TraceD.Trace IO Message
+  -> TraceD.Trace IO TraceSubmitApi
   -> TxSubmitMetrics
   -> WebserverConfig
   -> ConsensusModeParams
@@ -90,7 +90,7 @@ runTxSubmitServer trace trace' metrics webserverConfig protocol networkId socket
 
 txSubmitApp
   :: Trace IO Text
-  -> TraceD.Trace IO Message
+  -> TraceD.Trace IO TraceSubmitApi
   -> TxSubmitMetrics
   -> ConsensusModeParams
   -> NetworkId
@@ -132,7 +132,7 @@ readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyO
 
 txSubmitPost
   :: Trace IO Text
-  -> TraceD.Trace IO Message
+  -> TraceD.Trace IO TraceSubmitApi
   -> TxSubmitMetrics
   -> ConsensusModeParams
   -> NetworkId

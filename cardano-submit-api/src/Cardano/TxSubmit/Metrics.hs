@@ -14,7 +14,7 @@ import           Cardano.BM.Data.Trace (Trace)
 import           Cardano.BM.Trace (logError, logInfo, logWarning)
 import           Cardano.Logging.Trace (traceWith)
 import qualified Cardano.Logging.Types as TraceD
-import           Cardano.TxSubmit.Tracing.Message (Message (..))
+import           Cardano.TxSubmit.Tracing.Message (TraceSubmitApi (..))
 
 import           Control.Exception.Safe
 import           Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT))
@@ -34,7 +34,7 @@ data TxSubmitMetrics = TxSubmitMetrics
 -- be passed to 'withAsync'.
 registerMetricsServer
   :: Trace IO Text
-  -> TraceD.Trace IO Message
+  -> TraceD.Trace IO TraceSubmitApi
   -> Int
   -> IO (TxSubmitMetrics, IO ())
 registerMetricsServer tracer tracer' metricsPort =
@@ -69,5 +69,6 @@ registerMetricsServer tracer tracer' metricsPort =
 makeMetrics :: RegistryT IO TxSubmitMetrics
 makeMetrics =
   TxSubmitMetrics
-    <$> registerGauge "tx_submit_count" mempty
-    <*> registerGauge "tx_submit_fail_count" mempty
+    <$> registerGauge "tx_submit_count" mempty       -- TODO: (@russoul) Make it into a counter.
+    <*> registerGauge "tx_submit_fail_count" mempty  -- TODO: Immediately set to 0 when we create an EKG store
+      -- Suffix should be left out in the trace-dispatcher code (asMetrics)

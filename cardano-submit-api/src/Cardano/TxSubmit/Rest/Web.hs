@@ -8,7 +8,7 @@ where
 import           Cardano.Api.Pretty (textShow)
 
 import           Cardano.BM.Trace (Trace, logInfo)
-import           Cardano.TxSubmit.Tracing.Message (Message(..))
+import           Cardano.TxSubmit.Tracing.Message (TraceSubmitApi(..))
 
 import           Control.Exception (bracket)
 import           Data.Streaming.Network (bindPortTCP)
@@ -21,7 +21,7 @@ import qualified Cardano.Logging.Types as TraceD
 import Cardano.Logging.Trace (traceWith)
 
 -- | Like 'Network.Wai.Handler.Warp.runSettings', except with better logging.
-runSettings :: Trace IO Text -> TraceD.Trace IO Message -> Settings -> Application -> IO ()
+runSettings :: Trace IO Text -> TraceD.Trace IO TraceSubmitApi -> Settings -> Application -> IO ()
 runSettings trace trace' settings app =
   withSocketsDo $
     bracket

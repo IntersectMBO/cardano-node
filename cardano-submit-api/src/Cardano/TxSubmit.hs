@@ -27,7 +27,7 @@ import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmit
 import           Cardano.TxSubmit.Config (GenTxSubmitNodeConfig (..), ToggleLogging (..),
                    TxSubmitNodeConfig, readTxSubmitNodeConfig)
 import           Cardano.TxSubmit.Metrics (registerMetricsServer)
-import           Cardano.TxSubmit.Tracing.Message (Message (..))
+import           Cardano.TxSubmit.Tracing.Message (TraceSubmitApi (..))
 import           Cardano.TxSubmit.Web (runTxSubmitServer)
 
 import qualified Control.Concurrent.Async as Async
@@ -74,10 +74,11 @@ mkTracer enc = case tscToggleLogging enc of
   LoggingOn -> liftIO $ Logging.setupTrace (Right $ tscLoggingConfig enc) "cardano-tx-submit"
   LoggingOff -> pure Logging.nullTracer
 
-mkTraceDispatcher :: TraceConfig -> IO (TraceD.Trace IO Message)
+mkTraceDispatcher :: TraceConfig -> IO (TraceD.Trace IO TraceSubmitApi)
 mkTraceDispatcher config = do
   trBase <- standardTracer
   ekgStore <- EKG.newStore
+  -- Init the metrics (set to 0)
   trEkg  <- ekgTracer config ekgStore
   configReflection <- TraceD.emptyConfigReflection
   tr <- TraceD.mkCardanoTracer trBase mempty (Just trEkg) ["TxSubmitApi"]

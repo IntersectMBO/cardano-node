@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.TxSubmit.Tracing.Message (Message(..)) where
+module Cardano.TxSubmit.Tracing.Message (TraceSubmitApi(..)) where
 
 import           Cardano.Api (TxId (TxId), TxValidationErrorInCardanoMode (..))
 import           Cardano.Api.Pretty (textShow)
@@ -19,19 +19,20 @@ import           GHC.Exception.Type (SomeException, displayException)
 import           GHC.IO.Exception (IOException)
 import           Network.Socket (SockAddr)
 
-data Message = ApplicationStopping
-             | EndpointListeningOnPort SockAddr
-             | EndpointException Text SomeException
-             | EndpointFailedToSubmitTransaction TxCmdError
-             | EndpointSubmittedTransaction TxId
-             | EndpointExiting
-             | MetricsServerStarted Int
-             | MetricsServerError IOException
-             | MetricsServerPortOccupied Int
-             | MetricsServerPortNotBound Int {- tried ports until that one -}
+data TraceSubmitApi = ApplicationStopping
+                    | EndpointListeningOnPort SockAddr -- TODO addr as field name
+                    | EndpointException Text SomeException
+                    | EndpointFailedToSubmitTransaction TxCmdError
+                    | EndpointSubmittedTransaction TxId
+                    | EndpointExiting
+                    | MetricsServerStarted Int
+                    | MetricsServerError IOException
+                    | MetricsServerPortOccupied Int
+                    | MetricsServerPortNotBound Int {- tried ports until that one -}
 
-instance LogFormatting Message where
+instance LogFormatting TraceSubmitApi where
   -- TODO (from: @russoul, to: @jutaro) why json object is required instead of, more flexible, arbitrary json value?
+  -- TODO do as in tx-generator. Don't include `kind` field
   forMachine _ x = singleton "log" (toJSON (forHuman x))
 
   forHuman (MetricsServerStarted port) =
@@ -74,7 +75,7 @@ instance LogFormatting Message where
       renderMediumHash :: Crypto.Hash crypto a -> Text
       renderMediumHash = take 16 . decodeLatin1 . Crypto.hashToBytesAsHex
 
-instance MetaTrace Message where
+instance MetaTrace TraceSubmitApi where
   allNamespaces = [
       Namespace [] ["Application", "Stopping"],
 
