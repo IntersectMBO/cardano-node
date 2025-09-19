@@ -8,7 +8,7 @@ where
 import           Cardano.Api.Pretty (textShow)
 
 import           Cardano.BM.Trace (Trace, logInfo)
-import           Cardano.TxSubmit.Tracing.Message (Message(..), MetricAction (MetricActionNone))
+import           Cardano.TxSubmit.Tracing.Message (Message(..))
 
 import           Control.Exception (bracket)
 import           Data.Streaming.Network (bindPortTCP)
@@ -19,7 +19,6 @@ import           Network.Wai.Handler.Warp (Settings, getHost, getPort, runSettin
 import           Servant (Application)
 import qualified Cardano.Logging.Types as TraceD
 import Cardano.Logging.Trace (traceWith)
-import Cardano.Logging.Types (SeverityS(Info))
 
 -- | Like 'Network.Wai.Handler.Warp.runSettings', except with better logging.
 runSettings :: Trace IO Text -> TraceD.Trace IO Message -> Settings -> Application -> IO ()
@@ -31,6 +30,6 @@ runSettings trace trace' settings app =
       ( \socket -> do
           addr <- getSocketName socket
           logInfo trace $ "Web API listening on port " <> textShow addr
-          traceWith trace' $ Message Info ("Web API listening on port " <> textShow addr) MetricActionNone
+          traceWith trace' $ ServerListeningOnPort addr
           runSettingsSocket settings socket app
       )

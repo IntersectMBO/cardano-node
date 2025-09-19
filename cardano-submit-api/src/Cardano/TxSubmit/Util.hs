@@ -6,10 +6,8 @@ import           Cardano.Api (textShow)
 
 import           Cardano.BM.Trace (Trace, logError)
 import           Cardano.Logging.Trace (traceWith)
-import           Cardano.Logging.Types (SeverityS (Error))
 import qualified Cardano.Logging.Types as TraceD
-import           Cardano.TxSubmit.Tracing.Message (Message (Message),
-                   MetricAction (MetricActionNone))
+import           Cardano.TxSubmit.Tracing.Message (Message (..))
 
 import           Prelude
 
@@ -26,7 +24,7 @@ logException tracer tracer' txt action = action `catch` logger
     logger :: SomeException -> IO a
     logger e = do
       logError tracer $ txt <> textShow e
-      traceWith tracer' (Message Error (txt <> textShow e) MetricActionNone)
+      traceWith tracer' (Exception txt e)
       throwIO e
 
 
