@@ -30,6 +30,6 @@ runSettings trace trace' settings app =
       ( \socket -> do
           addr <- getSocketName socket
           logInfo trace $ "Web API listening on port " <> textShow addr
-          traceWith trace' $ ServerListeningOnPort addr
+          traceWith trace' $ EndpointListeningOnPort addr
           runSettingsSocket settings socket app
       )

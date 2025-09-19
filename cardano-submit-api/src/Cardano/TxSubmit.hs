@@ -17,6 +17,9 @@ import qualified Cardano.Logging.Trace as TraceD
 import qualified Cardano.Logging.Tracer.Composed as TraceD
 import           Cardano.Logging.Tracer.EKG (ekgTracer)
 import           Cardano.Logging.Tracer.Standard (standardTracer)
+import           Cardano.Logging.Types (BackendConfig (..),
+                   ConfigOption (ConfBackend, ConfSeverity), FormatLogging (HumanFormatColoured),
+                   SeverityF (SeverityF), SeverityS (Info))
 import qualified Cardano.Logging.Types as TraceD
 import           Cardano.TxSubmit.CLI.Parsers (opts)
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmitCommand (..),
@@ -29,15 +32,25 @@ import           Cardano.TxSubmit.Web (runTxSubmitServer)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Data.Map
 import           Data.Text (Text)
 import qualified System.Metrics as EKG
+
+defaultTraceConfig :: TraceConfig
+defaultTraceConfig =
+  TraceD.emptyTraceConfig
+    { TraceD.tcOptions = Data.Map.fromList
+        [([], [ ConfSeverity (SeverityF (Just Info))
+              , ConfBackend [Stdout HumanFormatColoured, EKGBackend]])
+        ]
+    }
 
 runTxSubmitWebapi :: TxSubmitNodeParams -> IO ()
 runTxSubmitWebapi tsnp = do
     tsnc <- readTxSubmitNodeConfig (unConfigFile tspConfigFile)
-    traceConfig <- readConfigurationWithDefault (unConfigFile tspConfigFile) TraceD.emptyTraceConfig
+    tracingConfig <- readConfigurationWithDefault (unConfigFile tspConfigFile) defaultTraceConfig
     trce <- mkTracer tsnc
-    trce' <- mkTraceDispatcher traceConfig
+    trce' <- mkTraceDispatcher tracingConfig
     (metrics, runMetricsServer) <- registerMetricsServer trce trce' tspMetricsPort
     Async.withAsync
       (runTxSubmitServer trce trce' metrics tspWebserverConfig tspProtocol tspNetworkId tspSocketPath)
@@ -45,7 +58,7 @@ runTxSubmitWebapi tsnp = do
         Async.withAsync runMetricsServer $ \_ ->
           Async.wait txSubmitServer
     logInfo trce "runTxSubmitWebapi: Stopping TxSubmit API"
-    TraceD.traceWith trce' ServerStopped
+    TraceD.traceWith trce' ApplicationStopping
   where
     TxSubmitNodeParams
       { tspProtocol

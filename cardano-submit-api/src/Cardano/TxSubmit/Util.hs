@@ -24,7 +24,7 @@ logException tracer tracer' txt action = action `catch` logger
     logger :: SomeException -> IO a
     logger e = do
       logError tracer $ txt <> textShow e
-      traceWith tracer' (Exception txt e)
+      traceWith tracer' (EndpointException txt e)
       throwIO e
 
 

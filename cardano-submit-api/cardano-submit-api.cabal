@@ -45,6 +45,7 @@ library
                       , cardano-binary
                       , cardano-cli ^>= 10.11.1
                       , cardano-crypto-class ^>= 2.2
+                      , containers
                       , ekg-core
                       , http-media
                       , iohk-monitoring

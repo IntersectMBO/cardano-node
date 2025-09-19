@@ -19,34 +19,38 @@ import           GHC.Exception.Type (SomeException, displayException)
 import           GHC.IO.Exception (IOException)
 import           Network.Socket (SockAddr)
 
--- TODO: (@russoul) Evaluate the Message structure.
-data Message = ServerStopped
-             | ServerListeningOnPort SockAddr
-             | AppExiting
+data Message = ApplicationStopping
+             | EndpointListeningOnPort SockAddr
+             | EndpointException Text SomeException
+             | EndpointFailedToSubmitTransaction TxCmdError
+             | EndpointSubmittedTransaction TxId
+             | EndpointExiting
              | MetricsServerStarted Int
              | MetricsServerError IOException
              | MetricsServerPortOccupied Int
              | MetricsServerPortNotBound Int {- tried ports until that one -}
-             | Exception Text SomeException
-             | FailedToSubmitTransaction TxCmdError
-             | SubmittedTransaction TxId
 
--- TODO: (@russoul) Implement this.
 instance LogFormatting Message where
-  -- TODO (@russoul) why json object is required instead of arbitrary json value?
+  -- TODO (from: @russoul, to: @jutaro) why json object is required instead of, more flexible, arbitrary json value?
   forMachine _ x = singleton "log" (toJSON (forHuman x))
 
-  forHuman (MetricsServerStarted port) = "Starting metrics server on port " <> textShow port
-  forHuman (Exception title except) = title <> textShow except
-  forHuman (MetricsServerError txt) = pack $ "Metrics server error: " <> displayException txt
+  forHuman (MetricsServerStarted port) =
+    "Starting metrics server on port " <> textShow port
+  forHuman (EndpointException title except) =
+    title <> textShow except
+  forHuman (MetricsServerError txt) =
+    pack $ "Metrics server error: " <> displayException txt
   forHuman (MetricsServerPortOccupied port) =
     "Could not allocate metrics server port " <> textShow port <> " - trying next available..."
   forHuman (MetricsServerPortNotBound untilPort) =
     "Could not allocate any metrics port until " <> textShow untilPort <> " - metrics endpoint disabled"
-  forHuman ServerStopped = "runTxSubmitWebapi: Stopping TxSubmit API"
-  forHuman (ServerListeningOnPort port) = "Web API listening on port " <> textShow port
-  forHuman AppExiting = "txSubmitApp: exiting"
-  forHuman (FailedToSubmitTransaction err) =
+  forHuman ApplicationStopping =
+    "runTxSubmitWebapi: Stopping TxSubmit API"
+  forHuman (EndpointListeningOnPort port) =
+    "Web API listening on port " <> textShow port
+  forHuman EndpointExiting =
+    "txSubmitApp: exiting"
+  forHuman (EndpointFailedToSubmitTransaction err) =
     "txSubmitPost: failed to submit transaction: " <> renderTxCmdError where
 
       renderTxCmdError :: Text
@@ -59,7 +63,7 @@ instance LogFormatting Message where
           case e of
             TxValidationErrorInCardanoMode validationErr -> "transaction submit error " <> textShow validationErr
             TxValidationEraMismatch eraMismatch -> "transaction submit era mismatch" <> textShow eraMismatch
-  forHuman (SubmittedTransaction txId) =
+  forHuman (EndpointSubmittedTransaction txId) =
     "txSubmitPost: successfully submitted transaction " <> renderMediumTxId txId where
 
       -- | Render the first 16 characters of a transaction ID.
@@ -70,41 +74,46 @@ instance LogFormatting Message where
       renderMediumHash :: Crypto.Hash crypto a -> Text
       renderMediumHash = take 16 . decodeLatin1 . Crypto.hashToBytesAsHex
 
--- TODO: @russoul
 instance MetaTrace Message where
-  namespaceFor ServerStopped = Namespace [] ["TxSubmit", "ServerStopped"]
-  namespaceFor (ServerListeningOnPort _) = Namespace [] ["TxSubmit", "ServerListeningOnPort"]
-  namespaceFor (Exception _ _) = Namespace [] ["TxSubmit", "Exception"]
-  namespaceFor (MetricsServerStarted _) = Namespace [] ["TxSubmit", "Metrics", "Started"]
-  namespaceFor (MetricsServerError _) = Namespace [] ["TxSubmit", "Metrics", "Error"]
-  namespaceFor (MetricsServerPortOccupied _) = Namespace [] ["TxSubmit", "Metrics", "PortOccupied"]
-  namespaceFor (MetricsServerPortNotBound _) = Namespace [] ["TxSubmit", "Metrics", "PortNotBound"]
-  namespaceFor AppExiting = Namespace [] ["TxSubmit", "AppExiting"]
-  namespaceFor (FailedToSubmitTransaction _) = Namespace [] ["TxSubmit", "FailedToSubmitTransaction"]
-  namespaceFor (SubmittedTransaction _) = Namespace [] ["TxSubmit", "SubmittedTransaction"]
-  severityFor (Namespace _ ["TxSubmit", "ServerStopped"]) _ = Just Info
-  severityFor (Namespace _ ["TxSubmit", "ServerListeningOnPort"]) _ = Just Info
-  severityFor (Namespace _ ["TxSubmit", "Exception"]) _ = Just Error
-  severityFor (Namespace _ ["TxSubmit", "Metrics", "Started"]) _ = Just Info
-  severityFor (Namespace _ ["TxSubmit", "Metrics", "Error"]) _ = Just Warning
-  severityFor (Namespace _ ["TxSubmit", "Metrics", "PortOccupied"]) _ = Just Warning
-  severityFor (Namespace _ ["TxSubmit", "Metrics", "PortNotBound"]) _ = Just Error
-  severityFor (Namespace _ ["TxSubmit", "AppExiting"]) _ = Just Info
-  severityFor (Namespace _ ["TxSubmit", "FailedToSubmitTransaction"]) _ = Just Info
-  severityFor (Namespace _ ["TxSubmit", "SubmittedTransaction"]) _ = Just Info
-  severityFor _ _ = Nothing
-  metricsDocFor _ = []
-  documentFor _ = Nothing
   allNamespaces = [
-    Namespace [] ["TxSubmit", "ServerStopped"],
-    Namespace [] ["TxSubmit", "ServerListeningOnPort"],
-    Namespace [] ["TxSubmit", "Exception"],
-    Namespace [] ["TxSubmit", "Metrics", "Started"],
-    Namespace [] ["TxSubmit", "Metrics", "Error"],
-    Namespace [] ["TxSubmit", "Metrics", "PortOccupied"],
-    Namespace [] ["TxSubmit", "Metrics", "PortNotBound"],
-    Namespace [] ["TxSubmit", "AppExiting"],
-    Namespace [] ["TxSubmit", "FailedToSubmitTransaction"],
-    Namespace [] ["TxSubmit", "SubmittedTransaction"]
-   ]
+      Namespace [] ["Application", "Stopping"],
 
+      Namespace [] ["Endpoint", "ListeningOnPort"],
+      Namespace [] ["Endpoint", "Exception"],
+      Namespace [] ["Endpoint", "FailedToSubmitTransaction"],
+      Namespace [] ["Endpoint", "SubmittedTransaction"],
+      Namespace [] ["Endpoint", "Exiting"],
+
+      Namespace [] ["Metrics", "Started"],
+      Namespace [] ["Metrics", "Error"],
+      Namespace [] ["Metrics", "PortOccupied"],
+      Namespace [] ["Metrics", "PortNotBound"]
+
+    ]
+
+  namespaceFor ApplicationStopping                   = Namespace [] ["Application", "Stopping"]
+  namespaceFor (EndpointListeningOnPort _)           = Namespace [] ["Endpoint", "ListeningOnPort"]
+  namespaceFor (EndpointException _ _)               = Namespace [] ["Endpoint", "Exception"]
+  namespaceFor (EndpointFailedToSubmitTransaction _) = Namespace [] ["Endpoint", "FailedToSubmitTransaction"]
+  namespaceFor (EndpointSubmittedTransaction _)      = Namespace [] ["Endpoint", "SubmittedTransaction"]
+  namespaceFor EndpointExiting                       = Namespace [] ["Endpoint", "Exiting"]
+  namespaceFor (MetricsServerStarted _)              = Namespace [] ["Metrics", "Started"]
+  namespaceFor (MetricsServerError _)                = Namespace [] ["Metrics", "Error"]
+  namespaceFor (MetricsServerPortOccupied _)         = Namespace [] ["Metrics", "PortOccupied"]
+  namespaceFor (MetricsServerPortNotBound _)         = Namespace [] ["Metrics", "PortNotBound"]
+
+  severityFor (Namespace _ ["Application", "Stopping"]) _               = Just Info
+  severityFor (Namespace _ ["Endpoint", "ListeningOnPort"]) _           = Just Info
+  severityFor (Namespace _ ["Endpoint", "Exception"]) _                 = Just Error
+  severityFor (Namespace _ ["Endpoint", "Exiting"]) _                   = Just Info
+  severityFor (Namespace _ ["Endpoint", "FailedToSubmitTransaction"]) _ = Just Info
+  severityFor (Namespace _ ["Endpoint", "SubmittedTransaction"]) _      = Just Info
+  severityFor (Namespace _ ["Metrics", "Started"]) _                    = Just Info
+  severityFor (Namespace _ ["Metrics", "Error"]) _                      = Just Warning
+  severityFor (Namespace _ ["Metrics", "PortOccupied"]) _               = Just Warning
+  severityFor (Namespace _ ["Metrics", "PortNotBound"]) _               = Just Error
+  severityFor _ _                                                       = Nothing
+
+  metricsDocFor _ = []
+
+  documentFor _ = Nothing
