@@ -177,6 +177,7 @@ library
                       , filepath
                       , formatting
                       , generic-data
+                      , ghc-debug-stub
                       , hashable
                       , hostname
                       , io-classes >= 1.5
@@ -247,6 +248,7 @@ executable cardano-node
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
+                      , ghc-debug-stub
                       , optparse-applicative-fork
                       , text
 

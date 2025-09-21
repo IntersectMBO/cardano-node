@@ -17,6 +17,7 @@ module Cardano.Node.Protocol.Cardano
 
 import           Cardano.Api
 import           Cardano.Api.Byron as Byron
+import GHC.Debug.Stub
 
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.Api.Transition as Ledger
@@ -114,6 +115,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationShelleyGenesisReadError $
         Shelley.readGenesis npcShelleyGenesisFile
                             npcShelleyGenesisFileHash
+
+    lift (saveClosures [Box (sgInitialFunds shelleyGenesis)])
 
     (alonzoGenesis, _alonzoGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationAlonzoGenesisReadError $

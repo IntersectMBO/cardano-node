@@ -23,10 +23,12 @@ import           Options.Applicative.Help ((<$$>))
 import           System.Info (arch, compilerName, compilerVersion, os)
 import           System.IO (hPutStrLn, stderr)
 
+import GHC.Debug.Stub
+
 import           Paths_cardano_node (version)
 
 main :: IO ()
-main = do
+main = withGhcDebugUnix "/tmp/ghc-debug" $ do
   Crypto.cryptoInit
 
   toplevelExceptionHandler $ do
