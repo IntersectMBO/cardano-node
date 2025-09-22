@@ -7,7 +7,7 @@ import           Cardano.Api (textShow)
 import           Cardano.BM.Trace (Trace, logError)
 import           Cardano.Logging.Trace (traceWith)
 import qualified Cardano.Logging.Types as TraceD
-import           Cardano.TxSubmit.Tracing.Message (TraceSubmitApi (..))
+import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 
 import           Prelude
 

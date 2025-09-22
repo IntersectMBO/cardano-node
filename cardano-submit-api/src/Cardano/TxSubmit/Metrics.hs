@@ -14,20 +14,21 @@ import           Cardano.BM.Data.Trace (Trace)
 import           Cardano.BM.Trace (logError, logInfo, logWarning)
 import           Cardano.Logging.Trace (traceWith)
 import qualified Cardano.Logging.Types as TraceD
-import           Cardano.TxSubmit.Tracing.Message (TraceSubmitApi (..))
+import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 
 import           Control.Exception.Safe
 import           Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           System.Metrics.Prometheus.Concurrent.RegistryT (RegistryT (..), registerGauge,
+import           System.Metrics.Prometheus.Concurrent.RegistryT (RegistryT (..), registerCounter,
                    runRegistryT, unRegistryT)
-import           System.Metrics.Prometheus.Http.Scrape (serveMetricsT)
-import           System.Metrics.Prometheus.Metric.Gauge (Gauge)
+import           System.Metrics.Prometheus.Http.Scrape (serveMetrics)
+import           System.Metrics.Prometheus.Metric.Counter
+import System.Metrics.Prometheus.Registry (RegistrySample)
 
 data TxSubmitMetrics = TxSubmitMetrics
-  { tsmCount :: Gauge
-  , tsmFailCount :: Gauge
+  { tsmCount :: Counter
+  , tsmFailCount :: Counter
   }
 
 -- | Register metrics server. Returns metrics and an IO action which starts metrics server and should
@@ -35,9 +36,10 @@ data TxSubmitMetrics = TxSubmitMetrics
 registerMetricsServer
   :: Trace IO Text
   -> TraceD.Trace IO TraceSubmitApi
+  -> IO RegistrySample
   -> Int
   -> IO (TxSubmitMetrics, IO ())
-registerMetricsServer tracer tracer' metricsPort =
+registerMetricsServer tracer tracer' registrySample metricsPort =
   runRegistryT $ do
     metrics <- makeMetrics
     registry <- RegistryT ask
@@ -45,9 +47,10 @@ registerMetricsServer tracer tracer' metricsPort =
           tryWithPort metricsPort $ \port -> do
             logInfo tracer $ "Starting metrics server on port " <> textShow port
             traceWith tracer' $ MetricsServerStarted port
-            flip runReaderT registry . unRegistryT $ serveMetricsT port []
+            flip runReaderT registry . unRegistryT $ serveMetrics port [] registrySample
     pure (metrics, runServer)
  where
+
   -- try opening the metrics server on the specified port, if it fails, try using next. Gives up after 1000 attempts and disables metrics server.
   tryWithPort :: Int -> (Int -> IO ()) -> IO ()
   tryWithPort startingPort f = go startingPort
@@ -69,6 +72,6 @@ registerMetricsServer tracer tracer' metricsPort =
 makeMetrics :: RegistryT IO TxSubmitMetrics
 makeMetrics =
   TxSubmitMetrics
-    <$> registerGauge "tx_submit_count" mempty       -- TODO: (@russoul) Make it into a counter.
-    <*> registerGauge "tx_submit_fail_count" mempty  -- TODO: Immediately set to 0 when we create an EKG store
+    <$> registerCounter "tx_submit_count" mempty
+    <*> registerCounter "tx_submit_fail_count" mempty
       -- Suffix should be left out in the trace-dispatcher code (asMetrics)

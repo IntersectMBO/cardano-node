@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.TxSubmit.Tracing.Message (TraceSubmitApi(..)) where
+module Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi(..)) where
 
 import           Cardano.Api (TxId (TxId), TxValidationErrorInCardanoMode (..))
 import           Cardano.Api.Pretty (textShow)
@@ -11,16 +11,17 @@ import           Cardano.TxSubmit.Types (TxCmdError (..))
 
 import           Prelude hiding (take)
 
-import           Data.Aeson (toJSON)
+import           Data.Aeson (toJSON, Value(String))
 import           Data.Aeson.KeyMap (singleton)
 import           Data.Text (Text, pack, take)
 import           Data.Text.Encoding (decodeLatin1)
 import           GHC.Exception.Type (SomeException, displayException)
 import           GHC.IO.Exception (IOException)
 import           Network.Socket (SockAddr)
+import Data.Aeson.Types ((.=))
 
 data TraceSubmitApi = ApplicationStopping
-                    | EndpointListeningOnPort SockAddr -- TODO addr as field name
+                    | EndpointListeningOnPort SockAddr
                     | EndpointException Text SomeException
                     | EndpointFailedToSubmitTransaction TxCmdError
                     | EndpointSubmittedTransaction TxId
@@ -30,10 +31,50 @@ data TraceSubmitApi = ApplicationStopping
                     | MetricsServerPortOccupied Int
                     | MetricsServerPortNotBound Int {- tried ports until that one -}
 
+
+-- | Render the first 16 characters of a transaction ID.
+renderMediumTxId :: TxId -> Text
+renderMediumTxId (TxId hash) = renderMediumHash hash
+
+-- | Render the first 16 characters of a hex-encoded hash.
+renderMediumHash :: Crypto.Hash crypto a -> Text
+renderMediumHash = take 16 . decodeLatin1 . Crypto.hashToBytesAsHex
+
+renderTxCmdError :: TxCmdError -> Text
+renderTxCmdError (TxCmdSocketEnvError socketError) =
+  "socket env error " <> textShow socketError
+renderTxCmdError (TxCmdTxReadError envelopeError) =
+  "transaction read error " <> textShow envelopeError
+renderTxCmdError (TxCmdTxSubmitValidationError e) =
+  case e of
+    TxValidationErrorInCardanoMode validationErr ->
+      "transaction submit error " <> textShow validationErr
+    TxValidationEraMismatch eraMismatch ->
+      "transaction submit era mismatch" <> textShow eraMismatch
+
 instance LogFormatting TraceSubmitApi where
   -- TODO (from: @russoul, to: @jutaro) why json object is required instead of, more flexible, arbitrary json value?
-  -- TODO do as in tx-generator. Don't include `kind` field
-  forMachine _ x = singleton "log" (toJSON (forHuman x))
+  forMachine _ ApplicationStopping = mempty
+  forMachine _ (EndpointListeningOnPort addr) =
+    singleton "addr" (toJSON (textShow addr))
+  forMachine _ (EndpointException txt except) = mconcat
+    [
+      "txt" .= String txt,
+      "exception" .= String (textShow except)
+    ]
+  forMachine _ (EndpointFailedToSubmitTransaction txCmdError) =
+    singleton "error" (toJSON (renderTxCmdError txCmdError))
+  forMachine _ (EndpointSubmittedTransaction txId) =
+    singleton "txId" (String $ renderMediumTxId txId)
+  forMachine _ EndpointExiting = mempty
+  forMachine _ (MetricsServerStarted port) =
+    singleton "port" (toJSON port)
+  forMachine _ (MetricsServerError except) =
+    singleton "exception" (toJSON $ displayException except)
+  forMachine _ (MetricsServerPortOccupied port) =
+    singleton "port" (toJSON port)
+  forMachine _ (MetricsServerPortNotBound port) =
+    singleton "port" (toJSON port)
 
   forHuman (MetricsServerStarted port) =
     "Starting metrics server on port " <> textShow port
@@ -52,28 +93,11 @@ instance LogFormatting TraceSubmitApi where
   forHuman EndpointExiting =
     "txSubmitApp: exiting"
   forHuman (EndpointFailedToSubmitTransaction err) =
-    "txSubmitPost: failed to submit transaction: " <> renderTxCmdError where
-
-      renderTxCmdError :: Text
-      renderTxCmdError = case err of
-        TxCmdSocketEnvError socketError ->
-          "socket env error " <> textShow socketError
-        TxCmdTxReadError envelopeError ->
-          "transaction read error " <> textShow envelopeError
-        TxCmdTxSubmitValidationError e ->
-          case e of
-            TxValidationErrorInCardanoMode validationErr -> "transaction submit error " <> textShow validationErr
-            TxValidationEraMismatch eraMismatch -> "transaction submit era mismatch" <> textShow eraMismatch
+    "txSubmitPost: failed to submit transaction: " <> renderTxCmdError err
   forHuman (EndpointSubmittedTransaction txId) =
-    "txSubmitPost: successfully submitted transaction " <> renderMediumTxId txId where
+    "txSubmitPost: successfully submitted transaction " <> renderMediumTxId txId
 
-      -- | Render the first 16 characters of a transaction ID.
-      renderMediumTxId :: TxId -> Text
-      renderMediumTxId (TxId hash) = renderMediumHash hash
-
-      -- | Render the first 16 characters of a hex-encoded hash.
-      renderMediumHash :: Crypto.Hash crypto a -> Text
-      renderMediumHash = take 16 . decodeLatin1 . Crypto.hashToBytesAsHex
+  asMetrics = _ -- TODO (@russoul)
 
 instance MetaTrace TraceSubmitApi where
   allNamespaces = [

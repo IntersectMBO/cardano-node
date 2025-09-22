@@ -8,7 +8,7 @@ where
 import           Cardano.Api.Pretty (textShow)
 
 import           Cardano.BM.Trace (Trace, logInfo)
-import           Cardano.TxSubmit.Tracing.Message (TraceSubmitApi(..))
+import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi(..))
 
 import           Control.Exception (bracket)
 import           Data.Streaming.Network (bindPortTCP)

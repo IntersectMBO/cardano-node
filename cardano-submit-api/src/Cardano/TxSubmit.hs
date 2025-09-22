@@ -27,14 +27,17 @@ import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmit
 import           Cardano.TxSubmit.Config (GenTxSubmitNodeConfig (..), ToggleLogging (..),
                    TxSubmitNodeConfig, readTxSubmitNodeConfig)
 import           Cardano.TxSubmit.Metrics (registerMetricsServer)
-import           Cardano.TxSubmit.Tracing.Message (TraceSubmitApi (..))
+import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 import           Cardano.TxSubmit.Web (runTxSubmitServer)
 
 import qualified Control.Concurrent.Async as Async
+import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Data.Map
 import           Data.Text (Text)
 import qualified System.Metrics as EKG
+import           System.Metrics.Prometheus.Registry (RegistrySample, sample)
+import           System.Remote.Monitoring.Prometheus (toPrometheusRegistry)
 
 defaultTraceConfig :: TraceConfig
 defaultTraceConfig =
@@ -50,8 +53,8 @@ runTxSubmitWebapi tsnp = do
     tsnc <- readTxSubmitNodeConfig (unConfigFile tspConfigFile)
     tracingConfig <- readConfigurationWithDefault (unConfigFile tspConfigFile) defaultTraceConfig
     trce <- mkTracer tsnc
-    trce' <- mkTraceDispatcher tracingConfig
-    (metrics, runMetricsServer) <- registerMetricsServer trce trce' tspMetricsPort
+    (trce', registrySample) <- mkTraceDispatcher tracingConfig
+    (metrics, runMetricsServer) <- registerMetricsServer trce trce' registrySample tspMetricsPort
     Async.withAsync
       (runTxSubmitServer trce trce' metrics tspWebserverConfig tspProtocol tspNetworkId tspSocketPath)
       $ \txSubmitServer ->
@@ -74,13 +77,15 @@ mkTracer enc = case tscToggleLogging enc of
   LoggingOn -> liftIO $ Logging.setupTrace (Right $ tscLoggingConfig enc) "cardano-tx-submit"
   LoggingOff -> pure Logging.nullTracer
 
-mkTraceDispatcher :: TraceConfig -> IO (TraceD.Trace IO TraceSubmitApi)
+mkTraceDispatcher :: TraceConfig -> IO (TraceD.Trace IO TraceSubmitApi, IO RegistrySample)
 mkTraceDispatcher config = do
   trBase <- standardTracer
   ekgStore <- EKG.newStore
-  -- Init the metrics (set to 0)
+  void $ EKG.createCounter "tx_submit_count" ekgStore
+  void $ EKG.createCounter "tx_submit_failed_count" ekgStore
+  registry <- toPrometheusRegistry ekgStore _ -- Convert EKG metrics store to prometheus metrics registry
   trEkg  <- ekgTracer config ekgStore
   configReflection <- TraceD.emptyConfigReflection
   tr <- TraceD.mkCardanoTracer trBase mempty (Just trEkg) ["TxSubmitApi"]
   TraceD.configureTracers configReflection config [tr]
-  pure tr
+  pure (tr, sample registry)

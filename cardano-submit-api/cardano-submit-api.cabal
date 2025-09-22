@@ -56,6 +56,7 @@ library
                       , ouroboros-network ^>= 0.21.2
                       , ouroboros-network-protocols
                       , prometheus >= 2.2.4
+                      , ekg-prometheus-adapter
                       , safe-exceptions
                       , servant
                       , servant-server
@@ -79,7 +80,7 @@ library
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
                       , Cardano.TxSubmit.Tracing.ToObjectOrphans
-                      , Cardano.TxSubmit.Tracing.Message
+                      , Cardano.TxSubmit.Tracing.TraceSubmitApi
                       , Cardano.TxSubmit.Types
                       , Cardano.TxSubmit.Util
                       , Cardano.TxSubmit.Web

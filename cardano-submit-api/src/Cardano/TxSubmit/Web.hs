@@ -28,8 +28,7 @@ import qualified Cardano.Logging.Types as TraceD
 import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
-import           Cardano.TxSubmit.Tracing.Message
-                   (TraceSubmitApi (..))
+import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError (..),
                    TxCmdError (..), TxSubmitApi, TxSubmitApiRecord (..),
                    TxSubmitWebApiError (TxSubmitFail), renderTxCmdError)
@@ -65,7 +64,7 @@ import qualified Data.Text.IO as T
 import           System.Environment (lookupEnv)
 import qualified System.IO as IO
 import           System.IO (IO)
-import qualified System.Metrics.Prometheus.Metric.Gauge as Gauge
+import qualified System.Metrics.Prometheus.Metric.Counter as Counter
 import           Text.Show (Show (show))
 
 import qualified Servant
@@ -176,7 +175,7 @@ txSubmitPost trace trace' metrics p@(CardanoModeParams cModeParams) networkId so
                 <> renderTxCmdError err
             liftIO $ traceWith trace' $ EndpointFailedToSubmitTransaction err
             -- TODO: (@russoul) Next step is to tie the metric action (Gauge.inc) to the trace message
-            liftIO $ Gauge.inc (tsmFailCount metrics)
+            liftIO $ Counter.inc (tsmFailCount metrics)
             errorResponse (TxSubmitFail err)
           Right txid -> do
             liftIO $ logInfo trace $
@@ -184,7 +183,7 @@ txSubmitPost trace trace' metrics p@(CardanoModeParams cModeParams) networkId so
                 <> renderMediumTxId txid
             liftIO $ traceWith trace' $ EndpointSubmittedTransaction txid
             -- TODO: (@russoul) Next step is to tie the metric action (Gauge.inc) to the trace message
-            liftIO $ Gauge.inc (tsmCount metrics)
+            liftIO $ Counter.inc (tsmCount metrics)
             pure txid
 
 -- | Render the first 16 characters of a transaction ID.
