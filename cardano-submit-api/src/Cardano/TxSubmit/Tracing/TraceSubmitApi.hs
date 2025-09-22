@@ -11,14 +11,14 @@ import           Cardano.TxSubmit.Types (TxCmdError (..))
 
 import           Prelude hiding (take)
 
-import           Data.Aeson (toJSON, Value(String))
+import           Data.Aeson (Value (String), toJSON)
 import           Data.Aeson.KeyMap (singleton)
+import           Data.Aeson.Types ((.=))
 import           Data.Text (Text, pack, take)
 import           Data.Text.Encoding (decodeLatin1)
 import           GHC.Exception.Type (SomeException, displayException)
 import           GHC.IO.Exception (IOException)
 import           Network.Socket (SockAddr)
-import Data.Aeson.Types ((.=))
 
 data TraceSubmitApi = ApplicationStopping
                     | EndpointListeningOnPort SockAddr
@@ -97,7 +97,9 @@ instance LogFormatting TraceSubmitApi where
   forHuman (EndpointSubmittedTransaction txId) =
     "txSubmitPost: successfully submitted transaction " <> renderMediumTxId txId
 
-  asMetrics = _ -- TODO (@russoul)
+  asMetrics (EndpointFailedToSubmitTransaction _) = [CounterM "tx_submit_fail" Nothing]
+  asMetrics (EndpointSubmittedTransaction      _) = [CounterM "tx_submit"      Nothing]
+  asMetrics _                                     = []
 
 instance MetaTrace TraceSubmitApi where
   allNamespaces = [
