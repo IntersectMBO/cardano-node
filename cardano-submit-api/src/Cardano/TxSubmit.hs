@@ -31,13 +31,14 @@ import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 import           Cardano.TxSubmit.Web (runTxSubmitServer)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Monad (void)
+import           Control.Lens
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Data.Map
 import           Data.Text (Text)
 import qualified System.Metrics as EKG
 import           System.Metrics.Prometheus.Registry (RegistrySample, sample)
-import           System.Remote.Monitoring.Prometheus (toPrometheusRegistry)
+import           System.Remote.Monitoring.Prometheus (defaultOptions, samplingFrequency,
+                   toPrometheusRegistry)
 
 defaultTraceConfig :: TraceConfig
 defaultTraceConfig =
@@ -81,11 +82,13 @@ mkTraceDispatcher :: TraceConfig -> IO (TraceD.Trace IO TraceSubmitApi, IO Regis
 mkTraceDispatcher config = do
   trBase <- standardTracer
   ekgStore <- EKG.newStore
-  void $ EKG.createCounter "tx_submit_count" ekgStore
-  void $ EKG.createCounter "tx_submit_failed_count" ekgStore
-  registry <- toPrometheusRegistry ekgStore _ -- Convert EKG metrics store to prometheus metrics registry
+  -- TODO: (@russoul) trace-dispatcher addes a postfix "counter" instead of "count" is that expected?
+  -- Also, adding those lines below breaks trace-dispatcher
+  -- void $ EKG.createCounter "tx_submit_counter" ekgStore
+  -- void $ EKG.createCounter "tx_submit_failed_counter" ekgStore
+  let registry = toPrometheusRegistry ekgStore (defaultOptions mempty & samplingFrequency .~ 1) -- Convert EKG metrics store to prometheus metrics registry on-demand
   trEkg  <- ekgTracer config ekgStore
   configReflection <- TraceD.emptyConfigReflection
   tr <- TraceD.mkCardanoTracer trBase mempty (Just trEkg) ["TxSubmitApi"]
   TraceD.configureTracers configReflection config [tr]
-  pure (tr, sample registry)
+  pure (tr, registry >>= sample)

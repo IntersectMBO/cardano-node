@@ -69,9 +69,10 @@ registerMetricsServer tracer tracer' registrySample metricsPort =
               "Could not allocate any metrics port until " <> textShow port <> " - metrics endpoint disabled"
             traceWith tracer' $ MetricsServerPortNotBound port
 
+-- TODO (@russoul) remove this
 makeMetrics :: RegistryT IO TxSubmitMetrics
 makeMetrics =
   TxSubmitMetrics
-    <$> registerCounter "tx_submit_count" mempty
-    <*> registerCounter "tx_submit_fail_count" mempty
+    <$> registerCounter "tx_submit_legacy_count" mempty
+    <*> registerCounter "tx_submit_legacy_fail_count" mempty
       -- Suffix should be left out in the trace-dispatcher code (asMetrics)

@@ -49,6 +49,7 @@ library
                       , ekg-core
                       , http-media
                       , iohk-monitoring
+                      , lens
                       , mtl
                       , network
                       , optparse-applicative-fork

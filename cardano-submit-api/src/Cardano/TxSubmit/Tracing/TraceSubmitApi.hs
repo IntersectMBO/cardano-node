@@ -97,8 +97,8 @@ instance LogFormatting TraceSubmitApi where
   forHuman (EndpointSubmittedTransaction txId) =
     "txSubmitPost: successfully submitted transaction " <> renderMediumTxId txId
 
-  asMetrics (EndpointFailedToSubmitTransaction _) = [CounterM "tx_submit_fail" Nothing]
-  asMetrics (EndpointSubmittedTransaction      _) = [CounterM "tx_submit"      Nothing]
+  asMetrics (EndpointFailedToSubmitTransaction _) = [CounterM "tx_submit_fail" (Just 1)]
+  asMetrics (EndpointSubmittedTransaction      _) = [CounterM "tx_submit"      (Just 1)]
   asMetrics _                                     = []
 
 instance MetaTrace TraceSubmitApi where
@@ -141,6 +141,9 @@ instance MetaTrace TraceSubmitApi where
   severityFor (Namespace _ ["Metrics", "PortNotBound"]) _               = Just Error
   severityFor _ _                                                       = Nothing
 
+  -- TODO (@russoul) This seems to be necessary for metrics to work at all, why?
+  metricsDocFor (Namespace _ ["Endpoint", "FailedToSubmitTransaction"]) = [ ("tx_submit_fail", "Number of failed tx submissions") ]
+  metricsDocFor (Namespace _ ["Endpoint", "SubmittedTransaction"]) = [ ("tx_submit", "Number of successful tx submissions") ]
   metricsDocFor _ = []
 
   documentFor _ = Nothing
