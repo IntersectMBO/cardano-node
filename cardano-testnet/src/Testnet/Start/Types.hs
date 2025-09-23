@@ -28,6 +28,7 @@ module Testnet.Start.Types
   , mainnetParamsRequest
   , NodeOption(..)
   , isRelayNodeOptions
+  , isSpoNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
   , TopologyType(..)

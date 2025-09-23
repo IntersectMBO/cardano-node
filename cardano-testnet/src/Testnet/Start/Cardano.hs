@@ -221,7 +221,6 @@ cardanoTestnet
         , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
         } = testnetOptions
-      nPools = cardanoNumPools testnetOptions
       nodeConfigFile = tmpAbsPath </> "configuration.yaml"
       byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
       shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
@@ -397,6 +396,7 @@ cardanoTestnet
 
   stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
+  let nPools = NumPools (length (sgsPools (sgStaking shelleyGenesis)))
   assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
   when enableNewEpochStateLogging $
