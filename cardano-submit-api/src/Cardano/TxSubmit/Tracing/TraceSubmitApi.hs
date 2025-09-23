@@ -21,6 +21,7 @@ import           GHC.IO.Exception (IOException)
 import           Network.Socket (SockAddr)
 
 data TraceSubmitApi = ApplicationStopping
+                    | ApplicationInitializeMetrics
                     | EndpointListeningOnPort SockAddr
                     | EndpointException Text SomeException
                     | EndpointFailedToSubmitTransaction TxCmdError
@@ -75,6 +76,7 @@ instance LogFormatting TraceSubmitApi where
     singleton "port" (toJSON port)
   forMachine _ (MetricsServerPortNotBound port) =
     singleton "port" (toJSON port)
+  forMachine _ ApplicationInitializeMetrics = mempty
 
   forHuman (MetricsServerStarted port) =
     "Starting metrics server on port " <> textShow port
@@ -88,6 +90,7 @@ instance LogFormatting TraceSubmitApi where
     "Could not allocate any metrics port until " <> textShow untilPort <> " - metrics endpoint disabled"
   forHuman ApplicationStopping =
     "runTxSubmitWebapi: Stopping TxSubmit API"
+  forHuman ApplicationInitializeMetrics = "Metrics initialized"
   forHuman (EndpointListeningOnPort port) =
     "Web API listening on port " <> textShow port
   forHuman EndpointExiting =
@@ -97,13 +100,15 @@ instance LogFormatting TraceSubmitApi where
   forHuman (EndpointSubmittedTransaction txId) =
     "txSubmitPost: successfully submitted transaction " <> renderMediumTxId txId
 
-  asMetrics (EndpointFailedToSubmitTransaction _) = [CounterM "tx_submit_fail" (Just 1)]
-  asMetrics (EndpointSubmittedTransaction      _) = [CounterM "tx_submit"      (Just 1)]
+  asMetrics (EndpointFailedToSubmitTransaction _) = [CounterM "tx_submit_fail" Nothing]
+  asMetrics (EndpointSubmittedTransaction      _) = [CounterM "tx_submit"      Nothing]
+  asMetrics ApplicationInitializeMetrics          = [CounterM "tx_submit_fail" (Just 0), CounterM "tx_submit" (Just 0)]
   asMetrics _                                     = []
 
 instance MetaTrace TraceSubmitApi where
   allNamespaces = [
       Namespace [] ["Application", "Stopping"],
+      Namespace [] ["Application", "InitializeMetrics"],
 
       Namespace [] ["Endpoint", "ListeningOnPort"],
       Namespace [] ["Endpoint", "Exception"],
@@ -119,6 +124,7 @@ instance MetaTrace TraceSubmitApi where
     ]
 
   namespaceFor ApplicationStopping                   = Namespace [] ["Application", "Stopping"]
+  namespaceFor ApplicationInitializeMetrics          = Namespace [] ["Application", "InitializeMetrics"]
   namespaceFor (EndpointListeningOnPort _)           = Namespace [] ["Endpoint", "ListeningOnPort"]
   namespaceFor (EndpointException _ _)               = Namespace [] ["Endpoint", "Exception"]
   namespaceFor (EndpointFailedToSubmitTransaction _) = Namespace [] ["Endpoint", "FailedToSubmitTransaction"]
@@ -130,6 +136,7 @@ instance MetaTrace TraceSubmitApi where
   namespaceFor (MetricsServerPortNotBound _)         = Namespace [] ["Metrics", "PortNotBound"]
 
   severityFor (Namespace _ ["Application", "Stopping"]) _               = Just Info
+  severityFor (Namespace _ ["Application", "InitializeMetrics"]) _      = Just Debug
   severityFor (Namespace _ ["Endpoint", "ListeningOnPort"]) _           = Just Info
   severityFor (Namespace _ ["Endpoint", "Exception"]) _                 = Just Error
   severityFor (Namespace _ ["Endpoint", "Exiting"]) _                   = Just Info
@@ -144,6 +151,11 @@ instance MetaTrace TraceSubmitApi where
   -- TODO (@russoul) This seems to be necessary for metrics to work at all, why?
   metricsDocFor (Namespace _ ["Endpoint", "FailedToSubmitTransaction"]) = [ ("tx_submit_fail", "Number of failed tx submissions") ]
   metricsDocFor (Namespace _ ["Endpoint", "SubmittedTransaction"]) = [ ("tx_submit", "Number of successful tx submissions") ]
+  metricsDocFor (Namespace _ ["Application", "InitializeMetrics"]) =
+    [
+      ("tx_submit_fail", "Initialize and set the number of successful tx submissions to 0"),
+      ("tx_submit", "Initialize and set the number of successful tx submissions to 0")
+    ]
   metricsDocFor _ = []
 
   documentFor _ = Nothing
