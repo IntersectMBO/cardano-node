@@ -13,19 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-06-24T21:06:59Z
-  , cardano-haskell-packages 2025-09-15T19:20:34Z
-
--- BEGIN SRP STANZAS MANAGED BY STANZAMAN --
-
-source-repository-package
-  type: git
-  location: https://github.com/intersectmbo/cardano-cli.git
-  tag: 8da6794d196cfa749b5525e72d7d44db962ab272
-  subdir: cardano-cli
-  --sha256: 0lsfxxj1dkz6afpqq9izr2g5rj538bksxkq30s4j0jhpcwzn9qcv
-
--- END SRP STANZAS MANAGED BY STANZAMAN --
+  , hackage.haskell.org 2025-09-11T01:58:40Z
+  , cardano-haskell-packages 2025-09-20T20:31:08Z
 
 packages:
   cardano-node
@@ -83,3 +72,41 @@ if impl (ghc >= 9.12)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-cli.git
+  tag: 9205bba98c35c3a158081104a202a59864472445
+  --sha256: sha256-JViaos6axYtRntdRP7GV34wY3LO2NCjyofZ+cEQG8ug=
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 7388805c2a56e2f628ca46924c648268cc61bbd2
+  --sha256: sha256-YdFyulwmlwLDjVd6Bk+8IxQAdBSRCpacL5HzW3aCb7c=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  -- latest master
+  tag: 71b02607c8a39ed4d8c983b281b05452ed8c01ce
+  --sha256: sha256-/vnZnAPsEuqQMzG5NGHaWk9vyefBWMft7/rKQ+yyYTQ=
+  subdir:
+      ouroboros-consensus
+      ouroboros-consensus-cardano
+      ouroboros-consensus-diffusion
+      ouroboros-consensus-protocol
+      sop-extras
+      strict-sop-core
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/kes-agent
+  tag: bf203c4e7f7e6aab947b077e178baac3ecb2541d
+  --sha256: sha256-cURVbhbTvK6iPKaXVjCovBezyE5UVs46iarmVyWA2Uc=
+  subdir:
+    kes-agent
