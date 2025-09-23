@@ -32,8 +32,6 @@ common project-config
                         -Wunused-packages
                         -fwarn-incomplete-patterns
                         -fwarn-redundant-constraints
-                        -Wno-typed-holes
-                        -fno-defer-type-errors
 
 library
   import:               project-config
@@ -48,8 +46,6 @@ library
                       , containers
                       , ekg-core
                       , http-media
-                      , iohk-monitoring
-                      , lens
                       , mtl
                       , network
                       , optparse-applicative-fork
@@ -65,7 +61,6 @@ library
                       , transformers-except
                       , trace-dispatcher
                       , warp
-                      , yaml
 
   hs-source-dirs:       src
 
@@ -73,13 +68,11 @@ library
 
   other-modules:        Cardano.TxSubmit.CLI.Parsers
                       , Cardano.TxSubmit.CLI.Types
-                      , Cardano.TxSubmit.Config
                       , Cardano.TxSubmit.Metrics
                       , Cardano.TxSubmit.Orphans
                       , Cardano.TxSubmit.Rest.Parsers
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
-                      , Cardano.TxSubmit.Tracing.ToObjectOrphans
                       , Cardano.TxSubmit.Tracing.TraceSubmitApi
                       , Cardano.TxSubmit.Types
                       , Cardano.TxSubmit.Util
