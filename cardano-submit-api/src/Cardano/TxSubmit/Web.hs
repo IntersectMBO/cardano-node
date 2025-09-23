@@ -21,11 +21,9 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AsType 
                    getTxBody, getTxId, submitTxToNodeLocal)
 
 import           Cardano.Binary (DecoderError (..))
-import           Cardano.BM.Trace (Trace, logInfo)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Logging.Trace (traceWith)
 import qualified Cardano.Logging.Types as TraceD
-import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
 import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
@@ -73,34 +71,29 @@ import           Servant.API.Generic (toServant)
 import           Servant.Server.Generic (AsServerT)
 
 runTxSubmitServer
-  :: Trace IO Text
-  -> TraceD.Trace IO TraceSubmitApi
-  -> TxSubmitMetrics
+  :: TraceD.Trace IO TraceSubmitApi
   -> WebserverConfig
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
   -> IO ()
-runTxSubmitServer trace trace' metrics webserverConfig protocol networkId socketPath = do
-  logException trace trace' "TxSubmit WebAPI: " $
-    Web.runSettings trace trace' (toWarpSettings webserverConfig) $ txSubmitApp trace trace' metrics protocol networkId socketPath
-  logInfo trace "txSubmitApp: exiting"
-  traceWith trace' EndpointExiting
+runTxSubmitServer trace  webserverConfig protocol networkId socketPath = do
+  logException trace "TxSubmit WebAPI: " $
+    Web.runSettings trace  (toWarpSettings webserverConfig) $ txSubmitApp trace protocol networkId socketPath
+  traceWith trace EndpointExiting
 
 txSubmitApp
-  :: Trace IO Text
-  -> TraceD.Trace IO TraceSubmitApi
-  -> TxSubmitMetrics
+  :: TraceD.Trace IO TraceSubmitApi
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
   -> Application
-txSubmitApp trace trace' metrics connectInfo networkId socketPath =
+txSubmitApp trace connectInfo networkId socketPath =
     Servant.serve (Proxy :: Proxy TxSubmitApi) (toServant handlers)
   where
     handlers :: TxSubmitApiRecord (AsServerT Handler)
     handlers = TxSubmitApiRecord
-      { _txSubmitPost = txSubmitPost trace trace' metrics connectInfo networkId socketPath
+      { _txSubmitPost = txSubmitPost trace connectInfo networkId socketPath
       }
 
 deserialiseOne :: forall b. ()
@@ -130,15 +123,13 @@ readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyO
   ]
 
 txSubmitPost
-  :: Trace IO Text
-  -> TraceD.Trace IO TraceSubmitApi
-  -> TxSubmitMetrics
+  :: TraceD.Trace IO TraceSubmitApi
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
   -> ByteString
   -> Handler TxId
-txSubmitPost trace trace' metrics p@(CardanoModeParams cModeParams) networkId socketPath txBytes =
+txSubmitPost trace p@(CardanoModeParams cModeParams) networkId socketPath txBytes =
   handle $ do
     InAnyShelleyBasedEra sbe tx <- readByteStringTx txBytes
     let txInMode = TxInMode sbe tx
@@ -170,26 +161,8 @@ txSubmitPost trace trace' metrics p@(CardanoModeParams cModeParams) networkId so
       handleSubmitResult res =
         case res of
           Left err -> do
-            liftIO $ logInfo trace $
-              "txSubmitPost: failed to submit transaction: "
-                <> renderTxCmdError err
-            liftIO $ traceWith trace' $ EndpointFailedToSubmitTransaction err
-            -- TODO: (@russoul) Next step is to tie the metric action (Gauge.inc) to the trace message
-            liftIO $ Counter.inc (tsmFailCount metrics)
+            liftIO $ traceWith trace $ EndpointFailedToSubmitTransaction err
             errorResponse (TxSubmitFail err)
           Right txid -> do
-            liftIO $ logInfo trace $
-              "txSubmitPost: successfully submitted transaction "
-                <> renderMediumTxId txid
-            liftIO $ traceWith trace' $ EndpointSubmittedTransaction txid
-            -- TODO: (@russoul) Next step is to tie the metric action (Gauge.inc) to the trace message
-            liftIO $ Counter.inc (tsmCount metrics)
+            liftIO $ traceWith trace $ EndpointSubmittedTransaction txid
             pure txid
-
--- | Render the first 16 characters of a transaction ID.
-renderMediumTxId :: TxId -> Text
-renderMediumTxId (TxId hash) = renderMediumHash hash
-
--- | Render the first 16 characters of a hex-encoded hash.
-renderMediumHash :: Crypto.Hash crypto a -> Text
-renderMediumHash = T.take 16 . T.decodeLatin1 . Crypto.hashToBytesAsHex
