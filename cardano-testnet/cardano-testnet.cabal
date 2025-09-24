@@ -70,7 +70,7 @@ library
                       , extra
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.8
+                      , hedgehog-extras ^>= 0.10
                       , http-conduit
                       , lens-aeson
                       , microlens

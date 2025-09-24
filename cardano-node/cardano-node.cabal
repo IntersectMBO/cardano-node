@@ -262,7 +262,7 @@ test-suite cardano-node-test
                       , filepath
                       , hedgehog
                       , hedgehog-corpus
-                      , hedgehog-extras ^>= 0.8
+                      , hedgehog-extras ^>= 0.10
                       , iproute
                       , mtl
                       , ouroboros-consensus
