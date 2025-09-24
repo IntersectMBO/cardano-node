@@ -202,12 +202,10 @@ library
                       , resource-registry
                       , safe-exceptions
                       , scientific
-                      , si-timers
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
                       , strict-sop-core
-                      , strict-stm
                       , sop-core
                       , sop-extras
                       , text >= 2.0
@@ -218,8 +216,8 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 0.3
-                      , typed-protocols-stateful >= 0.3
+                      , typed-protocols >= 0.1
+                      , typed-protocols-stateful >= 0.1
                       , yaml
 
 executable cardano-node

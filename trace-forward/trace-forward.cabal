@@ -72,12 +72,12 @@ library
                       , ekg-core
                       , ekg-forward  >= 0.9
                       , singletons ^>= 3.0
-                      , ouroboros-network-framework ^>= 0.18.0.1
+                      , ouroboros-network-framework ^>= 0.19.1
                       , serialise
                       , stm
                       , text
                       , trace-dispatcher
-                      , typed-protocols ^>= 0.3
+                      , typed-protocols ^>= 1.0
                       , typed-protocols-cborg
 
 test-suite test

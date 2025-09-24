@@ -17,7 +17,7 @@ extra-doc-files:        README.md
                         CHANGELOG.md
 
 flag rtview
-  description:          Enable RTView. False by default. Enable with `-f +rtview`.
+  description:          Enab2.3e RTView. False by default. Enable with `-f +rtview`.
   default:              False
   manual:               True
 
@@ -187,8 +187,8 @@ library
                       , network
                       , network-mux >= 0.8
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network ^>= 0.22.3
+                      , ouroboros-network-api ^>= 0.16
                       , ouroboros-network-framework
                       , signal
                       , slugify
@@ -421,7 +421,7 @@ test-suite cardano-tracer-test-ext
                       , network
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network ^>= 0.21.2
+                      , ouroboros-network ^>= 0.22.3
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , process
