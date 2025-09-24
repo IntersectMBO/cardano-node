@@ -201,7 +201,6 @@ library
                       , resource-registry
                       , safe-exceptions
                       , scientific
-                      , io-classes
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
