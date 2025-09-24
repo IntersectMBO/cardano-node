@@ -70,7 +70,7 @@ library
                       , network-mux
                       , ouroboros-network-api
                       , ekg-core
-                      , ekg-forward  >= 0.9
+                      , ekg-forward  >= 1.0
                       , singletons ^>= 3.0
                       , ouroboros-network-framework ^>= 0.19
                       , serialise
