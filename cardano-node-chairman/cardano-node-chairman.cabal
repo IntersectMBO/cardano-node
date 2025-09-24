@@ -44,7 +44,7 @@ executable cardano-node-chairman
   build-depends:        cardano-api
                       , cardano-crypto-class
                       , cardano-git-rev ^>= 0.2.2
-                      , cardano-ledger-core >= 1.17
+                      , cardano-ledger-core ^>= 1.18
                       , cardano-node ^>= 10.5
                       , cardano-prelude
                       , containers
@@ -55,7 +55,6 @@ executable cardano-node-chairman
                       , ouroboros-consensus-cardano
                       , ouroboros-network-api
                       , ouroboros-network-protocols
-                      , io-classes
                       , text
                       , time
 
@@ -74,7 +73,7 @@ test-suite chairman-tests
                       , data-default-class
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.8
+                      , hedgehog-extras ^>= 0.10
                       , network
                       , process
                       , random

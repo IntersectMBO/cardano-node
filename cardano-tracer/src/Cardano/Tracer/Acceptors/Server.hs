@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors.Server
   ( runAcceptorsServer

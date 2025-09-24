@@ -191,8 +191,8 @@ library
                       , ouroboros-consensus-diffusion ^>= 0.23
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.16
-                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances}  ^>= 0.22
-                      , ouroboros-network-framework
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.3
+                      , ouroboros-network-framework ^>= 0.19.1
                       , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
                       , prettyprinter-ansi-terminal
@@ -201,7 +201,6 @@ library
                       , resource-registry
                       , safe-exceptions
                       , scientific
-                      , io-classes
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
@@ -262,7 +261,7 @@ test-suite cardano-node-test
                       , filepath
                       , hedgehog
                       , hedgehog-corpus
-                      , hedgehog-extras ^>= 0.8
+                      , hedgehog-extras ^>= 0.10
                       , iproute
                       , mtl
                       , ouroboros-consensus
