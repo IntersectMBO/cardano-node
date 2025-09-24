@@ -117,3 +117,9 @@ source-repository-package
   --sha256: sha256-cURVbhbTvK6iPKaXVjCovBezyE5UVs46iarmVyWA2Uc=
   subdir:
     kes-agent
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: bce3027d9123d51b51a9423dfce8090d132493b0
+  --sha256: sha256-jLyJRIhDAQehaXKWp+RxruyFSSBtVsyM0QI12qa93V0=
