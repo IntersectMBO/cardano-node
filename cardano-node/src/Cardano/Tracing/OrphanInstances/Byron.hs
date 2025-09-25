@@ -12,8 +12,7 @@ module Cardano.Tracing.OrphanInstances.Byron () where
 
 import           Cardano.Api (textShow)
 
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView (..))
-import           Ouroboros.Consensus.Protocol.PBFT (PBft, PBftTiebreakerView(..))
+import           Ouroboros.Consensus.Protocol.PBFT (PBftTiebreakerView(..))
 import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
                    ChainValidationError (..), delegationCertificate)

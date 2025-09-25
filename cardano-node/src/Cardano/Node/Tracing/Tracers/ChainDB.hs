@@ -399,8 +399,8 @@ instance ( LogFormatting (Header blk)
          , InspectLedger blk
          , HasIssuer blk
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
-  forHuman (ChainDB.IgnoreBlockOlderThanK pt) =
-    "Ignoring block older than K: " <> renderRealPointAsPhrase pt
+  forHuman (ChainDB.IgnoreBlockOlderThanImmTip pt) =
+    "Ignoring block older than ImmTip: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
       "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.IgnoreInvalidBlock pt _reason) =
@@ -445,8 +445,8 @@ instance ( LogFormatting (Header blk)
       "Poppped request from queue to reprocess blocks postponed by LoE."
   forHuman ChainDB.ChainSelectionLoEDebug{} =
       "ChainDB LoE debug event"
-  forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
-      mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
+  forMachine dtal (ChainDB.IgnoreBlockOlderThanImmTip pt) =
+      mconcat [ "kind" .= String "IgnoreBlockOlderThanImmTip"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
       mconcat [ "kind" .= String "IgnoreBlockAlreadyInVolatileDB"
@@ -625,8 +625,8 @@ instance ( LogFormatting (Header blk)
 
 
 instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
-  namespaceFor ChainDB.IgnoreBlockOlderThanK {} =
-    Namespace [] ["IgnoreBlockOlderThanK"]
+  namespaceFor ChainDB.IgnoreBlockOlderThanImmTip {} =
+    Namespace [] ["IgnoreBlockOlderThanImmTip"]
   namespaceFor ChainDB.IgnoreBlockAlreadyInVolatileDB {} =
     Namespace [] ["IgnoreBlockAlreadyInVolatileDB"]
   namespaceFor ChainDB.IgnoreInvalidBlock {} =
