@@ -646,13 +646,14 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
     , pncChainSyncIdleTimeout     = mempty
 
-    , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 (Ouroboros.defaultDeadlineTargets _))
-    , pncDeadlineTargetOfKnownPeers                = Last (Just $ targetNumberOfKnownPeers                Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfEstablishedPeers          = Last (Just $ targetNumberOfEstablishedPeers          Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfActivePeers               = Last (Just $ targetNumberOfActivePeers               Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just $ targetNumberOfKnownBigLedgerPeers       Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just $ targetNumberOfActiveBigLedgerPeers      Ouroboros.defaultDeadlineTargets)
+    -- TODO: fix
+    , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 (Ouroboros.defaultDeadlineTargets undefined))
+    , pncDeadlineTargetOfKnownPeers                = Last (Just $ targetNumberOfKnownPeers                (Ouroboros.defaultDeadlineTargets undefined))
+    , pncDeadlineTargetOfEstablishedPeers          = Last (Just $ targetNumberOfEstablishedPeers          (Ouroboros.defaultDeadlineTargets undefined))
+    , pncDeadlineTargetOfActivePeers               = Last (Just $ targetNumberOfActivePeers               (Ouroboros.defaultDeadlineTargets undefined))
+    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just $ targetNumberOfKnownBigLedgerPeers       (Ouroboros.defaultDeadlineTargets undefined))
+    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just $ targetNumberOfEstablishedBigLedgerPeers (Ouroboros.defaultDeadlineTargets undefined))
+    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just $ targetNumberOfActiveBigLedgerPeers      (Ouroboros.defaultDeadlineTargets undefined))
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultDeadlineTargets
 
     , pncSyncTargetOfRootPeers                     = Last (Just $ targetNumberOfRootPeers                 Cardano.defaultSyncTargets)

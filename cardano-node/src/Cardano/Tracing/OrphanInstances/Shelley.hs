@@ -220,6 +220,9 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "credential" .= String (textShow credential)
       , "error" .= String "Delegated rep is not registered for provided stake key"
       ]
+    -- TODO: fix
+    Conway.DepositIncorrectDELEG _ -> undefined
+    Conway.RefundIncorrectDELEG _ -> undefined
 
 instance ToObject (Set (Credential 'Staking)) where
   toObject _verb creds =
@@ -481,6 +484,8 @@ instance
            ]
       )
       (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
+  -- TODO: fix
+  toObject _ _ = undefined
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "UTXO" ledgerera))
@@ -649,8 +654,6 @@ instance
              , "outputs" .= badOutputs
              , "error" .= String "The Byron address attributes are too big"
              ]
-  toObject _verb Allegra.TriesToForgeADA =
-    mconcat [ "kind" .= String "TriesToForgeADA" ]
   toObject _verb (Allegra.OutputTooBigUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
@@ -811,6 +814,8 @@ instance ToObject (ShelleyPoolPredFailure era) where
              , "hashSize" .= String (textShow hashSize)
              , "error" .= String "The stake pool metadata hash is too large"
              ]
+  -- TODO: fix
+  toObject _verb (VRFKeyHashAlreadyRegistered _ _) = undefined
 
 -- Apparently this should never happen according to the Shelley exec spec
   -- toObject _verb (WrongCertificateTypePOOL index) =
@@ -840,48 +845,8 @@ instance ToObject (ShelleyPoolPredFailure era) where
              , "error" .= String "Wrong network ID in pool registration certificate"
              ]
 
-instance
-  ( ToObject (PredicateFailure (Core.EraRule "NEWEPOCH" ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "RUPD" ledgerera))
-  ) => ToObject (ShelleyTickPredFailure ledgerera) where
-  toObject verb (NewEpochFailure f) = toObject verb f
-  toObject verb (RupdFailure f) = toObject verb f
-
 instance ToObject TicknPredicateFailure where
   toObject _verb x = case x of {} -- no constructors
-
-instance
-  ( ToObject (PredicateFailure (Core.EraRule "EPOCH" ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "MIR" ledgerera))
-  ) => ToObject (ShelleyNewEpochPredFailure ledgerera) where
-  toObject verb (EpochFailure f) = toObject verb f
-  toObject verb (MirFailure f) = toObject verb f
-
-
-instance
-  ( ToObject (PredicateFailure (Core.EraRule "POOLREAP" ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "SNAP" ledgerera))
-  , ToObject (UpecPredFailure ledgerera)
-  ) => ToObject (ShelleyEpochPredFailure ledgerera) where
-  toObject verb (PoolReapFailure f) = toObject verb f
-  toObject verb (SnapFailure f) = toObject verb f
-  toObject verb (UpecFailure f) = toObject verb f
-
-
-instance ToObject (ShelleyPoolreapPredFailure ledgerera) where
-  toObject _verb x = case x of {} -- no constructors
-
-
-instance ToObject (ShelleySnapPredFailure ledgerera) where
-  toObject _verb x = case x of {} -- no constructors
-
-instance ToObject (ShelleyMirPredFailure ledgerera) where
-  toObject _verb x = case x of {} -- no constructors
-
-
-instance ToObject (ShelleyRupdPredFailure ledgerera) where
-  toObject _verb x = case x of {} -- no constructors
-
 
 instance Core.Crypto crypto => ToObject (PrtclPredicateFailure crypto) where
   toObject  verb (OverlayFailure f) = toObject verb f
@@ -1095,8 +1060,6 @@ instance
              , "outputs" .= txouts
              , "error" .= String "The Byron address attributes are too big"
              ]
-  toObject _verb Alonzo.TriesToForgeADA =
-    mconcat [ "kind" .= String "TriesToForgeADA" ]
   toObject _verb (Alonzo.OutputTooBigUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
@@ -1219,6 +1182,8 @@ instance
         mconcat [ "kind" .= String "MalformedReferenceScripts"
                 , "scripts" .= s
                 ]
+      -- TODO: fix
+      Babbage.ScriptIntegrityHashMismatch _ _ -> undefined
 
 instance Core.Crypto crypto => ToObject (Praos.PraosValidationErr crypto) where
   toObject _ err' =
@@ -1559,6 +1524,8 @@ instance
       mconcat [ "kind" .= String "MalformedReferenceScripts"
               , "scripts" .= scripts
               ]
+    -- TODO: fix
+    Conway.ScriptIntegrityHashMismatch _ _ -> undefined
 
 --------------------------------------------------------------------------------
 -- Helper functions

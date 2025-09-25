@@ -182,6 +182,9 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "credential" .= String (textShow credential)
       , "error" .= String "Delegated rep is not registered for provided stake key"
       ]
+    -- TODO: fix
+    Conway.DepositIncorrectDELEG _ -> undefined
+    Conway.RefundIncorrectDELEG _ -> undefined
 
 instance
   ( ShelleyCompatible protocol era
@@ -376,6 +379,8 @@ instance
            ]
       )
       (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
+  -- TODO: fix
+  forMachine _ (ScriptIntegrityHashMismatch _ _) = undefined
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -543,8 +548,6 @@ instance
              , "outputs" .= badOutputs
              , "error" .= String "The Byron address attributes are too big"
              ]
-  forMachine _dtal Allegra.TriesToForgeADA =
-    mconcat [ "kind" .= String "TriesToForgeADA" ]
   forMachine _dtal (Allegra.OutputTooBigUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
@@ -714,46 +717,11 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "poolId" .= String (textShow poolId)
              , "error" .= String "Wrong network ID in pool registration certificate"
              ]
+  -- TODO: fix
+  forMachine _dtal (VRFKeyHashAlreadyRegistered _ _) = undefined
 
-
-instance
-  ( LogFormatting (PredicateFailure (Ledger.EraRule "NEWEPOCH" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "RUPD" era))
-  ) => LogFormatting (ShelleyTickPredFailure era) where
-  forMachine dtal (NewEpochFailure f) = forMachine dtal f
-  forMachine dtal (RupdFailure f)     = forMachine dtal f
 
 instance LogFormatting TicknPredicateFailure where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance
-  ( LogFormatting (PredicateFailure (Ledger.EraRule "EPOCH" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "MIR" era))
-  ) => LogFormatting (ShelleyNewEpochPredFailure era) where
-  forMachine dtal (EpochFailure f) = forMachine dtal f
-  forMachine dtal (MirFailure f) = forMachine dtal f
-
-
-instance
-  ( LogFormatting (PredicateFailure (Ledger.EraRule "POOLREAP" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "SNAP" era))
-  , LogFormatting (UpecPredFailure era)
-  ) => LogFormatting (ShelleyEpochPredFailure era) where
-  forMachine dtal (PoolReapFailure f) = forMachine dtal f
-  forMachine dtal (SnapFailure f)     = forMachine dtal f
-  forMachine dtal (UpecFailure f)     = forMachine dtal f
-
-
-instance LogFormatting (ShelleyPoolreapPredFailure era) where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance LogFormatting (ShelleySnapPredFailure era) where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance LogFormatting (ShelleyMirPredFailure era) where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance LogFormatting (ShelleyRupdPredFailure era) where
   forMachine _dtal x = case x of {} -- no constructors
 
 
@@ -937,8 +905,6 @@ instance
              , "outputs" .= txouts
              , "error" .= String "The Byron address attributes are too big"
              ]
-  forMachine _dtal Alonzo.TriesToForgeADA =
-    mconcat [ "kind" .= String "TriesToForgeADA" ]
   forMachine _dtal (Alonzo.OutputTooBigUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
@@ -1057,6 +1023,8 @@ instance
         mconcat [ "kind" .= String "MalformedReferenceScripts"
                 , "scripts" .= s
                 ]
+      -- TODO: fix
+      Babbage.ScriptIntegrityHashMismatch _ _ -> undefined
 --------------------------------------------------------------------------------
 -- Conway related
 --------------------------------------------------------------------------------
@@ -1506,6 +1474,8 @@ instance
       mconcat [ "kind" .= String "MalformedReferenceScripts"
               , "scripts" .= scripts
               ]
+    -- TODO: fix
+    Conway.ScriptIntegrityHashMismatch _ -> undefined
 
 --------------------------------------------------------------------------------
 -- Helper functions
