@@ -1475,7 +1475,7 @@ instance
               , "scripts" .= scripts
               ]
     -- TODO: fix
-    Conway.ScriptIntegrityHashMismatch _ -> undefined
+    Conway.ScriptIntegrityHashMismatch _ _ -> undefined
 
 --------------------------------------------------------------------------------
 -- Helper functions

@@ -46,7 +46,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToCli
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, SelectView (svTiebreakerView, svBlockNo), ConsensusProtocol (TiebreakerView))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import Ouroboros.Consensus.Cardano (ProtocolByron)
 
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as Base16
