@@ -8,13 +8,11 @@
 module Cardano.Node.Orphans () where
 
 import           Cardano.Api ()
-import           Cardano.Network.OrphanInstances ()
 
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag(..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import           Ouroboros.Network.OrphanInstances ()
 
 import           Data.Aeson.Types
 import qualified Data.Text as Text

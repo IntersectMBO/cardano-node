@@ -646,7 +646,7 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
     , pncChainSyncIdleTimeout     = mempty
 
-    , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 Ouroboros.defaultDeadlineTargets)
+    , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 (Ouroboros.defaultDeadlineTargets _))
     , pncDeadlineTargetOfKnownPeers                = Last (Just $ targetNumberOfKnownPeers                Ouroboros.defaultDeadlineTargets)
     , pncDeadlineTargetOfEstablishedPeers          = Last (Just $ targetNumberOfEstablishedPeers          Ouroboros.defaultDeadlineTargets)
     , pncDeadlineTargetOfActivePeers               = Last (Just $ targetNumberOfActivePeers               Ouroboros.defaultDeadlineTargets)
