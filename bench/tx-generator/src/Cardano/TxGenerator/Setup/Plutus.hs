@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-|
 Module      : Cardano.TxGenerator.Setup.Plutus
@@ -19,11 +20,12 @@ import           Data.ByteString.Short (ShortByteString)
 import           Data.Int (Int64)
 import           Data.Map.Strict as Map (lookup)
 
+import           Control.Exception (displayException)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Writer (runWriter)
 
-import           Cardano.CLI.Read (readFileScriptInAnyLang)
+import           Cardano.CLI.Read (readFileScriptInAnyLang, ScriptDecodeError)
 
 import           Cardano.Api
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
@@ -71,7 +73,7 @@ readPlutusScript (Left s)
     doLoad fp  = second (second (const $ ResolvedToFallback asFileName)) <$> readPlutusScript (Right fp)
 readPlutusScript (Right fp)
   = runExceptT $ do
-    script <- firstExceptT ApiError $
+    script <- firstExceptT (ApiError @ScriptDecodeError) $
       readFileScriptInAnyLang fp
     case script of
       ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure (script, ResolvedToFileName fp)

@@ -259,11 +259,11 @@ mkPraosLeaderCredentials
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
-        praosCanBeLeaderOpCert     = opcert,
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
-          praosCanBeLeaderSignKeyVRF = vrfKey
+          praosCanBeLeaderSignKeyVRF = vrfKey,
+          -- TODO: fix
+          praosCanBeLeaderCredentialsSource = undefined
         },
-      shelleyLeaderCredentialsInitSignKey = kesKey,
       shelleyLeaderCredentialsLabel = "Shelley"
     }
 

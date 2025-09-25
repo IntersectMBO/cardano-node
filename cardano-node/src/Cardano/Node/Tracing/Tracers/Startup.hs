@@ -266,8 +266,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
       mconcat [ "kind" .= String "BasicInfoNetwork"
                , "addresses" .= String (showT niAddresses)
                , "diffusionMode"  .= String (showT niDiffusionMode)
-               , "dnsProducers" .= String (showT niDnsProducers)
-               , "ipProducers" .= String (showT niIpProducers)
                ]
   forMachine _dtal (BIByron BasicInfoByron {..}) =
       mconcat [ "kind" .= String "BasicInfoByron"
@@ -604,8 +602,6 @@ ppStartupInfoTrace (WarningDevelopmentNodeToClientVersions ntcVersions) =
 ppStartupInfoTrace (BINetwork BasicInfoNetwork {..}) =
   "Addresses " <> showT niAddresses
   <> ", DiffusionMode " <> showT niDiffusionMode
-  <> ", DnsProducers " <> showT niDnsProducers
-  <> ", IpProducers " <> showT niIpProducers
 
 ppStartupInfoTrace (BIByron BasicInfoByron {..}) =
   "Era Byron"
