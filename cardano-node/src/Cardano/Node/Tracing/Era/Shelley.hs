@@ -58,6 +58,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
+import qualified Ouroboros.Consensus.Protocol.Praos.Common as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
@@ -1476,6 +1477,14 @@ instance
               ]
     -- TODO: fix
     Conway.ScriptIntegrityHashMismatch _ _ -> undefined
+
+instance LogFormatting (Praos.PraosTiebreakerView crypto) where
+  forMachine _dtal (Praos.PraosTiebreakerView sl issuer issueNo vrf) =
+    mconcat [ "slotNo" .= condense sl
+            , "issuer" .= textShow issuer
+            , "issueNo" .= textShow issueNo
+            , "vrf" .= textShow vrf
+            ]
 
 --------------------------------------------------------------------------------
 -- Helper functions

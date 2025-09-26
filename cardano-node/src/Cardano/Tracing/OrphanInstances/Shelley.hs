@@ -63,6 +63,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
+import qualified Ouroboros.Consensus.Protocol.Praos.Common as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
@@ -423,7 +424,7 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
     mconcat [ "kind" .= String "TreasuryWithdrawalReturnAccountsDoNotExist"
             , "invalidAccounts" .= accounts
             ]
-  toObject _ (Conway.UnelectedCommitteeVoters creds) = 
+  toObject _ (Conway.UnelectedCommitteeVoters creds) =
     mconcat [ "kind" .= String "UnelectedCommitteeVoters"
             , "unelectedCommitteeVoters" .= creds
             ]
@@ -1526,6 +1527,14 @@ instance
               ]
     -- TODO: fix
     Conway.ScriptIntegrityHashMismatch _ _ -> undefined
+
+instance ToObject (Praos.PraosTiebreakerView crypto) where
+  toObject v (Praos.PraosTiebreakerView sl issuer issueNo vrf) =
+    mconcat [ "slotNo" .= toObject v sl
+            , "issuer" .= textShow issuer
+            , "issueNo" .= textShow issueNo
+            , "vrf" .= textShow vrf
+            ]
 
 --------------------------------------------------------------------------------
 -- Helper functions
