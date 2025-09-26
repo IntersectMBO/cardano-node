@@ -34,6 +34,7 @@ module Cardano.Node.Types
   , NodeShelleyProtocolConfiguration(..)
   , NodeAlonzoProtocolConfiguration(..)
   , NodeConwayProtocolConfiguration(..)
+  , NodeDijkstraProtocolConfiguration(..)
   , NodeCheckpointsConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , renderVRFPrivateKeyFilePermissionError
@@ -207,6 +208,7 @@ data NodeProtocolConfiguration =
     NodeShelleyProtocolConfiguration
     NodeAlonzoProtocolConfiguration
     NodeConwayProtocolConfiguration
+    NodeDijkstraProtocolConfiguration
     NodeHardForkProtocolConfiguration
     NodeCheckpointsConfiguration
   deriving (Eq, Show)
@@ -232,6 +234,13 @@ data NodeConwayProtocolConfiguration =
        -- to enforce a maximum protocol version of 8 to avoid
        -- a permanent hard fork.
      , npcConwayGenesisFileHash :: !(Maybe GenesisHash)
+     }
+  deriving (Eq, Show)
+
+data NodeDijkstraProtocolConfiguration =
+     NodeDijkstraProtocolConfiguration {
+       npcDijkstraGenesisFile     :: !GenesisFile
+     , npcDijkstraGenesisFileHash :: !(Maybe GenesisHash)
      }
   deriving (Eq, Show)
 
@@ -357,6 +366,9 @@ data NodeHardForkProtocolConfiguration =
 
      , npcTestConwayHardForkAtEpoch         :: Maybe EpochNo
      , npcTestConwayHardForkAtVersion       :: Maybe Word
+
+     , npcTestDijkstraHardForkAtEpoch         :: Maybe EpochNo
+     , npcTestDijkstraHardForkAtVersion       :: Maybe Word
      }
   deriving (Eq, Show)
 
@@ -425,12 +437,13 @@ newtype TopologyFile = TopologyFile
   deriving newtype (Show, Eq)
 
 instance AdjustFilePaths NodeProtocolConfiguration where
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pch pccp) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pcd pch pccp) =
     NodeProtocolConfigurationCardano
       (adjustFilePaths f pcb)
       (adjustFilePaths f pcs)
       (adjustFilePaths f pca)
       (adjustFilePaths f pcc)
+      (adjustFilePaths f pcd)
       pch
       (adjustFilePaths f pccp)
 
@@ -457,6 +470,12 @@ instance AdjustFilePaths NodeConwayProtocolConfiguration where
                         npcConwayGenesisFile
                       } =
     x { npcConwayGenesisFile = adjustFilePaths f npcConwayGenesisFile }
+
+instance AdjustFilePaths NodeDijkstraProtocolConfiguration where
+  adjustFilePaths f x@NodeDijkstraProtocolConfiguration {
+                        npcDijkstraGenesisFile
+                      } =
+    x { npcDijkstraGenesisFile = adjustFilePaths f npcDijkstraGenesisFile }
 
 instance AdjustFilePaths NodeCheckpointsConfiguration where
   adjustFilePaths f x@NodeCheckpointsConfiguration {
