@@ -91,7 +91,7 @@ documentTracer' hook tracer = do
     tr' <- hook tracer
     documentTracer tr'
 
--- This fuction calls document tracers and returns a DocTracer result
+-- This function calls document tracers and returns a DocTracer result
 documentTracer :: forall a.
      MetaTrace a
   => Trace IO a
@@ -286,7 +286,7 @@ documentTracer tracer = do
 
 
 
--- | Calls the tracers in a documetation control mode,
+-- | Calls the tracers in a documentation control mode,
 -- and returns a DocCollector, from which the documentation gets generated
 documentTracersRun :: forall a. MetaTrace a => [Trace IO a] -> IO DocCollector
 documentTracersRun tracers = do

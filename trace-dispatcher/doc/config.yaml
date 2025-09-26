@@ -9,7 +9,7 @@ TraceOptions:
       - EKGBackend
       - Forwarder
 
-# More interesing tracers
+# More interesting tracers
 
   ChainDB:
     severity: Info
