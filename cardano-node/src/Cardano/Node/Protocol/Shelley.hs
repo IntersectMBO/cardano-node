@@ -39,7 +39,7 @@ import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..), PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
 
@@ -261,8 +261,7 @@ mkPraosLeaderCredentials
         PraosCanBeLeader {
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
           praosCanBeLeaderSignKeyVRF = vrfKey,
-          -- TODO: fix
-          praosCanBeLeaderCredentialsSource = undefined
+          praosCanBeLeaderCredentialsSource = PraosCredentialsUnsound opcert kesKey
         },
       shelleyLeaderCredentialsLabel = "Shelley"
     }
