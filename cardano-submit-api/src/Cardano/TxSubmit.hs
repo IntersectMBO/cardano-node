@@ -43,6 +43,9 @@ defaultTraceConfig =
 
 runTxSubmitWebapi :: TxSubmitNodeParams -> IO ()
 runTxSubmitWebapi tsnp = do
+    putStrLn $ "Path to config:\n" <> unConfigFile tspConfigFile
+    jsonFile <- readFile (unConfigFile tspConfigFile)
+    putStrLn $ "The json file contents:\n" <> jsonFile
     tracingConfig <- readConfigurationWithDefault (unConfigFile tspConfigFile) defaultTraceConfig
     (trce, registrySample) <- mkTraceDispatcher tracingConfig
     Async.withAsync
