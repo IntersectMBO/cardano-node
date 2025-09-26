@@ -210,7 +210,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
         let DegenLedgerConfig cfgShelley = configLedger cfg
         in getSystemStartShelley cfgShelley
       Api.CardanoBlockType ->
-        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway = configLedger cfg
+        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway cfgDijkstra = configLedger cfg
         in minimum [ getSystemStartByron
                    , getSystemStartShelley cfgShelley
                    , getSystemStartShelley cfgAllegra
@@ -218,6 +218,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
                    , getSystemStartShelley cfgAlonzo
                    , getSystemStartShelley cfgBabbage
                    , getSystemStartShelley cfgConway
+                   , getSystemStartShelley cfgDijkstra
                    ]
 
   getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg

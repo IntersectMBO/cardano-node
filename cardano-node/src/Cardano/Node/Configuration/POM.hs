@@ -332,6 +332,7 @@ instance FromJSON PartialNodeConfiguration where
                 <*> parseShelleyProtocol v
                 <*> parseAlonzoProtocol v
                 <*> parseConwayProtocol v
+                <*> parseDijkstraProtocol v
                 <*> parseHardForkProtocol v
                 <*> parseCheckpoints v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
@@ -545,6 +546,14 @@ instance FromJSON PartialNodeConfiguration where
              , npcConwayGenesisFileHash
              }
 
+      parseDijkstraProtocol v = do
+        npcDijkstraGenesisFile     <- v .:  "DijkstraGenesisFile"
+        npcDijkstraGenesisFileHash <- v .:? "DijkstraGenesisHash"
+        pure NodeDijkstraProtocolConfiguration {
+               npcDijkstraGenesisFile
+             , npcDijkstraGenesisFileHash
+             }
+
       parseHardForkProtocol v = do
 
         npcExperimentalHardForksEnabled <- do
@@ -576,6 +585,9 @@ instance FromJSON PartialNodeConfiguration where
         npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
         npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
 
+        npcTestDijkstraHardForkAtEpoch   <- v .:? "TestDijkstraHardForkAtEpoch"
+        npcTestDijkstraHardForkAtVersion <- v .:? "TestDijkstraHardForkAtVersion"
+
         pure NodeHardForkProtocolConfiguration
           { npcExperimentalHardForksEnabled
 
@@ -596,6 +608,9 @@ instance FromJSON PartialNodeConfiguration where
 
           , npcTestConwayHardForkAtEpoch
           , npcTestConwayHardForkAtVersion
+
+          , npcTestDijkstraHardForkAtEpoch
+          , npcTestDijkstraHardForkAtVersion
           }
 
       parseCheckpoints v = do
