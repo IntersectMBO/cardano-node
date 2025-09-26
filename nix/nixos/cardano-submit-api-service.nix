@@ -37,7 +37,7 @@ in {
       };
       config = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
-        default = cardanoLib.defaultExplorerLogConfig;
+        default = cardanoLib.environments.${cfg.environment}.submitApiConfig;
       };
       network = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
