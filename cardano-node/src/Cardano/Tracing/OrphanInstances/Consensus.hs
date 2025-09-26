@@ -61,6 +61,7 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
@@ -81,6 +82,7 @@ import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
+import           Control.Exception
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))
@@ -1870,3 +1872,23 @@ instance ConvertRawHash blk => ToObject (Tip blk) where
             , "tipHash" .= renderHeaderHash (Proxy @blk) hash
             , "tipBlockNo" .= toJSON bNo
             ]
+
+instance ToObject KESAgentClientTrace where
+  toObject _verb (KESAgentClientException exc) =
+    mconcat [ "kind" .= String "KESAgentClientException"
+            , "exception" .= String (pack $ displayException exc)
+            ]
+  toObject _verb (KESAgentClientTrace trc) =
+    mconcat [ "kind" .= String "KESAgentClientTrace"
+            , "trace" .= String (pack $ show trc)
+            ]
+
+instance HasPrivacyAnnotation KESAgentClientTrace where
+
+instance HasSeverityAnnotation KESAgentClientTrace where
+  getSeverityAnnotation = \case
+    KESAgentClientException{}       -> Error
+    KESAgentClientTrace{}       -> Notice
+
+instance Transformable Text IO KESAgentClientTrace where
+  trTransformer = trStructured
