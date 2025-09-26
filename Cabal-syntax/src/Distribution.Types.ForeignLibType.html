@@ -1,0 +1,412 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679403600"><span id="local-6989586621679403601"><span id="local-6989586621679403602"><span id="local-6989586621679403603"></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.ForeignLibType</span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier">ForeignLibType</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#knownForeignLibTypes"><span class="hs-identifier">knownForeignLibTypes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#foreignLibTypeIsShared"><span class="hs-identifier">foreignLibTypeIsShared</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.PackageDescription.Utils.html"><span class="hs-identifier">Distribution.PackageDescription.Utils</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Disp</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><span class="hs-comment">-- | What kind of foreign library is to be built?</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="ForeignLibType"><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-var">ForeignLibType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-23"></span><span>      </span><span class="hs-comment">-- | A native shared library (@.so@ on Linux, @.dylib@ on OSX, or</span><span>
+</span><span id="line-24"></span><span>      </span><span class="hs-comment">-- @.dll@ on Windows).</span><span>
+</span><span id="line-25"></span><span>      </span><span id="ForeignLibNativeShared"><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeShared"><span class="hs-identifier hs-var">ForeignLibNativeShared</span></a></span></span><span>
+</span><span id="line-26"></span><span>      </span><span class="annot"><span class="hs-comment">-- | A native static library (not currently supported.)</span></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ForeignLibNativeStatic"><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeStatic"><span class="hs-identifier hs-var">ForeignLibNativeStatic</span></a></span></span><span>
+</span><span id="line-28"></span><span>      </span><span class="hs-comment">-- TODO: Maybe this should record a string?</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ForeignLibTypeUnknown"><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679403610"><span id="local-6989586621679403612"><span class="annot"><span class="annottext">(forall x. ForeignLibType -&gt; Rep ForeignLibType x)
+-&gt; (forall x. Rep ForeignLibType x -&gt; ForeignLibType)
+-&gt; Generic ForeignLibType
+forall x. Rep ForeignLibType x -&gt; ForeignLibType
+forall x. ForeignLibType -&gt; Rep ForeignLibType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ForeignLibType -&gt; Rep ForeignLibType x
+from :: forall x. ForeignLibType -&gt; Rep ForeignLibType x
+$cto :: forall x. Rep ForeignLibType x -&gt; ForeignLibType
+to :: forall x. Rep ForeignLibType x -&gt; ForeignLibType
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679403616"><span id="local-6989586621679403618"><span id="local-6989586621679403622"><span class="annot"><span class="annottext">Int -&gt; ForeignLibType -&gt; ShowS
+[ForeignLibType] -&gt; ShowS
+ForeignLibType -&gt; String
+(Int -&gt; ForeignLibType -&gt; ShowS)
+-&gt; (ForeignLibType -&gt; String)
+-&gt; ([ForeignLibType] -&gt; ShowS)
+-&gt; Show ForeignLibType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ForeignLibType -&gt; ShowS
+showsPrec :: Int -&gt; ForeignLibType -&gt; ShowS
+$cshow :: ForeignLibType -&gt; String
+show :: ForeignLibType -&gt; String
+$cshowList :: [ForeignLibType] -&gt; ShowS
+showList :: [ForeignLibType] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679403626"><span id="local-6989586621679403630"><span id="local-6989586621679403633"><span id="local-6989586621679403639"><span class="annot"><span class="annottext">ReadPrec [ForeignLibType]
+ReadPrec ForeignLibType
+Int -&gt; ReadS ForeignLibType
+ReadS [ForeignLibType]
+(Int -&gt; ReadS ForeignLibType)
+-&gt; ReadS [ForeignLibType]
+-&gt; ReadPrec ForeignLibType
+-&gt; ReadPrec [ForeignLibType]
+-&gt; Read ForeignLibType
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ForeignLibType
+readsPrec :: Int -&gt; ReadS ForeignLibType
+$creadList :: ReadS [ForeignLibType]
+readList :: ReadS [ForeignLibType]
+$creadPrec :: ReadPrec ForeignLibType
+readPrec :: ReadPrec ForeignLibType
+$creadListPrec :: ReadPrec [ForeignLibType]
+readListPrec :: ReadPrec [ForeignLibType]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679403643"><span id="local-6989586621679403645"><span class="annot"><span class="annottext">ForeignLibType -&gt; ForeignLibType -&gt; Bool
+(ForeignLibType -&gt; ForeignLibType -&gt; Bool)
+-&gt; (ForeignLibType -&gt; ForeignLibType -&gt; Bool) -&gt; Eq ForeignLibType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+== :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+$c/= :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+/= :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679403652"><span id="local-6989586621679403654"><span id="local-6989586621679403656"><span id="local-6989586621679403660"><span id="local-6989586621679403663"><span id="local-6989586621679403666"><span id="local-6989586621679403669"><span class="annot"><span class="annottext">Eq ForeignLibType
+Eq ForeignLibType =&gt;
+(ForeignLibType -&gt; ForeignLibType -&gt; Ordering)
+-&gt; (ForeignLibType -&gt; ForeignLibType -&gt; Bool)
+-&gt; (ForeignLibType -&gt; ForeignLibType -&gt; Bool)
+-&gt; (ForeignLibType -&gt; ForeignLibType -&gt; Bool)
+-&gt; (ForeignLibType -&gt; ForeignLibType -&gt; Bool)
+-&gt; (ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType)
+-&gt; (ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType)
+-&gt; Ord ForeignLibType
+ForeignLibType -&gt; ForeignLibType -&gt; Bool
+ForeignLibType -&gt; ForeignLibType -&gt; Ordering
+ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ForeignLibType -&gt; ForeignLibType -&gt; Ordering
+compare :: ForeignLibType -&gt; ForeignLibType -&gt; Ordering
+$c&lt; :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+&lt; :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+$c&lt;= :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+&lt;= :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+$c&gt; :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+&gt; :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+$c&gt;= :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+&gt;= :: ForeignLibType -&gt; ForeignLibType -&gt; Bool
+$cmax :: ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+max :: ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+$cmin :: ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+min :: ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679403675"><span id="local-6989586621679403677"><span id="local-6989586621679403679"><span id="local-6989586621679403681"><span id="local-6989586621679403683"><span id="local-6989586621679403689"><span id="local-6989586621679403694"><span id="local-6989586621679403697"><span id="local-6989586621679403700"><span id="local-6989586621679403703"><span id="local-6989586621679403706"><span id="local-6989586621679403709"><span id="local-6989586621679403714"><span id="local-6989586621679403719"><span class="annot"><span class="annottext">Typeable ForeignLibType
+Typeable ForeignLibType =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; ForeignLibType -&gt; c ForeignLibType)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLibType)
+-&gt; (ForeignLibType -&gt; Constr)
+-&gt; (ForeignLibType -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLibType))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c ForeignLibType))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; ForeignLibType -&gt; ForeignLibType)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ForeignLibType -&gt; m ForeignLibType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ForeignLibType -&gt; m ForeignLibType)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; ForeignLibType -&gt; m ForeignLibType)
+-&gt; Data ForeignLibType
+ForeignLibType -&gt; Constr
+ForeignLibType -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; ForeignLibType -&gt; ForeignLibType
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLibType
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ForeignLibType -&gt; c ForeignLibType
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLibType)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ForeignLibType)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ForeignLibType -&gt; c ForeignLibType
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ForeignLibType -&gt; c ForeignLibType
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLibType
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ForeignLibType
+$ctoConstr :: ForeignLibType -&gt; Constr
+toConstr :: ForeignLibType -&gt; Constr
+$cdataTypeOf :: ForeignLibType -&gt; DataType
+dataTypeOf :: ForeignLibType -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLibType)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ForeignLibType)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ForeignLibType)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ForeignLibType)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ForeignLibType -&gt; ForeignLibType
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ForeignLibType -&gt; ForeignLibType
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ForeignLibType -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ForeignLibType -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679403726"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679403730"><span class="annot"><span class="annottext">pretty :: ForeignLibType -&gt; Doc
+</span><a href="#local-6989586621679403730"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeShared"><span class="hs-identifier hs-var">ForeignLibNativeShared</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;native-shared&quot;</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeStatic"><span class="hs-identifier hs-var">ForeignLibNativeStatic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;native-static&quot;</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Distribution.Pretty.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">Disp.text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unknown&quot;</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679403755"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m ForeignLibType
+</span><a href="#local-6989586621679403755"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679403757"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679403757"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch1"><span class="hs-identifier hs-var">P.munch1</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679403759"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679403759"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Unicode.html#isAlphaNum/GHC.Unicode.html#isAlphaNum"><span class="hs-identifier hs-var">isAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679403759"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679403759"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">ForeignLibType -&gt; m ForeignLibType
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(ForeignLibType -&gt; m ForeignLibType)
+-&gt; ForeignLibType -&gt; m ForeignLibType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679403757"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;native-shared&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeShared"><span class="hs-identifier hs-var">ForeignLibNativeShared</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;native-static&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeStatic"><span class="hs-identifier hs-var">ForeignLibNativeStatic</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span>               </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679403763"><span id="local-6989586621679403770"><span id="local-6989586621679403776"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span></span></span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679403814"><span id="local-6989586621679403821"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span></span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679403869"><span class="annot"><span class="annottext">rnf :: ForeignLibType -&gt; ()
+</span><a href="#local-6989586621679403869"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLibType -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679403874"><span id="local-6989586621679403878"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span><span> </span><span id="local-6989586621679403885"><span class="annot"><span class="annottext">&lt;&gt; :: ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679403886"><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="#local-6989586621679403886"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="#local-6989586621679403886"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679403887"><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="#local-6989586621679403887"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="#local-6989586621679403887"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">ForeignLibType
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ForeignLibType
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Err.html#error/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Ambiguous foreign library type&quot;</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679403894"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679403898"><span class="annot"><span class="annottext">mempty :: ForeignLibType
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679403900"><span class="annot"><span class="annottext">mappend :: ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForeignLibType -&gt; ForeignLibType -&gt; ForeignLibType
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#knownForeignLibTypes"><span class="hs-identifier hs-type">knownForeignLibTypes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span id="knownForeignLibTypes"><span class="annot"><span class="annottext">knownForeignLibTypes :: [ForeignLibType]
+</span><a href="Distribution.Types.ForeignLibType.html#knownForeignLibTypes"><span class="hs-identifier hs-var hs-var">knownForeignLibTypes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeShared"><span class="hs-identifier hs-var">ForeignLibNativeShared</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeStatic"><span class="hs-identifier hs-var">ForeignLibNativeStatic</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#foreignLibTypeIsShared"><span class="hs-identifier hs-type">foreignLibTypeIsShared</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.ForeignLibType.html#ForeignLibType"><span class="hs-identifier hs-type">ForeignLibType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-65"></span><span id="foreignLibTypeIsShared"><span class="annot"><span class="annottext">foreignLibTypeIsShared :: ForeignLibType -&gt; Bool
+</span><a href="Distribution.Types.ForeignLibType.html#foreignLibTypeIsShared"><span class="hs-identifier hs-var hs-var">foreignLibTypeIsShared</span></a></span></span><span> </span><span id="local-6989586621679403901"><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="#local-6989586621679403901"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="#local-6989586621679403901"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeShared"><span class="hs-identifier hs-var">ForeignLibNativeShared</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibNativeStatic"><span class="hs-identifier hs-var">ForeignLibNativeStatic</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><span class="annottext">ForeignLibType
+</span><a href="Distribution.Types.ForeignLibType.html#ForeignLibTypeUnknown"><span class="hs-identifier hs-var">ForeignLibTypeUnknown</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. String -&gt; a
+</span><a href="Distribution.PackageDescription.Utils.html#cabalBug"><span class="hs-identifier hs-var">cabalBug</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unknown foreign library type&quot;</span></span><span>
+</span><span id="line-70"></span></pre></body></html>

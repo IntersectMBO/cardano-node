@@ -1,0 +1,560 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679398786"><span id="local-6989586621679398787"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- @since 3.0</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.PkgconfigVersion</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier">PkgconfigVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#rpmvercmp"><span class="hs-identifier">rpmvercmp</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.html"><span class="hs-identifier">Distribution.Parsec</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier">isAsciiAlphaNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>                 </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Char8.html#/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span>           </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS8</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Compat.CharParsing.html"><span class="hs-identifier">Distribution.Compat.CharParsing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.html#/Text.PrettyPrint.html"><span class="hs-identifier">Text.PrettyPrint</span></a></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PP</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- | @pkg-config@ versions.</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- In fact, this can be arbitrary 'BS.ByteString',</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- but 'Parsec' instance is a little pickier.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- @since 3.0</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">newtype</span><span> </span><span id="PkgconfigVersion"><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-var">PkgconfigVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PkgconfigVersion"><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-var">PkgconfigVersion</span></a></span></span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679398820"><span id="local-6989586621679398822"><span class="annot"><span class="annottext">(forall x. PkgconfigVersion -&gt; Rep PkgconfigVersion x)
+-&gt; (forall x. Rep PkgconfigVersion x -&gt; PkgconfigVersion)
+-&gt; Generic PkgconfigVersion
+forall x. Rep PkgconfigVersion x -&gt; PkgconfigVersion
+forall x. PkgconfigVersion -&gt; Rep PkgconfigVersion x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. PkgconfigVersion -&gt; Rep PkgconfigVersion x
+from :: forall x. PkgconfigVersion -&gt; Rep PkgconfigVersion x
+$cto :: forall x. Rep PkgconfigVersion x -&gt; PkgconfigVersion
+to :: forall x. Rep PkgconfigVersion x -&gt; PkgconfigVersion
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398826"><span id="local-6989586621679398830"><span id="local-6989586621679398833"><span id="local-6989586621679398841"><span class="annot"><span class="annottext">ReadPrec [PkgconfigVersion]
+ReadPrec PkgconfigVersion
+Int -&gt; ReadS PkgconfigVersion
+ReadS [PkgconfigVersion]
+(Int -&gt; ReadS PkgconfigVersion)
+-&gt; ReadS [PkgconfigVersion]
+-&gt; ReadPrec PkgconfigVersion
+-&gt; ReadPrec [PkgconfigVersion]
+-&gt; Read PkgconfigVersion
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS PkgconfigVersion
+readsPrec :: Int -&gt; ReadS PkgconfigVersion
+$creadList :: ReadS [PkgconfigVersion]
+readList :: ReadS [PkgconfigVersion]
+$creadPrec :: ReadPrec PkgconfigVersion
+readPrec :: ReadPrec PkgconfigVersion
+$creadListPrec :: ReadPrec [PkgconfigVersion]
+readListPrec :: ReadPrec [PkgconfigVersion]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398845"><span id="local-6989586621679398850"><span id="local-6989586621679398854"><span class="annot"><span class="annottext">Int -&gt; PkgconfigVersion -&gt; ShowS
+[PkgconfigVersion] -&gt; ShowS
+PkgconfigVersion -&gt; String
+(Int -&gt; PkgconfigVersion -&gt; ShowS)
+-&gt; (PkgconfigVersion -&gt; String)
+-&gt; ([PkgconfigVersion] -&gt; ShowS)
+-&gt; Show PkgconfigVersion
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PkgconfigVersion -&gt; ShowS
+showsPrec :: Int -&gt; PkgconfigVersion -&gt; ShowS
+$cshow :: PkgconfigVersion -&gt; String
+show :: PkgconfigVersion -&gt; String
+$cshowList :: [PkgconfigVersion] -&gt; ShowS
+showList :: [PkgconfigVersion] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679398860"><span id="local-6989586621679398864"><span id="local-6989586621679398867"><span id="local-6989586621679398869"><span id="local-6989586621679398871"><span id="local-6989586621679398877"><span id="local-6989586621679398882"><span id="local-6989586621679398885"><span id="local-6989586621679398888"><span id="local-6989586621679398891"><span id="local-6989586621679398894"><span id="local-6989586621679398897"><span id="local-6989586621679398902"><span id="local-6989586621679398907"><span class="annot"><span class="annottext">Typeable PkgconfigVersion
+Typeable PkgconfigVersion =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; PkgconfigVersion -&gt; c PkgconfigVersion)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigVersion)
+-&gt; (PkgconfigVersion -&gt; Constr)
+-&gt; (PkgconfigVersion -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigVersion))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c PkgconfigVersion))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; PkgconfigVersion -&gt; PkgconfigVersion)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PkgconfigVersion -&gt; m PkgconfigVersion)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PkgconfigVersion -&gt; m PkgconfigVersion)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PkgconfigVersion -&gt; m PkgconfigVersion)
+-&gt; Data PkgconfigVersion
+PkgconfigVersion -&gt; Constr
+PkgconfigVersion -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; PkgconfigVersion -&gt; PkgconfigVersion
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigVersion
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PkgconfigVersion -&gt; c PkgconfigVersion
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigVersion)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PkgconfigVersion)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PkgconfigVersion -&gt; c PkgconfigVersion
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PkgconfigVersion -&gt; c PkgconfigVersion
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigVersion
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PkgconfigVersion
+$ctoConstr :: PkgconfigVersion -&gt; Constr
+toConstr :: PkgconfigVersion -&gt; Constr
+$cdataTypeOf :: PkgconfigVersion -&gt; DataType
+dataTypeOf :: PkgconfigVersion -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigVersion)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PkgconfigVersion)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PkgconfigVersion)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PkgconfigVersion)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; PkgconfigVersion -&gt; PkgconfigVersion
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; PkgconfigVersion -&gt; PkgconfigVersion
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PkgconfigVersion -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PkgconfigVersion -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PkgconfigVersion -&gt; m PkgconfigVersion
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398914"><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span><span> </span><span id="local-6989586621679398920"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398920"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679398921"><span class="annot"><span class="annottext">== :: PkgconfigVersion -&gt; PkgconfigVersion -&gt; Bool
+</span><span class="hs-operator hs-var hs-var hs-var hs-var">==</span></span></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span><span> </span><span id="local-6989586621679398922"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398922"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Ordering
+</span><a href="Distribution.Types.PkgconfigVersion.html#rpmvercmp"><span class="hs-identifier hs-var">rpmvercmp</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398920"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398922"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Ordering -&gt; Ordering -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398927"><span id="local-6989586621679398931"><span id="local-6989586621679398934"><span id="local-6989586621679398937"><span id="local-6989586621679398940"><span id="local-6989586621679398943"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span><span> </span><span id="local-6989586621679398946"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398946"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679398947"><span class="annot"><span class="annottext">compare :: PkgconfigVersion -&gt; PkgconfigVersion -&gt; Ordering
+</span><a href="#local-6989586621679398947"><span class="hs-operator hs-var hs-var hs-var hs-var">`compare`</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span><span> </span><span id="local-6989586621679398949"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398949"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Ordering
+</span><a href="Distribution.Types.PkgconfigVersion.html#rpmvercmp"><span class="hs-identifier hs-var">rpmvercmp</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398946"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679398949"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398951"><span id="local-6989586621679398958"><span id="local-6989586621679398964"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span></span></span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679398983"><span id="local-6989586621679398990"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span></span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679399031"><span class="annot"><span class="annottext">rnf :: PkgconfigVersion -&gt; ()
+</span><a href="#local-6989586621679399031"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PkgconfigVersion -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679399036"><span class="annot"><a href="Distribution.Pretty.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>    </span><span id="local-6989586621679399040"><span class="annot"><span class="annottext">pretty :: PkgconfigVersion -&gt; Doc
+</span><a href="#local-6989586621679399040"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span><span> </span><span id="local-6989586621679399042"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679399042"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+</span><a href="../../pretty-1.1.3.6/src/Text.PrettyPrint.HughesPJ.html#text/Text.PrettyPrint.HughesPJ.html#text"><span class="hs-identifier hs-var">PP.text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Char8.html#unpack/Data.ByteString.Char8.html#unpack"><span class="hs-identifier hs-var">BS8.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679399042"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;1.0.2n&quot; :: Maybe PkgconfigVersion</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- Just (PkgconfigVersion &quot;1.0.2n&quot;)</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- &gt;&gt;&gt; simpleParsec &quot;0.3.5+ds&quot; :: Maybe PkgconfigVersion</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- Nothing</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Distribution.Parsec.html#Parsec"><span class="hs-identifier hs-type">Parsec</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-type">PkgconfigVersion</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679399061"><span class="annot"><span class="annottext">parsec :: forall (m :: * -&gt; *). CabalParsing m =&gt; m PkgconfigVersion
+</span><a href="#local-6989586621679399061"><span class="hs-identifier hs-var hs-var hs-var hs-var">parsec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; PkgconfigVersion
+</span><a href="Distribution.Types.PkgconfigVersion.html#PkgconfigVersion"><span class="hs-identifier hs-var">PkgconfigVersion</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; PkgconfigVersion)
+-&gt; (String -&gt; ByteString) -&gt; String -&gt; PkgconfigVersion
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#./GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ByteString
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Char8.html#pack/Data.ByteString.Char8.html#pack"><span class="hs-identifier hs-var">BS8.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; PkgconfigVersion) -&gt; m String -&gt; m PkgconfigVersion
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; m String
+forall (m :: * -&gt; *). CharParsing m =&gt; (Char -&gt; Bool) -&gt; m String
+</span><a href="Distribution.Compat.CharParsing.html#munch1"><span class="hs-identifier hs-var">P.munch1</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="#local-6989586621679399067"><span class="hs-identifier hs-var">predicate</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>        </span><span id="local-6989586621679399067"><span class="annot"><span class="annottext">predicate :: Char -&gt; Bool
+</span><a href="#local-6989586621679399067"><span class="hs-identifier hs-var hs-var">predicate</span></a></span></span><span> </span><span id="local-6989586621679399071"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679399071"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Distribution.Utils.Generic.html#isAsciiAlphaNum"><span class="hs-identifier hs-var">isAsciiAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679399071"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679399071"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679399071"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- rpmvercmp - pure Haskell implementation</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | Compare two version strings as @pkg-config@ would compare them.</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- @since 3.0</span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#rpmvercmp"><span class="hs-identifier hs-type">rpmvercmp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-63"></span><span id="rpmvercmp"><span class="annot"><span class="annottext">rpmvercmp :: ByteString -&gt; ByteString -&gt; Ordering
+</span><a href="Distribution.Types.PkgconfigVersion.html#rpmvercmp"><span class="hs-identifier hs-var hs-var">rpmvercmp</span></a></span></span><span> </span><span id="local-6989586621679399073"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679399073"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679399074"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679399074"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="#local-6989586621679399075"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [Word8]
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#unpack/Data.ByteString.html#unpack"><span class="hs-identifier hs-var">BS.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679399073"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [Word8]
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#unpack/Data.ByteString.html#unpack"><span class="hs-identifier hs-var">BS.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679399074"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="#local-6989586621679399075"><span class="hs-identifier hs-type">go0</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- if there is _any_ trailing &quot;garbage&quot;, it seems to affect result</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">-- https://github.com/haskell/cabal/issues/6805</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679399075"><span class="annot"><span class="annottext">go0 :: [Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="#local-6989586621679399075"><span class="hs-identifier hs-var hs-var">go0</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><a href="#local-6989586621679399075"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><a href="#local-6989586621679399075"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><a href="#local-6989586621679399075"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span id="local-6989586621679399077"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399077"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679399078"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399078"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="#local-6989586621679399079"><span class="hs-identifier hs-var">go1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8]
+</span><a href="Distribution.Types.PkgconfigVersion.html#dropNonAlnum8"><span class="hs-identifier hs-var">dropNonAlnum8</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399077"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8]
+</span><a href="Distribution.Types.PkgconfigVersion.html#dropNonAlnum8"><span class="hs-identifier hs-var">dropNonAlnum8</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399078"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="#local-6989586621679399079"><span class="hs-identifier hs-type">go1</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679399079"><span class="annot"><span class="annottext">go1 :: [Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="#local-6989586621679399079"><span class="hs-identifier hs-var hs-var">go1</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="#local-6989586621679399079"><span class="hs-identifier hs-var">go1</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="#local-6989586621679399079"><span class="hs-identifier hs-var">go1</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><a href="#local-6989586621679399079"><span class="hs-identifier hs-var">go1</span></a></span><span> </span><span id="local-6989586621679399081"><span class="annot"><span class="annottext">xs :: [Word8]
+</span><a href="#local-6989586621679399081"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679399082"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399082"><span class="hs-identifier hs-var">x</span></a></span></span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span class="annot"><span class="annottext">[Word8]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679399083"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399083"><span class="hs-identifier hs-var">ys</span></a></span></span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isDigit8"><span class="hs-identifier hs-var">isDigit8</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399082"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679399085"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399085"><span class="hs-identifier hs-var">xs1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679399086"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399086"><span class="hs-identifier hs-var">xs2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; [Word8] -&gt; ([Word8], [Word8])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#span/GHC.List.html#span"><span class="hs-identifier hs-var">span</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isDigit8"><span class="hs-identifier hs-var">isDigit8</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399081"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-80"></span><span>              </span><span class="hs-special">(</span><span id="local-6989586621679399088"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399088"><span class="hs-identifier hs-var">ys1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679399089"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399089"><span class="hs-identifier hs-var">ys2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; [Word8] -&gt; ([Word8], [Word8])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#span/GHC.List.html#span"><span class="hs-identifier hs-var">span</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isDigit8"><span class="hs-identifier hs-var">isDigit8</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399083"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-81"></span><span>            </span><span class="hs-comment">-- numeric segments are always newer than alpha segments</span><span>
+</span><span id="line-82"></span><span>          </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#null/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399088"><span class="hs-identifier hs-var">ys1</span></a></span><span>
+</span><span id="line-83"></span><span>             </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span>
+</span><span id="line-84"></span><span>             </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="Distribution.Types.PkgconfigVersion.html#compareInt"><span class="hs-identifier hs-var">compareInt</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399085"><span class="hs-identifier hs-var">xs1</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399088"><span class="hs-identifier hs-var">ys1</span></a></span><span> </span><span class="annot"><span class="annottext">Ordering -&gt; Ordering -&gt; Ordering
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="#local-6989586621679399075"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399086"><span class="hs-identifier hs-var">xs2</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399089"><span class="hs-identifier hs-var">ys2</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-comment">-- isAlpha</span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#otherwise/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679399092"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399092"><span class="hs-identifier hs-var">xs1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679399093"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399093"><span class="hs-identifier hs-var">xs2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; [Word8] -&gt; ([Word8], [Word8])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#span/GHC.List.html#span"><span class="hs-identifier hs-var">span</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isAlpha8"><span class="hs-identifier hs-var">isAlpha8</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399081"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-89"></span><span>              </span><span class="hs-special">(</span><span id="local-6989586621679399095"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399095"><span class="hs-identifier hs-var">ys1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679399096"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399096"><span class="hs-identifier hs-var">ys2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; [Word8] -&gt; ([Word8], [Word8])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#span/GHC.List.html#span"><span class="hs-identifier hs-var">span</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isAlpha8"><span class="hs-identifier hs-var">isAlpha8</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399083"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#null/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399095"><span class="hs-identifier hs-var">ys1</span></a></span><span>
+</span><span id="line-91"></span><span>             </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span>
+</span><span id="line-92"></span><span>             </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="Distribution.Types.PkgconfigVersion.html#compareStr"><span class="hs-identifier hs-var">compareStr</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399092"><span class="hs-identifier hs-var">xs1</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399095"><span class="hs-identifier hs-var">ys1</span></a></span><span> </span><span class="annot"><span class="annottext">Ordering -&gt; Ordering -&gt; Ordering
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="#local-6989586621679399075"><span class="hs-identifier hs-var">go0</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399093"><span class="hs-identifier hs-var">xs2</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399096"><span class="hs-identifier hs-var">ys2</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- compare as numbers</span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#compareInt"><span class="hs-identifier hs-type">compareInt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-96"></span><span id="compareInt"><span class="annot"><span class="annottext">compareInt :: [Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="Distribution.Types.PkgconfigVersion.html#compareInt"><span class="hs-identifier hs-var hs-var">compareInt</span></a></span></span><span> </span><span id="local-6989586621679399098"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399098"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679399099"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399099"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- whichever number has more digits wins</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Word8] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#length/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399101"><span class="hs-identifier hs-var">xs'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Word8] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../base-4.18.2.1/src/Data.Foldable.html#length/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399102"><span class="hs-identifier hs-var">ys'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Ordering -&gt; Ordering -&gt; Ordering
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-comment">-- equal length: use per character compare, &quot;strcmp&quot;</span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399101"><span class="hs-identifier hs-var">xs'</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399102"><span class="hs-identifier hs-var">ys'</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- drop  leading zeros</span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679399101"><span class="annot"><span class="annottext">xs' :: [Word8]
+</span><a href="#local-6989586621679399101"><span class="hs-identifier hs-var hs-var">xs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; [Word8] -&gt; [Word8]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#dropWhile/GHC.List.html#dropWhile"><span class="hs-identifier hs-var">dropWhile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x30</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399098"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679399102"><span class="annot"><span class="annottext">ys' :: [Word8]
+</span><a href="#local-6989586621679399102"><span class="hs-identifier hs-var hs-var">ys'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; [Word8] -&gt; [Word8]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#dropWhile/GHC.List.html#dropWhile"><span class="hs-identifier hs-var">dropWhile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x30</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679399099"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- strcmp</span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#compareStr"><span class="hs-identifier hs-type">compareStr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-108"></span><span id="compareStr"><span class="annot"><span class="annottext">compareStr :: [Word8] -&gt; [Word8] -&gt; Ordering
+</span><a href="Distribution.Types.PkgconfigVersion.html#compareStr"><span class="hs-identifier hs-var hs-var">compareStr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#dropNonAlnum8"><span class="hs-identifier hs-type">dropNonAlnum8</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span id="dropNonAlnum8"><span class="annot"><span class="annottext">dropNonAlnum8 :: [Word8] -&gt; [Word8]
+</span><a href="Distribution.Types.PkgconfigVersion.html#dropNonAlnum8"><span class="hs-identifier hs-var hs-var">dropNonAlnum8</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; [Word8] -&gt; [Word8]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.List.html#dropWhile/GHC.List.html#dropWhile"><span class="hs-identifier hs-var">dropWhile</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679399109"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399109"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isDigit8"><span class="hs-identifier hs-var">isDigit8</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399109"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isAlpha8"><span class="hs-identifier hs-var">isAlpha8</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399109"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#isDigit8"><span class="hs-identifier hs-type">isDigit8</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-114"></span><span id="isDigit8"><span class="annot"><span class="annottext">isDigit8 :: Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isDigit8"><span class="hs-identifier hs-var hs-var">isDigit8</span></a></span></span><span> </span><span id="local-6989586621679399111"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399111"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x30</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399111"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399111"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x39</span></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Distribution.Types.PkgconfigVersion.html#isAlpha8"><span class="hs-identifier hs-type">isAlpha8</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-117"></span><span id="isAlpha8"><span class="annot"><span class="annottext">isAlpha8 :: Word8 -&gt; Bool
+</span><a href="Distribution.Types.PkgconfigVersion.html#isAlpha8"><span class="hs-identifier hs-var hs-var">isAlpha8</span></a></span></span><span> </span><span id="local-6989586621679399114"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399114"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x41</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399114"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399114"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x5A</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x61</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399114"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679399114"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x7A</span></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span></pre></body></html>

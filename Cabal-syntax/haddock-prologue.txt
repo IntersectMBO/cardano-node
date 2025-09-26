@@ -1,0 +1,2 @@
+This library provides tools for reading and manipulating the .cabal file
+format.

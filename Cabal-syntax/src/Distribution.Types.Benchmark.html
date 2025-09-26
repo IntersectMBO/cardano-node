@@ -1,0 +1,448 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679444820"><span id="local-6989586621679444821"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.Benchmark</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier">Benchmark</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.Benchmark.html#emptyBenchmark"><span class="hs-identifier">emptyBenchmark</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.Benchmark.html#benchmarkType"><span class="hs-identifier">benchmarkType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.Benchmark.html#benchmarkModules"><span class="hs-identifier">benchmarkModules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Distribution.Types.Benchmark.html#benchmarkModulesAutogen"><span class="hs-identifier">benchmarkModulesAutogen</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html"><span class="hs-identifier">Distribution.Types.BuildInfo</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html"><span class="hs-identifier">Distribution.Types.BenchmarkType</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkInterface.html"><span class="hs-identifier">Distribution.Types.BenchmarkInterface</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html"><span class="hs-identifier">Distribution.Types.UnqualComponentName</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html"><span class="hs-identifier">Distribution.Types.BuildInfo.Lens</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- | A \&quot;benchmark\&quot; stanza in a cabal file.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">data</span><span> </span><span id="Benchmark"><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-var">Benchmark</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Benchmark"><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-var">Benchmark</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-27"></span><span>        </span><span id="benchmarkName"><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="Distribution.Types.Benchmark.html#benchmarkName"><span class="hs-identifier hs-var hs-var">benchmarkName</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.UnqualComponentName.html#UnqualComponentName"><span class="hs-identifier hs-type">UnqualComponentName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>        </span><span id="benchmarkInterface"><span class="annot"><span class="annottext">Benchmark -&gt; BenchmarkInterface
+</span><a href="Distribution.Types.Benchmark.html#benchmarkInterface"><span class="hs-identifier hs-var hs-var">benchmarkInterface</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkInterface.html#BenchmarkInterface"><span class="hs-identifier hs-type">BenchmarkInterface</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>        </span><span id="benchmarkBuildInfo"><span class="annot"><span class="annottext">Benchmark -&gt; BuildInfo
+</span><a href="Distribution.Types.Benchmark.html#benchmarkBuildInfo"><span class="hs-identifier hs-var hs-var">benchmarkBuildInfo</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679444833"><span id="local-6989586621679444835"><span class="annot"><span class="annottext">(forall x. Benchmark -&gt; Rep Benchmark x)
+-&gt; (forall x. Rep Benchmark x -&gt; Benchmark) -&gt; Generic Benchmark
+forall x. Rep Benchmark x -&gt; Benchmark
+forall x. Benchmark -&gt; Rep Benchmark x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Benchmark -&gt; Rep Benchmark x
+from :: forall x. Benchmark -&gt; Rep Benchmark x
+$cto :: forall x. Rep Benchmark x -&gt; Benchmark
+to :: forall x. Rep Benchmark x -&gt; Benchmark
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679444839"><span id="local-6989586621679444849"><span id="local-6989586621679444853"><span class="annot"><span class="annottext">Int -&gt; Benchmark -&gt; ShowS
+[Benchmark] -&gt; ShowS
+Benchmark -&gt; String
+(Int -&gt; Benchmark -&gt; ShowS)
+-&gt; (Benchmark -&gt; String)
+-&gt; ([Benchmark] -&gt; ShowS)
+-&gt; Show Benchmark
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Benchmark -&gt; ShowS
+showsPrec :: Int -&gt; Benchmark -&gt; ShowS
+$cshow :: Benchmark -&gt; String
+show :: Benchmark -&gt; String
+$cshowList :: [Benchmark] -&gt; ShowS
+showList :: [Benchmark] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679444857"><span id="local-6989586621679444861"><span id="local-6989586621679444864"><span id="local-6989586621679444882"><span class="annot"><span class="annottext">ReadPrec [Benchmark]
+ReadPrec Benchmark
+Int -&gt; ReadS Benchmark
+ReadS [Benchmark]
+(Int -&gt; ReadS Benchmark)
+-&gt; ReadS [Benchmark]
+-&gt; ReadPrec Benchmark
+-&gt; ReadPrec [Benchmark]
+-&gt; Read Benchmark
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS Benchmark
+readsPrec :: Int -&gt; ReadS Benchmark
+$creadList :: ReadS [Benchmark]
+readList :: ReadS [Benchmark]
+$creadPrec :: ReadPrec Benchmark
+readPrec :: ReadPrec Benchmark
+$creadListPrec :: ReadPrec [Benchmark]
+readListPrec :: ReadPrec [Benchmark]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679444886"><span id="local-6989586621679444894"><span class="annot"><span class="annottext">Benchmark -&gt; Benchmark -&gt; Bool
+(Benchmark -&gt; Benchmark -&gt; Bool)
+-&gt; (Benchmark -&gt; Benchmark -&gt; Bool) -&gt; Eq Benchmark
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Benchmark -&gt; Benchmark -&gt; Bool
+== :: Benchmark -&gt; Benchmark -&gt; Bool
+$c/= :: Benchmark -&gt; Benchmark -&gt; Bool
+/= :: Benchmark -&gt; Benchmark -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679444901"><span id="local-6989586621679444909"><span id="local-6989586621679444914"><span id="local-6989586621679444918"><span id="local-6989586621679444921"><span id="local-6989586621679444924"><span id="local-6989586621679444927"><span class="annot"><span class="annottext">Eq Benchmark
+Eq Benchmark =&gt;
+(Benchmark -&gt; Benchmark -&gt; Ordering)
+-&gt; (Benchmark -&gt; Benchmark -&gt; Bool)
+-&gt; (Benchmark -&gt; Benchmark -&gt; Bool)
+-&gt; (Benchmark -&gt; Benchmark -&gt; Bool)
+-&gt; (Benchmark -&gt; Benchmark -&gt; Bool)
+-&gt; (Benchmark -&gt; Benchmark -&gt; Benchmark)
+-&gt; (Benchmark -&gt; Benchmark -&gt; Benchmark)
+-&gt; Ord Benchmark
+Benchmark -&gt; Benchmark -&gt; Bool
+Benchmark -&gt; Benchmark -&gt; Ordering
+Benchmark -&gt; Benchmark -&gt; Benchmark
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Benchmark -&gt; Benchmark -&gt; Ordering
+compare :: Benchmark -&gt; Benchmark -&gt; Ordering
+$c&lt; :: Benchmark -&gt; Benchmark -&gt; Bool
+&lt; :: Benchmark -&gt; Benchmark -&gt; Bool
+$c&lt;= :: Benchmark -&gt; Benchmark -&gt; Bool
+&lt;= :: Benchmark -&gt; Benchmark -&gt; Bool
+$c&gt; :: Benchmark -&gt; Benchmark -&gt; Bool
+&gt; :: Benchmark -&gt; Benchmark -&gt; Bool
+$c&gt;= :: Benchmark -&gt; Benchmark -&gt; Bool
+&gt;= :: Benchmark -&gt; Benchmark -&gt; Bool
+$cmax :: Benchmark -&gt; Benchmark -&gt; Benchmark
+max :: Benchmark -&gt; Benchmark -&gt; Benchmark
+$cmin :: Benchmark -&gt; Benchmark -&gt; Benchmark
+min :: Benchmark -&gt; Benchmark -&gt; Benchmark
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679444933"><span id="local-6989586621679444941"><span id="local-6989586621679444946"><span id="local-6989586621679444948"><span id="local-6989586621679444950"><span id="local-6989586621679444956"><span id="local-6989586621679444961"><span id="local-6989586621679444964"><span id="local-6989586621679444967"><span id="local-6989586621679444970"><span id="local-6989586621679444973"><span id="local-6989586621679444976"><span id="local-6989586621679444981"><span id="local-6989586621679444986"><span class="annot"><span class="annottext">Typeable Benchmark
+Typeable Benchmark =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Benchmark -&gt; c Benchmark)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Benchmark)
+-&gt; (Benchmark -&gt; Constr)
+-&gt; (Benchmark -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Benchmark))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Benchmark))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Benchmark -&gt; Benchmark)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark)
+-&gt; Data Benchmark
+Benchmark -&gt; Constr
+Benchmark -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Benchmark -&gt; Benchmark
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Benchmark
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Benchmark -&gt; c Benchmark
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Benchmark)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Benchmark)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Benchmark -&gt; c Benchmark
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Benchmark -&gt; c Benchmark
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Benchmark
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Benchmark
+$ctoConstr :: Benchmark -&gt; Constr
+toConstr :: Benchmark -&gt; Constr
+$cdataTypeOf :: Benchmark -&gt; DataType
+dataTypeOf :: Benchmark -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Benchmark)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Benchmark)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Benchmark)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Benchmark)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Benchmark -&gt; Benchmark
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Benchmark -&gt; Benchmark
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Benchmark -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Benchmark -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Benchmark -&gt; m Benchmark
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679444992"><span id="local-6989586621679444999"><span id="local-6989586621679445005"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span></span></span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679445044"><span id="local-6989586621679445051"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span></span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679445116"><span class="annot"><span class="annottext">rnf :: Benchmark -&gt; ()
+</span><a href="#local-6989586621679445116"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679445121"><span id="local-6989586621679445127"><span id="local-6989586621679445132"><span id="local-6989586621679445137"><span id="local-6989586621679445142"><span id="local-6989586621679445147"><span id="local-6989586621679445152"><span id="local-6989586621679445157"><span id="local-6989586621679445162"><span id="local-6989586621679445167"><span id="local-6989586621679445172"><span id="local-6989586621679445177"><span id="local-6989586621679445182"><span id="local-6989586621679445187"><span id="local-6989586621679445192"><span id="local-6989586621679445197"><span id="local-6989586621679445202"><span id="local-6989586621679445207"><span id="local-6989586621679445212"><span id="local-6989586621679445217"><span id="local-6989586621679445222"><span id="local-6989586621679445227"><span id="local-6989586621679445232"><span id="local-6989586621679445237"><span id="local-6989586621679445242"><span id="local-6989586621679445247"><span id="local-6989586621679445252"><span id="local-6989586621679445257"><span id="local-6989586621679445262"><span id="local-6989586621679445267"><span id="local-6989586621679445272"><span id="local-6989586621679445277"><span id="local-6989586621679445282"><span id="local-6989586621679445287"><span id="local-6989586621679445292"><span id="local-6989586621679445297"><span id="local-6989586621679445302"><span id="local-6989586621679445307"><span id="local-6989586621679445312"><span id="local-6989586621679445317"><span id="local-6989586621679445322"><span id="local-6989586621679445327"><span id="local-6989586621679445332"><span id="local-6989586621679445337"><span id="local-6989586621679445342"><span id="local-6989586621679445347"><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#HasBuildInfo"><span class="hs-identifier hs-type">L.HasBuildInfo</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679445354"><span class="annot"><span class="annottext">buildInfo :: Lens' Benchmark BuildInfo
+</span><a href="#local-6989586621679445354"><span class="hs-identifier hs-var hs-var hs-var hs-var">buildInfo</span></a></span></span><span> </span><span id="local-6989586621679445356"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445356"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span id="local-6989586621679445357"><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679445357"><span class="hs-identifier hs-var">x1</span></a></span></span><span> </span><span id="local-6989586621679445358"><span class="annot"><span class="annottext">BenchmarkInterface
+</span><a href="#local-6989586621679445358"><span class="hs-identifier hs-var">x2</span></a></span></span><span> </span><span id="local-6989586621679445359"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679445359"><span class="hs-identifier hs-var">x3</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; Benchmark) -&gt; f BuildInfo -&gt; f Benchmark
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679445360"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679445360"><span class="hs-identifier hs-var">y1</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; BenchmarkInterface -&gt; BuildInfo -&gt; Benchmark
+</span><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-var">Benchmark</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><a href="#local-6989586621679445357"><span class="hs-identifier hs-var">x1</span></a></span><span> </span><span class="annot"><span class="annottext">BenchmarkInterface
+</span><a href="#local-6989586621679445358"><span class="hs-identifier hs-var">x2</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679445360"><span class="hs-identifier hs-var">y1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679445356"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679445359"><span class="hs-identifier hs-var">x3</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679445367"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>    </span><span id="local-6989586621679445376"><span class="annot"><span class="annottext">mempty :: Benchmark
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><span class="annottext">benchmarkName :: UnqualComponentName
+</span><a href="Distribution.Types.Benchmark.html#benchmarkName"><span class="hs-identifier hs-var">benchmarkName</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">benchmarkInterface :: BenchmarkInterface
+</span><a href="Distribution.Types.Benchmark.html#benchmarkInterface"><span class="hs-identifier hs-var">benchmarkInterface</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BenchmarkInterface
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>        </span><span class="annot"><span class="annottext">benchmarkBuildInfo :: BuildInfo
+</span><a href="Distribution.Types.Benchmark.html#benchmarkBuildInfo"><span class="hs-identifier hs-var">benchmarkBuildInfo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span><span>    </span><span id="local-6989586621679445378"><span class="annot"><span class="annottext">mappend :: Benchmark -&gt; Benchmark -&gt; Benchmark
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; Benchmark -&gt; Benchmark
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679445381"><span id="local-6989586621679445384"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>    </span><span id="local-6989586621679445391"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445391"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679445392"><span class="annot"><span class="annottext">&lt;&gt; :: Benchmark -&gt; Benchmark -&gt; Benchmark
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679445393"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445393"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">benchmarkName :: UnqualComponentName
+</span><a href="Distribution.Types.Benchmark.html#benchmarkName"><span class="hs-identifier hs-var">benchmarkName</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Benchmark -&gt; UnqualComponentName) -&gt; UnqualComponentName
+</span><a href="#local-6989586621679445394"><span class="hs-identifier hs-var">combine'</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="Distribution.Types.Benchmark.html#benchmarkName"><span class="hs-identifier hs-var">benchmarkName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">benchmarkInterface :: BenchmarkInterface
+</span><a href="Distribution.Types.Benchmark.html#benchmarkInterface"><span class="hs-identifier hs-var">benchmarkInterface</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Benchmark -&gt; BenchmarkInterface) -&gt; BenchmarkInterface
+forall {a}. Monoid a =&gt; (Benchmark -&gt; a) -&gt; a
+</span><a href="#local-6989586621679445395"><span class="hs-identifier hs-var">combine</span></a></span><span>  </span><span class="annot"><span class="annottext">Benchmark -&gt; BenchmarkInterface
+</span><a href="Distribution.Types.Benchmark.html#benchmarkInterface"><span class="hs-identifier hs-var">benchmarkInterface</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">benchmarkBuildInfo :: BuildInfo
+</span><a href="Distribution.Types.Benchmark.html#benchmarkBuildInfo"><span class="hs-identifier hs-var">benchmarkBuildInfo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Benchmark -&gt; BuildInfo) -&gt; BuildInfo
+forall {a}. Monoid a =&gt; (Benchmark -&gt; a) -&gt; a
+</span><a href="#local-6989586621679445395"><span class="hs-identifier hs-var">combine</span></a></span><span>  </span><span class="annot"><span class="annottext">Benchmark -&gt; BuildInfo
+</span><a href="Distribution.Types.Benchmark.html#benchmarkBuildInfo"><span class="hs-identifier hs-var">benchmarkBuildInfo</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679445395"><span class="annot"><span class="annottext">combine :: (Benchmark -&gt; a) -&gt; a
+</span><a href="#local-6989586621679445395"><span class="hs-identifier hs-var hs-var">combine</span></a></span></span><span>  </span><span id="local-6989586621679445401"><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><a href="#local-6989586621679445401"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><a href="#local-6989586621679445401"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445391"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; a
+</span><a href="#local-6989586621679445401"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445393"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-55"></span><span>              </span><span id="local-6989586621679445394"><span class="annot"><span class="annottext">combine' :: (Benchmark -&gt; UnqualComponentName) -&gt; UnqualComponentName
+</span><a href="#local-6989586621679445394"><span class="hs-identifier hs-var hs-var">combine'</span></a></span></span><span> </span><span id="local-6989586621679445404"><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="#local-6989586621679445404"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier hs-var">unUnqualComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; String) -&gt; UnqualComponentName -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="#local-6989586621679445404"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445391"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-56"></span><span>                                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UnqualComponentName -&gt; String
+</span><a href="Distribution.Types.UnqualComponentName.html#unUnqualComponentName"><span class="hs-identifier hs-var">unUnqualComponentName</span></a></span><span> </span><span class="annot"><span class="annottext">(UnqualComponentName -&gt; String) -&gt; UnqualComponentName -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="#local-6989586621679445404"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445393"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-57"></span><span>                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="#local-6989586621679445404"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445393"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-58"></span><span>                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; UnqualComponentName
+</span><a href="#local-6989586621679445404"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445391"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-59"></span><span>                        </span><span class="hs-special">(</span><span id="local-6989586621679445406"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679445406"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679445407"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679445407"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; UnqualComponentName
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Err.html#error/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; UnqualComponentName) -&gt; String -&gt; UnqualComponentName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Ambiguous values for test field: '&quot;</span></span><span>
+</span><span id="line-60"></span><span>                            </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679445406"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' and '&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679445407"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Distribution.Types.Benchmark.html#emptyBenchmark"><span class="hs-identifier hs-type">emptyBenchmark</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span>
+</span><span id="line-63"></span><span id="emptyBenchmark"><span class="annot"><span class="annottext">emptyBenchmark :: Benchmark
+</span><a href="Distribution.Types.Benchmark.html#emptyBenchmark"><span class="hs-identifier hs-var hs-var">emptyBenchmark</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Benchmark
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Distribution.Types.Benchmark.html#benchmarkType"><span class="hs-identifier hs-type">benchmarkType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.BenchmarkType.html#BenchmarkType"><span class="hs-identifier hs-type">BenchmarkType</span></a></span><span>
+</span><span id="line-66"></span><span id="benchmarkType"><span class="annot"><span class="annottext">benchmarkType :: Benchmark -&gt; BenchmarkType
+</span><a href="Distribution.Types.Benchmark.html#benchmarkType"><span class="hs-identifier hs-var hs-var">benchmarkType</span></a></span></span><span> </span><span id="local-6989586621679445409"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445409"><span class="hs-identifier hs-var">benchmark</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; BenchmarkInterface
+</span><a href="Distribution.Types.Benchmark.html#benchmarkInterface"><span class="hs-identifier hs-var">benchmarkInterface</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445409"><span class="hs-identifier hs-var">benchmark</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="Distribution.Types.BenchmarkInterface.html#BenchmarkExeV10"><span class="hs-identifier hs-type">BenchmarkExeV10</span></a></span><span> </span><span id="local-6989586621679445411"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679445411"><span class="hs-identifier hs-var">ver</span></a></span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Version -&gt; BenchmarkType
+</span><a href="Distribution.Types.BenchmarkType.html#BenchmarkTypeExe"><span class="hs-identifier hs-var">BenchmarkTypeExe</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679445411"><span class="hs-identifier hs-var">ver</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="Distribution.Types.BenchmarkInterface.html#BenchmarkUnsupported"><span class="hs-identifier hs-type">BenchmarkUnsupported</span></a></span><span> </span><span id="local-6989586621679445414"><span class="annot"><span class="annottext">BenchmarkType
+</span><a href="#local-6989586621679445414"><span class="hs-identifier hs-var">benchmarktype</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BenchmarkType
+</span><a href="#local-6989586621679445414"><span class="hs-identifier hs-var">benchmarktype</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><span class="hs-comment">-- | Get all the module names from a benchmark.</span></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Distribution.Types.Benchmark.html#benchmarkModules"><span class="hs-identifier hs-type">benchmarkModules</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span id="benchmarkModules"><span class="annot"><span class="annottext">benchmarkModules :: Benchmark -&gt; [ModuleName]
+</span><a href="Distribution.Types.Benchmark.html#benchmarkModules"><span class="hs-identifier hs-var hs-var">benchmarkModules</span></a></span></span><span> </span><span id="local-6989586621679445415"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445415"><span class="hs-identifier hs-var">benchmark</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#otherModules"><span class="hs-identifier hs-var">otherModules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Benchmark -&gt; BuildInfo
+</span><a href="Distribution.Types.Benchmark.html#benchmarkBuildInfo"><span class="hs-identifier hs-var">benchmarkBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445415"><span class="hs-identifier hs-var">benchmark</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Get all the auto generated module names from a benchmark.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- This are a subset of 'benchmarkModules'.</span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Distribution.Types.Benchmark.html#benchmarkModulesAutogen"><span class="hs-identifier hs-type">benchmarkModulesAutogen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Benchmark.html#Benchmark"><span class="hs-identifier hs-type">Benchmark</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-77"></span><span id="benchmarkModulesAutogen"><span class="annot"><span class="annottext">benchmarkModulesAutogen :: Benchmark -&gt; [ModuleName]
+</span><a href="Distribution.Types.Benchmark.html#benchmarkModulesAutogen"><span class="hs-identifier hs-var hs-var">benchmarkModulesAutogen</span></a></span></span><span> </span><span id="local-6989586621679445417"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445417"><span class="hs-identifier hs-var">benchmark</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#autogenModules"><span class="hs-identifier hs-var">autogenModules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Benchmark -&gt; BuildInfo
+</span><a href="Distribution.Types.Benchmark.html#benchmarkBuildInfo"><span class="hs-identifier hs-var">benchmarkBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679445417"><span class="hs-identifier hs-var">benchmark</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span></pre></body></html>

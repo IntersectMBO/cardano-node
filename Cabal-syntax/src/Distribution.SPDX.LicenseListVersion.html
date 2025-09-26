@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679389348"><span id="local-6989586621679389349"></span></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.SPDX.LicenseListVersion</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion"><span class="hs-identifier">LicenseListVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier">cabalSpecVersionToSPDXListVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.CabalSpecVersion.html"><span class="hs-identifier">Distribution.CabalSpecVersion</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="annot"><span class="hs-comment">-- | SPDX License List version @Cabal@ is aware of.</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">data</span><span> </span><span id="LicenseListVersion"><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion"><span class="hs-identifier hs-var">LicenseListVersion</span></a></span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="LicenseListVersion_3_0"><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_0"><span class="hs-identifier hs-var">LicenseListVersion_3_0</span></a></span></span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LicenseListVersion_3_2"><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_2"><span class="hs-identifier hs-var">LicenseListVersion_3_2</span></a></span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LicenseListVersion_3_6"><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_6"><span class="hs-identifier hs-var">LicenseListVersion_3_6</span></a></span></span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LicenseListVersion_3_9"><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_9"><span class="hs-identifier hs-var">LicenseListVersion_3_9</span></a></span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LicenseListVersion_3_10"><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_10"><span class="hs-identifier hs-var">LicenseListVersion_3_10</span></a></span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LicenseListVersion_3_16"><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_16"><span class="hs-identifier hs-var">LicenseListVersion_3_16</span></a></span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679389358"><span id="local-6989586621679389360"><span class="annot"><span class="annottext">LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+(LicenseListVersion -&gt; LicenseListVersion -&gt; Bool)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion -&gt; Bool)
+-&gt; Eq LicenseListVersion
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+== :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+$c/= :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+/= :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679389367"><span id="local-6989586621679389369"><span id="local-6989586621679389371"><span id="local-6989586621679389375"><span id="local-6989586621679389378"><span id="local-6989586621679389381"><span id="local-6989586621679389384"><span class="annot"><span class="annottext">Eq LicenseListVersion
+Eq LicenseListVersion =&gt;
+(LicenseListVersion -&gt; LicenseListVersion -&gt; Ordering)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion -&gt; Bool)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion -&gt; Bool)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion -&gt; Bool)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion -&gt; Bool)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion -&gt; LicenseListVersion)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion -&gt; LicenseListVersion)
+-&gt; Ord LicenseListVersion
+LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+LicenseListVersion -&gt; LicenseListVersion -&gt; Ordering
+LicenseListVersion -&gt; LicenseListVersion -&gt; LicenseListVersion
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: LicenseListVersion -&gt; LicenseListVersion -&gt; Ordering
+compare :: LicenseListVersion -&gt; LicenseListVersion -&gt; Ordering
+$c&lt; :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+&lt; :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+$c&lt;= :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+&lt;= :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+$c&gt; :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+&gt; :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+$c&gt;= :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+&gt;= :: LicenseListVersion -&gt; LicenseListVersion -&gt; Bool
+$cmax :: LicenseListVersion -&gt; LicenseListVersion -&gt; LicenseListVersion
+max :: LicenseListVersion -&gt; LicenseListVersion -&gt; LicenseListVersion
+$cmin :: LicenseListVersion -&gt; LicenseListVersion -&gt; LicenseListVersion
+min :: LicenseListVersion -&gt; LicenseListVersion -&gt; LicenseListVersion
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679389388"><span id="local-6989586621679389390"><span id="local-6989586621679389394"><span class="annot"><span class="annottext">Int -&gt; LicenseListVersion -&gt; ShowS
+[LicenseListVersion] -&gt; ShowS
+LicenseListVersion -&gt; String
+(Int -&gt; LicenseListVersion -&gt; ShowS)
+-&gt; (LicenseListVersion -&gt; String)
+-&gt; ([LicenseListVersion] -&gt; ShowS)
+-&gt; Show LicenseListVersion
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LicenseListVersion -&gt; ShowS
+showsPrec :: Int -&gt; LicenseListVersion -&gt; ShowS
+$cshow :: LicenseListVersion -&gt; String
+show :: LicenseListVersion -&gt; String
+$cshowList :: [LicenseListVersion] -&gt; ShowS
+showList :: [LicenseListVersion] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679389398"><span id="local-6989586621679389406"><span id="local-6989586621679389412"><span id="local-6989586621679389422"><span id="local-6989586621679389424"><span id="local-6989586621679389428"><span id="local-6989586621679389432"><span id="local-6989586621679389436"><span class="annot"><span class="annottext">Int -&gt; LicenseListVersion
+LicenseListVersion -&gt; Int
+LicenseListVersion -&gt; [LicenseListVersion]
+LicenseListVersion -&gt; LicenseListVersion
+LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+LicenseListVersion
+-&gt; LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+(LicenseListVersion -&gt; LicenseListVersion)
+-&gt; (LicenseListVersion -&gt; LicenseListVersion)
+-&gt; (Int -&gt; LicenseListVersion)
+-&gt; (LicenseListVersion -&gt; Int)
+-&gt; (LicenseListVersion -&gt; [LicenseListVersion])
+-&gt; (LicenseListVersion
+    -&gt; LicenseListVersion -&gt; [LicenseListVersion])
+-&gt; (LicenseListVersion
+    -&gt; LicenseListVersion -&gt; [LicenseListVersion])
+-&gt; (LicenseListVersion
+    -&gt; LicenseListVersion
+    -&gt; LicenseListVersion
+    -&gt; [LicenseListVersion])
+-&gt; Enum LicenseListVersion
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: LicenseListVersion -&gt; LicenseListVersion
+succ :: LicenseListVersion -&gt; LicenseListVersion
+$cpred :: LicenseListVersion -&gt; LicenseListVersion
+pred :: LicenseListVersion -&gt; LicenseListVersion
+$ctoEnum :: Int -&gt; LicenseListVersion
+toEnum :: Int -&gt; LicenseListVersion
+$cfromEnum :: LicenseListVersion -&gt; Int
+fromEnum :: LicenseListVersion -&gt; Int
+$cenumFrom :: LicenseListVersion -&gt; [LicenseListVersion]
+enumFrom :: LicenseListVersion -&gt; [LicenseListVersion]
+$cenumFromThen :: LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+enumFromThen :: LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+$cenumFromTo :: LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+enumFromTo :: LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+$cenumFromThenTo :: LicenseListVersion
+-&gt; LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+enumFromThenTo :: LicenseListVersion
+-&gt; LicenseListVersion -&gt; LicenseListVersion -&gt; [LicenseListVersion]
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#Enum/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679389440"><span id="local-6989586621679389442"><span class="annot"><span class="annottext">LicenseListVersion
+LicenseListVersion
+-&gt; LicenseListVersion -&gt; Bounded LicenseListVersion
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: LicenseListVersion
+minBound :: LicenseListVersion
+$cmaxBound :: LicenseListVersion
+maxBound :: LicenseListVersion
+</span><a href="../../base-4.18.2.1/src/GHC.Enum.html#Bounded/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-type">cabalSpecVersionToSPDXListVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.CabalSpecVersion.html#CabalSpecVersion"><span class="hs-identifier hs-type">CabalSpecVersion</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion"><span class="hs-identifier hs-type">LicenseListVersion</span></a></span><span>
+</span><span id="line-19"></span><span id="cabalSpecVersionToSPDXListVersion"><span class="annot"><span class="annottext">cabalSpecVersionToSPDXListVersion :: CabalSpecVersion -&gt; LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-var hs-var">cabalSpecVersionToSPDXListVersion</span></a></span></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="Distribution.CabalSpecVersion.html#CabalSpecV3_8"><span class="hs-identifier hs-var">CabalSpecV3_8</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_16"><span class="hs-identifier hs-var">LicenseListVersion_3_16</span></a></span><span>
+</span><span id="line-20"></span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-var">cabalSpecVersionToSPDXListVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="Distribution.CabalSpecVersion.html#CabalSpecV3_6"><span class="hs-identifier hs-var">CabalSpecV3_6</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_10"><span class="hs-identifier hs-var">LicenseListVersion_3_10</span></a></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-var">cabalSpecVersionToSPDXListVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="Distribution.CabalSpecVersion.html#CabalSpecV3_4"><span class="hs-identifier hs-var">CabalSpecV3_4</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_9"><span class="hs-identifier hs-var">LicenseListVersion_3_9</span></a></span><span>
+</span><span id="line-22"></span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-var">cabalSpecVersionToSPDXListVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="Distribution.CabalSpecVersion.html#CabalSpecV3_0"><span class="hs-identifier hs-var">CabalSpecV3_0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_6"><span class="hs-identifier hs-var">LicenseListVersion_3_6</span></a></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-var">cabalSpecVersionToSPDXListVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><a href="Distribution.CabalSpecVersion.html#CabalSpecV2_4"><span class="hs-identifier hs-var">CabalSpecV2_4</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_2"><span class="hs-identifier hs-var">LicenseListVersion_3_2</span></a></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Distribution.SPDX.LicenseListVersion.html#cabalSpecVersionToSPDXListVersion"><span class="hs-identifier hs-var">cabalSpecVersionToSPDXListVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CabalSpecVersion
+</span><span class="hs-identifier">_</span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LicenseListVersion
+</span><a href="Distribution.SPDX.LicenseListVersion.html#LicenseListVersion_3_0"><span class="hs-identifier hs-var">LicenseListVersion_3_0</span></a></span><span>
+</span><span id="line-25"></span></pre></body></html>
