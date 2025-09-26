@@ -864,9 +864,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
     , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr
-      -- TODO plug in
-    , Consensus.perasCertDiffusionInboundTracer = Tracer $ \_ -> pure ()
-    , Consensus.perasCertDiffusionOutboundTracer = Tracer $ \_ -> pure ()
+    , Consensus.perasCertDiffusionInboundTracer = tracerOnOff (tracePerasCertDiffusionInbound trSel) verb "PerasCertDiffusionInbound" tr
+    , Consensus.perasCertDiffusionOutboundTracer = tracerOnOff (tracePerasCertDiffusionOutbound trSel) verb "PerasCertDiffusionOutbound" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1518,8 +1517,9 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tPeerSharingTracer =
       tracerOnOff (tracePeerSharingProtocol trSel)
                   verb "PeerSharingPrototocol" tr
-    -- TODO plug in
-  , NodeToNode.tPerasCertDiffusionTracer = Tracer $ \_ -> pure ()
+  , NodeToNode.tPerasCertDiffusionTracer =
+      tracerOnOff (tracePerasCertDiffusionProtocol trSel)
+                  verb "PerasCertDiffusionProtocol" tr
   }
 
 -- TODO @ouroboros-network

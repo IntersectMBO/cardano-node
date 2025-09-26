@@ -71,6 +71,10 @@ import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart 
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
+import qualified Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert as PerasCert
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (TraceObjectDiffusionInbound(..), NumObjectsProcessed (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound (TraceObjectDiffusionOutbound(..))
+import           Ouroboros.Network.Protocol.ObjectDiffusion.Type (NumObjectIdsReq(..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -248,6 +252,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
 
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
+
+  getSeverityAnnotation ChainDB.TraceAddPerasCertEvent{} = Info
+  getSeverityAnnotation ChainDB.TracePerasCertDbEvent{} = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -782,6 +789,8 @@ instance ( ConvertRawHash blk
       ChainDB.TraceChainSelStarvationEvent ev -> case ev of
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
+      ChainDB.TracePerasCertDbEvent ev -> showT ev
+      ChainDB.TraceAddPerasCertEvent ev -> showT ev
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -1278,6 +1287,14 @@ instance ( ConvertRawHash blk
                  RisingEdge -> "risingEdge" .= True
                  FallingEdgeWith pt -> "fallingEdge" .= toObject verb pt
              ]
+  toObject _verb (ChainDB.TracePerasCertDbEvent ev) =
+    mconcat [ "kind" .= String "TracePerasCertDbEvent"
+            , "event" .= show ev
+            ]
+  toObject _verb (ChainDB.TraceAddPerasCertEvent ev) =
+    mconcat [ "kind" .= String "TraceAddPerasCertEvent"
+            , "event" .= show ev
+            ]
 
 instance ConvertRawHash blk => ToObject (ImmDB.TraceChunkValidation blk ChunkNo) where
   toObject verb ev = case ev of
@@ -1851,3 +1868,92 @@ instance ConvertRawHash blk => ToObject (Tip blk) where
             , "tipHash" .= renderHeaderHash (Proxy @blk) hash
             , "tipBlockNo" .= toJSON bNo
             ]
+
+-- | Peras Certificate Diffusion Tracers
+-- These instances are needed to support the Peras certificate diffusion tracing
+
+-- Basic privacy and severity annotations for Peras cert diffusion events  
+instance HasPrivacyAnnotation (PerasCert.TracePerasCertDiffusionInbound blk)
+instance HasSeverityAnnotation (PerasCert.TracePerasCertDiffusionInbound blk) where
+  getSeverityAnnotation _ = Info
+
+instance HasPrivacyAnnotation (PerasCert.TracePerasCertDiffusionOutbound blk)  
+instance HasSeverityAnnotation (PerasCert.TracePerasCertDiffusionOutbound blk) where
+  getSeverityAnnotation _ = Info
+
+-- ToObject instances for basic JSON serialization
+instance ToObject (PerasCert.TracePerasCertDiffusionInbound blk) where
+  toObject _verb = \case
+    TraceObjectDiffusionCollected n ->
+      mconcat
+        [ "kind" .= String "Collected"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionProcessed (NumObjectsProcessed n) ->
+      mconcat
+        [ "kind" .= String "Processed"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionControlMessage msg ->
+      mconcat
+        [ "kind" .= String "ControlMessage"
+        , "message" .= String (Text.pack $ show msg)
+        ]
+    TraceObjectInboundCanRequestMoreObjects {} ->
+      mconcat
+        [ "kind" .= String "CanRequestMoreObjects"
+        ]
+    TraceObjectInboundCannotRequestMoreObjects {} ->
+      mconcat
+        [ "kind" .= String "CannotRequestMoreObjects"
+        ]
+
+instance ToObject (PerasCert.TracePerasCertDiffusionOutbound blk) where
+  toObject _verb = \case
+    TraceObjectDiffusionOutboundTerminated ->
+      mconcat
+        [ "kind" .= String "Terminated"
+        ]
+    TraceObjectDiffusionOutboundRecvMsgRequestObjectIds (NumObjectIdsReq n) ->
+      mconcat
+        [ "kind" .= String "RecvMsgRequestObjectIds"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionOutboundSendMsgReplyObjectIds roundNos ->
+      mconcat
+        [ "kind" .= String "SendMsgReplyObjectIds"
+        , "count" .= length roundNos
+        ]
+    TraceObjectDiffusionOutboundRecvMsgRequestObjects objIds ->
+      mconcat
+        [ "kind" .= String "RecvMsgRequestObjects"
+        , "count" .= length objIds
+        ]
+    TraceObjectDiffusionOutboundSendMsgReplyObjects objs ->
+      mconcat
+        [ "kind" .= String "SendMsgReplyObjects"
+        , "count" .= length objs
+        ]
+
+-- Transformable instances for the basic event types
+instance Transformable Text IO (PerasCert.TracePerasCertDiffusionInbound blk) where
+  trTransformer = trStructured
+
+instance Transformable Text IO (PerasCert.TracePerasCertDiffusionOutbound blk) where
+  trTransformer = trStructured
+
+-- TraceLabelPeer wrapper instances  
+instance (ToObject peer, ToObject (PerasCert.TracePerasCertDiffusionInbound blk))
+    => Transformable Text IO (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionInbound blk)) where
+  trTransformer = trStructured
+
+instance (ToObject peer, ToObject (PerasCert.TracePerasCertDiffusionOutbound blk))
+    => Transformable Text IO (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionOutbound blk)) where
+  trTransformer = trStructured
+
+-- HasTextFormatter instances
+instance HasTextFormatter (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionInbound blk)) where
+  formatText _ = pack . show . toList
+
+instance HasTextFormatter (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionOutbound blk)) where
+  formatText _ = pack . show . toList

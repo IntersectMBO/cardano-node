@@ -70,6 +70,9 @@ module Cardano.Tracing.Config
   , TraceTxOutbound
   , TraceTxSubmissionProtocol
   , TraceTxSubmission2Protocol
+  , TracePerasCertDiffusionInbound
+  , TracePerasCertDiffusionOutbound
+  , TracePerasCertDiffusionProtocol
   , TraceKeepAliveProtocol
   , TracePeerSharingProtocol
   , proxyName
@@ -178,6 +181,9 @@ type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
 type TraceTxSubmission2Protocol = ("TraceTxSubmission2Protocol" :: Symbol)
+type TracePerasCertDiffusionInbound = ("TracePerasCertDiffusionInbound" :: Symbol)
+type TracePerasCertDiffusionOutbound = ("TracePerasCertDiffusionOutbound" :: Symbol)
+type TracePerasCertDiffusionProtocol = ("TracePerasCertDiffusionProtocol" :: Symbol)
 type TraceKeepAliveProtocol = ("TraceKeepAliveProtocol" :: Symbol)
 type TracePeerSharingProtocol = ("TracePeerSharingProtocol" :: Symbol)
 type TraceGsm = ("TraceGsm" :: Symbol)
@@ -254,6 +260,9 @@ data TraceSelection
   , traceTxOutbound :: OnOff TraceTxOutbound
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
   , traceTxSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
+  , tracePerasCertDiffusionInbound :: OnOff TracePerasCertDiffusionInbound
+  , tracePerasCertDiffusionOutbound :: OnOff TracePerasCertDiffusionOutbound
+  , tracePerasCertDiffusionProtocol :: OnOff TracePerasCertDiffusionProtocol
   , traceKeepAliveProtocol :: OnOff TraceKeepAliveProtocol
   , tracePeerSharingProtocol :: OnOff TracePeerSharingProtocol
   , traceGsm :: OnOff TraceGsm
@@ -324,6 +333,9 @@ data PartialTraceSelection
       , pTraceTxOutbound :: Last (OnOff TraceTxOutbound)
       , pTraceTxSubmissionProtocol :: Last (OnOff TraceTxSubmissionProtocol)
       , pTraceTxSubmission2Protocol :: Last (OnOff TraceTxSubmission2Protocol)
+      , pTracePerasCertDiffusionInbound :: Last (OnOff TracePerasCertDiffusionInbound)
+      , pTracePerasCertDiffusionOutbound :: Last (OnOff TracePerasCertDiffusionOutbound)
+      , pTracePerasCertDiffusionProtocol :: Last (OnOff TracePerasCertDiffusionProtocol)
       , pTraceKeepAliveProtocol :: Last (OnOff TraceKeepAliveProtocol)
       , pTracePeerSharingProtocol :: Last (OnOff TracePeerSharingProtocol)
       , pTraceGsm :: Last (OnOff TraceGsm)
@@ -395,6 +407,9 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceTxOutbound) v
       <*> parseTracer (Proxy @TraceTxSubmissionProtocol) v
       <*> parseTracer (Proxy @TraceTxSubmission2Protocol) v
+      <*> parseTracer (Proxy @TracePerasCertDiffusionInbound) v
+      <*> parseTracer (Proxy @TracePerasCertDiffusionOutbound) v
+      <*> parseTracer (Proxy @TracePerasCertDiffusionProtocol) v
       <*> parseTracer (Proxy @TraceKeepAliveProtocol) v
       <*> parseTracer (Proxy @TracePeerSharingProtocol) v
       <*> parseTracer (Proxy @TraceGsm) v
@@ -463,6 +478,9 @@ defaultPartialTraceConfiguration =
     , pTraceTxOutbound = pure $ OnOff False
     , pTraceTxSubmissionProtocol = pure $ OnOff False
     , pTraceTxSubmission2Protocol = pure $ OnOff False
+    , pTracePerasCertDiffusionInbound = pure $ OnOff False
+    , pTracePerasCertDiffusionOutbound = pure $ OnOff False
+    , pTracePerasCertDiffusionProtocol = pure $ OnOff False
     , pTraceKeepAliveProtocol = pure $ OnOff False
     , pTracePeerSharingProtocol = pure $ OnOff False
     , pTraceGsm = pure $ OnOff True
@@ -533,6 +551,9 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
    traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
    traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
+   tracePerasCertDiffusionInbound <- proxyLastToEither (Proxy @TracePerasCertDiffusionInbound) pTracePerasCertDiffusionInbound
+   tracePerasCertDiffusionOutbound <- proxyLastToEither (Proxy @TracePerasCertDiffusionOutbound) pTracePerasCertDiffusionOutbound
+   tracePerasCertDiffusionProtocol <- proxyLastToEither (Proxy @TracePerasCertDiffusionProtocol) pTracePerasCertDiffusionProtocol
    traceKeepAliveProtocol <- proxyLastToEither (Proxy @TraceKeepAliveProtocol) pTraceKeepAliveProtocol
    tracePeerSharingProtocol <- proxyLastToEither (Proxy @TracePeerSharingProtocol) pTracePeerSharingProtocol
    traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
@@ -596,6 +617,9 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceTxOutbound = traceTxOutbound
              , traceTxSubmissionProtocol = traceTxSubmissionProtocol
              , traceTxSubmission2Protocol = traceTxSubmission2Protocol
+             , tracePerasCertDiffusionInbound = tracePerasCertDiffusionInbound
+             , tracePerasCertDiffusionOutbound = tracePerasCertDiffusionOutbound
+             , tracePerasCertDiffusionProtocol = tracePerasCertDiffusionProtocol
              , traceKeepAliveProtocol = traceKeepAliveProtocol
              , tracePeerSharingProtocol = tracePeerSharingProtocol
              , traceGsm = traceGsm
@@ -663,6 +687,9 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
   traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
   traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
+  tracePerasCertDiffusionInbound <- proxyLastToEither (Proxy @TracePerasCertDiffusionInbound) pTracePerasCertDiffusionInbound
+  tracePerasCertDiffusionOutbound <- proxyLastToEither (Proxy @TracePerasCertDiffusionOutbound) pTracePerasCertDiffusionOutbound
+  tracePerasCertDiffusionProtocol <- proxyLastToEither (Proxy @TracePerasCertDiffusionProtocol) pTracePerasCertDiffusionProtocol
   traceKeepAliveProtocol <- proxyLastToEither (Proxy @TraceKeepAliveProtocol) pTraceKeepAliveProtocol
   tracePeerSharingProtocol <- proxyLastToEither (Proxy @TracePeerSharingProtocol) pTracePeerSharingProtocol
   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
@@ -726,6 +753,9 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceTxOutbound = traceTxOutbound
             , traceTxSubmissionProtocol = traceTxSubmissionProtocol
             , traceTxSubmission2Protocol = traceTxSubmission2Protocol
+            , tracePerasCertDiffusionInbound = tracePerasCertDiffusionInbound
+            , tracePerasCertDiffusionOutbound = tracePerasCertDiffusionOutbound
+            , tracePerasCertDiffusionProtocol = tracePerasCertDiffusionProtocol
             , traceKeepAliveProtocol = traceKeepAliveProtocol
             , tracePeerSharingProtocol = tracePeerSharingProtocol
             , traceGsm = traceGsm

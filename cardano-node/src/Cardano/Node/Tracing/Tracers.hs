@@ -316,6 +316,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Mempool"]
     configureTracers configReflection trConfig [mempoolTr]
 
+    !perasCertDiffusionInboundTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "CertDiffusion", "Inbound"]
+    configureTracers configReflection trConfig [perasCertDiffusionInboundTr]
+
+    !perasCertDiffusionOutboundTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "CertDiffusion", "Outbound"]
+    configureTracers configReflection trConfig [perasCertDiffusionOutboundTr]
+
     !forgeTr    <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Forge", "Loop"]
@@ -408,9 +418,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusCsjTr
       , Consensus.dbfTracer = Tracer $
           traceWith consensusDbfTr
-        -- TODO plug these in
-      , Consensus.perasCertDiffusionInboundTracer = Tracer $ \_ -> pure ()
-      , Consensus.perasCertDiffusionOutboundTracer = Tracer $ \_ -> pure ()
+      , Consensus.perasCertDiffusionInboundTracer = Tracer $ traceWith perasCertDiffusionInboundTr
+      , Consensus.perasCertDiffusionOutboundTracer = Tracer $ traceWith perasCertDiffusionOutboundTr
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -495,6 +504,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["TxSubmission", "Remote"]
     configureTracers configReflection trConfig [txSubmission2Tracer]
 
+    !perasCertDiffusionTracer <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "CertDiffusion", "Remote"]
+    configureTracers configReflection trConfig [perasCertDiffusionTracer]
+
     !keepAliveTracer  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["KeepAlive", "Remote"]
@@ -520,8 +534,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith keepAliveTracer
       , NtN.tPeerSharingTracer = Tracer $
           traceWith peerSharingTracer
-        -- TODO plug in
-      , NtN.tPerasCertDiffusionTracer = Tracer $ \_ -> pure ()
+      , NtN.tPerasCertDiffusionTracer = Tracer $
+          traceWith perasCertDiffusionTracer
       }
 
 mkDiffusionTracers

@@ -80,6 +80,11 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
+import Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
+import Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (TraceObjectDiffusionInbound(..), NumObjectsProcessed (..))
+import Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound (TraceObjectDiffusionOutbound(..))
+import Ouroboros.Network.Protocol.ObjectDiffusion.Type (NumObjectIdsReq(..), NumObjectIdsAck(..), ObjectDiffusion(..), Message(..), BlockingReplyList(..))
 
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
@@ -1427,6 +1432,279 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["LedgerNotFound"]
       , Namespace [] ["LedgerFound"]
       ]
+
+--------------------------------------------------------------------------------
+-- PerasCertDiffusionInbound Tracer
+--------------------------------------------------------------------------------
+
+instance MetaTrace (TracePerasCertDiffusionInbound blk) where
+  namespaceFor TraceObjectDiffusionCollected {} =
+    Namespace [] ["Collected"]
+  namespaceFor TraceObjectDiffusionProcessed {} =
+    Namespace [] ["Processed"]
+  namespaceFor TraceObjectDiffusionControlMessage {} =
+    Namespace [] ["ControlMessage"]
+  namespaceFor TraceObjectInboundCanRequestMoreObjects {} =
+    Namespace [] ["CanRequestMoreObjects"]
+  namespaceFor TraceObjectInboundCannotRequestMoreObjects {} =
+    Namespace [] ["CannotRequestMoreObjects"]
+
+  severityFor (Namespace _ ["Collected"]) _ = Just Info
+  severityFor (Namespace _ ["Processed"]) _ = Just Info
+  severityFor (Namespace _ ["ControlMessage"]) _ = Just Info
+  severityFor (Namespace _ ["CanRequestMoreObjects"]) _ = Just Info
+  severityFor (Namespace _ ["CannotRequestMoreObjects"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["Collected"]) = Just
+    "Objects have been collected from the peer."
+  documentFor (Namespace _ ["Processed"]) = Just
+    "Objects have been processed and added to the pool."
+  documentFor (Namespace _ ["ControlMessage"]) = Just
+    "A control message has been received."
+  documentFor (Namespace _ ["CanRequestMoreObjects"]) = Just
+    "More objects can be requested from the peer."
+  documentFor (Namespace _ ["CannotRequestMoreObjects"]) = Just
+    "No more objects can be requested from the peer at this time."
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["Collected"]
+    , Namespace [] ["Processed"]
+    , Namespace [] ["ControlMessage"]
+    , Namespace [] ["CanRequestMoreObjects"]
+    , Namespace [] ["CannotRequestMoreObjects"]
+    ]
+
+--------------------------------------------------------------------------------
+-- PerasCertDiffusionInbound LogFormatting
+--------------------------------------------------------------------------------
+
+instance LogFormatting (TracePerasCertDiffusionInbound blk) where
+  forMachine _dtal = \case
+    TraceObjectDiffusionCollected n ->
+      mconcat
+        [ "kind" .= String "Collected"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionProcessed (NumObjectsProcessed n) ->
+      mconcat
+        [ "kind" .= String "Processed"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionControlMessage msg ->
+      mconcat
+        [ "kind" .= String "ControlMessage"
+        , "message" .= String (Text.pack $ show msg)
+        ]
+    TraceObjectInboundCanRequestMoreObjects {} ->
+      mconcat
+        [ "kind" .= String "CanRequestMoreObjects"
+        ]
+    TraceObjectInboundCannotRequestMoreObjects {} ->
+      mconcat
+        [ "kind" .= String "CannotRequestMoreObjects"
+        ]
+
+  forHuman = \case
+    TraceObjectDiffusionCollected n ->
+      "Collected " <> showT n <> " Peras certificates"
+    TraceObjectDiffusionProcessed n ->
+      "Processed " <> showT n <> " Peras certificates"
+    TraceObjectDiffusionControlMessage msg ->
+      "Received control message: " <> showT msg
+    TraceObjectInboundCanRequestMoreObjects {} ->
+      "Can request more Peras certificates from peer"
+    TraceObjectInboundCannotRequestMoreObjects {} ->
+      "Cannot request more Peras certificates from peer at this time"
+
+--------------------------------------------------------------------------------
+-- PerasCertDiffusionOutbound Tracer
+--------------------------------------------------------------------------------
+
+instance MetaTrace (TracePerasCertDiffusionOutbound blk) where
+  namespaceFor TraceObjectDiffusionOutboundTerminated {} =
+    Namespace [] ["Terminated"]
+  namespaceFor TraceObjectDiffusionOutboundRecvMsgRequestObjectIds {} =
+    Namespace [] ["RecvMsgRequestObjectIds"]
+  namespaceFor TraceObjectDiffusionOutboundSendMsgReplyObjectIds {} =
+    Namespace [] ["SendMsgReplyObjectIds"]
+  namespaceFor TraceObjectDiffusionOutboundRecvMsgRequestObjects {} =
+    Namespace [] ["RecvMsgRequestObjects"]
+  namespaceFor TraceObjectDiffusionOutboundSendMsgReplyObjects {} =
+    Namespace [] ["SendMsgReplyObjects"]
+
+  severityFor (Namespace _ ["Terminated"]) _ = Just Info
+  severityFor (Namespace _ ["RecvMsgRequestObjectIds"]) _ = Just Info
+  severityFor (Namespace _ ["SendMsgReplyObjectIds"]) _ = Just Info
+  severityFor (Namespace _ ["RecvMsgRequestObjects"]) _ = Just Info
+  severityFor (Namespace _ ["SendMsgReplyObjects"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["Terminated"]) = Just
+    "The object diffusion mini-protocol has been terminated by the inbound peer."
+  documentFor (Namespace _ ["RecvMsgRequestObjectIds"]) = Just
+    "Received a request for object IDs from the inbound peer."
+  documentFor (Namespace _ ["SendMsgReplyObjectIds"]) = Just
+    "Sending a reply with object IDs to the inbound peer."
+  documentFor (Namespace _ ["RecvMsgRequestObjects"]) = Just
+    "Received a request for specific objects from the inbound peer."
+  documentFor (Namespace _ ["SendMsgReplyObjects"]) = Just
+    "Sending a reply with specific objects to the inbound peer."
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["Terminated"]
+    , Namespace [] ["RecvMsgRequestObjectIds"]
+    , Namespace [] ["SendMsgReplyObjectIds"]
+    , Namespace [] ["RecvMsgRequestObjects"]
+    , Namespace [] ["SendMsgReplyObjects"]
+    ]
+
+--------------------------------------------------------------------------------
+-- PerasCertDiffusionOutbound LogFormatting
+--------------------------------------------------------------------------------
+
+instance LogFormatting (TracePerasCertDiffusionOutbound blk) where
+  forMachine _dtal = \case
+    TraceObjectDiffusionOutboundTerminated ->
+      mconcat
+        [ "kind" .= String "Terminated"
+        ]
+    TraceObjectDiffusionOutboundRecvMsgRequestObjectIds (NumObjectIdsReq n) ->
+      mconcat
+        [ "kind" .= String "RecvMsgRequestObjectIds"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionOutboundSendMsgReplyObjectIds roundNos ->
+      mconcat
+        [ "kind" .= String "SendMsgReplyObjectIds"
+        , "count" .= length roundNos
+        ]
+    TraceObjectDiffusionOutboundRecvMsgRequestObjects objIds ->
+      mconcat
+        [ "kind" .= String "RecvMsgRequestObjects"
+        , "count" .= length objIds
+        ]
+    TraceObjectDiffusionOutboundSendMsgReplyObjects objs ->
+      mconcat
+        [ "kind" .= String "SendMsgReplyObjects"
+        , "count" .= length objs
+        ]
+
+  forHuman = \case
+    TraceObjectDiffusionOutboundTerminated ->
+      "Peras certificate diffusion mini-protocol has been terminated"
+    TraceObjectDiffusionOutboundRecvMsgRequestObjectIds n ->
+      "Received request for " <> showT n <> " Peras certificate IDs"
+    TraceObjectDiffusionOutboundSendMsgReplyObjectIds roundNos ->
+      "Sending " <> showT (length roundNos) <> " Peras certificate IDs"
+    TraceObjectDiffusionOutboundRecvMsgRequestObjects objIds ->
+      "Received request for " <> showT (length objIds) <> " Peras certificates"
+    TraceObjectDiffusionOutboundSendMsgReplyObjects objs ->
+      "Sending " <> showT (length objs) <> " Peras certificates to inbound peer"
+
+
+
+--------------------------------------------------------------------------------
+-- ObjectDiffusion Protocol Tracer (AnyMessage)
+--------------------------------------------------------------------------------
+
+instance LogFormatting (AnyMessage (ObjectDiffusion objectId object)) where
+  forMachine _dtal (AnyMessageAndAgency _stok MsgInit) =
+    mconcat 
+      [ "kind" .= String "MsgInit"
+      ]
+  forMachine _dtal (AnyMessageAndAgency _stok (MsgRequestObjectIds _ ack req)) =
+    mconcat 
+      [ "kind" .= String "MsgRequestObjectIds"
+      , "ack" .= getNumObjectIdsAck ack
+      , "req" .= getNumObjectIdsReq req
+      ]
+  forMachine _dtal (AnyMessageAndAgency _stok (MsgReplyObjectIds objIds)) =
+    let count = case objIds of
+          BlockingReply xs -> length xs
+          NonBlockingReply xs -> length xs
+    in mconcat 
+      [ "kind" .= String "MsgReplyObjectIds"
+      , "count" .= (count :: Int)
+      ]
+  forMachine _dtal (AnyMessageAndAgency _stok (MsgRequestObjects objIds)) =
+    mconcat 
+      [ "kind" .= String "MsgRequestObjects"
+      , "count" .= length objIds
+      ]
+  forMachine _dtal (AnyMessageAndAgency _stok (MsgReplyObjects objects)) =
+    mconcat 
+      [ "kind" .= String "MsgReplyObjects"
+      , "count" .= length objects
+      ]
+  forMachine _dtal (AnyMessageAndAgency _stok MsgDone) =
+    mconcat 
+      [ "kind" .= String "MsgDone"
+      ]
+
+  forHuman (AnyMessageAndAgency _stok MsgInit) = 
+    "ObjectDiffusion protocol initialized"
+  forHuman (AnyMessageAndAgency _stok (MsgRequestObjectIds _ ack req)) = 
+    "Requested " <> showT (getNumObjectIdsReq req) <> " object IDs, acknowledging " <> showT (getNumObjectIdsAck ack)
+  forHuman (AnyMessageAndAgency _stok (MsgReplyObjectIds objIds)) = 
+    let count = case objIds of
+          BlockingReply xs -> length xs
+          NonBlockingReply xs -> length xs
+    in "Replied with " <> showT (count :: Int) <> " object IDs"
+  forHuman (AnyMessageAndAgency _stok (MsgRequestObjects objIds)) = 
+    "Requested " <> showT (length objIds) <> " objects"
+  forHuman (AnyMessageAndAgency _stok (MsgReplyObjects objects)) = 
+    "Replied with " <> showT (length objects) <> " objects"
+  forHuman (AnyMessageAndAgency _stok MsgDone) = 
+    "ObjectDiffusion protocol terminated"
+
+instance MetaTrace (AnyMessage (ObjectDiffusion objectId object)) where
+  namespaceFor (AnyMessageAndAgency _stok MsgInit) =
+    Namespace [] ["MsgInit"]
+  namespaceFor (AnyMessageAndAgency _stok (MsgRequestObjectIds _ _ _)) =
+    Namespace [] ["MsgRequestObjectIds"]
+  namespaceFor (AnyMessageAndAgency _stok (MsgReplyObjectIds _)) =
+    Namespace [] ["MsgReplyObjectIds"]
+  namespaceFor (AnyMessageAndAgency _stok (MsgRequestObjects _)) =
+    Namespace [] ["MsgRequestObjects"]
+  namespaceFor (AnyMessageAndAgency _stok (MsgReplyObjects _)) =
+    Namespace [] ["MsgReplyObjects"]
+  namespaceFor (AnyMessageAndAgency _stok MsgDone) =
+    Namespace [] ["MsgDone"]
+
+  severityFor (Namespace _ ["MsgInit"]) _ = Just Info
+  severityFor (Namespace _ ["MsgRequestObjectIds"]) _ = Just Debug
+  severityFor (Namespace _ ["MsgReplyObjectIds"]) _ = Just Debug
+  severityFor (Namespace _ ["MsgRequestObjects"]) _ = Just Debug
+  severityFor (Namespace _ ["MsgReplyObjects"]) _ = Just Debug
+  severityFor (Namespace _ ["MsgDone"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["MsgInit"]) = Just
+    "ObjectDiffusion protocol initialization message."
+  documentFor (Namespace _ ["MsgRequestObjectIds"]) = Just
+    "Request for object identifiers with acknowledgement count."
+  documentFor (Namespace _ ["MsgReplyObjectIds"]) = Just
+    "Reply with available object identifiers."
+  documentFor (Namespace _ ["MsgRequestObjects"]) = Just
+    "Request for specific objects by their identifiers."
+  documentFor (Namespace _ ["MsgReplyObjects"]) = Just
+    "Reply with the requested objects."
+  documentFor (Namespace _ ["MsgDone"]) = Just
+    "ObjectDiffusion protocol termination message."
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["MsgInit"]
+    , Namespace [] ["MsgRequestObjectIds"]
+    , Namespace [] ["MsgReplyObjectIds"]
+    , Namespace [] ["MsgRequestObjects"]
+    , Namespace [] ["MsgReplyObjects"]
+    , Namespace [] ["MsgDone"]
+    ]
+
 
 --------------------------------------------------------------------------------
 -- ForgeEvent Tracer

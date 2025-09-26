@@ -117,6 +117,7 @@ import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
+import qualified Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert as Consensus
 
 
 data TraceDocumentationCmd
@@ -370,6 +371,24 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [mempoolTr]
     mempoolTrDoc <- documentTracer (mempoolTr ::
       Logging.Trace IO (TraceEventMempool blk))
+
+    perasCertDiffusionInboundTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "CertDiffusion", "Inbound"]
+    configureTracers configReflection trConfig [perasCertDiffusionInboundTr]
+    perasCertDiffusionInboundTrDoc <- documentTracer (perasCertDiffusionInboundTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer
+                  remotePeer
+                  (Consensus.TracePerasCertDiffusionInbound blk)))
+    
+    perasCertDiffusionOutboundTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "CertDiffusion", "Outbound"]
+    configureTracers configReflection trConfig [perasCertDiffusionOutboundTracer]
+    perasCertDiffusionOutboundTrDoc <- documentTracer (perasCertDiffusionOutboundTracer ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer
+                  remotePeer
+                  (Consensus.TracePerasCertDiffusionOutbound blk)))
 
     forgeTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -778,6 +797,8 @@ docTracersFirstPhase condConfigFileName = do
             <> txOutboundTrDoc
             <> localTxSubmissionServerTrDoc
             <> mempoolTrDoc
+            <> perasCertDiffusionInboundTrDoc
+            <> perasCertDiffusionOutboundTrDoc
             <> forgeTrDoc
             <> forgeStatsTrDoc
             <> blockchainTimeTrDoc
