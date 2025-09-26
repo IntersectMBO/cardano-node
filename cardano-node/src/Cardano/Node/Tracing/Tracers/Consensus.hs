@@ -2099,9 +2099,8 @@ instance ( LogFormatting selection
       GsmEventLeaveCaughtUp {}       -> [preSyncing]
       GsmEventPreSyncingToSyncing {} -> [syncing]
       GsmEventSyncingToPreSyncing {} -> [preSyncing]
-      -- TODO: fix
-      GsmEventInitializedInCaughtUp {}   -> undefined
-      GsmEventInitializedInPreSyncing {} -> undefined
+      GsmEventInitializedInCaughtUp {}   -> [caughtUp]
+      GsmEventInitializedInPreSyncing {} -> [preSyncing]
     where
       preSyncing = IntM "GSM.state" 0
       syncing    = IntM "GSM.state" 1
