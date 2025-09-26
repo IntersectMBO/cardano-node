@@ -78,6 +78,7 @@ library
                         Cardano.Node.Protocol.Cardano
                         Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
+                        Cardano.Node.Protocol.Dijkstra
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
@@ -153,6 +154,7 @@ library
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-core
+                      , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
