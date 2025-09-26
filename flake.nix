@@ -53,7 +53,7 @@
     incl.url = "github:divnix/incl";
 
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:russoul/iohk-nix/f9fe3eddaa4bc5fc92b5b928d2406a06f8530477";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
