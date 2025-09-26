@@ -1761,9 +1761,8 @@ instance HasSeverityAnnotation (TraceGsmEvent selection) where
     GsmEventLeaveCaughtUp{}       -> Warning
     GsmEventPreSyncingToSyncing{} -> Notice
     GsmEventSyncingToPreSyncing{} -> Notice
-    -- TODO: fix
-    GsmEventInitializedInCaughtUp{}   -> undefined
-    GsmEventInitializedInPreSyncing{} -> undefined
+    GsmEventInitializedInCaughtUp{}   -> Notice
+    GsmEventInitializedInPreSyncing{} -> Notice
 
 instance ToObject selection => Transformable Text IO (TraceGsmEvent selection) where
   trTransformer = trStructured
@@ -1789,15 +1788,14 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
     mconcat
       [ "kind" .= String "GsmEventSyncingToPreSyncing"
       ]
-  toObject _verb (GsmEventInitializedInCaughtUp) =
+  toObject _verb GsmEventInitializedInCaughtUp =
     mconcat
       [ "kind" .= String "GsmEventInitializedInCaughtUp"
       ]
-  toObject _verb (GsmEventInitializedInPreSyncing) =
+  toObject _verb GsmEventInitializedInPreSyncing =
     mconcat
       [ "kind" .= String "GsmEventInitializedInPreSyncing"
       ]
-
 
 instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
 instance HasSeverityAnnotation (TraceGDDEvent peer blk) where
