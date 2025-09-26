@@ -47,7 +47,6 @@ import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.State as Ledger
 import qualified Cardano.Ledger.TxIn as Ledger
-import qualified Cardano.Ledger.UMap as UM
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -234,98 +233,104 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 class LedgerQueries blk where
   ledgerUtxoSize     :: LedgerState blk EmptyMK -> Int
   ledgerDelegMapSize :: LedgerState blk EmptyMK -> Int
+
+class LedgerConwayQueries blk where
   ledgerDRepCount    :: LedgerState blk EmptyMK -> Int
   ledgerDRepMapSize  :: LedgerState blk EmptyMK -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
   ledgerDelegMapSize _ = 0
-  ledgerDRepCount    _ = 0
-  ledgerDRepMapSize  _ = 0
 
--- TODO should this be ConwayEraCertState constraint? Wouldn't this break queries for older eras?
-instance Conway.ConwayEraCertState era => LedgerQueries (Shelley.ShelleyBlock protocol era) where
+instance (Ledger.EraAccounts era, Shelley.EraCertState era) => LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
-      (\(Shelley.UTxO xs)-> Map.size xs)
-    . Shelley.utxosUtxo
-    . Shelley.lsUTxOState
-    . Shelley.esLState
-    . Shelley.nesEs
+      Map.size
+    . Ledger.unUTxO
+    . (^. Shelley.nesEsL
+       .  Shelley.esLStateL
+       .  Shelley.lsUTxOStateL
+       .  Shelley.utxoL
+      )
     . Shelley.shelleyLedgerState
   ledgerDelegMapSize =
-      UM.size
-    . UM.SPoolUView
-    . undefined -- TODO what should be here?
-    . (^. Conway.accountsMapL)
-    . Ledger.dsAccounts
-    . (^. Shelley.certDStateL)
-    . Shelley.lsCertState
-    . Shelley.esLState
-    . Shelley.nesEs
+      foldl' (\acc -> maybe acc (const $ 1 + acc) . (^. Ledger.stakePoolDelegationAccountStateL)) 0
+    . (^. Shelley.nesEsL
+       .  Shelley.esLStateL
+       .  Shelley.lsCertStateL
+       .  Shelley.certDStateL
+       .  Ledger.accountsL
+       .  Ledger.accountsMapL
+      )
     . Shelley.shelleyLedgerState
+
+instance Conway.ConwayEraCertState era => LedgerConwayQueries (Shelley.ShelleyBlock protocol era) where
   ledgerDRepCount =
       Map.size
-    . Conway.vsDReps
-    . (^. Conway.certVStateL)
-    . Shelley.lsCertState
-    . Shelley.esLState
-    . Shelley.nesEs
+    . (^. Shelley.nesEsL
+       .  Shelley.esLStateL
+       .  Shelley.lsCertStateL
+       .  Conway.certVStateL
+       .  Conway.vsDRepsL
+      )
     . Shelley.shelleyLedgerState
   ledgerDRepMapSize =
-      UM.size
-    . UM.DRepUView
-    . undefined -- TODO what should be here?
-    . Ledger.dsAccounts
-    . (^. Shelley.certDStateL)
-    . Shelley.lsCertState
-    . Shelley.esLState
-    . Shelley.nesEs
+      foldl' (\acc -> maybe acc (const $ 1 + acc) . (^. Conway.dRepDelegationAccountStateL)) 0
+    . (^. Shelley.nesEsL
+       .  Shelley.esLStateL
+       .  Shelley.lsCertStateL
+       .  Shelley.certDStateL
+       .  Ledger.accountsL
+       .  Ledger.accountsMapL
+      )
     . Shelley.shelleyLedgerState
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
   ledgerUtxoSize     = ledgerUtxoSize     . unFlip . project . Flip
   ledgerDelegMapSize = ledgerDelegMapSize . unFlip . project . Flip
+
+instance (LedgerConwayQueries x, NoHardForks x)
+      => LedgerConwayQueries (HardForkBlock '[x]) where
   ledgerDRepCount    = ledgerDRepCount    . unFlip . project . Flip
   ledgerDRepMapSize  = ledgerDRepMapSize  . unFlip . project . Flip
 
--- TODO those states make no sense, since required lenses got moved to Conway
--- TODO(geo2a): fill in TODOs following the pattern, after adding missing instances
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
     Cardano.LedgerStateByron     ledgerByron    -> ledgerUtxoSize ledgerByron
-    Cardano.LedgerStateShelley   _ledgerShelley  -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAllegra   _ledgerAllegra  -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateMary      _ledgerMary     -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAlonzo    _ledgerAlonzo   -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateBabbage   _ledgerBabbage  -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateShelley   ledgerShelley  -> ledgerUtxoSize ledgerShelley
+    Cardano.LedgerStateAllegra   ledgerAllegra  -> ledgerUtxoSize ledgerAllegra
+    Cardano.LedgerStateMary      ledgerMary     -> ledgerUtxoSize ledgerMary
+    Cardano.LedgerStateAlonzo    ledgerAlonzo   -> ledgerUtxoSize ledgerAlonzo
+    Cardano.LedgerStateBabbage   ledgerBabbage  -> ledgerUtxoSize ledgerBabbage
     Cardano.LedgerStateConway    ledgerConway   -> ledgerUtxoSize ledgerConway
     Cardano.LedgerStateDijkstra  ledgerDijkstra -> ledgerUtxoSize ledgerDijkstra
   ledgerDelegMapSize = \case
     Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
-    Cardano.LedgerStateShelley _ledgerShelley -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAllegra _ledgerAllegra -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateMary    _ledgerMary    -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateBabbage _ledgerBabbage -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
+    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
+    Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
+    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
+    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDelegMapSize ledgerConway
     Cardano.LedgerStateDijkstra  ledgerDijkstra  -> ledgerDelegMapSize ledgerDijkstra
+
+instance LedgerConwayQueries (Cardano.CardanoBlock c) where
   ledgerDRepCount = \case
-    Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepCount ledgerByron
-    Cardano.LedgerStateShelley _ledgerShelley -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAllegra _ledgerAllegra -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateMary    _ledgerMary    -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateBabbage _ledgerBabbage -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateByron   _ledgerByron   -> 0
+    Cardano.LedgerStateShelley _ledgerShelley -> 0
+    Cardano.LedgerStateAllegra _ledgerAllegra -> 0
+    Cardano.LedgerStateMary    _ledgerMary    -> 0
+    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> 0
+    Cardano.LedgerStateBabbage _ledgerBabbage -> 0
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepCount ledgerConway
     Cardano.LedgerStateDijkstra  ledgerDijkstra  -> ledgerDRepCount ledgerDijkstra
   ledgerDRepMapSize = \case
-    Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepMapSize ledgerByron
-    Cardano.LedgerStateShelley _ledgerShelley -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAllegra _ledgerAllegra -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateMary    _ledgerMary    -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> undefined -- TODO(geo2a)
-    Cardano.LedgerStateBabbage _ledgerBabbage -> undefined -- TODO(geo2a)
+    Cardano.LedgerStateByron   _ledgerByron   -> 0
+    Cardano.LedgerStateShelley _ledgerShelley -> 0
+    Cardano.LedgerStateAllegra _ledgerAllegra -> 0
+    Cardano.LedgerStateMary    _ledgerMary    -> 0
+    Cardano.LedgerStateAlonzo  _ledgerAlonzo  -> 0
+    Cardano.LedgerStateBabbage _ledgerBabbage -> 0
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepMapSize ledgerConway
     Cardano.LedgerStateDijkstra  ledgerDijkstra  -> ledgerDRepMapSize ledgerDijkstra
 
