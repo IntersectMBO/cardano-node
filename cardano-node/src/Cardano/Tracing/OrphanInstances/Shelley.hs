@@ -64,7 +64,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosChainSelectView (..))
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosTiebreakerView (..))
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
@@ -1327,20 +1327,18 @@ instance ToJSON ShelleyNodeToClientVersion where
   toJSON ShelleyNodeToClientVersion11 = String "ShelleyNodeToClientVersion11"
   toJSON ShelleyNodeToClientVersion12 = String "ShelleyNodeToClientVersion12"
 
-instance Core.Crypto c => ToObject (PraosChainSelectView c) where
-  toObject _ PraosChainSelectView {
-      csvChainLength
-    , csvSlotNo
-    , csvIssuer
-    , csvIssueNo
-    , csvTieBreakVRF
+instance Core.Crypto c => ToObject (PraosTiebreakerView c) where
+  toObject _ PraosTiebreakerView {
+      ptvSlotNo
+    , ptvIssuer
+    , ptvIssueNo
+    , ptvTieBreakVRF
     } =
-      mconcat [ "kind" .= String "PraosChainSelectView"
-              , "chainLength" .= csvChainLength
-              , "slotNo" .= csvSlotNo
-              , "issuerHash" .= hashKey csvIssuer
-              , "issueNo" .= csvIssueNo
-              , "tieBreakVRF" .= renderVRF csvTieBreakVRF
+      mconcat [ "kind" .= String "PraosTiebreakerView"
+              , "slotNo" .= ptvSlotNo
+              , "issuerHash" .= hashKey ptvIssuer
+              , "issueNo" .= ptvIssueNo
+              , "tieBreakVRF" .= renderVRF ptvTieBreakVRF
               ]
     where
       renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes

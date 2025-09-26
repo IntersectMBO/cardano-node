@@ -22,20 +22,19 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
-                   ForgeStateUpdateError)
+                   ForgeStateUpdateError, PerasWeight (..))
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraSelectView (..),
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraTiebreakerView (..),
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
-                   (EraNodeToClientVersion (..),
-                   HardForkNodeToNodeVersion (..), HardForkSpecificNodeToClientVersion (..),
-                   HardForkSpecificNodeToNodeVersion (..))
+                   (EraNodeToClientVersion (..), HardForkNodeToNodeVersion (..),
+                   HardForkSpecificNodeToClientVersion (..), HardForkSpecificNodeToNodeVersion (..))
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
@@ -43,7 +42,9 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Peras.SelectView
+import           Ouroboros.Consensus.Protocol.Abstract (ConsensusProtocol (TiebreakerView),
+                   ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -431,16 +432,22 @@ instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion 
 -- instances for HardForkSelectView
 --
 
-instance All (ToObject `Compose` WrapSelectView) xs => ToObject (HardForkSelectView xs) where
-    -- elide BlockNo as it is already contained in every per-era SelectView
-    toObject verb = toObject verb . dropBlockNo . getHardForkSelectView
+instance All (ToObject `Compose` WrapTiebreakerView) xs => ToObject (HardForkTiebreakerView xs) where
+    toObject verb = toObject verb . getHardForkTiebreakerView
 
-instance All (ToObject `Compose` WrapSelectView) xs => ToObject (OneEraSelectView xs) where
+instance ToObject (TiebreakerView protocol) => ToObject (WeightedSelectView protocol) where
+    toObject verb sv = mconcat
+        [ "length"  .= wsvLength sv
+        , "weightBoost" .= unPerasWeight (wsvWeightBoost sv)
+        , toObject verb (wsvTiebreaker sv)
+        ]
+
+instance All (ToObject `Compose` WrapTiebreakerView) xs => ToObject (OneEraTiebreakerView xs) where
     toObject verb =
           hcollapse
-        . hcmap (Proxy @(ToObject `Compose` WrapSelectView))
+        . hcmap (Proxy @(ToObject `Compose` WrapTiebreakerView))
                 (K . toObject verb)
-        . getOneEraSelectView
+        . getOneEraTiebreakerView
 
-instance ToObject (SelectView (BlockProtocol blk)) => ToObject (WrapSelectView blk) where
-    toObject verb = toObject verb . unwrapSelectView
+instance ToObject (TiebreakerView (BlockProtocol blk)) => ToObject (WrapTiebreakerView blk) where
+    toObject verb = toObject verb . unwrapTiebreakerView
