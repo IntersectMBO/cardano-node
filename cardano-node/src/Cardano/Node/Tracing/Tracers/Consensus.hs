@@ -55,6 +55,7 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
@@ -68,6 +69,7 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
+import           Control.Exception
 import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
 import qualified Data.Aeson as Aeson
@@ -2299,3 +2301,17 @@ instance ( StandardHash blk
             ]
 
   forHuman = showT
+
+{-------------------------------------------------------------------------------
+ KES-agent
+-------------------------------------------------------------------------------}
+
+instance LogFormatting KESAgentClientTrace where
+  forMachine _verb (KESAgentClientException exc) =
+    mconcat [ "kind" .= String "KESAgentClientException"
+            , "exception" .= String (Text.pack $ displayException exc)
+            ]
+  forMachine _verb (KESAgentClientTrace trc) =
+    mconcat [ "kind" .= String "KESAgentClientTrace"
+            , "trace" .= String (Text.pack $ show trc)
+            ]
