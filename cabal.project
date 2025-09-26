@@ -100,8 +100,8 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
   -- latest master
-  tag: 71b02607c8a39ed4d8c983b281b05452ed8c01ce
-  --sha256: sha256-/vnZnAPsEuqQMzG5NGHaWk9vyefBWMft7/rKQ+yyYTQ=
+  tag: ac1a8db76f4c7a38a9a6b962a40fa722d5bd55a6
+  --sha256: sha256-8MlAxCi1wXLc2p0csYTKZ4RW7+uqWvxOBs5IhISzwxk=
   subdir:
       ouroboros-consensus
       ouroboros-consensus-cardano
@@ -109,11 +109,3 @@ source-repository-package
       ouroboros-consensus-protocol
       sop-extras
       strict-sop-core
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/kes-agent
-  tag: bf203c4e7f7e6aab947b077e178baac3ecb2541d
-  --sha256: sha256-cURVbhbTvK6iPKaXVjCovBezyE5UVs46iarmVyWA2Uc=
-  subdir:
-    kes-agent
