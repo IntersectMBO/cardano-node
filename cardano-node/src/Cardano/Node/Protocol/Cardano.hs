@@ -124,14 +124,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     (alonzoGenesis, _alonzoGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationAlonzoGenesisReadError $
-        case npcTestStartingEra npc of
-          Nothing ->
-            Alonzo.readGenesis Nothing
-                               npcAlonzoGenesisFile
-                               npcAlonzoGenesisFileHash
-          Just (AnyShelleyBasedEra sbe) -> do
-            Alonzo.readGenesis (Just $ toCardanoEra sbe)
-                               npcAlonzoGenesisFile
+        Alonzo.readGenesis npcAlonzoGenesisFile
                                npcAlonzoGenesisFileHash
 
     (conwayGenesis, _conwayGenesisHash) <-
