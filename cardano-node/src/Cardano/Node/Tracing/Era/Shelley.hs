@@ -183,9 +183,18 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "credential" .= String (textShow credential)
       , "error" .= String "Delegated rep is not registered for provided stake key"
       ]
-    -- TODO: fix
-    Conway.DepositIncorrectDELEG _ -> undefined
-    Conway.RefundIncorrectDELEG _ -> undefined
+    Conway.DepositIncorrectDELEG Mismatch {mismatchSupplied, mismatchExpected}  ->
+      [ "kind" .= String "DepositIncorrectDELEG"
+      , "givenRefund" .= mismatchSupplied
+      , "expectedRefund" .= mismatchExpected
+      , "error" .= String "Deposit mismatch"
+      ]
+    Conway.RefundIncorrectDELEG Mismatch {mismatchSupplied, mismatchExpected}  ->
+      [ "kind" .= String "RefundIncorrectDELEG"
+      , "givenRefund" .= mismatchSupplied
+      , "expectedRefund" .= mismatchExpected
+      , "error" .= String "Refund mismatch"
+      ]
 
 instance
   ( ShelleyCompatible protocol era
@@ -380,8 +389,16 @@ instance
            ]
       )
       (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
-  -- TODO: fix
-  forMachine _ (ScriptIntegrityHashMismatch _ _) = undefined
+  forMachine _ (ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes) =
+      mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+              , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+              , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+              ]
+
+formatAsHex :: Maybe Crypto.ByteString -> String
+formatAsHex Nothing = ""
+formatAsHex (Just bs) = show bs
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -718,8 +735,12 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "poolId" .= String (textShow poolId)
              , "error" .= String "Wrong network ID in pool registration certificate"
              ]
-  -- TODO: fix
-  forMachine _dtal (VRFKeyHashAlreadyRegistered _ _) = undefined
+  forMachine _dtal (VRFKeyHashAlreadyRegistered poolId vrfKeyHash) =
+    mconcat [ "kind" .= String "VRFKeyHashAlreadyRegistered"
+            , "poolId" .= String (textShow poolId)
+            , "vrfKeyHash" .= String (textShow vrfKeyHash)
+            , "error" .= String "Pool with the same VRF Key Hash is already registered"
+            ]
 
 
 instance LogFormatting TicknPredicateFailure where
@@ -1024,8 +1045,12 @@ instance
         mconcat [ "kind" .= String "MalformedReferenceScripts"
                 , "scripts" .= s
                 ]
-      -- TODO: fix
-      Babbage.ScriptIntegrityHashMismatch _ _ -> undefined
+      Babbage.ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes ->
+        mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+                , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+                , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+                , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+                ]
 --------------------------------------------------------------------------------
 -- Conway related
 --------------------------------------------------------------------------------
@@ -1475,8 +1500,12 @@ instance
       mconcat [ "kind" .= String "MalformedReferenceScripts"
               , "scripts" .= scripts
               ]
-    -- TODO: fix
-    Conway.ScriptIntegrityHashMismatch _ _ -> undefined
+    Conway.ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes ->
+      mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+              , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+              , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+              ]
 
 instance LogFormatting (Praos.PraosTiebreakerView crypto) where
   forMachine _dtal (Praos.PraosTiebreakerView sl issuer issueNo vrf) =
