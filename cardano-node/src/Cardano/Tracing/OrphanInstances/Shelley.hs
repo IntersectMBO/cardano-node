@@ -221,9 +221,18 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "credential" .= String (textShow credential)
       , "error" .= String "Delegated rep is not registered for provided stake key"
       ]
-    -- TODO: fix
-    Conway.DepositIncorrectDELEG _ -> undefined
-    Conway.RefundIncorrectDELEG _ -> undefined
+    Conway.DepositIncorrectDELEG Mismatch {mismatchSupplied, mismatchExpected}  ->
+      [ "kind" .= String "DepositIncorrectDELEG"
+      , "givenRefund" .= mismatchSupplied
+      , "expectedRefund" .= mismatchExpected
+      , "error" .= String "Deposit mismatch"
+      ]
+    Conway.RefundIncorrectDELEG Mismatch {mismatchSupplied, mismatchExpected}  ->
+      [ "kind" .= String "RefundIncorrectDELEG"
+      , "givenRefund" .= mismatchSupplied
+      , "expectedRefund" .= mismatchExpected
+      , "error" .= String "Refund mismatch"
+      ]
 
 instance ToObject (Set (Credential 'Staking)) where
   toObject _verb creds =
@@ -485,8 +494,12 @@ instance
            ]
       )
       (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
-  -- TODO: fix
-  toObject _ _ = undefined
+  toObject _ (ScriptIntegrityHashMismatch poolId vrfKeyHash) =
+    mconcat [ "kind" .= String "VRFKeyHashAlreadyRegistered"
+            , "poolId" .= String (textShow poolId)
+            , "vrfKeyHash" .= String (textShow vrfKeyHash)
+            , "error" .= String "Pool with the same VRF Key Hash is already registered"
+            ]
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "UTXO" ledgerera))
@@ -815,8 +828,12 @@ instance ToObject (ShelleyPoolPredFailure era) where
              , "hashSize" .= String (textShow hashSize)
              , "error" .= String "The stake pool metadata hash is too large"
              ]
-  -- TODO: fix
-  toObject _verb (VRFKeyHashAlreadyRegistered _ _) = undefined
+  toObject _ (VRFKeyHashAlreadyRegistered poolId vrfKeyHash) =
+    mconcat [ "kind" .= String "VRFKeyHashAlreadyRegistered"
+            , "poolId" .= String (textShow poolId)
+            , "vrfKeyHash" .= String (textShow vrfKeyHash)
+            , "error" .= String "Pool with the same VRF Key Hash is already registered"
+            ]
 
 -- Apparently this should never happen according to the Shelley exec spec
   -- toObject _verb (WrongCertificateTypePOOL index) =
@@ -1183,8 +1200,16 @@ instance
         mconcat [ "kind" .= String "MalformedReferenceScripts"
                 , "scripts" .= s
                 ]
-      -- TODO: fix
-      Babbage.ScriptIntegrityHashMismatch _ _ -> undefined
+      Babbage.ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes ->
+        mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+                , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+                , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+                , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+                ]
+
+formatAsHex :: Maybe Crypto.ByteString -> String
+formatAsHex Nothing = ""
+formatAsHex (Just bs) = show bs
 
 instance Core.Crypto crypto => ToObject (Praos.PraosValidationErr crypto) where
   toObject _ err' =
@@ -1525,8 +1550,12 @@ instance
       mconcat [ "kind" .= String "MalformedReferenceScripts"
               , "scripts" .= scripts
               ]
-    -- TODO: fix
-    Conway.ScriptIntegrityHashMismatch _ _ -> undefined
+    Conway.ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes ->
+      mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+              , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+              , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+              ]
 
 instance ToObject (Praos.PraosTiebreakerView crypto) where
   toObject v (Praos.PraosTiebreakerView sl issuer issueNo vrf) =
