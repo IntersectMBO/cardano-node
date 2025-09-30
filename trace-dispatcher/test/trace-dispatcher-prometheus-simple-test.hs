@@ -6,7 +6,7 @@ import           Cardano.Logging.Tracer.EKG (ekgTracer)
 import           Cardano.Logging.Types
 
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (cancel)
+import           Control.Concurrent.Async (Async, cancel)
 import           Control.Monad (unless)
 import           Data.Aeson
 import qualified Data.Map.Internal as Map
@@ -14,7 +14,7 @@ import           Data.Text (pack)
 import           Network.HTTP.Client (defaultManagerSettings, newManager)
 import           Network.HTTP.PrometheusTracker (scrapeOnce)
 import           Network.HTTP.PrometheusTracker.Types (MetricsMap (MM), MetricsValue (MVDouble))
-import           System.Exit (die)
+import           System.Exit (die, exitSuccess)
 import           System.Metrics (newStore)
 import           System.Posix.Signals
 
@@ -52,7 +52,7 @@ main = do
   store <- newStore
   let host = "localhost"
   let port = 9090
-  Right metricsServerThread <- spawnPrometheusSimple store (True, Just host, port)
+  metricsServerThread <- spawnPrometheusSimple store (True, Just host, port) >>= handleSpawn
   pretracer <- ekgTracer emptyTraceConfig store
   let tracer = metricsFormatter pretracer :: Trace IO Measure
   confState <- emptyConfigReflection
@@ -64,5 +64,10 @@ main = do
   MM metricsMap <- scrapeOnce manager ("http://" <> host <> ":" <> show port <> "/metrics")
   MVDouble value <- maybe (die "'measure' metric not found in the scape list") pure (Map.lookup "measure" metricsMap)
   unless (value == 42) $ die ("Unexpected value: " <> show value)
-  putStrLn "Got correct metric value ✔"
-  cancel metricsServerThread
+  putStrLn "Got correct metric value ✔" where
+
+  handleSpawn :: Either String (Async ()) -> IO (Async ())
+  handleSpawn (Right async) = pure async
+  handleSpawn (Left err) = do
+    putStrLn $ "Couldn't spawn prometheus-simple server:\n" <> err
+    exitSuccess
