@@ -241,6 +241,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                   (getLast (pncConfigFile cmdPc))
   case ncTraceConfig nc of
     TraceDispatcher{} -> do
+      -- TODO fix
       blockForging <- snd (Api.protocolInfo runP)
       tracers <-
         initTraceDispatcher
@@ -248,6 +249,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
           p
           networkMagic
           nodeKernelData
+          -- TODO fix
           (null blockForging)
 
       startupInfo <- getStartupInfo nc p fp
@@ -255,6 +257,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
       traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
       -- sends initial BlockForgingUpdate
       let isNonProducing = ncStartAsNonProducingNode nc
+      -- TODO fix
       traceWith (startupTracer tracers)
                 (BlockForgingUpdate (if isNonProducing || null blockForging
                                       then DisabledBlockForging
@@ -298,6 +301,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
 
       traceWith (nodeVersionTracer tracers) getNodeVersion
       let isNonProducing = ncStartAsNonProducingNode nc
+      -- TODO fix
       blockForging <- snd (Api.protocolInfo runP)
       traceWith (startupTracer tracers)
                 (BlockForgingUpdate (if isNonProducing || null blockForging
@@ -468,6 +472,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , rnProtocolInfo   = pInfo
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
+              -- TODO fix
               blockForging <- snd (Api.protocolInfo runP)
 
               unless (ncStartAsNonProducingNode nc) $
@@ -688,6 +693,7 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
+          -- TODO fix
           blockForging <- snd (Api.protocolInfo runP')
           traceWith startupTracer
                     (BlockForgingUpdate (if null blockForging
