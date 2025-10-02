@@ -147,7 +147,7 @@ instance ConvertRawHash blk => ConvertRawHash (HeaderWithTime blk) where
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK {} -> Info
+    ChainDB.IgnoreBlockOlderThanImmTip {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
     ChainDB.AddedBlockToQueue {} -> Debug
@@ -528,8 +528,8 @@ instance ( ConvertRawHash blk
     formatText tev _obj = case tev of
       ChainDB.TraceLastShutdownUnclean -> "ChainDB is not clean. Validating all immutable chunks"
       ChainDB.TraceAddBlockEvent ev -> case ev of
-        ChainDB.IgnoreBlockOlderThanK pt ->
-          "Ignoring block older than K: " <> renderRealPointAsPhrase pt
+        ChainDB.IgnoreBlockOlderThanImmTip pt ->
+          "Ignoring block older than ImmTip: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
           "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreInvalidBlock pt _reason ->
@@ -928,8 +928,8 @@ instance ( ConvertRawHash blk
   toObject _verb ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK pt ->
-      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
+    ChainDB.IgnoreBlockOlderThanImmTip pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanImmTip"
                , "block" .= toObject verb pt ]
     ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
@@ -1759,6 +1759,9 @@ instance HasSeverityAnnotation (TraceGsmEvent selection) where
     GsmEventLeaveCaughtUp{}       -> Warning
     GsmEventPreSyncingToSyncing{} -> Notice
     GsmEventSyncingToPreSyncing{} -> Notice
+    -- TODO: fix
+    GsmEventInitializedInCaughtUp{}   -> undefined
+    GsmEventInitializedInPreSyncing{} -> undefined
 
 instance ToObject selection => Transformable Text IO (TraceGsmEvent selection) where
   trTransformer = trStructured
