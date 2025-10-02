@@ -325,15 +325,16 @@ instance FromJSON PartialNodeConfiguration where
       protocol <-  v .:? "Protocol" .!= CardanoProtocol
       pncProtocolConfig <-
         case protocol of
-          CardanoProtocol ->
+          CardanoProtocol -> do
+            hfp <- parseHardForkProtocol v
             fmap (Last . Just) $
               NodeProtocolConfigurationCardano
                 <$> parseByronProtocol v
                 <*> parseShelleyProtocol v
                 <*> parseAlonzoProtocol v
                 <*> parseConwayProtocol v
-                <*> parseDijkstraProtocol v
-                <*> parseHardForkProtocol v
+                <*> (if npcExperimentalHardForksEnabled hfp then Just <$> parseDijkstraProtocol v else pure Nothing)
+                <*> pure hfp
                 <*> parseCheckpoints v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
@@ -585,8 +586,9 @@ instance FromJSON PartialNodeConfiguration where
         npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
         npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
 
-        npcTestDijkstraHardForkAtEpoch   <- v .:? "TestDijkstraHardForkAtEpoch"
-        npcTestDijkstraHardForkAtVersion <- v .:? "TestDijkstraHardForkAtVersion"
+        (npcTestDijkstraHardForkAtEpoch, npcTestDijkstraHardForkAtVersion) <- if npcExperimentalHardForksEnabled
+           then (,) <$>  v .:? "TestConwayHardForkAtEpoch" <*> v .:? "TestConwayHardForkAtVersion"
+           else pure (Nothing, Nothing)
 
         pure NodeHardForkProtocolConfiguration
           { npcExperimentalHardForksEnabled

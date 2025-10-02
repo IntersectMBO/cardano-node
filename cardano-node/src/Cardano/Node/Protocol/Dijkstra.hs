@@ -6,6 +6,7 @@
 module Cardano.Node.Protocol.Dijkstra
   ( readGenesis
   , readGenesisMaybe
+  , emptyDijkstraGenesis
   ) where
 
 import           Cardano.Api
