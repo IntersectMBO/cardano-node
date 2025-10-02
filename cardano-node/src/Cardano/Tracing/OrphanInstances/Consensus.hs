@@ -95,6 +95,7 @@ import           Data.Word (Word32)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core
 import           Numeric (showFFloat)
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 
 
 {- HLINT ignore "Use const" -}
@@ -1876,9 +1877,9 @@ instance ToObject KESAgentClientTrace where
     mconcat [ "kind" .= String "KESAgentClientException"
             , "exception" .= String (pack $ displayException exc)
             ]
-  toObject _verb (KESAgentClientTrace trc) =
+  toObject verb (KESAgentClientTrace trc) =
     mconcat [ "kind" .= String "KESAgentClientTrace"
-            , "trace" .= String (pack $ show trc)
+            , "trace" .= toObject verb trc
             ]
 
 instance HasPrivacyAnnotation KESAgentClientTrace where
@@ -1886,7 +1887,51 @@ instance HasPrivacyAnnotation KESAgentClientTrace where
 instance HasSeverityAnnotation KESAgentClientTrace where
   getSeverityAnnotation = \case
     KESAgentClientException{}       -> Error
-    KESAgentClientTrace{}       -> Notice
+    KESAgentClientTrace{}       -> Info
 
 instance Transformable Text IO KESAgentClientTrace where
   trTransformer = trStructured
+
+instance ToObject Agent.ServiceClientTrace where
+  toObject _dtal = \case
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeTrace" ]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeFailed" ]
+    Agent.ServiceClientDriverTrace _sdt ->
+      mconcat [ "kind" .= String "ServiceClientDriverTrace" ]
+    Agent.ServiceClientSocketClosed ->
+      mconcat [ "kind" .= String "ServiceClientSocketClosed" ]
+    Agent.ServiceClientConnected _s ->
+      mconcat [ "kind" .= String "ServiceClientConnected" ]
+    Agent.ServiceClientAttemptReconnect _ _ _ _ ->
+      mconcat [ "kind" .= String "ServiceClientAttemptReconnect" ]
+    Agent.ServiceClientReceivedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientReceivedKey" ]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientDeclinedKey" ]
+    Agent.ServiceClientDroppedKey ->
+      mconcat [ "kind" .= String "ServiceClientDroppedKey" ]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      mconcat [ "kind" .= String "ServiceClientOpCertNumberCheck" ]
+    Agent.ServiceClientAbnormalTermination _s ->
+      mconcat [ "kind" .= String "ServiceClientAbnormalTermination" ]
+    Agent.ServiceClientStopped ->
+      mconcat [ "kind" .= String "ServiceClientStopped" ]
+
+instance HasPrivacyAnnotation Agent.ServiceClientTrace where
+
+instance HasSeverityAnnotation Agent.ServiceClientTrace where
+  getSeverityAnnotation = \case
+    Agent.ServiceClientVersionHandshakeTrace{} -> Debug
+    Agent.ServiceClientVersionHandshakeFailed{} -> Error
+    Agent.ServiceClientDriverTrace{} -> Debug
+    Agent.ServiceClientSocketClosed{} -> Info
+    Agent.ServiceClientConnected{} -> Info
+    Agent.ServiceClientAttemptReconnect{} -> Info
+    Agent.ServiceClientReceivedKey{} -> Info
+    Agent.ServiceClientDeclinedKey{} -> Info
+    Agent.ServiceClientDroppedKey{} -> Info
+    Agent.ServiceClientOpCertNumberCheck{} -> Debug
+    Agent.ServiceClientAbnormalTermination{} -> Error
+    Agent.ServiceClientStopped{} -> Info

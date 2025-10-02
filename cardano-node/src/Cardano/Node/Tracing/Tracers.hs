@@ -333,6 +333,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "CSJ"]
     configureTracers configReflection trConfig [consensusCsjTr]
 
+    !consensusKesAgentTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "KESAgent"]
+    configureTracers configReflection trConfig [consensusKesAgentTr]
+
     !consensusDbfTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "DevotedBlockFetch"]
@@ -384,6 +389,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusCsjTr
       , Consensus.dbfTracer = Tracer $
           traceWith consensusDbfTr
+      , Consensus.kesAgentTracer = Tracer $
+          traceWith consensusKesAgentTr
       }
 
 mkNodeToClientTracers :: forall blk.
