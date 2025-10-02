@@ -661,13 +661,14 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
     , pncChainSyncIdleTimeout     = mempty
 
-    , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 (Ouroboros.defaultDeadlineTargets _))
-    , pncDeadlineTargetOfKnownPeers                = Last (Just $ targetNumberOfKnownPeers                Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfEstablishedPeers          = Last (Just $ targetNumberOfEstablishedPeers          Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfActivePeers               = Last (Just $ targetNumberOfActivePeers               Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just $ targetNumberOfKnownBigLedgerPeers       Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just $ targetNumberOfActiveBigLedgerPeers      Ouroboros.defaultDeadlineTargets)
+    -- these targets are set properly in makeNodeConfiguration below
+    , pncDeadlineTargetOfRootPeers                 = mempty
+    , pncDeadlineTargetOfKnownPeers                = mempty
+    , pncDeadlineTargetOfEstablishedPeers          = mempty
+    , pncDeadlineTargetOfActivePeers               = mempty
+    , pncDeadlineTargetOfKnownBigLedgerPeers       = mempty
+    , pncDeadlineTargetOfEstablishedBigLedgerPeers = mempty
+    , pncDeadlineTargetOfActiveBigLedgerPeers      = mempty
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultDeadlineTargets
 
     , pncSyncTargetOfRootPeers                     = Last (Just $ targetNumberOfRootPeers                 Cardano.defaultSyncTargets)
@@ -675,7 +676,7 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfEstablishedPeers              = Last (Just $ targetNumberOfEstablishedPeers          Cardano.defaultSyncTargets)
     , pncSyncTargetOfActivePeers                   = Last (Just $ targetNumberOfActivePeers               Cardano.defaultSyncTargets)
     , pncSyncTargetOfKnownBigLedgerPeers           = Last (Just $ targetNumberOfKnownBigLedgerPeers       Cardano.defaultSyncTargets)
-    , pncSyncTargetOfEstablishedBigLedgerPeers     = Last (Just $ targetNumberOfEstablishedBigLedgerPeers  Cardano.defaultSyncTargets)
+    , pncSyncTargetOfEstablishedBigLedgerPeers     = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Cardano.defaultSyncTargets)
     , pncSyncTargetOfActiveBigLedgerPeers          = Last (Just $ targetNumberOfActiveBigLedgerPeers      Cardano.defaultSyncTargets)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultSyncTargets
 
@@ -709,27 +710,30 @@ makeNodeConfiguration pnc = do
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
 
-  ncDeadlineTargetOfRootPeers <-
-    lastToEither "Missing TargetNumberOfRootPeers"
-    $ pncDeadlineTargetOfRootPeers pnc
-  ncDeadlineTargetOfKnownPeers <-
-    lastToEither "Missing TargetNumberOfKnownPeers"
-    $ pncDeadlineTargetOfKnownPeers pnc
-  ncDeadlineTargetOfEstablishedPeers <-
-    lastToEither "Missing TargetNumberOfEstablishedPeers"
-    $ pncDeadlineTargetOfEstablishedPeers pnc
-  ncDeadlineTargetOfActivePeers <-
-    lastToEither "Missing TargetNumberOfActivePeers"
-    $ pncDeadlineTargetOfActivePeers pnc
-  ncDeadlineTargetOfKnownBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfKnownBigLedgerPeers"
-    $ pncDeadlineTargetOfKnownBigLedgerPeers pnc
-  ncDeadlineTargetOfEstablishedBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfEstablishedBigLedgerPeers"
-    $ pncDeadlineTargetOfEstablishedBigLedgerPeers pnc
-  ncDeadlineTargetOfActiveBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
-    $ pncDeadlineTargetOfActiveBigLedgerPeers pnc
+  let PeerSelectionTargets {
+        targetNumberOfRootPeers, targetNumberOfKnownPeers,
+        targetNumberOfEstablishedPeers, targetNumberOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers, targetNumberOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers
+        } = Ouroboros.defaultDeadlineTargets $ if hasProtocolFile protocolFiles
+              then BlockProducer else Relay
+      (<>!) defaults override = fromJust . getLast $ pure defaults <> override
+
+      ncDeadlineTargetOfRootPeers =
+        targetNumberOfRootPeers <>! pncDeadlineTargetOfRootPeers pnc
+      ncDeadlineTargetOfKnownPeers =
+        targetNumberOfKnownPeers <>! pncDeadlineTargetOfKnownPeers pnc
+      ncDeadlineTargetOfEstablishedPeers =
+        targetNumberOfEstablishedPeers <>! pncDeadlineTargetOfEstablishedPeers pnc
+      ncDeadlineTargetOfActivePeers =
+        targetNumberOfActivePeers <>! pncDeadlineTargetOfActivePeers pnc
+      ncDeadlineTargetOfKnownBigLedgerPeers =
+        targetNumberOfKnownBigLedgerPeers <>! pncDeadlineTargetOfKnownBigLedgerPeers pnc
+      ncDeadlineTargetOfEstablishedBigLedgerPeers =
+        targetNumberOfEstablishedBigLedgerPeers <>! pncDeadlineTargetOfEstablishedBigLedgerPeers pnc
+      ncDeadlineTargetOfActiveBigLedgerPeers =
+        targetNumberOfActiveBigLedgerPeers <>! pncDeadlineTargetOfActiveBigLedgerPeers pnc
+
   ncSyncTargetOfRootPeers <-
     lastToEither "Missing SyncTargetNumberOfRootPeers"
     $ pncSyncTargetOfRootPeers pnc
