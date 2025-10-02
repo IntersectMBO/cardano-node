@@ -82,7 +82,6 @@ import           Ouroboros.Network.Diffusion.Types (DiffusionTracer)
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
@@ -556,21 +555,6 @@ docTracersFirstPhase condConfigFileName = do
     dtLocalMuxTrDoc <- documentTracer (dtLocalMuxTr ::
       Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace))
 
-    dtHandshakeTr   <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Handshake", "Remote"]
-    configureTracers configReflection trConfig [dtHandshakeTr]
-    dtHandshakeTrDoc <- documentTracer (dtHandshakeTr ::
-      Logging.Trace IO (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion))
-
-    dtLocalHandshakeTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                 ["Net", "Handshake", "Local"]
-    configureTracers configReflection trConfig [dtLocalHandshakeTr]
-    dtLocalHandshakeTrDoc <- documentTracer (dtLocalHandshakeTr ::
-      Logging.Trace IO
-        (NtC.HandshakeTr LocalAddress NtC.NodeToClientVersion))
-
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Startup", "DiffusionInit"]
@@ -768,8 +752,6 @@ docTracersFirstPhase condConfigFileName = do
 -- Diffusion
             <> dtMuxTrDoc
             <> dtLocalMuxTrDoc
-            <> dtHandshakeTrDoc
-            <> dtLocalHandshakeTrDoc
             <> dtDiffusionInitializationTrDoc
             <> dtLedgerPeersTrDoc
 -- DiffusionTracersExtra P2P

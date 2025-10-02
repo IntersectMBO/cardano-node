@@ -101,12 +101,12 @@ import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
 import           Data.Bifunctor (Bifunctor (first))
-import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
 import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (Text, pack)
+import           Data.Typeable
 import qualified Network.Mux as Mux
 import           Network.Socket (SockAddr (..))
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
@@ -255,6 +255,14 @@ instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
     Mux.TraceTerminating {} -> Debug
     Mux.TraceStopping -> Debug
     Mux.TraceStopped -> Debug
+
+instance HasPrivacyAnnotation (Mux.WithBearer peer Mux.ChannelTrace)
+instance HasSeverityAnnotation (Mux.WithBearer peer Mux.ChannelTrace) where
+  getSeverityAnnotation (Mux.WithBearer _ ev) = case ev of
+    Mux.TraceChannelRecvStart {} -> Debug
+    Mux.TraceChannelRecvEnd   {} -> Debug
+    Mux.TraceChannelSendStart {} -> Debug
+    Mux.TraceChannelSendEnd   {} -> Debug
 
 instance HasPrivacyAnnotation (Mux.WithBearer peer Mux.BearerTrace)
 instance HasSeverityAnnotation (Mux.WithBearer peer Mux.BearerTrace) where
@@ -466,17 +474,6 @@ instance Transformable Text IO (Diffusion.DiffusionTracer RemoteAddress LocalAdd
 instance HasTextFormatter (Diffusion.DiffusionTracer RemoteAddress LocalAddress) where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
-  trTransformer = trStructuredText
-instance HasTextFormatter (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
-  formatText a _ = pack (show a)
-
-
-instance Transformable Text IO (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
-  trTransformer = trStructuredText
-instance HasTextFormatter (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
-  formatText a _ = pack (show a)
-
 
 instance Transformable Text IO NtN.AcceptConnectionsPolicyTrace where
   trTransformer = trStructuredText
@@ -591,11 +588,15 @@ instance HasTextFormatter TraceLedgerPeers where
   formatText _ = pack . show . toList
 
 
-instance (Show peer, ToObject peer)
-      => Transformable Text IO (Mux.WithBearer peer Mux.Trace) where
+instance ( Show peer
+         , Show tr
+         , HasPrivacyAnnotation (Mux.WithBearer peer tr)
+         , HasSeverityAnnotation (Mux.WithBearer peer tr)
+         , ToObject (Mux.WithBearer peer tr))
+      => Transformable Text IO (Mux.WithBearer peer tr) where
   trTransformer = trStructuredText
-instance (Show peer)
-      => HasTextFormatter (Mux.WithBearer peer Mux.Trace) where
+instance (Show peer, Show tr)
+      => HasTextFormatter (Mux.WithBearer peer tr) where
   formatText (Mux.WithBearer peer ev) _o =
         "Bearer on " <> pack (show peer)
      <> " event: " <> pack (show ev)
@@ -1042,18 +1043,6 @@ instance (Show ntnAddr, Show ntcAddr) => ToObject (Diffusion.DiffusionTracer ntn
     , "message" .= String (pack (show config))
     ]
 
-instance ToObject (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
-  toObject _verb (Mux.WithBearer b ev) =
-    mconcat [ "kind" .= String "LocalHandshakeTrace"
-             , "bearer" .= show b
-             , "event" .= show ev ]
-
-
-instance ToObject (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
-  toObject _verb (Mux.WithBearer b ev) =
-    mconcat [ "kind" .= String "HandshakeTrace"
-             , "bearer" .= show b
-             , "event" .= show ev ]
 
 instance ToObject NtN.AcceptConnectionsPolicyTrace where
   toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
@@ -1391,9 +1380,9 @@ instance ToObject TraceLedgerPeers where
       ]
 
 
-instance ToObject peer => ToObject (Mux.WithBearer peer Mux.Trace) where
+instance (Typeable tr, ToObject peer, Show tr) => ToObject (Mux.WithBearer peer tr) where
   toObject verb (Mux.WithBearer b ev) =
-    mconcat [ "kind" .= String "Mux.Trace"
+    mconcat [ "kind" .= (show . typeOf $ ev)
              , "bearer" .= toObject verb b
              , "event" .= show ev ]
 
