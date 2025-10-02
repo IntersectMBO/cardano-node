@@ -510,20 +510,40 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Net", "Mux", "Remote"]
     configureTracers configReflection trConfig [dtMuxTr]
 
+    !dtChannelTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Remote", "Channel"]
+    configureTracers configReflection trConfig [dtChannelTracer]
+
+    !dtBearerTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Remote", "Bearer"]
+    configureTracers configReflection trConfig [dtBearerTracer]
+
+    !dtHandshakeTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Handshake", "Remote"]
+    configureTracers configReflection trConfig [dtHandshakeTracer]
+
     !dtLocalMuxTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Mux", "Local"]
     configureTracers configReflection trConfig [dtLocalMuxTr]
 
-    !dtHandshakeTr   <-  mkCardanoTracer
+    !dtLocalChannelTracer <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Net", "Handshake", "Remote"]
-    configureTracers configReflection trConfig [dtHandshakeTr]
+                ["Net", "Mux", "Local", "Channel"]
+    configureTracers configReflection trConfig [dtLocalChannelTracer]
 
-    !dtLocalHandshakeTr  <-  mkCardanoTracer
+    !dtLocalBearerTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Local", "Bearer"]
+    configureTracers configReflection trConfig [dtLocalBearerTracer]
+
+    !dtLocalHandshakeTracer <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Handshake", "Local"]
-    configureTracers configReflection trConfig [dtLocalHandshakeTr]
+    configureTracers configReflection trConfig [dtLocalHandshakeTracer]
 
     !dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -623,12 +643,20 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     pure $ Diffusion.Tracers
        { Diffusion.dtMuxTracer = Tracer $
            traceWith dtMuxTr
+       , Diffusion.dtChannelTracer = Tracer $
+           traceWith dtChannelTracer
+       , Diffusion.dtBearerTracer = Tracer $
+           traceWith dtBearerTracer
+       , Diffusion.dtHandshakeTracer = Tracer $
+           traceWith dtHandshakeTracer
        , Diffusion.dtLocalMuxTracer = Tracer $
            traceWith dtLocalMuxTr
-       , Diffusion.dtHandshakeTracer = Tracer $
-           traceWith dtHandshakeTr
+       , Diffusion.dtLocalChannelTracer = Tracer $
+           traceWith dtLocalChannelTracer
+       , Diffusion.dtLocalBearerTracer = Tracer $
+           traceWith dtLocalBearerTracer
        , Diffusion.dtLocalHandshakeTracer = Tracer $
-           traceWith dtLocalHandshakeTr
+           traceWith dtLocalHandshakeTracer
        , Diffusion.dtDiffusionTracer = Tracer $
            traceWith dtDiffusionInitializationTr
        , Diffusion.dtTraceLocalRootPeersTracer = Tracer $

@@ -83,6 +83,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.V2.Args
 import           Ouroboros.Consensus.Util.Args
 import           Ouroboros.Consensus.Util.Orphans ()
 
+import           Cardano.Network.ConsensusMode
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import qualified Cardano.Network.Diffusion.Configuration as Configuration
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
@@ -426,7 +427,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
                          $ Proxy @blk
                          ))
 
-  withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $
+  withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
               (StartupP2PInfo (ncDiffusionMode nc))
     nt@TopologyP2P.RealNodeTopology
@@ -494,6 +495,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
               ledgerPeerSnapshotPathVar
             void $ updateLedgerPeerSnapshot
               (startupTracer tracers)
+              nc
               (readTVar ledgerPeerSnapshotPathVar)
               (readTVar useLedgerVar)
               (writeTVar ledgerPeerSnapshotVar)
@@ -555,22 +557,17 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
           , srnTraceChainDB                 = chainDBTracer tracers
           , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-          , srnChainSyncTimeout             = customizeChainSyncTimeout
+          , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
           , srnSnapshotPolicyArgs           = snapshotPolicyArgs
           , srnQueryBatchSize               = queryBatchSize
           , srnLdbFlavorArgs                = selectorToArgs ldbBackend
           }
  where
-  customizeChainSyncTimeout :: Maybe (IO ChainSyncTimeout)
+  customizeChainSyncTimeout :: ChainSyncIdleTimeout
   customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
-    NoTimeoutOverride -> Nothing
-    TimeoutOverride t -> Just $ do
-      cst <- Configuration.defaultChainSyncTimeout
-      pure $ case t of
-        0 ->
-          cst { idleTimeout = Nothing }
-        _ ->
-          cst { idleTimeout = Just t }
+    NoTimeoutOverride -> Configuration.defaultChainSyncIdleTimeout
+    TimeoutOverride t | t == 0    -> ChainSyncNoIdleTimeout
+                      | otherwise -> ChainSyncIdleTimeout t
 
   logStartupWarnings :: IO ()
   logStartupWarnings = do

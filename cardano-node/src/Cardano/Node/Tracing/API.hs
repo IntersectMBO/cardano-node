@@ -10,7 +10,7 @@ module Cardano.Node.Tracing.API
 
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
-import           Cardano.Node.Configuration.NodeAddress (File (..), PortNumber)
+import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
@@ -109,7 +109,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
     :: TraceConfig
     -> IO ( IO ()
           , IO (Maybe String)
-          , Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO
+          , Tracers RemoteAddress LocalAddress blk IO
           )
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
@@ -127,7 +127,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
         then do
           -- TODO: check if this is the correct way to use withIOManager
           (forwardSink, dpStore, kickoffForwarder) <- withIOManager $ \iomgr -> do
-            let tracerSocketMode :: Maybe (Net.HowToConnect, ForwarderMode)
+            let tracerSocketMode :: Maybe (HowToConnect, ForwarderMode)
                 tracerSocketMode = ncTraceForwardSocket nc
 
                 forwardingConf :: TraceOptionForwarder

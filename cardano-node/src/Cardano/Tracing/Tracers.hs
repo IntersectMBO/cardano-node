@@ -376,8 +376,12 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
    diffusionTracers :: Cardano.Diffusion.CardanoTracers IO
    diffusionTracers = Cardano.Diffusion.Tracers
      { Diffusion.dtMuxTracer            = muxTracer
+     , Diffusion.dtChannelTracer        = channelTracer
+     , Diffusion.dtBearerTracer         = bearerTracer
      , Diffusion.dtHandshakeTracer      = handshakeTracer
      , Diffusion.dtLocalMuxTracer       = localMuxTracer
+     , Diffusion.dtLocalChannelTracer   = localChannelTracer
+     , Diffusion.dtLocalBearerTracer    = localBearerTracer
      , Diffusion.dtLocalHandshakeTracer = localHandshakeTracer
      , Diffusion.dtDiffusionTracer      = initializationTracer
      , Diffusion.dtTraceLocalRootPeersTracer =
@@ -449,8 +453,16 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
    verb = traceVerbosity trSel
    muxTracer =
      tracerOnOff (traceMux trSel) verb "Mux" tr
+   channelTracer =
+     tracerOnOff (traceMux trSel) verb "MuxChannel" tr
+   bearerTracer =
+     tracerOnOff (traceMux trSel) verb "MuxBearerTracer" tr
    localMuxTracer =
      tracerOnOff (traceLocalMux trSel) verb "MuxLocal" tr
+   localChannelTracer =
+     tracerOnOff (traceMux trSel) verb "LocalMuxChannel" tr
+   localBearerTracer =
+     tracerOnOff (traceMux trSel) verb "LocalMuxBearerTracer" tr
    localHandshakeTracer =
      tracerOnOff (traceLocalHandshake trSel) verb "LocalHandshake" tr
    handshakeTracer =

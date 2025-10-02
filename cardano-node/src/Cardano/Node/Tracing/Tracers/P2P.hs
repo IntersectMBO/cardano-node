@@ -1226,6 +1226,10 @@ instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) 
     mconcat [ "kind" .= String "AcquireConnectionError"
             , "error" .= displayException exception
             ]
+  forMachine _dtal (PeerHotDuration connId dt) =
+    mconcat [ "kind" .= String "PeerHotDuration"
+            , "connectionId" .= toJSON connId
+            , "time" .= show dt]
   forHuman = pack . show
 
 instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
@@ -1234,12 +1238,14 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
     namespaceFor PeerMonitoringError {} = Namespace [] ["MonitoringError"]
     namespaceFor PeerMonitoringResult {} = Namespace [] ["MonitoringResult"]
     namespaceFor AcquireConnectionError {} = Namespace [] ["ConnectionError"]
+    namespaceFor PeerHotDuration {} = Namespace [] ["PeerHotDuration"]
 
     severityFor (Namespace _ ["StatusChanged"]) _ = Just Info
     severityFor (Namespace _ ["StatusChangeFailure"]) _ = Just Error
     severityFor (Namespace _ ["MonitoringError"]) _ = Just Error
     severityFor (Namespace _ ["MonitoringResult"]) _ = Just Debug
     severityFor (Namespace _ ["ConnectionError"]) _ = Just Error
+    severityFor (Namespace _ ["PeerHotDuration"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["StatusChanged"]) = Just
@@ -1252,6 +1258,8 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
       ""
     documentFor (Namespace _ ["ConnectionError"]) = Just
       ""
+    documentFor (Namespace _ ["PeerHotDuration"]) = Just
+      "Reports how long the outbound connection was in hot state"
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -1260,6 +1268,7 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
       , Namespace [] ["MonitoringError"]
       , Namespace [] ["MonitoringResult"]
       , Namespace [] ["ConnectionError"]
+      , Namespace [] ["PeerHotDuration"]
       ]
 
 --------------------------------------------------------------------------------
