@@ -208,7 +208,7 @@ data NodeProtocolConfiguration =
     NodeShelleyProtocolConfiguration
     NodeAlonzoProtocolConfiguration
     NodeConwayProtocolConfiguration
-    NodeDijkstraProtocolConfiguration
+    (Maybe NodeDijkstraProtocolConfiguration)
     NodeHardForkProtocolConfiguration
     NodeCheckpointsConfiguration
   deriving (Eq, Show)
@@ -443,7 +443,7 @@ instance AdjustFilePaths NodeProtocolConfiguration where
       (adjustFilePaths f pcs)
       (adjustFilePaths f pca)
       (adjustFilePaths f pcc)
-      (adjustFilePaths f pcd)
+      (adjustFilePaths f <$> pcd)
       pch
       (adjustFilePaths f pccp)
 
