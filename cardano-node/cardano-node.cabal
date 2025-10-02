@@ -175,6 +175,7 @@ library
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} >= 1.5
                       , iohk-monitoring ^>= 0.2
+                      , kes-agent ^>=0.2
                       , microlens
                       , mmap
                       , network-mux
@@ -188,9 +189,9 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.27
-                      , ouroboros-consensus-cardano ^>= 0.25
-                      , ouroboros-consensus-diffusion ^>= 0.23
+                      , ouroboros-consensus ^>= 0.28
+                      , ouroboros-consensus-cardano ^>= 0.26
+                      , ouroboros-consensus-diffusion ^>= 0.24
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.16
                       , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.3
