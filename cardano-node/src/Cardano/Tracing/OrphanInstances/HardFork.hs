@@ -22,7 +22,7 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
-                   ForgeStateUpdateError, BlockSupportsProtocol (tiebreakerView))
+                   ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
@@ -46,7 +46,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToCli
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, SelectView (svTiebreakerView, svBlockNo), ConsensusProtocol (TiebreakerView))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import Ouroboros.Consensus.Cardano (ProtocolByron)
 
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as Base16
