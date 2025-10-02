@@ -91,6 +91,9 @@ instance AE.ToJSON ConfigOptionRep where
             . consMay "backends" backends
             . consMay "maxFrequency" maxFrequency
 
+instance AE.FromJSON TraceConfig where
+  parseJSON json = representationToConfig <$> AE.parseJSON json
+
 instance AE.ToJSON TraceConfig where
   toJSON tc = toJSON (configToRepresentation tc)
 
@@ -128,9 +131,14 @@ parseRepresentation bs = transform (decodeEither' bs)
          Either ParseException ConfigRepresentation
          -> Either ParseException TraceConfig
     transform (Left e)   = Left e
-    transform (Right rl) = Right $ transform' emptyTraceConfig rl
-    transform' :: TraceConfig -> ConfigRepresentation -> TraceConfig
-    transform' TraceConfig {tcOptions=to'} cr =
+    transform (Right rl) = Right $ representationToConfig rl
+
+-- | Convert from external to internal representation
+representationToConfig :: ConfigRepresentation -> TraceConfig
+representationToConfig = transform emptyTraceConfig
+  where
+    transform :: TraceConfig -> ConfigRepresentation -> TraceConfig
+    transform TraceConfig {tcOptions=to'} cr =
       let to''  = List.foldl' (\ tci (nsp, opts') ->
                               let ns' = split (=='.') nsp
                                   ns'' = if ns' == [""] then [] else ns'
@@ -151,8 +159,6 @@ parseRepresentation bs = transform (decodeEither' bs)
           (traceOptionPeerFrequency cr)
           (traceOptionResourceFrequency cr)
           (traceOptionLedgerMetricsFrequency cr)
-
-
     -- | Convert from external to internal representation
     toConfigOptions :: ConfigOptionRep -> [ConfigOption]
     toConfigOptions ConfigOptionRep {..} =
@@ -161,7 +167,6 @@ parseRepresentation bs = transform (decodeEither' bs)
         , ConfDetail <$> detail
         , ConfBackend <$> backends
         , ConfLimiter <$> maxFrequency]
-
 
 -- | Convert from internal to external representation
 configToRepresentation :: TraceConfig -> ConfigRepresentation
@@ -196,8 +201,3 @@ configToRepresentation traceConfig =
       , backends     = listToMaybe [d | ConfBackend d <- opts]
       , maxFrequency = listToMaybe [d | ConfLimiter d <- opts]
       }
-
-
-
-
-
