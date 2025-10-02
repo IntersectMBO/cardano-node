@@ -70,6 +70,7 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
                    NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Node (RunNodeArgs (..),
                    SnapshotPolicyArgs (..), StdRunNodeArgs (..))
@@ -241,15 +242,13 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                   (getLast (pncConfigFile cmdPc))
   case ncTraceConfig nc of
     TraceDispatcher{} -> do
-      -- TODO fix
-      blockForging <- snd (Api.protocolInfo runP)
+      blockForging <- snd (Api.protocolInfo runP) nullTracer
       tracers <-
         initTraceDispatcher
           nc
           p
           networkMagic
           nodeKernelData
-          -- TODO fix
           (null blockForging)
 
       startupInfo <- getStartupInfo nc p fp
@@ -257,7 +256,6 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
       traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
       -- sends initial BlockForgingUpdate
       let isNonProducing = ncStartAsNonProducingNode nc
-      -- TODO fix
       traceWith (startupTracer tracers)
                 (BlockForgingUpdate (if isNonProducing || null blockForging
                                       then DisabledBlockForging
@@ -301,8 +299,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
 
       traceWith (nodeVersionTracer tracers) getNodeVersion
       let isNonProducing = ncStartAsNonProducingNode nc
-      -- TODO fix
-      blockForging <- snd (Api.protocolInfo runP)
+      blockForging <- snd (Api.protocolInfo runP) nullTracer
       traceWith (startupTracer tracers)
                 (BlockForgingUpdate (if isNonProducing || null blockForging
                                       then DisabledBlockForging
@@ -472,8 +469,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , rnProtocolInfo   = pInfo
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
-              -- TODO fix
-              blockForging <- snd (Api.protocolInfo runP)
+              blockForging <- snd (Api.protocolInfo runP) (Consensus.kesAgentTracer $ consensusTracers tracers)
 
               unless (ncStartAsNonProducingNode nc) $
                 setBlockForging nodeKernel blockForging
@@ -546,7 +542,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
         nodeArgs {
             rnNodeKernelHook = \registry nodeKernel -> do
               -- reinstall `SIGHUP` handler
-              installSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
+              installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers) blockType nc nodeKernel
                                    localRootsVar publicRootsVar useLedgerVar useBootstrapVar
                                    ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
               rnNodeKernelHook nodeArgs registry nodeKernel
@@ -639,6 +635,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
 -- | The P2P SIGHUP handler can update block forging & reconfigure network topology.
 --
 installSigHUPHandler :: Tracer IO (StartupTrace blk)
+                     -> Tracer IO KESAgentClientTrace
                      -> Api.BlockType blk
                      -> NodeConfiguration
                      -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
@@ -650,14 +647,14 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO (Maybe LedgerPeerSnapshot)
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
+installSigHUPHandler startupTracer kesAgentTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
                         useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
-      updateBlockForging startupTracer blockType nodeKernel nc
+      updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
@@ -673,11 +670,12 @@ installSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publicR
 
 #ifdef UNIX
 updateBlockForging :: Tracer IO (StartupTrace blk)
+                   -> Tracer IO KESAgentClientTrace
                    -> Api.BlockType blk
                    -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                    -> NodeConfiguration
                    -> IO ()
-updateBlockForging startupTracer blockType nodeKernel nc = do
+updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
                                        (ncProtocolConfig nc)
                                        (Just (ncProtocolFiles nc))
@@ -693,8 +691,7 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
-          -- TODO fix
-          blockForging <- snd (Api.protocolInfo runP')
+          blockForging <- snd (Api.protocolInfo runP') kesAgentTracer
           traceWith startupTracer
                     (BlockForgingUpdate (if null blockForging
                                           then DisabledBlockForging
