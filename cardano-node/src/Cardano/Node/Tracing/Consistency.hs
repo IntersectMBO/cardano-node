@@ -265,9 +265,21 @@ getAllNamespaces =
         dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
+        dtMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Bearer"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Channel"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
         dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace)])
+        dtLocalMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Bearer"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
         dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "Handshake", "Remote"])
                             (allNamespaces :: [Namespace
@@ -412,7 +424,11 @@ getAllNamespaces =
             <> txSubmission2NS
 -- Diffusion
             <> dtMuxNS
+            <> dtMuxBearerNS
+            <> dtMuxChannelNS
             <> dtLocalMuxNS
+            <> dtLocalMuxBearerNS
+            <> dtLocalMuxChannelNS
             <> dtHandshakeNS
             <> dtLocalHandshakeNS
             <> dtDiffusionInitializationNS
