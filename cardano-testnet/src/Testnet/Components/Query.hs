@@ -39,7 +39,7 @@ module Testnet.Components.Query
   , getProtocolParams
   , getGovActionLifetime
   , getKeyDeposit
-  , getDelegationState
+  , getAccountsStates
   , getTxIx
   ) where
 
@@ -50,12 +50,11 @@ import qualified Cardano.Api.UTxO as Utxo
 
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Api.State.Query as SQ
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
-import qualified Cardano.Ledger.UMap as L
-import qualified Cardano.Ledger.Api.State.Query as SQ
-import qualified Data.Set as Set
+import qualified Cardano.Ledger.State as L
 
 import           Prelude
 
@@ -69,6 +68,7 @@ import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
 import           Data.Maybe
 import           Data.Ord (Down (..))
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
@@ -412,7 +412,7 @@ checkDRepState epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe f =
       $ \(AnyNewEpochState actualEra newEpochState _) _slotNumber _blockNumber -> do
         Refl <- either error pure $ assertErasEqual sbe actualEra
         let dreps =
-              shelleyBasedEraConstraints sbe 
+              shelleyBasedEraConstraints sbe
                 $ SQ.queryDRepState newEpochState Set.empty
         case f dreps of
           Nothing -> pure ConditionNotMet
@@ -467,7 +467,7 @@ getTreasuryValue
   -> m L.Coin -- ^ The current value of the treasury
 getTreasuryValue epochStateView = withFrozenCallStack $ do
   AnyNewEpochState _ newEpochState _ <- getEpochState epochStateView
-  pure $ newEpochState ^. L.nesEpochStateL . L.epochStateTreasuryL
+  pure $ newEpochState ^. L.nesEpochStateL . L.treasuryL
 
 -- | Obtain minimum deposit amount for governance action from node
 getMinGovActionDeposit
@@ -590,19 +590,21 @@ getKeyDeposit epochStateView ceo = conwayEraOnwardsConstraints ceo $ do
                       . L.ppKeyDepositL
 
 
--- | Returns delegation state from the epoch state.
-getDelegationState :: (H.MonadAssertion m, MonadTest m, MonadIO m)
+-- | Returns staking accounts state
+getAccountsStates :: (H.MonadAssertion m, MonadTest m, MonadIO m)
   => EpochStateView
-  -> m L.StakeCredentials
-getDelegationState epochStateView = do
+  -> ShelleyBasedEra era
+  -> m (Map (L.Credential L.Staking) (L.AccountState (ShelleyLedgerEra era)))
+getAccountsStates epochStateView sbe' = shelleyBasedEraConstraints sbe' $ do
   AnyNewEpochState sbe newEpochState _ <- getEpochState epochStateView
-  let pools = shelleyBasedEraConstraints sbe $ newEpochState
-                ^. L.nesEsL
-                 . L.esLStateL
-                 . L.lsCertStateL
-                 . L.certDStateL
-
-  pure $ L.toStakeCredentials pools
+  Refl <- H.nothingFail $ testEquality sbe sbe'
+  pure $ newEpochState
+          ^. L.nesEsL
+           . L.esLStateL
+           . L.lsCertStateL
+           . L.certDStateL
+           . L.accountsL
+           . L.accountsMapL
 
 -- | Returns the transaction index of a transaction with a given amount and ID.
 getTxIx :: forall m era. HasCallStack

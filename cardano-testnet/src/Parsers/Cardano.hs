@@ -5,20 +5,16 @@ module Parsers.Cardano
   , cmdCreateEnv
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra(..))
-import           Cardano.CLI.EraBased.Common.Option (bounded, command')
-import           Cardano.Api ( AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), Eon(..)
-                             , forEraInEonMaybe, convert, ShelleyBasedEra(..), AnyCardanoEra(..))
-import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), ShelleyBasedEra (..), Convert (..), Eon, AnyCardanoEra (..), forEraInEonMaybe)
+import           Cardano.Api (AnyShelleyBasedEra (..))
 
-import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
+
 import           Prelude
 
-import           Control.Applicative((<|>), optional)
+import           Control.Applicative (optional, (<|>))
 import           Data.Default.Class (def)
 import qualified Data.List as L
-import           Data.Maybe (fromMaybe, maybeToList)
+import           Data.Maybe
 import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
@@ -27,8 +23,6 @@ import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
-import qualified Options.Applicative as Opt
-import Cardano.Prelude (Typeable)
 
 
 optsTestnet :: Parser CardanoTestnetCliOptions
