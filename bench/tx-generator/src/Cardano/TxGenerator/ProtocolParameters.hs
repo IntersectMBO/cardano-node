@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DataKinds #-}
 
 {--
 Due to the changes to "cardano-api" listed below it was decided to move
@@ -32,9 +33,9 @@ where
 
 import           Cardano.Api (AnyPlutusScriptVersion (..), CostModel, ExecutionUnitPrices (..),
                    ExecutionUnits, LedgerProtocolParameters (..),
-                   PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3), PraosNonce,
+                   PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3, PlutusScriptV4), PraosNonce,
                    ProtocolParametersConversionError (..),
-                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraMary, ShelleyBasedEraShelley),
+                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraMary, ShelleyBasedEraShelley, ShelleyBasedEraDijkstra),
                    ShelleyLedgerEra, fromAlonzoCostModels, fromAlonzoExUnits, fromAlonzoPrices,
                    makePraosNonce, toAlonzoCostModels, toAlonzoExUnits, toAlonzoPrices,
                    toLedgerNonce)
@@ -242,6 +243,7 @@ fromPlutusLanguageName :: Plutus.Language -> AnyPlutusScriptVersion
 fromPlutusLanguageName Plutus.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromPlutusLanguageName Plutus.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 fromPlutusLanguageName Plutus.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
+fromPlutusLanguageName Plutus.PlutusV4 = AnyPlutusScriptVersion PlutusScriptV4
 
 instance Aeson.ToJSON ProtocolParameters where
   toJSON ProtocolParameters{..} =
@@ -296,6 +298,7 @@ toPlutusLanguageName :: AnyPlutusScriptVersion -> Plutus.Language
 toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV1) = Plutus.PlutusV1
 toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV2) = Plutus.PlutusV2
 toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV3) = Plutus.PlutusV3
+toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV4) = Plutus.PlutusV4
 
 -- Praos nonce.
 --------------------------------------------------------------------------------
@@ -348,6 +351,7 @@ toLedgerPParams ShelleyBasedEraMary = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAlonzo = toAlonzoPParams
 toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
 toLedgerPParams ShelleyBasedEraConway = toConwayPParams
+toLedgerPParams ShelleyBasedEraDijkstra = toConwayPParams
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
 toShelleyCommonPParams
@@ -396,8 +400,8 @@ toShelleyCommonPParams
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
 toShelleyPParams
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
      )
   => ProtocolParameters
   -> Either ProtocolParametersConversionError (PParams ledgerera)
@@ -517,6 +521,7 @@ fromLedgerPParams ShelleyBasedEraMary = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAlonzo = fromExactlyAlonzoPParams
 fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
 fromLedgerPParams ShelleyBasedEraConway = fromConwayPParams
+fromLedgerPParams ShelleyBasedEraDijkstra = fromConwayPParams
 
 -- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromShelleyCommonPParams
@@ -556,8 +561,8 @@ fromShelleyCommonPParams pp =
 -- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromShelleyPParams
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
      )
   => PParams ledgerera
   -> ProtocolParameters
