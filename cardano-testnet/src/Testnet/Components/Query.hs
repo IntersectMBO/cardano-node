@@ -54,6 +54,8 @@ import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UMap as L
+import qualified Cardano.Ledger.Api.State.Query as SQ
+import qualified Data.Set as Set
 
 import           Prelude
 
@@ -409,12 +411,9 @@ checkDRepState epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe f =
   result <- H.evalIO . runExceptT $ foldEpochState nodeConfigPath socketPath QuickValidation terminationEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState _) _slotNumber _blockNumber -> do
         Refl <- either error pure $ assertErasEqual sbe actualEra
-        let dreps = shelleyBasedEraConstraints sbe newEpochState
-                      ^. L.nesEsL
-                       . L.esLStateL
-                       . L.lsCertStateL
-                       . L.certVStateL
-                       . L.vsDRepsL
+        let dreps =
+              shelleyBasedEraConstraints sbe 
+                $ SQ.queryDRepState newEpochState Set.empty
         case f dreps of
           Nothing -> pure ConditionNotMet
           Just a -> do put $ Just a
@@ -602,7 +601,6 @@ getDelegationState epochStateView = do
                  . L.esLStateL
                  . L.lsCertStateL
                  . L.certDStateL
-                 . L.dsUnifiedL
 
   pure $ L.toStakeCredentials pools
 

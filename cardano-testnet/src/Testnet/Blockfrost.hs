@@ -14,6 +14,7 @@ import           Cardano.Ledger.BaseTypes (EpochInterval, Nonce, NonNegativeInte
                   UnitInterval, ProtVer(..), Version)
 import           Cardano.Ledger.Coin (Coin)
 import           Cardano.Ledger.Core (PParams(..))
+import           Cardano.Ledger.Compactible (toCompactPartial)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis(..))
 import           Cardano.Ledger.Shelley.PParams (ShelleyPParams(..))
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis(..))
@@ -248,7 +249,7 @@ blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') Blockfrost
       , sppMaxTxSize = bfgMaxTxSize
       , sppMaxBHSize = bfgMaxBlockHeaderSize
       , sppKeyDeposit = bfgKeyDeposit
-      , sppPoolDeposit = bfgPoolDeposit
+      , sppPoolDeposit = toCompactPartial bfgPoolDeposit
       , sppEMax = bfgEMax
       , sppNOpt = bfgNOpt
       , sppA0 = bfgA0

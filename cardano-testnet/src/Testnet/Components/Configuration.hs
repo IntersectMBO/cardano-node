@@ -146,10 +146,9 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 getDefaultAlonzoGenesis :: ()
   => HasCallStack
   => MonadTest m
-  => ShelleyBasedEra era
-  -> m AlonzoGenesis
-getDefaultAlonzoGenesis sbe =
-  H.evalEither $ first prettyError (Defaults.defaultAlonzoGenesis sbe)
+  => m AlonzoGenesis
+getDefaultAlonzoGenesis =
+  H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
@@ -181,7 +180,7 @@ createSPOGenesisAndFiles
         { sgSecurityParam = unsafeNonZero 5
         , sgUpdateQuorum = 2
         }
-  alonzoGenesis' <- getDefaultAlonzoGenesis sbe
+  alonzoGenesis' <- getDefaultAlonzoGenesis 
   let conwayGenesis' = Defaults.defaultConwayGenesis
 
   (alonzoGenesis, conwayGenesis, shelleyGenesis) <- resolveOnChainParams onChainParams

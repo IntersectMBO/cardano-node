@@ -89,6 +89,7 @@ library
                       , retry
                       , safe-exceptions
                       , scientific
+                      , stm
                       , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog
