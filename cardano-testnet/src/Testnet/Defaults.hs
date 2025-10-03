@@ -42,7 +42,7 @@ module Testnet.Defaults
   ) where
 
 import           Cardano.Api (AnyShelleyBasedEra (..), CardanoEra (..), File (..),
-                   ShelleyBasedEra (..), pshow, toCardanoEra, unsafeBoundedRational)
+                   ShelleyBasedEra (..), pshow, unsafeBoundedRational)
 import qualified Cardano.Api as Api
 
 import           Cardano.Ledger.Alonzo.Core (PParams (..))
@@ -107,9 +107,9 @@ newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
 
-defaultAlonzoGenesis :: ShelleyBasedEra era -> Either AlonzoGenesisError AlonzoGenesis
-defaultAlonzoGenesis sbe = do
-  let genesis = Api.alonzoGenesisDefaults (toCardanoEra sbe)
+defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
+defaultAlonzoGenesis = do
+  let genesis = Api.alonzoGenesisDefaults
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
@@ -197,6 +197,7 @@ defaultYamlHardforkViaConfig sbe =
         ShelleyBasedEraAlonzo -> ("LastKnownBlockVersion-Major", Aeson.Number 5)
         ShelleyBasedEraBabbage -> ("LastKnownBlockVersion-Major", Aeson.Number 8)
         ShelleyBasedEraConway -> ("LastKnownBlockVersion-Major", Aeson.Number 9)
+        ShelleyBasedEraDijkstra -> ("LastKnownBlockVersion-Major", Aeson.Number 10)
       , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
       , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
       ]
@@ -241,7 +242,17 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
                 , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
                 , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
-                ])
+                ]
+            ShelleyBasedEraDijkstra ->
+                [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+                , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
+                , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
+                , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
+                , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
+                , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
+                , ("TestDijkstraHardForkAtEpoch", Aeson.Number 0)
+                ]
+                )
   -- | Various tracers we can turn on or off
   tracers :: Aeson.KeyMap Aeson.Value
   tracers = Aeson.fromList $ map (bimap Aeson.fromText Aeson.Bool)
@@ -434,6 +445,8 @@ eraToProtocolVersion =
     AnyShelleyBasedEra ShelleyBasedEraBabbage -> mkProtVer (8, 0)
     -- By default start after bootstrap (which is PV9)
     AnyShelleyBasedEra ShelleyBasedEraConway -> mkProtVer (10, 0)
+    -- TODO: is this correct?
+    AnyShelleyBasedEra ShelleyBasedEraDijkstra -> mkProtVer (11, 0)
 
 -- TODO: Expose from cardano-api
 mkProtVer :: (Natural, Natural) -> ProtVer
@@ -443,7 +456,7 @@ mkProtVer (majorProtVer, minorProtVer) =
     Nothing -> error "mkProtVer: invalid protocol version"
 
 ppProtocolVersionL' ::  Lens' (PParams Ledger.ShelleyEra) ProtVer
-ppProtocolVersionL' = Ledger.ppLens . Ledger.hkdProtocolVersionL @Ledger.ShelleyEra @Identity
+ppProtocolVersionL' = Ledger.ppLensHKD . Ledger.hkdProtocolVersionL @Ledger.ShelleyEra @Identity
 
 defaultMainnetTopology :: Topology.NetworkTopology RemoteAddress
 defaultMainnetTopology =

@@ -80,10 +80,10 @@ pingNode networkMagic sprocket = liftIO $ bracket
     Socket.connect sd (Socket.addrAddress peer)
     peerStr <- peerString
 
-    bearer <- getBearer makeSocketBearer sduTimeout nullTracer sd Nothing
+    bearer <- getBearer makeSocketBearer sduTimeout sd Nothing
 
     let versions = supportedNodeToClientVersions networkMagic
-    !_ <- Mux.write bearer timeoutfn $ wrap handshakeNum InitiatorDir (handshakeReq versions doHandshakeQuery)
+    !_ <- Mux.write bearer nullTracer timeoutfn $ wrap handshakeNum InitiatorDir (handshakeReq versions doHandshakeQuery)
     (msg, !_) <- nextMsg bearer timeoutfn handshakeNum
 
     pure $ case CBOR.deserialiseFromBytes handshakeDec msg of
@@ -130,7 +130,7 @@ pingNode networkMagic sprocket = liftIO $ bracket
             -> MiniProtocolNum -- ^ handshake protocol number
             -> IO (LBS.ByteString, Time) -- ^ raw message and timestamp
     nextMsg bearer timeoutfn ptclNum = do
-      (sdu, t_e) <- Mux.read bearer timeoutfn
+      (sdu, t_e) <- Mux.read bearer nullTracer timeoutfn
       if mhNum (msHeader sdu) == ptclNum
         then pure (msBlob sdu, t_e)
         else nextMsg bearer timeoutfn ptclNum
