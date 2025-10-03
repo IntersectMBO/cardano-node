@@ -12,7 +12,6 @@ module Cardano.Benchmarking.OuroborosImports
   , ShelleyGenesis
   , SigningKey
   , SigningKeyFile
-  , StandardShelley
   , NetworkId
   -- , getGenesis
   , makeLocalConnectInfo
@@ -35,7 +34,7 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configCodec)
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..), getNetworkMagic)
 import           Ouroboros.Consensus.Node (ProtocolInfo (..))
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Prelude

@@ -69,6 +69,8 @@ assumeMapCosts _proxy = stepFunction [
       ShelleyBasedEraAlonzo  -> 42
       ShelleyBasedEraBabbage -> 42
       ShelleyBasedEraConway  -> 42
+      -- TODO: check if this is correct!
+      ShelleyBasedEraDijkstra -> 42
 
 -- Bytestring costs are not LINEAR !!
 -- Costs are piecewise linear for payload sizes [0..23] and [24..64].
@@ -141,12 +143,13 @@ mkMetadata size
       else Right $ metadataInEra $ Just metadata
  where
   minSize = case shelleyBasedEra @era of
-    ShelleyBasedEraShelley -> 37
-    ShelleyBasedEraAllegra -> 39
-    ShelleyBasedEraMary    -> 39
-    ShelleyBasedEraAlonzo  -> 39 -- TODO: check minSize for Alonzo
-    ShelleyBasedEraBabbage -> 39 -- TODO: check minSize for Babbage
-    ShelleyBasedEraConway  -> 39 -- TODO: check minSize for Conway
+    ShelleyBasedEraShelley  -> 37
+    ShelleyBasedEraAllegra  -> 39
+    ShelleyBasedEraMary     -> 39
+    ShelleyBasedEraAlonzo   -> 39 -- TODO: check minSize for Alonzo
+    ShelleyBasedEraBabbage  -> 39 -- TODO: check minSize for Babbage
+    ShelleyBasedEraConway   -> 39 -- TODO: check minSize for Conway
+    ShelleyBasedEraDijkstra -> 39 -- TODO: check minSize for Dijkstra
   nettoSize = size - minSize
 
   -- At 24 the CBOR representation changes.

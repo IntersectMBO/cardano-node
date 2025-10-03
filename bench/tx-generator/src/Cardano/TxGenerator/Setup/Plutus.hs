@@ -20,7 +20,6 @@ import           Data.ByteString.Short (ShortByteString)
 import           Data.Int (Int64)
 import           Data.Map.Strict as Map (lookup)
 
-import           Control.Exception (displayException)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Writer (runWriter)
