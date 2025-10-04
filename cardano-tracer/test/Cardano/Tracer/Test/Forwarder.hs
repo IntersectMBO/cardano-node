@@ -27,16 +27,15 @@ import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                   codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake (Handshake, HandshakeArguments (..))
 import qualified Ouroboros.Network.Protocol.Handshake as Handshake
-import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
-                   makeLocalBearer)
-import           Ouroboros.Network.Socket (ConnectToArgs (..),
-                   HandshakeCallbacks (..), SomeResponderApplication (..),
-                   connectToNode, nullNetworkConnectTracers)
+import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
+                   codecHandshake, noTimeLimitsHandshake)
 import qualified Ouroboros.Network.Server.Simple as Server
+import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
+                   makeLocalBearer, makeSocketBearer, socketSnocket)
+import           Ouroboros.Network.Socket (ConnectToArgs (..), HandshakeCallbacks (..),
+                   SomeResponderApplication (..), connectToNode, nullNetworkConnectTracers)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
@@ -48,6 +47,8 @@ import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTr
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor (void)
+import           Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.Text as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
@@ -68,6 +69,7 @@ import           Trace.Forward.Utils.ForwardSink (ForwardSink)
 import           Trace.Forward.Utils.TraceObject
 import           Trace.Forward.Utils.Version (ForwardingVersion (..), ForwardingVersionData (..),
                    forwardingCodecCBORTerm, forwardingVersionCodec)
+
 
 data ForwardersMode = Initiator | Responder
 
@@ -118,7 +120,7 @@ launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
                  (socketSnocket iomgr)
                  makeSocketBearer
                  (Socket.addrAddress listenAddress)
-                 timeLimitsHandshake
+                 Handshake.timeLimitsHandshake
                  (ekgConfig, tfConfig, dpfConfig)
             do \(exception :: SomeException) -> do
                   logTrace $ "launchForwardersSimple': doConnectToAcceptor failure: " ++ show exception
@@ -137,7 +139,7 @@ launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
                  (socketSnocket iomgr)
                  makeSocketBearer
                  (Socket.addrAddress listenAddress)
-                 timeLimitsHandshake
+                 Handshake.timeLimitsHandshake
                  (ekgConfig, tfConfig, dpfConfig)
             do \(exception :: SomeException) -> do
                   logTrace $ "launchForwardersSimple': doListenToAcceptor failure: " ++ show exception
@@ -274,6 +276,7 @@ doListenToAcceptor TestSetup{..}
       address
       HandshakeArguments {
         haHandshakeTracer = nullTracer,
+        haBearerTracer = nullTracer,
         haHandshakeCodec = codecHandshake forwardingVersionCodec,
         haVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
         haAcceptVersion = Handshake.acceptableVersion,
