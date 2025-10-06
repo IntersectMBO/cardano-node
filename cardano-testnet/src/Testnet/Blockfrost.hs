@@ -10,31 +10,31 @@ module Testnet.Blockfrost
   , blockfrostToGenesis
   ) where
 
-import           Cardano.Ledger.BaseTypes (EpochInterval, Nonce, NonNegativeInterval,
-                  UnitInterval, ProtVer(..), Version)
-import           Cardano.Ledger.Coin (Coin)
-import           Cardano.Ledger.Core (PParams(..))
-import           Cardano.Ledger.Compactible (toCompactPartial)
-import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis(..))
-import           Cardano.Ledger.Shelley.PParams (ShelleyPParams(..))
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis(..))
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.Alonzo.PParams (CoinPerWord)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis(..))
-import           Cardano.Ledger.Conway.PParams (UpgradeConwayPParams(..),
-                  PoolVotingThresholds(..), DRepVotingThresholds(..))
-import           Cardano.Ledger.Plutus (CostModel, CostModels, ExUnits(..),
-                  Language(..), Prices(..))
+import           Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, Nonce, ProtVer (..),
+                   UnitInterval, Version)
+import           Cardano.Ledger.Coin (Coin)
+import           Cardano.Ledger.Compactible (toCompactPartial)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
+                   PoolVotingThresholds (..), UpgradeConwayPParams (..))
+import           Cardano.Ledger.Core (PParams (..))
+import           Cardano.Ledger.Plutus (CostModel, CostModels, ExUnits (..), Language (..),
+                   Prices (..))
 import qualified Cardano.Ledger.Plutus.CostModels as CostModels
+import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 
 import           Control.Applicative ((<|>))
+import           Data.Aeson (FromJSON (..), withObject, (.:))
 import qualified Data.Aeson as Aeson
-import           Data.Aeson (FromJSON(..), (.:), withObject)
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Map.Strict as Map
-import           Text.Read (readMaybe)
 import           Data.Scientific (Scientific)
 import           Data.Word (Word16, Word32)
 import           Numeric.Natural (Natural)
+import           Text.Read (readMaybe)
 
 data BlockfrostParams = BlockfrostParams
   { -- Alonzo parameters
@@ -206,7 +206,7 @@ blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') Blockfrost
         { prMem = bfgPriceMem
         , prSteps = bfgPriceSteps
         }
-      , agCostModels = bfgAlonzoCostModels
+      , agCostModels = {- TODO trimCostModelToInitial PlutusV2  -} bfgAlonzoCostModels
       }
 
     -- Conway Params
@@ -237,7 +237,7 @@ blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') Blockfrost
       , ucppDRepDeposit = bfgDRepDeposit
       , ucppDRepActivity = bfgDRepActivity
       , ucppMinFeeRefScriptCostPerByte = bfgMinFeeRevScriptCostPerByte
-      , ucppPlutusV3CostModel = bfgConwayCostModel
+      , ucppPlutusV3CostModel = trimCostModelToInitial PlutusV3 bfgConwayCostModel
       }
     conwayGenesis = conwayGenesis'{cgUpgradePParams=conwayParams}
 
@@ -265,3 +265,14 @@ blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') Blockfrost
       , sppMinPoolCost = bfgMinPoolCost
       }
     shelleyGenesis = shelleyGenesis'{sgProtocolParams=shelleyParams}
+
+-- | Trims cost model to the initial number of parameters. The cost models in geneses can't
+-- have more parameters than the initial number.
+trimCostModelToInitial :: Language -> CostModel -> CostModel
+trimCostModelToInitial lang cm = do
+  let paramsCount = CostModels.costModelInitParamCount lang
+  either (error . ("Testnet.Blockfrost: Cost model trimming failure: " <>) . show) id
+    . CostModels.mkCostModel lang
+    . take paramsCount
+    $ CostModels.getCostModelParams cm
+

@@ -53,19 +53,22 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
+import qualified Cardano.Ledger.Conway.Genesis as Ledger
 import           Cardano.Ledger.Conway.PParams
+import qualified Cardano.Ledger.Conway.PParams as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Plutus as Ledger
+import qualified Cardano.Ledger.Plutus.CostModels as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Node.Configuration.Topology (RemoteAddress (..))
 import qualified Cardano.Node.Configuration.Topology as Topology
-import           Cardano.Node.Configuration.Topology (RemoteAddress(..))
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroups (..),
-                   LocalRootPeersGroup (..), NetworkTopology(..), PublicRootPeers (..),
+import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
+                   LocalRootPeersGroups (..), NetworkTopology (..), PublicRootPeers (..),
                    RootConfig (..))
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Tracing.Config
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers (..))
@@ -95,7 +98,6 @@ import           Numeric.Natural
 import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
-import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -126,7 +128,9 @@ defaultAlonzoGenesis = do
         Just s -> return s
 
 defaultConwayGenesis :: ConwayGenesis
-defaultConwayGenesis =
+defaultConwayGenesis = do
+  -- use the cost model from cardano-api, which is trimmed to the correct number of parameters
+  let ucppPlutusV3CostModel = Ledger.ucppPlutusV3CostModel $ Ledger.cgUpgradePParams Api.conwayGenesisDefaults
   let upPParams :: UpgradeConwayPParams Identity
       upPParams = UpgradeConwayPParams
                     { ucppPoolVotingThresholds = poolVotingThresholds
@@ -138,7 +142,7 @@ defaultConwayGenesis =
                     , ucppDRepDeposit = Coin 1_000_000
                     , ucppDRepActivity = EpochInterval 100
                     , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- FIXME GARBAGE VALUE
-                    , ucppPlutusV3CostModel = testingCostModelV3
+                    , ucppPlutusV3CostModel
                     }
       drepVotingThresholds = DRepVotingThresholds
         { dvtMotionNoConfidence = 0 %! 1
@@ -159,7 +163,7 @@ defaultConwayGenesis =
          , pvtHardForkInitiation = 1 %! 2
          , pvtPPSecurityGroup = 1 %! 2
          }
-  in ConwayGenesis
+  ConwayGenesis
       { cgUpgradePParams = upPParams
       , cgConstitution = DefaultClass.def
       , cgCommittee = DefaultClass.def
