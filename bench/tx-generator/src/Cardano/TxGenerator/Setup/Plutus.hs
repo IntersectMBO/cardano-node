@@ -25,7 +25,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Writer (runWriter)
 
-import           Cardano.CLI.Read (readFileScriptInAnyLang, ScriptDecodeError)
+import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)

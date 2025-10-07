@@ -58,7 +58,6 @@ import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Plutus as Ledger
-import qualified Cardano.Ledger.Plutus.CostModels as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))

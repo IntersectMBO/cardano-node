@@ -23,9 +23,6 @@ import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
-import qualified Options.Applicative as Opt
-import           Cardano.Prelude (Typeable)
-
 
 optsTestnet :: Parser CardanoTestnetCliOptions
 optsTestnet = CardanoTestnetCliOptions
