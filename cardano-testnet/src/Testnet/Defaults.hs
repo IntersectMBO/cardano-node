@@ -327,6 +327,7 @@ defaultYamlConfig =
     , ("ShelleyGenesisFile", genesisPath ShelleyEra)
     , ("AlonzoGenesisFile",  genesisPath AlonzoEra)
     , ("ConwayGenesisFile",  genesisPath ConwayEra)
+    , ("DijkstraGenesisFile",  genesisPath DijkstraEra)
 
     -- See: https://github.com/input-output-hk/cardano-ledger/blob/master/eras/byron/ledger/impl/doc/network-magic.md
     , ("RequiresNetworkMagic", "RequiresMagic")

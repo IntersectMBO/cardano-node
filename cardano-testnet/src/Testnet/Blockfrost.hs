@@ -20,6 +20,7 @@ import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
                    PoolVotingThresholds (..), UpgradeConwayPParams (..))
 import           Cardano.Ledger.Core (PParams (..))
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import           Cardano.Ledger.Plutus (CostModel, CostModels, ExUnits (..), Language (..),
                    Prices (..))
 import qualified Cardano.Ledger.Plutus.CostModels as CostModels
@@ -182,11 +183,11 @@ instance FromJSON BlockfrostParams where
 
 -- Edit a set of Genesis files with data from Blockfrost parameters
 blockfrostToGenesis :: ()
-  => (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
+  => (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
   -> BlockfrostParams
-  -> (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
-blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') BlockfrostParams{..} =
-  (alonzoGenesis, conwayGenesis, shelleyGenesis)
+  -> (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
+blockfrostToGenesis (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGenesis') BlockfrostParams{..} =
+  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)
   where
     -- Alonzo params
     alonzoGenesis = alonzoGenesis'
@@ -206,7 +207,7 @@ blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') Blockfrost
         { prMem = bfgPriceMem
         , prSteps = bfgPriceSteps
         }
-      , agCostModels = {- TODO trimCostModelToInitial PlutusV2  -} bfgAlonzoCostModels
+      , agCostModels = CostModels.mkCostModels . Map.mapWithKey trimCostModelToInitial $ CostModels.costModelsValid bfgAlonzoCostModels
       }
 
     -- Conway Params
@@ -265,6 +266,9 @@ blockfrostToGenesis (alonzoGenesis', conwayGenesis', shelleyGenesis') Blockfrost
       , sppMinPoolCost = bfgMinPoolCost
       }
     shelleyGenesis = shelleyGenesis'{sgProtocolParams=shelleyParams}
+
+    -- TODO dijkstra: there are no dijkstra params on blockfrost
+    dijkstraGenesis = dijkstraGenesis'
 
 -- | Trims cost model to the initial number of parameters. The cost models in geneses can't
 -- have more parameters than the initial number.

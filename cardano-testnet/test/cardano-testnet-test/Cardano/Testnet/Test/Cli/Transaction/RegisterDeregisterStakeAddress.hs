@@ -11,7 +11,6 @@ module Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Type.Key (SomeSigningKey (AStakeSigningKey))
-import qualified Cardano.Ledger.UMap as L
 import           Cardano.Testnet
 
 import           Prelude

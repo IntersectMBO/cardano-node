@@ -29,6 +29,7 @@ import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesis
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (unsafeNonZero)
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import           Cardano.Network.PeerSelection.Bootstrap
 import           Cardano.Network.PeerSelection.PeerTrustable
 import qualified Cardano.Node.Configuration.Topology as NonP2P
@@ -84,12 +85,14 @@ createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ d
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
+  dijkstraGenesisHash  <- getHash ConwayEra  "DijkstraGenesisHash"
 
   pure $ mconcat
     [ byronGenesisHash
     , shelleyGenesisHash
     , alonzoGenesisHash
     , conwayGenesisHash
+    , dijkstraGenesisHash
     , Defaults.defaultYamlHardforkViaConfig sbe
     ]
    where
@@ -180,17 +183,18 @@ createSPOGenesisAndFiles
         { sgSecurityParam = unsafeNonZero 5
         , sgUpdateQuorum = 2
         }
-  alonzoGenesis' <- getDefaultAlonzoGenesis 
+  alonzoGenesis' <- getDefaultAlonzoGenesis
   let conwayGenesis' = Defaults.defaultConwayGenesis
+      dijkstraGenesis' = dijkstraGenesisDefaults
 
-  (alonzoGenesis, conwayGenesis, shelleyGenesis) <- resolveOnChainParams onChainParams
-    (alonzoGenesis', conwayGenesis', shelleyGenesis')
+  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis) <- resolveOnChainParams onChainParams
+    (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGenesis')
 
   -- Write Genesis files to disk, so they can be picked up by create-testnet-data
-  H.evalIO $ do
-    LBS.writeFile inputGenesisAlonzoFp $ A.encodePretty alonzoGenesis
-    LBS.writeFile inputGenesisConwayFp $ A.encodePretty conwayGenesis
-    LBS.writeFile inputGenesisShelleyFp $ A.encodePretty shelleyGenesis
+  H.lbsWriteFile inputGenesisAlonzoFp $ A.encodePretty alonzoGenesis
+  H.lbsWriteFile inputGenesisConwayFp $ A.encodePretty conwayGenesis
+  H.lbsWriteFile inputGenesisShelleyFp $ A.encodePretty shelleyGenesis
+  H.lbsWriteFile inputGenesisDijkstraFp $ A.encodePretty dijkstraGenesis
 
   H.note_ $ "Number of pools: " <> show nPoolNodes
   H.note_ $ "Number of stake delegators: " <> show numStakeDelegators
@@ -232,6 +236,7 @@ createSPOGenesisAndFiles
     inputGenesisShelleyFp = genesisInputFilepath ShelleyEra
     inputGenesisAlonzoFp  = genesisInputFilepath AlonzoEra
     inputGenesisConwayFp  = genesisInputFilepath ConwayEra
+    inputGenesisDijkstraFp  = genesisInputFilepath DijkstraEra
     nPoolNodes = cardanoNumPools testnetOptions
     CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply, cardanoNumDReps} = testnetOptions
     genesisInputFilepath :: Pretty (eon era) => eon era -> FilePath
@@ -292,8 +297,8 @@ resolveOnChainParams :: ()
  => (MonadTest m, MonadIO m)
  => HasCallStack
  => TestnetOnChainParams
- -> (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
- -> m (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
+ -> (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
+ -> m (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
 resolveOnChainParams onChainParams geneses = case onChainParams of
 
   DefaultParams -> pure geneses
