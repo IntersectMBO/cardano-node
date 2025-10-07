@@ -61,13 +61,6 @@ package plutus-scripts-bench
 allow-newer:
   , katip:Win32
 
-allow-newer:
-    , cardano-ledger-byron
-    -- https://github.com/phadej/vec/issues/121
-    , ral:QuickCheck
-    , fin:QuickCheck
-    , bin:QuickCheck
-
 if impl (ghc >= 9.12)
   allow-newer:
     -- https://github.com/kapralVV/Unique/issues/11
@@ -86,7 +79,6 @@ source-repository-package
   tag: 801b1d7cce99c6d5afbe6af7d7ad1d7a2cde087c
   --sha256: sha256-s6SvoDHCFXfMC5bNBFoDgxMDZuMhnE1ZZwx1L15yjL0=
   subdir: cardano-cli
-
 
 source-repository-package
   type: git
