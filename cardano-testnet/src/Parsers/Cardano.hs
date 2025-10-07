@@ -24,7 +24,6 @@ import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
 
-
 optsTestnet :: Parser CardanoTestnetCliOptions
 optsTestnet = CardanoTestnetCliOptions
   <$> pCardanoTestnetCliOptions
