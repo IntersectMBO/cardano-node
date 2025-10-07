@@ -207,14 +207,7 @@ let
               ];
               cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.json.golden"
                 "cardano-testnet/test/cardano-testnet-test/files/input/sample-constitution.txt"
                 "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
@@ -295,15 +288,7 @@ let
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. [
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
-                  ];
+                  filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
                 in
                 ''
                   ${exportCliPath}

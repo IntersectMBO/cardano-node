@@ -5,38 +5,36 @@ module Parsers.Cardano
   , cmdCreateEnv
   ) where
 
-import           Cardano.Api ( AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), Eon(..)
-                             , forEraInEonMaybe, convert, ShelleyBasedEra(..), AnyCardanoEra(..))
-
-import           Cardano.CLI.Environment
-import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
+import           Cardano.Api (AnyShelleyBasedEra(..))
+import           Cardano.CLI.EraBased.Common.Option (bounded, command')
 import           Prelude
 
-import           Control.Applicative
-import           Data.Default.Class
-import           Data.Functor
+import           Control.Applicative((<|>), optional)
+import           Data.Default.Class (def)
 import qualified Data.List as L
 import           Data.Maybe (fromMaybe, maybeToList)
 import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
 
+import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
 import qualified Options.Applicative as Opt
 import Cardano.Prelude (Typeable)
 
-optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
-optsTestnet envCli = CardanoTestnetCliOptions
-  <$> pCardanoTestnetCliOptions envCli
+
+optsTestnet :: Parser CardanoTestnetCliOptions
+optsTestnet = CardanoTestnetCliOptions
+  <$> pCardanoTestnetCliOptions
   <*> pGenesisOptions
   <*> pNodeEnvironment
   <*> pUpdateTimestamps
 
-optsCreateTestnet :: EnvCli -> Parser CardanoTestnetCreateEnvOptions
-optsCreateTestnet envCli = CardanoTestnetCreateEnvOptions
-  <$> pCardanoTestnetCliOptions envCli
+optsCreateTestnet :: Parser CardanoTestnetCreateEnvOptions
+optsCreateTestnet = CardanoTestnetCreateEnvOptions
+  <$> pCardanoTestnetCliOptions
   <*> pGenesisOptions
   <*> pEnvOutputDir
   <*> pCreateEnvOptions
@@ -48,10 +46,10 @@ pCreateEnvOptions = CreateEnvOptions
   <$> pOnChainParams
   <*> pTopologyType
 
-pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
-pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
+pCardanoTestnetCliOptions :: Parser CardanoTestnetOptions
+pCardanoTestnetCliOptions = CardanoTestnetOptions
   <$> pTestnetNodeOptions
-  <*> pAnyShelleyBasedEra'
+  <*> pure (AnyShelleyBasedEra defaultEra)
   <*> pMaxLovelaceSupply
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
@@ -62,7 +60,7 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       )
   <*> OA.option OA.auto
       (   OA.long "num-dreps"
-      <>  OA.help "Number of delegate representatives (DReps) to generate. Ignored if a custom Conway genesis file is passed."
+      <>  OA.help "Number of delegate representatives (DReps) to generate. Ignored if a node environment is passed."
       <>  OA.metavar "NUMBER"
       <>  OA.showDefault
       <>  OA.value 3
@@ -77,68 +75,6 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
       <>  OA.metavar "DIRECTORY"
       )))
-  where
-    pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
-    pAnyShelleyBasedEra' =
-      pAnyShelleyBasedEra <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
-
-pAnyShelleyBasedEra :: EnvCli -> Parser (EraInEon ShelleyBasedEra)
-pAnyShelleyBasedEra envCli =
-  asum $
-    mconcat
-      [
-        [ OA.flag' (EraInEon ShelleyBasedEraShelley) $
-            mconcat [OA.long "shelley-era", OA.help $ "Specify the Shelley era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraAllegra) $
-            mconcat [OA.long "allegra-era", OA.help $ "Specify the Allegra era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraMary) $
-            mconcat [OA.long "mary-era", OA.help $ "Specify the Mary era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraAlonzo) $
-            mconcat [OA.long "alonzo-era", OA.help $ "Specify the Alonzo era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraBabbage) $
-            mconcat [OA.long "babbage-era", OA.help $ "Specify the Babbage era (default)" <> deprecationText]
-        , fmap (EraInEon . convert) $ pConwayEra envCli
-        ]
-      , maybeToList $ pure <$> envCliAnyEon envCli
-      , pure $ pure $ EraInEon ShelleyBasedEraConway
-      ]
- where
-  deprecationText :: String
-  deprecationText = " - DEPRECATED - will be removed in the future"
-
-  envCliAnyEon :: Typeable eon => Eon eon => EnvCli -> Maybe (EraInEon eon)
-  envCliAnyEon envCli' = do
-    AnyCardanoEra era <- envCliAnyCardanoEra envCli'
-    forEraInEonMaybe era EraInEon
-
-pAnyShelleyBasedEra :: EnvCli -> Parser (EraInEon ShelleyBasedEra)
-pAnyShelleyBasedEra envCli =
-  asum $
-    mconcat
-      [
-        [ OA.flag' (EraInEon ShelleyBasedEraShelley) $
-            mconcat [OA.long "shelley-era", OA.help $ "Specify the Shelley era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraAllegra) $
-            mconcat [OA.long "allegra-era", OA.help $ "Specify the Allegra era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraMary) $
-            mconcat [OA.long "mary-era", OA.help $ "Specify the Mary era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraAlonzo) $
-            mconcat [OA.long "alonzo-era", OA.help $ "Specify the Alonzo era" <> deprecationText]
-        , OA.flag' (EraInEon ShelleyBasedEraBabbage) $
-            mconcat [OA.long "babbage-era", OA.help $ "Specify the Babbage era (default)" <> deprecationText]
-        , fmap (EraInEon . convert) $ pConwayEra envCli
-        ]
-      , maybeToList $ pure <$> envCliAnyEon envCli
-      , pure $ pure $ EraInEon ShelleyBasedEraConway
-      ]
- where
-  deprecationText :: String
-  deprecationText = " - DEPRECATED - will be removed in the future"
-
-  envCliAnyEon :: Typeable eon => Eon eon => EnvCli -> Maybe (EraInEon eon)
-  envCliAnyEon envCli' = do
-    AnyCardanoEra era <- envCliAnyCardanoEra envCli'
-    forEraInEonMaybe era EraInEon
 
 pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =
@@ -210,8 +146,7 @@ pGenesisOptions =
     pEpochLength =
       OA.option OA.auto
         (   OA.long "epoch-length"
-        -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
-        <>  OA.help "Epoch length, in number of slots. Ignored if a custom Shelley genesis file is passed."
+        <>  OA.help "Epoch length, in number of slots. Ignored if a node environment is passed."
         <>  OA.metavar "SLOTS"
         <>  OA.showDefault
         <>  OA.value (genesisEpochLength def)
@@ -219,8 +154,7 @@ pGenesisOptions =
     pSlotLength =
       OA.option OA.auto
         (   OA.long "slot-length"
-        -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
-        <>  OA.help "Slot length. Ignored if a custom Shelley genesis file is passed."
+        <>  OA.help "Slot length. Ignored if a node environment is passed."
         <>  OA.metavar "SECONDS"
         <>  OA.showDefault
         <>  OA.value (genesisSlotLength def)
@@ -228,18 +162,17 @@ pGenesisOptions =
     pActiveSlotCoeffs =
       OA.option OA.auto
         (   OA.long "active-slots-coeff"
-        -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
-        <>  OA.help "Active slots coefficient. Ignored if a custom Shelley genesis file is passed."
+        <>  OA.help "Active slots coefficient. Ignored if a node environment is passed."
         <>  OA.metavar "DOUBLE"
         <>  OA.showDefault
         <>  OA.value (genesisActiveSlotsCoeff def)
         )
 
-cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetCliOptions
-cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)
+cmdCardano :: Mod CommandFields CardanoTestnetCliOptions
+cmdCardano = command' "cardano" "Start a testnet in any era" optsTestnet
 
-cmdCreateEnv :: EnvCli -> Mod CommandFields CardanoTestnetCreateEnvOptions
-cmdCreateEnv envCli = command' "create-env" "Create a sandbox for Cardano testnet" (optsCreateTestnet envCli)
+cmdCreateEnv :: Mod CommandFields CardanoTestnetCreateEnvOptions
+cmdCreateEnv = command' "create-env" "Create a sandbox for Cardano testnet" optsCreateTestnet
 
 pNetworkId :: Parser Int
 pNetworkId =
@@ -255,8 +188,7 @@ pMaxLovelaceSupply :: Parser Word64
 pMaxLovelaceSupply =
   OA.option OA.auto
       (   OA.long "max-lovelace-supply"
-      -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
-      <>  OA.help "Max lovelace supply that your testnet starts with. Ignored if a custom Shelley genesis file is passed."
+      <>  OA.help "Max lovelace supply that your testnet starts with. Ignored if a node environment is passed."
       <>  OA.metavar "WORD64"
       <>  OA.showDefault
       <>  OA.value (cardanoMaxSupply def)

@@ -1,11 +1,4 @@
 Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
-  [ --shelley-era
-  | --allegra-era
-  | --mary-era
-  | --alonzo-era
-  | --babbage-era
-  | --conway-era
-  ]
   [--max-lovelace-supply WORD64]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
@@ -23,27 +16,16 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
 Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
                            configuration for all nodes.
-  --shelley-era            Specify the Shelley era - DEPRECATED - will be
-                           removed in the future
-  --allegra-era            Specify the Allegra era - DEPRECATED - will be
-                           removed in the future
-  --mary-era               Specify the Mary era - DEPRECATED - will be removed
-                           in the future
-  --alonzo-era             Specify the Alonzo era - DEPRECATED - will be removed
-                           in the future
-  --babbage-era            Specify the Babbage era (default) - DEPRECATED - will
-                           be removed in the future
-  --conway-era             Specify the Conway era
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
-                           Ignored if a custom Shelley genesis file is passed.
+                           Ignored if a node environment is passed.
                            (default: 100000020000000)
   --nodeLoggingFormat LOGGING_FORMAT
                            Node logging format (json|text)
                            (default: NodeLoggingFormatAsJson)
   --num-dreps NUMBER       Number of delegate representatives (DReps) to
-                           generate. Ignored if a custom Conway genesis file is
-                           passed. (default: 3)
+                           generate. Ignored if a node environment is passed.
+                           (default: 3)
   --enable-new-epoch-state-logging
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log
@@ -51,13 +33,13 @@ Available options:
                            It is created if it doesn't exist. If unset, a
                            temporary directory is used.
   --testnet-magic INT      Specify a testnet magic id. (default: 42)
-  --epoch-length SLOTS     Epoch length, in number of slots. Ignored if a custom
-                           Shelley genesis file is passed. (default: 500)
-  --slot-length SECONDS    Slot length. Ignored if a custom Shelley genesis file
-                           is passed. (default: 0.1)
+  --epoch-length SLOTS     Epoch length, in number of slots. Ignored if a node
+                           environment is passed. (default: 500)
+  --slot-length SECONDS    Slot length. Ignored if a node environment is passed.
+                           (default: 0.1)
   --active-slots-coeff DOUBLE
-                           Active slots coefficient. Ignored if a custom Shelley
-                           genesis file is passed. (default: 5.0e-2)
+                           Active slots coefficient. Ignored if a node
+                           environment is passed. (default: 5.0e-2)
   --node-env FILEPATH      Path to the node's environment (which is generated
                            otherwise). You can generate a default environment
                            with the 'create-env' command, then modify it and
