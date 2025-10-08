@@ -332,8 +332,8 @@ defaultYamlConfig =
     -- See: https://github.com/input-output-hk/cardano-ledger/blob/master/eras/byron/ledger/impl/doc/network-magic.md
     , ("RequiresNetworkMagic", "RequiresMagic")
 
-    -- Enable peer to peer discovery
-    , ("EnableP2P", Aeson.Bool False)
+    -- Enable P2P, non-P2P is gone
+    , ("EnableP2P", Aeson.Bool True)
 
     -- Logging related
     , ("setupScribes", setupScribes)

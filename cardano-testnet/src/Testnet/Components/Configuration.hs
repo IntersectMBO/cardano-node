@@ -85,7 +85,7 @@ createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ d
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
-  dijkstraGenesisHash  <- getHash ConwayEra  "DijkstraGenesisHash"
+  dijkstraGenesisHash  <- getHash DijkstraEra  "DijkstraGenesisHash"
 
   pure $ mconcat
     [ byronGenesisHash
