@@ -232,7 +232,8 @@ instance ToJSON adr => ToJSON (NetworkTopology adr) where
 -- | Read the `NetworkTopology` configuration from the specified file.
 readTopologyFile :: ()
   => forall adr. FromJSON adr
-  => NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text (NetworkTopology adr))
+  => NodeConfiguration
+  -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text (NetworkTopology adr))
 readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode, ncProtocolFiles} tracer = runExceptT $ do
   bs <- handleIOExceptionsLiftWith handler $ BS.readFile topologyFilePath
   topology@RealNodeTopology{ntUseLedgerPeers, ntUseBootstrapPeers, ntPeerSnapshotPath} <-

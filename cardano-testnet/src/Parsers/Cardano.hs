@@ -43,7 +43,6 @@ optsCreateTestnet = CardanoTestnetCreateEnvOptions
 pCreateEnvOptions :: Parser CreateEnvOptions
 pCreateEnvOptions = CreateEnvOptions
   <$> pOnChainParams
-  <*> pTopologyType
 
 pCardanoTestnetCliOptions :: Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions = CardanoTestnetOptions
@@ -111,13 +110,6 @@ pMainnetParams :: Parser TestnetOnChainParams
 pMainnetParams = OA.flag' OnChainParamsMainnet
   (  OA.long "params-mainnet"
   <> OA.help "Use mainnet on-chain parameters"
-  )
-
-pTopologyType :: Parser TopologyType
-pTopologyType = OA.flag DirectTopology P2PTopology
-  (  OA.long "p2p-topology"
-  <> OA.help "Use P2P topology files instead of \"direct\" topology files"
-  <> OA.showDefault
   )
 
 pUpdateTimestamps :: Parser UpdateTimestamps
