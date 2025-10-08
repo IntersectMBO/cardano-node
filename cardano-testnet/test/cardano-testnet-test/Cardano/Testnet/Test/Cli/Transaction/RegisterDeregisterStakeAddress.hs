@@ -122,8 +122,8 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   getAccountsStates epochStateView sbe >>=
     flip H.assertWith
       (\accountsStates -> isJust $ do
-        state <- M.lookup stakeKeyHash accountsStates
-        pure () -- should I check for balance?
+        _state <- M.lookup stakeKeyHash accountsStates
+        pure () -- TODO should we check for balance?
         )
 
   void $ execCli' execConfig
@@ -138,8 +138,8 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   getAccountsStates epochStateView sbe >>=
     flip H.assertWith
       (\accountsStates -> isJust $ do
-        state <- M.lookup stakeKeyHash accountsStates
-        pure () -- should I check for balance?
+        _state <- M.lookup stakeKeyHash accountsStates
+        pure () -- TODO: should we check for balance?
         )
 
   -- deregister stake address
@@ -182,8 +182,8 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   getAccountsStates epochStateView sbe >>=
     flip H.assertWith
       (\accountsStates -> isJust $ do
-        state <- M.lookup stakeKeyHash accountsStates
-        pure () -- should I check for balance?
+        _state <- M.lookup stakeKeyHash accountsStates
+        pure () -- TODO: should we check for balance?
         )
       -- (M.notMember stakeKeyHash . L.scDeposits)
 
