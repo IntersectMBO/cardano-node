@@ -17,5 +17,5 @@ cabal build cardano-node cardano-cli cardano-testnet
     exit 1
   fi
 
-  ln -sf ./testnet-data/socket/node1/rpc.sock ../cardano-api/rpc.socket
+  ln -sf `pwd`/testnet-data/socket/node1/rpc.sock ../cardano-api/rpc.socket
 ) & cabal run cardano-testnet -- cardano --testnet-magic 42 --enable-grpc --output-dir ./testnet-data
