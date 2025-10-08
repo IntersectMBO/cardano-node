@@ -23,6 +23,7 @@ import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
@@ -74,11 +75,13 @@ import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 {- HLINT ignore "Use :" -}
 
@@ -1557,13 +1560,21 @@ instance
               , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
               ]
 
-instance ToObject (Praos.PraosTiebreakerView crypto) where
-  toObject v (Praos.PraosTiebreakerView sl issuer issueNo vrf) =
-    mconcat [ "slotNo" .= toObject v sl
-            , "issuer" .= textShow issuer
-            , "issueNo" .= textShow issueNo
-            , "vrf" .= textShow vrf
-            ]
+instance Core.Crypto c => ToObject (Praos.PraosTiebreakerView c) where
+  toObject _v Praos.PraosTiebreakerView {
+      ptvSlotNo
+    , ptvIssuer
+    , ptvIssueNo
+    , ptvTieBreakVRF
+    } =
+      mconcat [ "kind" .= String "PraosTiebreakerView"
+              , "slotNo" .= ptvSlotNo
+              , "issuerHash" .= hashKey ptvIssuer
+              , "issueNo" .= ptvIssueNo
+              , "tieBreakVRF" .= renderVRF ptvTieBreakVRF
+              ]
+    where
+      renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
 
 --------------------------------------------------------------------------------
 -- Helper functions
