@@ -88,19 +88,21 @@ testNodeConwayProtocolConfiguration =
 testNodeHardForkProtocolConfiguration :: NodeHardForkProtocolConfiguration
 testNodeHardForkProtocolConfiguration =
   NodeHardForkProtocolConfiguration
-    { npcExperimentalHardForksEnabled = True
-    , npcTestShelleyHardForkAtEpoch   = Nothing
-    , npcTestShelleyHardForkAtVersion = Nothing
-    , npcTestAllegraHardForkAtEpoch   = Nothing
-    , npcTestAllegraHardForkAtVersion = Nothing
-    , npcTestMaryHardForkAtEpoch      = Nothing
-    , npcTestMaryHardForkAtVersion    = Nothing
-    , npcTestAlonzoHardForkAtEpoch    = Nothing
-    , npcTestAlonzoHardForkAtVersion  = Nothing
-    , npcTestBabbageHardForkAtEpoch   = Nothing
-    , npcTestBabbageHardForkAtVersion = Nothing
-    , npcTestConwayHardForkAtEpoch    = Nothing
-    , npcTestConwayHardForkAtVersion  = Nothing
+    { npcExperimentalHardForksEnabled  = True
+    , npcTestShelleyHardForkAtEpoch    = Nothing
+    , npcTestShelleyHardForkAtVersion  = Nothing
+    , npcTestAllegraHardForkAtEpoch    = Nothing
+    , npcTestAllegraHardForkAtVersion  = Nothing
+    , npcTestMaryHardForkAtEpoch       = Nothing
+    , npcTestMaryHardForkAtVersion     = Nothing
+    , npcTestAlonzoHardForkAtEpoch     = Nothing
+    , npcTestAlonzoHardForkAtVersion   = Nothing
+    , npcTestBabbageHardForkAtEpoch    = Nothing
+    , npcTestBabbageHardForkAtVersion  = Nothing
+    , npcTestConwayHardForkAtEpoch     = Nothing
+    , npcTestConwayHardForkAtVersion   = Nothing
+    , npcTestDijkstraHardForkAtEpoch   = Nothing
+    , npcTestDijkstraHardForkAtVersion = Nothing
     }
 
 testNodeCheckpointsConfiguration :: NodeCheckpointsConfiguration
@@ -117,6 +119,7 @@ testNodeProtocolConfiguration =
     testNodeShelleyProtocolConfiguration
     testNodeAlonzoProtocolConfiguration
     testNodeConwayProtocolConfiguration
+    Nothing -- Dijkstra configuration
     testNodeHardForkProtocolConfiguration
     testNodeCheckpointsConfiguration
 
