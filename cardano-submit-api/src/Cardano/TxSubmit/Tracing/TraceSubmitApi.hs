@@ -6,7 +6,7 @@ import           Cardano.Api (TxId (TxId), TxValidationErrorInCardanoMode (..))
 import           Cardano.Api.Pretty (textShow)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Logging.Types
+import           Cardano.Logging
 import           Cardano.TxSubmit.Types (TxCmdError (..))
 
 import           Prelude hiding (take)

@@ -22,8 +22,7 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AsType 
 
 import           Cardano.Binary (DecoderError (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Logging.Trace (traceWith)
-import qualified Cardano.Logging.Types as TraceD
+import           Cardano.Logging (Trace, traceWith)
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
 import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
@@ -71,7 +70,7 @@ import           Servant.API.Generic (toServant)
 import           Servant.Server.Generic (AsServerT)
 
 runTxSubmitServer
-  :: TraceD.Trace IO TraceSubmitApi
+  :: Trace IO TraceSubmitApi
   -> WebserverConfig
   -> ConsensusModeParams
   -> NetworkId
@@ -83,7 +82,7 @@ runTxSubmitServer trace  webserverConfig protocol networkId socketPath = do
   traceWith trace EndpointExiting
 
 txSubmitApp
-  :: TraceD.Trace IO TraceSubmitApi
+  :: Trace IO TraceSubmitApi
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
@@ -123,7 +122,7 @@ readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyO
   ]
 
 txSubmitPost
-  :: TraceD.Trace IO TraceSubmitApi
+  :: Trace IO TraceSubmitApi
   -> ConsensusModeParams
   -> NetworkId
   -> SocketPath
