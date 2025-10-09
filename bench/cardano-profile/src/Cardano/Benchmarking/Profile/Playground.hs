@@ -109,4 +109,28 @@ profilesNoEraPlayground =
            . P.dreps 1000
            . P.workloadAppend W.votingWorkloadx2
            . P.traceForwardingOn . P.newTracing
+  -- Leios sim.
+  , P.empty & P.name "50-blocks-50"
+            . P.fixedLoaded
+            . P.pparamsEpoch 537 . V.timescaleMainnet
+            . P.uniCircle . V.hosts 2 . P.loopback
+            . V.datasetEmpty . V.fundsDefault
+            . P.txIn 2 . P.txOut 2 . P.txFee 1000000 . P.tps 12
+            . P.shutdownOnBlock 51
+            -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
+            --       Create a "time.epochs" or "time.blocks" or similar, IDK!
+            -- This applies to all profiles!
+            -- WHAT: Don't use, with mainnet it will run and generate:
+            -- - 2592kTx
+            -- - 432000s
+            -- - 12631 full blocks
+             -- . P.generatorEpochs 1
+            . P.overlay (KeyMap.fromList [
+                ("generator", Aeson.Object $ KeyMap.fromList [
+                  ("tx_count", Aeson.Number (12 * 20 * 51))
+                ])
+              ])
+            . P.traceForwardingOn . P.newTracing
+            . P.initCooldown 5
+            . P.analysisStandard
   ]
