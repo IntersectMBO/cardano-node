@@ -65,7 +65,6 @@ library
                         Cardano.Node.Configuration.POM
                         Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
-                        Cardano.Node.Configuration.Topology
                         Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
                         Cardano.Node.Handlers.TopLevel
