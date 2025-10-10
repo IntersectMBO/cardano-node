@@ -216,12 +216,6 @@ TraceOptions:
   Net.ConnectionManager.Remote.ConnectionManagerCounters:
     severity: Silence
 
-  Net.ErrorPolicy:
-    severity: Info
-
-  Net.ErrorPolicy.Local:
-    severity: Info
-
   Net.InboundGovernor:
     severity: Warning
 
@@ -233,12 +227,6 @@ TraceOptions:
 
   Net.PeerSelection:
     severity: Silence
-
-  Net.Subscription.DNS:
-    severity: Info
-
-  Net.Subscription.IP:
-    severity: Info
 
   Resources:
     severity: Silence
@@ -255,12 +243,6 @@ TraceOptions:
     severity: Silence
 
   Mempool.AttemptAdd:
-    severity: Silence
-
-  Mempool.LedgerFound:
-    severity: Silence
-
-  Mempool.LedgerNotFound:
     severity: Silence
 
   Mempool.SyncNotNeeded:
