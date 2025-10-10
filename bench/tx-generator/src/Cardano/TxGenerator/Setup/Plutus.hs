@@ -35,11 +35,11 @@ import qualified PlutusTx.AssocMap as AssocMap (empty)
 
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Types (TxGenError (..), TxGenPlutusResolvedTo (..))
+import           Control.Exception (SomeException (..), try, displayException)
+import           System.FilePath ((<.>), (</>))
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
-import           Control.Exception (SomeException (..), try)
-import           System.FilePath ((<.>), (</>))
 
 import           Paths_tx_generator
 
