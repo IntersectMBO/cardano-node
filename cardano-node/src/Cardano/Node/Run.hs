@@ -43,7 +43,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
 import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
                    SocketOrSocketInfo, SocketOrSocketInfo' (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
-import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Handlers.Shutdown

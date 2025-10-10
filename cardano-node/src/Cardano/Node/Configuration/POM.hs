@@ -13,7 +13,6 @@
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
   , ResponderCoreAffinityPolicy (..)
-  , NetworkP2PMode (..)
   , PartialNodeConfiguration(..)
   , TimeoutOverride (..)
   , defaultPartialNodeConfiguration
@@ -70,9 +69,6 @@ import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
-
-data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
-  deriving (Eq, Show, Generic)
 
 -- | Isomorphic to a `Maybe DiffTime`, but expresses what `Nothing` means, in
 -- this case that we want to /NOT/ override the default timeout.
