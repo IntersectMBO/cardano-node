@@ -334,6 +334,7 @@ defaultYamlConfig =
 
     -- Enable P2P, non-P2P is gone
     , ("EnableP2P", Aeson.Bool True)
+    , ("PeerSharing", Aeson.Bool False)
 
     -- Logging related
     , ("setupScribes", setupScribes)
