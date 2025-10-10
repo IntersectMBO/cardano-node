@@ -38,7 +38,7 @@ import           Cardano.TxGenerator.Types (TxGenError (..), TxGenPlutusResolved
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
-import           Control.Exception (SomeException (..), displayException, try)
+import           Control.Exception (SomeException (..), try)
 import           System.FilePath ((<.>), (</>))
 
 import           Paths_tx_generator
