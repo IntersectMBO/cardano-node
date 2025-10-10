@@ -139,7 +139,7 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
                          . L.accountsL
                          . L.accountsMapL
 
-
+    -- TODO: this is an old implementation, remove it after verifying that the test works correctly
     -- let umap = shelleyBasedEraConstraints sbe $ newEpochState ^. L.nesEsL . L.epochStateUMapL
     --     dag = L.filterStakePoolDelegsAndRewards umap $ Set.singleton sCred
     --     allStakeCredentials = umap ^. L.umElemsL -- This does not include pointer addresses
@@ -162,7 +162,6 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
         apiRewardsMap = Map.map (toBalance sbe) accountsMap'
     DelegationsAndRewards (apiRewardsMap, apiDelegationMap)
 
-  -- toApiPoolId ::  L.KeyHash L.StakePool -> PoolId
   toApiPoolId :: ShelleyBasedEra era
               -> L.AccountState (ShelleyLedgerEra era)
               -> Maybe PoolId
