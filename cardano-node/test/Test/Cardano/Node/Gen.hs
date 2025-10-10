@@ -159,8 +159,10 @@ genNodeSetup =
 genRelayAddress :: Gen RelayAccessPoint
 genRelayAddress =
   Gen.choice
-    [ RelayAccessDomain <$> ((<> ".") <$> Gen.element cooking)
-                        <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+    [ RelayAccessDomain
+        . (<> ".")
+        <$> Gen.element cooking
+        <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
     , RelayAccessSRVDomain . (<> ".") <$> Gen.element cooking
     , RelayAccessAddress
         <$> Gen.choice

@@ -19,7 +19,6 @@ import           Data.ByteString.Short (ShortByteString)
 import           Data.Int (Int64)
 import           Data.Map.Strict as Map (lookup)
 
-import           Control.Exception (displayException)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Writer (runWriter)
@@ -36,11 +35,11 @@ import qualified PlutusTx.AssocMap as AssocMap (empty)
 
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Types (TxGenError (..), TxGenPlutusResolvedTo (..))
+import           Control.Exception (SomeException (..), try, displayException)
+import           System.FilePath ((<.>), (</>))
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
-import           Control.Exception (SomeException (..), try)
-import           System.FilePath ((<.>), (</>))
 
 import           Paths_tx_generator
 
