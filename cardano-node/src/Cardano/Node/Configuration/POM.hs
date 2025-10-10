@@ -587,7 +587,7 @@ instance FromJSON PartialNodeConfiguration where
         npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
 
         (npcTestDijkstraHardForkAtEpoch, npcTestDijkstraHardForkAtVersion) <- if npcExperimentalHardForksEnabled
-           then (,) <$>  v .:? "TestConwayHardForkAtEpoch" <*> v .:? "TestConwayHardForkAtVersion"
+           then (,) <$>  v .:? "TestDijkstraHardForkAtEpoch" <*> v .:? "TestDijkstraHardForkAtVersion"
            else pure (Nothing, Nothing)
 
         pure NodeHardForkProtocolConfiguration
