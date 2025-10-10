@@ -2260,18 +2260,18 @@ instance MetaTrace V2.FlavorImplSpecificTrace where
   severityFor _                          _ = Nothing
 
   -- suspicious
-  privacyFor (Namespace _ ["TraceLedgerTablesHandleCreate"]) _ = Just Public
+  privacyFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Public
   privacyFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Public
   privacyFor _                          _ = Just Public
 
-  documentFor (Namespace _ ["TraceLedgerTablesHandleCreate"]) =
+  documentFor (Namespace _ ["LedgerTablesHandleCreate"]) =
     Just "An in-memory backing store event"
   documentFor (Namespace _ ["LedgerTablesHandleClose"]) =
     Just "An on-disk backing store event"
   documentFor _ = Nothing
 
   allNamespaces =
-    [ Namespace [] ["TraceLedgerTablesHandleCreate"]
+    [ Namespace [] ["LedgerTablesHandleCreate"]
     , Namespace [] ["LedgerTablesHandleClose"]
     ]
 
