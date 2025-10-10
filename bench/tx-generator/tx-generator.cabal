@@ -136,7 +136,7 @@ library
                       , formatting
                       , generic-monoid
                       , ghc-prim
-                      , io-classes
+                      , io-classes:{io-classes, strict-stm}
                       , microlens
                       , mtl
                       , network

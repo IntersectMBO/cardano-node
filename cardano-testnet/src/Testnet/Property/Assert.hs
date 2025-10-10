@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -42,6 +43,7 @@ import           GHC.Stack as GHC
 
 import           Testnet.Process.Run
 import           Testnet.Start.Types
+import           Testnet.Types
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -110,13 +112,13 @@ assertChainExtended
   => MonadIO m
   => DTC.UTCTime
   -> NodeLoggingFormat
-  -> FilePath
+  -> TestnetNode
   -> m ()
-assertChainExtended deadline nodeLoggingFormat nodeStdoutFile = withFrozenCallStack $
-  assertByDeadlineIOCustom "Chain not extended" deadline $ do
+assertChainExtended deadline nodeLoggingFormat TestnetNode{nodeName, nodeStdout} = withFrozenCallStack $
+  assertByDeadlineIOCustom ("Chain not extended in " <> nodeName) deadline $ do
     case nodeLoggingFormat of
-      NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdoutFile
-      NodeLoggingFormatAsJson -> fileJsonGrep nodeStdoutFile $ \v ->
+      NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdout
+      NodeLoggingFormatAsJson -> fileJsonGrep nodeStdout $ \v ->
                                     Aeson.parseMaybe (Aeson.parseJSON @(LogEntry Kind)) v == Just (LogEntry (Kind "AddedToCurrentChain"))
 
 newtype LogEntry a = LogEntry

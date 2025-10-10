@@ -21,6 +21,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
   ) where
 
 
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
 import           Cardano.Node.Queries (HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
@@ -68,7 +69,6 @@ import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
-import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 
 import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
@@ -2122,8 +2122,8 @@ instance MetaTrace (TraceGsmEvent selection) where
       Namespace _ ["InitializedInPreSyncing"]     -> Just Info
       Namespace _ ["EnterCaughtUp"]               -> Just Info
       Namespace _ ["LeaveCaughtUp"]               -> Just Info
-      Namespace _ ["GsmEventPreSyncingToSyncing"] -> Just Info
-      Namespace _ ["GsmEventSyncingToPreSyncing"] -> Just Info
+      Namespace _ ["PreSyncingToSyncing"] -> Just Info
+      Namespace _ ["SyncingToPreSyncing"] -> Just Info
       Namespace _ _                               -> Nothing
 
   documentFor = \case

@@ -53,6 +53,7 @@ library
                       , cardano-ledger-api
                       , cardano-ledger-conway
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
+                      , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-node
                       , cardano-ping ^>= 0.9
@@ -72,6 +73,7 @@ library
                       , hedgehog
                       , hedgehog-extras ^>= 0.10
                       , http-conduit
+                      , io-classes:{si-timers}
                       , lens-aeson
                       , microlens
                       , monad-control
@@ -88,6 +90,7 @@ library
                       , retry
                       , safe-exceptions
                       , scientific
+                      , stm
                       , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog

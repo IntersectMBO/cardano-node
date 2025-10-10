@@ -30,7 +30,6 @@ module Testnet.Start.Types
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
-  , TopologyType(..)
   , UserProvidedData(..)
   , UserProvidedEnv(..)
   , UserProvidedGeneses(..)
@@ -44,6 +43,7 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
@@ -96,30 +96,18 @@ data UserProvidedEnv
 instance Default UserProvidedEnv where
   def = NoUserProvidedEnv
 
-data TopologyType
-  = DirectTopology
-  | P2PTopology
-  deriving (Eq, Show)
-
-instance Default TopologyType where
-  def = DirectTopology
-
 data UpdateTimestamps = UpdateTimestamps | DontUpdateTimestamps
   deriving (Eq, Show)
 
 instance Default UpdateTimestamps where
   def = DontUpdateTimestamps
 
-data CreateEnvOptions = CreateEnvOptions
+newtype CreateEnvOptions = CreateEnvOptions
   { ceoOnChainParams :: TestnetOnChainParams
-  , ceoTopologyType :: TopologyType
   } deriving (Eq, Show)
 
 instance Default CreateEnvOptions where
-  def = CreateEnvOptions
-    { ceoOnChainParams = def
-    , ceoTopologyType = def
-    }
+  def = CreateEnvOptions { ceoOnChainParams = def }
 
 data TestnetOnChainParams
   = DefaultParams

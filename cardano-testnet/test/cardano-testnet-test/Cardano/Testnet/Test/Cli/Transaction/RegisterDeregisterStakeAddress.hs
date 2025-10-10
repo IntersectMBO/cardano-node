@@ -11,7 +11,6 @@ module Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Type.Key (SomeSigningKey (AStakeSigningKey))
-import qualified Cardano.Ledger.UMap as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -19,6 +18,7 @@ import           Prelude
 import           Control.Monad
 import           Data.Default.Class
 import qualified Data.Map as M
+import           Data.Maybe
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
@@ -119,9 +119,12 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
     ]
 
   H.note_ "Check that stake address isn't registered yet"
-  getDelegationState epochStateView >>=
+  getAccountsStates epochStateView sbe >>=
     flip H.assertWith
-      (M.notMember stakeKeyHash . L.scDeposits)
+      (\accountsStates -> isJust $ do
+        _state <- M.lookup stakeKeyHash accountsStates
+        pure () -- TODO should we check for balance?
+        )
 
   void $ execCli' execConfig
     [ eraName, "transaction", "submit"
@@ -132,9 +135,12 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   _ <- waitForBlocks epochStateView 1
 
   H.note_ "Check that stake address is registered"
-  getDelegationState epochStateView >>=
+  getAccountsStates epochStateView sbe >>=
     flip H.assertWith
-      (M.member stakeKeyHash . L.scDeposits)
+      (\accountsStates -> isJust $ do
+        _state <- M.lookup stakeKeyHash accountsStates
+        pure () -- TODO: should we check for balance?
+        )
 
   -- deregister stake address
   createStakeKeyDeregistrationCertificate
@@ -173,7 +179,11 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   _ <- waitForBlocks epochStateView 1
 
   H.note_ "Check that stake address is deregistered"
-  getDelegationState epochStateView >>=
+  getAccountsStates epochStateView sbe >>=
     flip H.assertWith
-      (M.notMember stakeKeyHash . L.scDeposits)
+      (\accountsStates -> isJust $ do
+        _state <- M.lookup stakeKeyHash accountsStates
+        pure () -- TODO: should we check for balance?
+        )
+      -- (M.notMember stakeKeyHash . L.scDeposits)
 

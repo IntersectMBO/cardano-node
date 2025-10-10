@@ -8,6 +8,7 @@ import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
 
+import qualified Cardano.Ledger.Compactible as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -94,7 +95,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
   void $ registerDRep execConfig epochStateView ceo work "drep2" wallet1
 
   checkDRepState epochStateView sbe $ \m ->
-    if map L.drepDeposit (Map.elems m) == [L.Coin minDRepDeposit]
+    if map (L.fromCompact . L.drepDeposit) (Map.elems m) == [L.Coin minDRepDeposit]
        then Just ()
        else Nothing
 

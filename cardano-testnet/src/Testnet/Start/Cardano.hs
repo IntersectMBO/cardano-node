@@ -30,11 +30,11 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
-import           Cardano.Node.Configuration.Topology (RemoteAddress(..))
+import           Cardano.Node.Configuration.Topology (RemoteAddress (..))
 import qualified Cardano.Node.Configuration.Topology as Direct
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Prelude (canonicalEncodePretty)
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
 
@@ -42,7 +42,6 @@ import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
-import qualified Data.Aeson.KeyMap as A
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class (def)
 import           Data.Either
@@ -98,7 +97,6 @@ createTestnetEnv
   genesisOptions
   CreateEnvOptions
     { ceoOnChainParams=onChainParams
-    , ceoTopologyType=topologyType
     }
   Conf
     { genesisHashesPolicy
@@ -114,14 +112,10 @@ createTestnetEnv
 
   configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  config' <- case genesisHashesPolicy of
+  config <- case genesisHashesPolicy of
     WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
     WithoutHashes -> pure $ createConfigJsonNoHash sbe
   -- Setup P2P configuration value
-  let config = A.insert
-        "EnableP2P"
-        (Bool $ topologyType == P2PTopology)
-        config'
   H.evalIO $ LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
   -- Create network topology, with abstract IDs in lieu of addresses
@@ -131,13 +125,8 @@ createTestnetEnv
     H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
 
     let producers = NodeId <$> filter (/= i) nodeIds
-    case topologyType of
-      DirectTopology ->
-        let topology = Direct.RealNodeTopology producers
-        in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
-      P2PTopology ->
-        let topology = Defaults.defaultP2PTopology producers
-        in H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+        topology = Defaults.defaultP2PTopology producers
+    H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:
@@ -364,8 +353,8 @@ cardanoTestnet
   -- FIXME: use foldEpochState waiting for chain extensions
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 45 now
-  forM_ (map nodeStdout testnetNodes') $ \nodeStdoutFile -> do
-    assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
+  forM_ testnetNodes' $ \node -> do
+    assertChainExtended deadline nodeLoggingFormat node
 
   H.noteShowIO_ DTC.getCurrentTime
 

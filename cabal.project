@@ -61,13 +61,6 @@ package plutus-scripts-bench
 allow-newer:
   , katip:Win32
 
-allow-newer:
-    , cardano-ledger-byron
-    -- https://github.com/phadej/vec/issues/121
-    , ral:QuickCheck
-    , fin:QuickCheck
-    , bin:QuickCheck
-
 if impl (ghc >= 9.12)
   allow-newer:
     -- https://github.com/kapralVV/Unique/issues/11
@@ -83,15 +76,14 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: 9205bba98c35c3a158081104a202a59864472445
-  --sha256: sha256-JViaos6axYtRntdRP7GV34wY3LO2NCjyofZ+cEQG8ug=
-  subdir:
-    cardano-cli
+  tag: e660e5f592ed0f10ef950c8a15fa78d8bacf6450
+  --sha256: sha256-QlJhgEeRTr9qeC+MFaGDOGhmeOC73TxRZdix7I9Jcm8=
+  subdir: cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: cee9b20505a407b55f3b7b335e857d61d71ae196
-  --sha256: sha256-ijMOji6MNupx6eewRJcWpuoxitp4rw8nnccr/Ay+tTo=
+  tag: 845b761ba38c65c7d4ad4c2c14c4c034598fba23
+  --sha256: sha256-EAAFJ5yyeblUTNl1usk3ZVwFW6YL9pOLkIQpd0CDIcs=
   subdir:
     cardano-api

@@ -42,7 +42,7 @@ module Testnet.Defaults
   ) where
 
 import           Cardano.Api (AnyShelleyBasedEra (..), CardanoEra (..), File (..),
-                   ShelleyBasedEra (..), pshow, toCardanoEra, unsafeBoundedRational)
+                   ShelleyBasedEra (..), pshow, unsafeBoundedRational)
 import qualified Cardano.Api as Api
 
 import           Cardano.Ledger.Alonzo.Core (PParams (..))
@@ -53,19 +53,21 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
+import qualified Cardano.Ledger.Conway.Genesis as Ledger
 import           Cardano.Ledger.Conway.PParams
+import qualified Cardano.Ledger.Conway.PParams as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Node.Configuration.Topology (RemoteAddress (..))
 import qualified Cardano.Node.Configuration.Topology as Topology
-import           Cardano.Node.Configuration.Topology (RemoteAddress(..))
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroups (..),
-                   LocalRootPeersGroup (..), NetworkTopology(..), PublicRootPeers (..),
+import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
+                   LocalRootPeersGroups (..), NetworkTopology (..), PublicRootPeers (..),
                    RootConfig (..))
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Tracing.Config
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers (..))
@@ -95,7 +97,6 @@ import           Numeric.Natural
 import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
-import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -107,9 +108,9 @@ newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
 
-defaultAlonzoGenesis :: ShelleyBasedEra era -> Either AlonzoGenesisError AlonzoGenesis
-defaultAlonzoGenesis sbe = do
-  let genesis = Api.alonzoGenesisDefaults (toCardanoEra sbe)
+defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
+defaultAlonzoGenesis = do
+  let genesis = Api.alonzoGenesisDefaults
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
@@ -126,7 +127,9 @@ defaultAlonzoGenesis sbe = do
         Just s -> return s
 
 defaultConwayGenesis :: ConwayGenesis
-defaultConwayGenesis =
+defaultConwayGenesis = do
+  -- use the cost model from cardano-api, which is trimmed to the correct number of parameters
+  let ucppPlutusV3CostModel = Ledger.ucppPlutusV3CostModel $ Ledger.cgUpgradePParams Api.conwayGenesisDefaults
   let upPParams :: UpgradeConwayPParams Identity
       upPParams = UpgradeConwayPParams
                     { ucppPoolVotingThresholds = poolVotingThresholds
@@ -138,7 +141,7 @@ defaultConwayGenesis =
                     , ucppDRepDeposit = Coin 1_000_000
                     , ucppDRepActivity = EpochInterval 100
                     , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- FIXME GARBAGE VALUE
-                    , ucppPlutusV3CostModel = testingCostModelV3
+                    , ucppPlutusV3CostModel
                     }
       drepVotingThresholds = DRepVotingThresholds
         { dvtMotionNoConfidence = 0 %! 1
@@ -159,7 +162,7 @@ defaultConwayGenesis =
          , pvtHardForkInitiation = 1 %! 2
          , pvtPPSecurityGroup = 1 %! 2
          }
-  in ConwayGenesis
+  ConwayGenesis
       { cgUpgradePParams = upPParams
       , cgConstitution = DefaultClass.def
       , cgCommittee = DefaultClass.def
@@ -197,6 +200,7 @@ defaultYamlHardforkViaConfig sbe =
         ShelleyBasedEraAlonzo -> ("LastKnownBlockVersion-Major", Aeson.Number 5)
         ShelleyBasedEraBabbage -> ("LastKnownBlockVersion-Major", Aeson.Number 8)
         ShelleyBasedEraConway -> ("LastKnownBlockVersion-Major", Aeson.Number 9)
+        ShelleyBasedEraDijkstra -> ("LastKnownBlockVersion-Major", Aeson.Number 10)
       , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
       , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
       ]
@@ -241,7 +245,17 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
                 , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
                 , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
-                ])
+                ]
+            ShelleyBasedEraDijkstra ->
+                [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+                , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
+                , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
+                , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
+                , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
+                , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
+                , ("TestDijkstraHardForkAtEpoch", Aeson.Number 0)
+                ]
+                )
   -- | Various tracers we can turn on or off
   tracers :: Aeson.KeyMap Aeson.Value
   tracers = Aeson.fromList $ map (bimap Aeson.fromText Aeson.Bool)
@@ -313,12 +327,13 @@ defaultYamlConfig =
     , ("ShelleyGenesisFile", genesisPath ShelleyEra)
     , ("AlonzoGenesisFile",  genesisPath AlonzoEra)
     , ("ConwayGenesisFile",  genesisPath ConwayEra)
+    , ("DijkstraGenesisFile",  genesisPath DijkstraEra)
 
     -- See: https://github.com/input-output-hk/cardano-ledger/blob/master/eras/byron/ledger/impl/doc/network-magic.md
     , ("RequiresNetworkMagic", "RequiresMagic")
 
-    -- Enable peer to peer discovery
-    , ("EnableP2P", Aeson.Bool False)
+    -- Enable P2P, non-P2P is gone
+    , ("EnableP2P", Aeson.Bool True)
 
     -- Logging related
     , ("setupScribes", setupScribes)
@@ -434,6 +449,8 @@ eraToProtocolVersion =
     AnyShelleyBasedEra ShelleyBasedEraBabbage -> mkProtVer (8, 0)
     -- By default start after bootstrap (which is PV9)
     AnyShelleyBasedEra ShelleyBasedEraConway -> mkProtVer (10, 0)
+    -- TODO: is this correct?
+    AnyShelleyBasedEra ShelleyBasedEraDijkstra -> mkProtVer (11, 0)
 
 -- TODO: Expose from cardano-api
 mkProtVer :: (Natural, Natural) -> ProtVer
@@ -443,7 +460,7 @@ mkProtVer (majorProtVer, minorProtVer) =
     Nothing -> error "mkProtVer: invalid protocol version"
 
 ppProtocolVersionL' ::  Lens' (PParams Ledger.ShelleyEra) ProtVer
-ppProtocolVersionL' = Ledger.ppLens . Ledger.hkdProtocolVersionL @Ledger.ShelleyEra @Identity
+ppProtocolVersionL' = Ledger.ppLensHKD . Ledger.hkdProtocolVersionL @Ledger.ShelleyEra @Identity
 
 defaultMainnetTopology :: Topology.NetworkTopology RemoteAddress
 defaultMainnetTopology =

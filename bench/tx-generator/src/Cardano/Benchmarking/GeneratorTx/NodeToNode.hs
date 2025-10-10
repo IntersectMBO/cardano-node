@@ -89,7 +89,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   done <- NtN.connectTo
     (socketSnocket envIOManager)
     NetworkConnectTracers {
-        nctMuxTracer       = mempty,
+        nctMuxTracers      = Mux.nullTracers,
         nctHandshakeTracer = handshakeTracer
       }
     peerMultiplex
