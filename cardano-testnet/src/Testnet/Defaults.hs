@@ -140,7 +140,7 @@ defaultConwayGenesis = do
                     , ucppGovActionDeposit = Coin 1_000_000
                     , ucppDRepDeposit = Coin 1_000_000
                     , ucppDRepActivity = EpochInterval 100
-                    , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- FIXME GARBAGE VALUE
+                    , ucppMinFeeRefScriptCostPerByte = 15 %! 1
                     , ucppPlutusV3CostModel
                     }
       drepVotingThresholds = DRepVotingThresholds
@@ -449,8 +449,7 @@ eraToProtocolVersion =
     AnyShelleyBasedEra ShelleyBasedEraBabbage -> mkProtVer (8, 0)
     -- By default start after bootstrap (which is PV9)
     AnyShelleyBasedEra ShelleyBasedEraConway -> mkProtVer (10, 0)
-    -- TODO: is this correct?
-    AnyShelleyBasedEra ShelleyBasedEraDijkstra -> mkProtVer (11, 0)
+    AnyShelleyBasedEra ShelleyBasedEraDijkstra -> mkProtVer (12, 0)
 
 -- TODO: Expose from cardano-api
 mkProtVer :: (Natural, Natural) -> ProtVer
