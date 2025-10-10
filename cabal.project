@@ -76,14 +76,14 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: b5b7b3abbe137db9700279faf2032026c3130239
-  --sha256: sha256-cjJ/A+lzlI5+OjJxcCI5nFvlkc+ywcie5lkuG9I8y8k=
+  tag: e660e5f592ed0f10ef950c8a15fa78d8bacf6450
+  --sha256: sha256-QlJhgEeRTr9qeC+MFaGDOGhmeOC73TxRZdix7I9Jcm8=
   subdir: cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: bcb16bfd5c2273c9c59e471708448308a007ad67
-  --sha256: sha256-sk03XkS5SKj+aprZGjts2FLBWJNDqBJ0N71ASq7yebk=
+  tag: 845b761ba38c65c7d4ad4c2c14c4c034598fba23
+  --sha256: sha256-EAAFJ5yyeblUTNl1usk3ZVwFW6YL9pOLkIQpd0CDIcs=
   subdir:
     cardano-api

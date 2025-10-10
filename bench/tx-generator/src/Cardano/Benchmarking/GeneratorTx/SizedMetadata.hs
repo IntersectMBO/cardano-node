@@ -40,18 +40,20 @@ assume_cbor_properties
 
 -- The cost of map entries in metadata follows a step function.
 -- This assumes the map indices are [0..n].
-prop_mapCostsShelley :: Bool
-prop_mapCostsAllegra :: Bool
-prop_mapCostsMary    :: Bool
-prop_mapCostsAlonzo  :: Bool
-prop_mapCostsBabbage :: Bool
-prop_mapCostsConway  :: Bool
-prop_mapCostsShelley = measureMapCosts AsShelleyEra   == assumeMapCosts AsShelleyEra
-prop_mapCostsAllegra = measureMapCosts AsAllegraEra   == assumeMapCosts AsAllegraEra
-prop_mapCostsMary    = measureMapCosts AsMaryEra      == assumeMapCosts AsMaryEra
-prop_mapCostsAlonzo  = measureMapCosts AsAlonzoEra    == assumeMapCosts AsAlonzoEra
-prop_mapCostsBabbage = measureMapCosts AsBabbageEra   == assumeMapCosts AsBabbageEra
-prop_mapCostsConway  = measureMapCosts AsConwayEra    == assumeMapCosts AsConwayEra
+prop_mapCostsShelley   :: Bool
+prop_mapCostsAllegra   :: Bool
+prop_mapCostsMary      :: Bool
+prop_mapCostsAlonzo    :: Bool
+prop_mapCostsBabbage   :: Bool
+prop_mapCostsConway    :: Bool
+prop_mapCostsDijkstra  :: Bool
+prop_mapCostsShelley   = measureMapCosts AsShelleyEra  == assumeMapCosts AsShelleyEra
+prop_mapCostsAllegra   = measureMapCosts AsAllegraEra  == assumeMapCosts AsAllegraEra
+prop_mapCostsMary      = measureMapCosts AsMaryEra     == assumeMapCosts AsMaryEra
+prop_mapCostsAlonzo    = measureMapCosts AsAlonzoEra   == assumeMapCosts AsAlonzoEra
+prop_mapCostsBabbage   = measureMapCosts AsBabbageEra  == assumeMapCosts AsBabbageEra
+prop_mapCostsConway    = measureMapCosts AsConwayEra   == assumeMapCosts AsConwayEra
+prop_mapCostsDijkstra  = measureMapCosts AsDijkstraEra == assumeMapCosts AsDijkstraEra 
 
 assumeMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
 assumeMapCosts _proxy = stepFunction [
@@ -63,13 +65,12 @@ assumeMapCosts _proxy = stepFunction [
     ]
   where
     firstEntry = case shelleyBasedEra @era of
-      ShelleyBasedEraShelley -> 37
-      ShelleyBasedEraAllegra -> 39
-      ShelleyBasedEraMary    -> 39
-      ShelleyBasedEraAlonzo  -> 42
-      ShelleyBasedEraBabbage -> 42
-      ShelleyBasedEraConway  -> 42
-      -- TODO: check if this is correct!
+      ShelleyBasedEraShelley  -> 37
+      ShelleyBasedEraAllegra  -> 39
+      ShelleyBasedEraMary     -> 39
+      ShelleyBasedEraAlonzo   -> 42
+      ShelleyBasedEraBabbage  -> 42
+      ShelleyBasedEraConway   -> 42
       ShelleyBasedEraDijkstra -> 42
 
 -- Bytestring costs are not LINEAR !!

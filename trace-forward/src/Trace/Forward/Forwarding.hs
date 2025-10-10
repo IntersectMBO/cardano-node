@@ -34,9 +34,8 @@ import           Ouroboros.Network.Socket (ConnectToArgs (..),
 import qualified Ouroboros.Network.Server.Simple as Server
 
 import           Codec.CBOR.Term (Term)
-import           Control.Concurrent.Async (async)
+import           Control.Concurrent.Async (async, wait)
 import           Control.Exception (throwIO)
-import           Control.Monad.Class.MonadAsync (wait)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
