@@ -77,8 +77,7 @@ withEra era action = do
     AnyCardanoEra AllegraEra  -> action AsAllegraEra
     AnyCardanoEra ShelleyEra  -> action AsShelleyEra
     AnyCardanoEra ByronEra    -> error "byron not supported"
-    -- TODO: is this correct?
-    AnyCardanoEra DijkstraEra -> error "Dijkstra not supported"
+    AnyCardanoEra DijkstraEra -> action AsDijkstraEra 
 
 setProtocolParameters :: ProtocolParametersSource -> ActionM ()
 setProtocolParameters s = case s of
