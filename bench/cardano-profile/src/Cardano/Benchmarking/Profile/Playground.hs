@@ -91,7 +91,7 @@ profilesNoEraPlayground =
           P.empty &
           P.fixedLoaded
         . P.uniCircle . V.hosts 2 . P.loopback
-        . V.genesisVariantVoltaire . P.voting . P.v10Preview
+        . V.genesisVariantVoltaire . P.voting
         . V.datasetMiniature
         . V.fundsVoting
         . compressedFor3Epochs
