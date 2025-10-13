@@ -37,7 +37,10 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore as V1
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB as LMDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Backend as V2
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
@@ -52,6 +55,9 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
 import           Numeric (showFFloat)
+import Data.Void (absurd)
+import Data.Typeable (cast)
+import Data.Typeable (Typeable)
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
@@ -1920,52 +1926,93 @@ instance MetaTrace LedgerDB.FlavorImplSpecificTrace where
     nsPrependInner "V2" (namespaceFor ev)
 
   severityFor (Namespace out ("V1" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTrace) Nothing
+    severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) Nothing
   severityFor (Namespace out ("V1" : tl)) (Just (LedgerDB.FlavorImplSpecificTraceV1 ev)) =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTrace) (Just ev)
+    severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) (Just ev)
   severityFor (Namespace out ("V2" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V2.FlavorImplSpecificTrace) Nothing
+    severityFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace) Nothing
   severityFor (Namespace out ("V2" : tl)) (Just (LedgerDB.FlavorImplSpecificTraceV2 ev)) =
-    severityFor (Namespace out tl :: Namespace V2.FlavorImplSpecificTrace) (Just ev)
+    severityFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace) (Just ev)
   severityFor _ _ = Nothing
 
   documentFor (Namespace out ("V1" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTrace)
+    documentFor (Namespace out tl :: Namespace V1.SomeBackendTrace)
   documentFor (Namespace out ("V2" : tl)) =
-    documentFor (Namespace out tl :: Namespace V2.FlavorImplSpecificTrace)
+    documentFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace)
   documentFor _ = Nothing
 
   allNamespaces =
        map (nsPrependInner "V1")
-         (allNamespaces :: [Namespace V1.FlavorImplSpecificTrace])
+         (allNamespaces :: [Namespace V1.SomeBackendTrace])
     ++ map (nsPrependInner "V2")
-         (allNamespaces :: [Namespace V2.FlavorImplSpecificTrace])
+         (allNamespaces :: [Namespace V2.LedgerDBV2Trace])
 
 --------------------------------------------------------------------------------
 -- V1
 --------------------------------------------------------------------------------
 
-instance LogFormatting V1.FlavorImplSpecificTrace where
-  forMachine dtal (V1.FlavorImplSpecificTraceInMemory ev) = forMachine dtal ev
-  forMachine dtal (V1.FlavorImplSpecificTraceOnDisk ev) = forMachine dtal ev
+unwrapV1Trace :: forall a backend. Typeable backend => (V1.Trace LMDB.LMDB -> a) -> V1.Trace backend -> a
+unwrapV1Trace g ev =
+  case cast @(V1.Trace backend) @(V1.Trace LMDB.LMDB) ev of
+    Just t -> g t
+    _ -> error "blah"
 
-  forHuman (V1.FlavorImplSpecificTraceInMemory ev) = forHuman ev
-  forHuman (V1.FlavorImplSpecificTraceOnDisk ev) = forHuman ev
+instance LogFormatting V1.SomeBackendTrace where
+  forMachine dtal (V1.SomeBackendTrace ev) =
+    unwrapV1Trace (forMachine dtal) ev
 
-instance LogFormatting V1.FlavorImplSpecificTraceInMemory where
-  forMachine _dtal V1.InMemoryBackingStoreInitialise = mempty
-  forMachine dtal (V1.InMemoryBackingStoreTrace ev) = forMachine dtal ev
+  forHuman (V1.SomeBackendTrace ev) =
+    unwrapV1Trace forHuman ev
 
-  forHuman V1.InMemoryBackingStoreInitialise = "Initializing in-memory backing store"
-  forHuman (V1.InMemoryBackingStoreTrace ev) = forHuman ev
+instance MetaTrace V1.SomeBackendTrace where
+  namespaceFor (V1.SomeBackendTrace ev) =
+    unwrapV1Trace (nsPrependInner "LMDB" . namespaceFor) ev
 
-instance LogFormatting V1.FlavorImplSpecificTraceOnDisk where
-  forMachine _dtal (V1.OnDiskBackingStoreInitialise limits) =
-    mconcat [ "limits" .= showT limits ]
-  forMachine dtal (V1.OnDiskBackingStoreTrace ev) = forMachine dtal ev
+  severityFor (Namespace out ("LMDB" : tl)) (Just (V1.SomeBackendTrace ev)) =
+    unwrapV1Trace (severityFor (Namespace out tl :: Namespace (V1.Trace LMDB.LMDB)) . Just) ev
+  severityFor (Namespace _ ("LMDB" : _)) Nothing =
+    Just Debug
+  severityFor _ _ = Nothing
 
-  forHuman (V1.OnDiskBackingStoreInitialise limits) = "Initializing on-disk backing store with limits " <> showT limits
-  forHuman (V1.OnDiskBackingStoreTrace ev) = forHuman ev
+  documentFor (Namespace _ ("LMDB" : _)) =
+    Just "An LMDB trace"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    map (nsPrependInner "LMDB")
+        (allNamespaces :: [Namespace (V1.Trace LMDB.LMDB)])
+
+instance LogFormatting (V1.Trace LMDB.LMDB) where
+  forMachine _dtal (LMDB.OnDiskBackingStoreInitialise limits) =
+    mconcat [ "kind" .= String "LMDBBackingStoreInitialise", "limits" .= showT limits ]
+  forMachine dtal (LMDB.OnDiskBackingStoreTrace ev) = forMachine dtal ev
+
+  forHuman (LMDB.OnDiskBackingStoreInitialise limits) = "Initializing LMDB backing store with limits " <> showT limits
+  forHuman (LMDB.OnDiskBackingStoreTrace ev) = forHuman ev
+
+instance MetaTrace (V1.Trace LMDB.LMDB) where
+  namespaceFor LMDB.OnDiskBackingStoreInitialise{} =
+    Namespace [] ["Initialise"]
+  namespaceFor (LMDB.OnDiskBackingStoreTrace ev) =
+    nsPrependInner "BackingStoreEvent" (namespaceFor ev)
+
+  severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
+  severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
+  severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (LMDB.OnDiskBackingStoreTrace ev)) =
+    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ("Initialise" : _)) = Just
+    "Backing store is being initialised"
+  documentFor (Namespace out ("BackingStoreEvent" : tl)) =
+    documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
+  documentFor _ = Nothing
+
+  allNamespaces =
+    Namespace [] ["Initialise"]
+    : map (nsPrependInner "BackingStoreEvent")
+          (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
 instance LogFormatting V1.BackingStoreTrace where
   forMachine _dtals V1.BSOpening = mempty
@@ -2004,81 +2051,6 @@ instance LogFormatting V1.BackingStoreValueHandleTrace where
   forMachine _dtals V1.BSVHRead = mempty
   forMachine _dtals V1.BSVHStatting = mempty
   forMachine _dtals V1.BSVHStatted = mempty
-
-instance MetaTrace V1.FlavorImplSpecificTrace where
-  namespaceFor (V1.FlavorImplSpecificTraceInMemory ev) =
-    nsPrependInner "InMemory" (namespaceFor ev)
-  namespaceFor (V1.FlavorImplSpecificTraceOnDisk ev) =
-    nsPrependInner "OnDisk" (namespaceFor ev)
-
-  severityFor (Namespace out ("InMemory" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceInMemory) Nothing
-  severityFor (Namespace out ("InMemory" : tl)) (Just (V1.FlavorImplSpecificTraceInMemory ev)) =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceInMemory) (Just ev)
-  severityFor (Namespace out ("OnDisk" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk) Nothing
-  severityFor (Namespace out ("OnDisk" : tl)) (Just (V1.FlavorImplSpecificTraceOnDisk ev)) =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk) (Just ev)
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace out ("InMemory" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceInMemory)
-  documentFor (Namespace out ("OnDisk" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk)
-  documentFor _ = Nothing
-
-  allNamespaces =
-    map (nsPrependInner "InMemory")
-        (allNamespaces :: [Namespace V1.FlavorImplSpecificTraceInMemory])
-    ++ map (nsPrependInner "OnDisk")
-        (allNamespaces :: [Namespace V1.FlavorImplSpecificTraceOnDisk])
-
-instance MetaTrace V1.FlavorImplSpecificTraceInMemory where
-  namespaceFor V1.InMemoryBackingStoreInitialise = Namespace [] ["Initialise"]
-  namespaceFor (V1.InMemoryBackingStoreTrace bsTrace) =
-    nsPrependInner "BackingStoreEvent" (namespaceFor bsTrace)
-
-  severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (V1.InMemoryBackingStoreTrace ev)) =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace _ ("Initialise" : _)) = Just
-    "Backing store is being initialised"
-  documentFor (Namespace out ("BackingStoreEvent" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
-  documentFor _ = Nothing
-
-  allNamespaces =
-    Namespace [] ["Initialise"]
-    : map (nsPrependInner "BackingStoreEvent")
-          (allNamespaces :: [Namespace V1.BackingStoreTrace])
-
-instance MetaTrace V1.FlavorImplSpecificTraceOnDisk where
-  namespaceFor V1.OnDiskBackingStoreInitialise{} =
-    Namespace [] ["Initialise"]
-  namespaceFor (V1.OnDiskBackingStoreTrace ev) =
-    nsPrependInner "BackingStoreEvent" (namespaceFor ev)
-
-  severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (V1.OnDiskBackingStoreTrace ev)) =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace _ ("Initialise" : _)) = Just
-    "Backing store is being initialised"
-  documentFor (Namespace out ("BackingStoreEvent" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
-  documentFor _ = Nothing
-
-  allNamespaces =
-    Namespace [] ["Initialise"]
-    : map (nsPrependInner "BackingStoreEvent")
-          (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
 instance MetaTrace V1.BackingStoreTrace where
   namespaceFor V1.BSOpening = Namespace [] ["Opening"]
@@ -2238,42 +2210,87 @@ instance MetaTrace V1.BackingStoreValueHandleTrace where
     , Namespace [] ["Statted"]
     ]
 
-instance LogFormatting V2.FlavorImplSpecificTrace where
+{-------------------------------------------------------------------------------
+  V2
+-------------------------------------------------------------------------------}
+
+instance LogFormatting V2.LedgerDBV2Trace where
   forMachine _dtal V2.TraceLedgerTablesHandleCreate =
     mconcat [ "kind" .= String "LedgerTablesHandleCreate" ]
   forMachine _dtal V2.TraceLedgerTablesHandleClose =
     mconcat [ "kind" .= String "LedgerTablesHandleClose" ]
+  forMachine dtal (V2.BackendTrace ev) = forMachine dtal ev
 
   forHuman V2.TraceLedgerTablesHandleCreate =
     "Created a new 'LedgerTablesHandle', potentially by duplicating an existing one"
   forHuman V2.TraceLedgerTablesHandleClose =
     "Closed a 'LedgerTablesHandle'"
+  forHuman (V2.BackendTrace ev) = forHuman ev
 
-instance MetaTrace V2.FlavorImplSpecificTrace where
+instance MetaTrace V2.LedgerDBV2Trace where
   namespaceFor V2.TraceLedgerTablesHandleCreate =
     Namespace [] ["LedgerTablesHandleCreate"]
   namespaceFor V2.TraceLedgerTablesHandleClose =
     Namespace [] ["LedgerTablesHandleClose"]
+  namespaceFor (V2.BackendTrace ev) = nsPrependInner "BackendTrace" (namespaceFor ev)
 
-  severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Info
-  severityFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Info
+  severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Debug
+  severityFor (Namespace _ ("BackendTrace":_)) _ = Just Debug
   severityFor _                          _ = Nothing
 
-  -- suspicious
-  privacyFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Public
-  privacyFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Public
-  privacyFor _                          _ = Just Public
-
   documentFor (Namespace _ ["LedgerTablesHandleCreate"]) =
-    Just "An in-memory backing store event"
+    Just "Created a ledger tables handle"
   documentFor (Namespace _ ["LedgerTablesHandleClose"]) =
-    Just "An on-disk backing store event"
+    Just "Closed a ledger tables handle"
   documentFor _ = Nothing
 
   allNamespaces =
     [ Namespace [] ["LedgerTablesHandleCreate"]
     , Namespace [] ["LedgerTablesHandleClose"]
-    ]
+    ] ++ map (nsPrependInner "BackendTrace") (allNamespaces :: [Namespace V2.SomeBackendTrace])
+
+instance LogFormatting V2.SomeBackendTrace where
+  forMachine dtal (V2.SomeBackendTrace ev) = unwrapV2Trace (forMachine dtal) ev
+
+  forHuman (V2.SomeBackendTrace ev) = unwrapV2Trace forHuman ev
+
+instance MetaTrace V2.SomeBackendTrace where
+  namespaceFor (V2.SomeBackendTrace ev) =
+    unwrapV2Trace (nsPrependInner "LSM" . namespaceFor) ev
+
+  severityFor (Namespace _ ("LSM" : _)) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace out ("LSM" : tl)) = documentFor @(V2.Trace LSM.LSM) (Namespace out tl)
+  documentFor _ = Nothing
+
+  allNamespaces =
+    map (nsPrependInner "LSM") (allNamespaces :: [Namespace (V2.Trace LSM.LSM)])
+
+instance LogFormatting (V2.Trace LSM.LSM) where
+  forMachine _dtal (LSM.LSMTreeTrace ev) = mconcat [ "kind" .= String "LSMTreeTrace", "content" .= showT ev]
+  forHuman (LSM.LSMTreeTrace ev) = showT ev
+
+instance MetaTrace (V2.Trace LSM.LSM) where
+  namespaceFor LSM.LSMTreeTrace{} = Namespace [] ["LSMTrace"]
+  severityFor (Namespace _ ["LSMTrace"]) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["LSMTrace"]) =
+    Just "A trace from the LSM-trees backend"
+  documentFor _ = Nothing
+
+  allNamespaces = [Namespace [] ["LSMTrace"]]
+
+unwrapV2Trace :: forall a backend. Typeable backend => (V2.Trace LSM.LSM -> a) -> V2.Trace backend -> a
+unwrapV2Trace g ev =
+  case cast @(V2.Trace backend) @(V2.Trace InMemory.Mem) ev of
+    Just (InMemory.NoTrace v) -> absurd v
+    Nothing ->
+      case cast @(V2.Trace backend) @(V2.Trace LSM.LSM) ev of
+        Just t -> g t
+        _ -> error "blah"
 
 --------------------------------------------------------------------------------
 -- ImmDB.TraceEvent
