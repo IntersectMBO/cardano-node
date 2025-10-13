@@ -14,6 +14,7 @@
     "MaxConcurrencyBulkSync": 1,
     "MaxConcurrencyDeadline": 2,
     "PBftSignatureThreshold": 0.6,
+    "PeerSharing": false,
     "Protocol": "Cardano",
     "RequiresNetworkMagic": "RequiresMagic",
     "ShelleyGenesisFile": "shelley-genesis.json",
