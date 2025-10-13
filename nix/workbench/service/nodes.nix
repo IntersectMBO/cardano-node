@@ -100,6 +100,7 @@ let
                   "ShelleyGenesisHash"
                   "AlonzoGenesisHash"
                   "ConwayGenesisHash"
+                  "DijkstraGenesisHash"
                 ] //
                 {
                   ExperimentalHardForksEnabled = true;
@@ -120,6 +121,7 @@ let
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
+                  DijkstraGenesisFile          = "../genesis/genesis.dijkstra.json";
                 } // optionalAttrs (profile.node.utxo_lmdb && isProducer)
                 {
                   LedgerDB = {
