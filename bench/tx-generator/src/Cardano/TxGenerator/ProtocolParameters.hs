@@ -65,7 +65,6 @@ import           Numeric.Natural (Natural)
 -- Era based ledger protocol parameters.
 --------------------------------------------------------------------------------
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 convertToLedgerProtocolParameters
   :: ShelleyBasedEra era
   -> ProtocolParameters
@@ -81,7 +80,6 @@ convertToLedgerProtocolParameters sbe pp =
 --
 -- There are also parameters fixed in the Genesis file. See 'GenesisParameters'.
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 data ProtocolParameters
   = ProtocolParameters
   { protocolParamProtocolVersion :: (Natural, Natural)
@@ -510,7 +508,6 @@ toConwayPParams = toBabbagePParams
 -- Conversion functions: protocol parameters from ledger types.
 --------------------------------------------------------------------------------
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromLedgerPParams
   :: ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
@@ -523,7 +520,6 @@ fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
 fromLedgerPParams ShelleyBasedEraConway = fromConwayPParams
 fromLedgerPParams ShelleyBasedEraDijkstra = fromConwayPParams
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromShelleyCommonPParams
   :: EraPParams ledgerera
   => PParams ledgerera
@@ -558,7 +554,6 @@ fromShelleyCommonPParams pp =
     , protocolParamMinUTxOValue = Nothing -- Obsolete from Alonzo onwards
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromShelleyPParams
   :: ( EraPParams ledgerera
      , Ledger.AtMostEra "Mary" ledgerera
@@ -573,7 +568,6 @@ fromShelleyPParams pp =
     , protocolParamMinUTxOValue = Just $ pp ^. ppMinUTxOValueL
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromAlonzoPParams
   :: AlonzoEraPParams ledgerera
   => PParams ledgerera
@@ -590,7 +584,6 @@ fromAlonzoPParams pp =
     , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromExactlyAlonzoPParams
   :: (AlonzoEraPParams ledgerera, Ledger.ExactEra Ledger.AlonzoEra ledgerera)
   => PParams ledgerera
@@ -600,7 +593,6 @@ fromExactlyAlonzoPParams pp =
     { protocolParamUTxOCostPerByte = Just . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromBabbagePParams
   :: BabbageEraPParams ledgerera
   => PParams ledgerera
@@ -611,7 +603,6 @@ fromBabbagePParams pp =
     , protocolParamDecentralization = Nothing
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromConwayPParams
   :: BabbageEraPParams ledgerera
   => PParams ledgerera
