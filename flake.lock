@@ -621,11 +621,11 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1755030560,
-        "narHash": "sha256-iEKngfkifsqAvi8g2cwV2W0IK/3LopgFhA3SXz4r5m0=",
+        "lastModified": 1761066415,
+        "narHash": "sha256-jx83bMiZGw3ulkouzjLTcx6xtVI9GLoG6qBy/Oo3DPM=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "f1da9c88be417237608580bab7fe24ee433bc585",
+        "rev": "338ae551e1d1ae5dae72bbb335f8c3cd623fefee",
         "type": "github"
       },
       "original": {

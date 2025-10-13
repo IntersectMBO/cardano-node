@@ -43,6 +43,7 @@ copyTmplCfg "byron.json"
 copyTmplCfg "config.json"
 copyTmplCfg "config-legacy.json"
 copyTmplCfg "conway.json"
+copyTmplCfg "dijkstra.json"
 copyTmplCfg "shelley.json"
 copyTmplCfg "topology-empty-p2p.json"
 
