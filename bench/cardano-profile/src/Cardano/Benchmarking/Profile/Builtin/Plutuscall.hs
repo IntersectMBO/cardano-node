@@ -52,7 +52,7 @@ profilesNoEraPlutuscall =
       blstVolt        = plutusCall & V.plutusTypeBLST    . V.plutusDoublePlusSaturation . P.analysisSizeModerate2
       ripemdVolt      = plutusCall & V.plutusTypeRIPEMD  . V.plutusDoublePlusSaturation . P.analysisSizeSmall
 
-      postPlomin      = V.genesisVariantVoltaire         . P.v10Preview
+      postPlomin      = V.genesisVariantVoltaire
   in [
     loop        & P.name "plutuscall-loop"                 . postPlomin
   , loop        & P.name "plutuscall-loop-memx2"           . postPlomin . P.budgetBlockMemoryDouble . P.overlay Pl.calibrateLoopBlockMemx2
