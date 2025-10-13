@@ -22,12 +22,18 @@ module Cardano.Node.Configuration.TopologyP2P
   , NodeHostIPv4Address(..)
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
-  , PeerAdvertise(..)
   , nodeAddressToSockAddr
   , readTopologyFile
   , readPeerSnapshotFile
   , readTopologyFileOrError
   , rootConfigToRelayAccessPoint
+  -- * Re-exports
+  , DiffusionMode(..)
+  , PeerAdvertise(..)
+  , PeerTrustable(..)
+  , RelayAccessPoint(..)
+  , UseBootstrapPeers(..)
+  , UseLedgerPeers(..)
   )
 where
 
@@ -43,7 +49,7 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   UseLedgerPeers (..))
+                   UseLedgerPeers (..), RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 

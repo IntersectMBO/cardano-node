@@ -32,7 +32,6 @@ import           Cardano.Ledger.BaseTypes (unsafeNonZero)
 import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import           Cardano.Network.PeerSelection.Bootstrap
 import           Cardano.Network.PeerSelection.PeerTrustable
-import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers
@@ -250,18 +249,8 @@ ifaceAddress = "127.0.0.1"
 
 -- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
 -- to support current era on mainnet and the upcoming era.
-mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
-  where
-    topologyNonP2P :: NonP2P.NetworkTopology NonP2P.RemoteAddress
-    topologyNonP2P =
-      NonP2P.RealNodeTopology
-        [ NonP2P.RemoteAddress (fromString ifaceAddress)
-                               (fromIntegral peerPort)
-                               (numNodes - 1)
-        | peerPort <- allPorts List.\\ [port]
-        ]
-mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
+mkTopologyConfig :: Int -> [Int] -> Int -> LBS.ByteString
+mkTopologyConfig numNodes allPorts port = A.encodePretty topologyP2P
   where
     rootConfig :: P2P.RootConfig RelayAccessPoint
     rootConfig =

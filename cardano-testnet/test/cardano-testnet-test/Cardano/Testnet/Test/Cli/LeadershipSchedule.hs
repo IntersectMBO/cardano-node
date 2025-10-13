@@ -16,7 +16,7 @@ module Cardano.Testnet.Test.Cli.LeadershipSchedule
 import           Cardano.Api
 import qualified Cardano.Api as Api
 
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.Configuration.TopologyP2P
 import           Cardano.Testnet
 
 import           Prelude
@@ -27,6 +27,7 @@ import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as J
 import           Data.Default.Class
+import qualified Data.IP as IP
 import           Data.List ((\\))
 import qualified Data.List as L
 import qualified Data.Map.Strict as Map
@@ -228,10 +229,32 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  let valency = 1
-      topology = RealNodeTopology $
-        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
-          RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
+  let topology = RealNodeTopology {
+        ntLocalRootPeersGroups =
+          (LocalRootPeersGroups
+            [ LocalRootPeersGroup {
+                localRoots = RootConfig {
+                    rootAccessPoints =
+                      [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4)
+                                           nodePort
+                      | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                      ],
+                    rootAdvertise = DoNotAdvertisePeer
+                  },
+                hotValency = 1,
+                warmValency = 1,
+                trustable = IsNotTrustable,
+                rootDiffusionMode = InitiatorAndResponderDiffusionMode
+              }
+            ]),
+        ntPublicRootPeers = [],
+        ntUseLedgerPeers = DontUseLedgerPeers,
+        ntUseBootstrapPeers = DontUseBootstrapPeers,
+        ntPeerSnapshotPath = Nothing
+      }
+
+        -- flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
+        --    (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
   let testSpoKesVKey = work </> "kes.vkey"
       testSpoKesSKey = work </> "kes.skey"

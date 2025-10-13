@@ -30,8 +30,6 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
-import           Cardano.Node.Configuration.Topology (RemoteAddress (..))
-import qualified Cardano.Node.Configuration.Topology as Direct
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Prelude (canonicalEncodePretty)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
@@ -249,19 +247,6 @@ cardanoTestnet
     H.writeFile (nodeDataDir </> "port") (show portNumber)
 
   let
-      idToRemoteAddressDirect :: ()
-        => MonadTest m
-        => HasCallStack
-        => NodeId -> m RemoteAddress
-      idToRemoteAddressDirect (NodeId i) = case lookup i portNumbers of
-        Just port -> pure $ RemoteAddress
-          { raAddress = showIpv4Address testnetDefaultIpv4Address
-          , raPort = port
-          , raValency = 1
-          }
-        Nothing -> do
-          H.note_ $ "Found node id that was unaccounted for: " ++ show i
-          H.failure
       idToRemoteAddressP2P :: ()
         => MonadTest m
         => HasCallStack
@@ -280,19 +265,14 @@ cardanoTestnet
 
     -- Try to decode either a direct topology file, or a P2P one
     H.readJsonFile topologyPath >>= \case
-      Right (abstractTopology :: Direct.NetworkTopology NodeId) -> do
-        topology <- mapM idToRemoteAddressDirect abstractTopology
+      Right (abstractTopology :: P2P.NetworkTopology NodeId) -> do
+        topology <- mapM idToRemoteAddressP2P abstractTopology
         H.lbsWriteFile topologyPath $ encode topology
-      Left _ ->
-        H.readJsonFile topologyPath >>= \case
-          Right (abstractTopology :: P2P.NetworkTopology NodeId) -> do
-            topology <- mapM idToRemoteAddressP2P abstractTopology
-            H.lbsWriteFile topologyPath $ encode topology
-          Left e ->
-            -- There can be multiple reasons for why both decodings have failed.
-            -- Here we assume, very optimistically, that the user has already
-            -- instantiated it with a concrete topology file.
-            H.note_ $ "Could not decode topology file. This may be okay. Reason for decoding failure is:\n" ++ e
+      Left e ->
+        -- There can be multiple reasons for why both decodings have failed.
+        -- Here we assume, very optimistically, that the user has already
+        -- instantiated it with a concrete topology file.
+        H.note_ $ "Could not decode topology file. This may be okay. Reason for decoding failure is:\n" ++ e
 
   -- If necessary, update the time stamps in Byron and Shelley Genesis files.
   -- This is a QoL feature so that users who edit their configuration files don't

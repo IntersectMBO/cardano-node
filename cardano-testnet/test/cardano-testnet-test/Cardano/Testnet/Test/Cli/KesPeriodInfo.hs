@@ -14,7 +14,7 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Type.Output
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.Configuration.TopologyP2P
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
 
@@ -26,6 +26,7 @@ import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import           Data.Default.Class
 import           Data.Function
+import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
@@ -221,10 +222,29 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  let valency = 1
-      topology = RealNodeTopology $
-        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
-            RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
+  let topology = RealNodeTopology {
+        ntLocalRootPeersGroups =
+          (LocalRootPeersGroups
+            [ LocalRootPeersGroup {
+                localRoots = RootConfig {
+                    rootAccessPoints =
+                      [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4)
+                                           nodePort
+                      | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                      ],
+                    rootAdvertise = DoNotAdvertisePeer
+                  },
+                hotValency = 1,
+                warmValency = 1,
+                trustable = IsNotTrustable,
+                rootDiffusionMode = InitiatorAndResponderDiffusionMode
+              }
+            ]),
+        ntPublicRootPeers = [],
+        ntUseLedgerPeers = DontUseLedgerPeers,
+        ntUseBootstrapPeers = DontUseBootstrapPeers,
+        ntPeerSnapshotPath = Nothing
+      }
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
   let testSpoVrfVKey = work </> "vrf.vkey"
