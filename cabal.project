@@ -13,13 +13,13 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-09-24T20:00:55Z
-  , cardano-haskell-packages 2025-09-30T09:59:24Z
+  , hackage.haskell.org 2025-09-26T20:57:57Z
+  , cardano-haskell-packages 2025-10-01T14:54:25Z
 
 packages:
   cardano-node
   cardano-node-capi
-  cardano-node-chairman
+--  cardano-node-chairman
   cardano-submit-api
   cardano-testnet
   cardano-tracer
@@ -83,7 +83,53 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 845b761ba38c65c7d4ad4c2c14c4c034598fba23
-  --sha256: sha256-EAAFJ5yyeblUTNl1usk3ZVwFW6YL9pOLkIQpd0CDIcs=
+  tag: 91977bb9d98d658a1208380e6b92539a3a113e9e
   subdir:
     cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/io-classes-extra
+  tag: bdef43a0660c7af2a0c1f4021228ff4e9ac5af71
+  --sha256: sha256-1if7Gt1dDx2Ryj9iXTbb6SlLA+nOLs6R3pH6TUAkM1o=
+  subdir:
+    resource-registry
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/ouroboros-consensus
+   tag: ebdf2446f23fa30b209442f5b9a6c05f08d08b8d
+   subdir:
+     ouroboros-consensus
+     ouroboros-consensus-cardano
+     ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: fb09078fa55015c881303a2ddb609c024cec258f
+  --sha256: sha256-9Y9CRiyMn0AWD+C4aNVMaJgrj3FDAYfCX4VrLvtoMaI=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-api
+    libs/cardano-ledger-core
+    libs/cardano-ledger-binary
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/cardano-data
+    libs/set-algebra
+    libs/vector-map
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/crypto
