@@ -62,15 +62,14 @@ import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
-import           Cardano.Node.Configuration.Topology (RemoteAddress (..))
-import qualified Cardano.Node.Configuration.Topology as Topology
+import qualified Cardano.Node.Configuration.TopologyP2P as Topology
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), NetworkTopology (..), PublicRootPeers (..),
                    RootConfig (..))
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Tracing.Config
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Ouroboros.Network.PeerSelection (AfterSlot (..), PeerAdvertise (..), RelayAccessPoint (..), UseLedgerPeers (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -462,14 +461,28 @@ mkProtVer (majorProtVer, minorProtVer) =
 ppProtocolVersionL' ::  Lens' (PParams Ledger.ShelleyEra) ProtVer
 ppProtocolVersionL' = Ledger.ppLensHKD . Ledger.hkdProtocolVersionL @Ledger.ShelleyEra @Identity
 
-defaultMainnetTopology :: Topology.NetworkTopology RemoteAddress
+defaultMainnetTopology :: Topology.NetworkTopology RelayAccessPoint
 defaultMainnetTopology =
-  let single = RemoteAddress
-         { raAddress  = "relays-new.cardano-mainnet.iohk.io"
-         , raPort     = 3_001
-         , raValency  = 2
-         }
-  in Topology.RealNodeTopology [single]
+  Topology.RealNodeTopology {
+    ntLocalRootPeersGroups = LocalRootPeersGroups [
+      LocalRootPeersGroup {
+        localRoots = RootConfig {
+          rootAccessPoints =
+            [ RelayAccessDomain  "relays-new.cardano-mainnet.iohk.io" 3_001
+            ],
+          rootAdvertise = DoAdvertisePeer
+        },
+        hotValency = 2,
+        warmValency = 2,
+        trustable = IsTrustable,
+        rootDiffusionMode = InitiatorAndResponderDiffusionMode
+      }
+    ],
+    ntPublicRootPeers = [],
+    ntUseLedgerPeers = UseLedgerPeers Always,
+    ntUseBootstrapPeers = DontUseBootstrapPeers,
+    ntPeerSnapshotPath = Nothing
+  }
 
 defaultGenesisFilepath :: CardanoEra a -> FilePath
 defaultGenesisFilepath era =
