@@ -49,8 +49,8 @@ import           Test.Tasty (TestTree)
 -- import qualified Cardano.Testnet.Test.Cli.LeadershipSchedule
 -- import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
 
-_tests :: IO TestTree
-_tests = do
+tests :: IO TestTree
+tests = do
   pure $ T.testGroup "test/Spec.hs"
     [ T.testGroup "Spec"
         [ T.testGroup "Ledger Events"
@@ -131,7 +131,5 @@ main = do
   hSetBuffering stdout LineBuffering
   hSetEncoding stdout utf8
   args <- E.getArgs
-  let disabledTests = pure $ T.testGroup "tests disabled" []
 
-  -- TODO: fix testnet tests  and reenable here
-  E.withArgs args $ disabledTests >>= T.defaultMainWithIngredients T.defaultIngredients
+  E.withArgs args $ tests >>= T.defaultMainWithIngredients T.defaultIngredients

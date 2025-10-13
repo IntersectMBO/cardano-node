@@ -121,10 +121,7 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   H.note_ "Check that stake address isn't registered yet"
   getAccountsStates epochStateView sbe >>=
     flip H.assertWith
-      (\accountsStates -> isJust $ do
-        _state <- M.lookup stakeKeyHash accountsStates
-        pure () -- TODO should we check for balance?
-        )
+      (isNothing . M.lookup stakeKeyHash)
 
   void $ execCli' execConfig
     [ eraName, "transaction", "submit"
@@ -181,9 +178,5 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   H.note_ "Check that stake address is deregistered"
   getAccountsStates epochStateView sbe >>=
     flip H.assertWith
-      (\accountsStates -> isJust $ do
-        _state <- M.lookup stakeKeyHash accountsStates
-        pure () -- TODO: should we check for balance?
-        )
-      -- (M.notMember stakeKeyHash . L.scDeposits)
+      (isNothing . M.lookup stakeKeyHash)
 

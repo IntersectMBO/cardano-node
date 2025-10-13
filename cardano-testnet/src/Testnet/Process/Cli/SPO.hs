@@ -138,12 +138,6 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
                          . L.accountsL
                          . L.accountsMapL
 
-    -- TODO: this is an old implementation, remove it after verifying that the test works correctly
-    -- let umap = shelleyBasedEraConstraints sbe $ newEpochState ^. L.nesEsL . L.epochStateUMapL
-    --     dag = L.filterStakePoolDelegsAndRewards umap $ Set.singleton sCred
-    --     allStakeCredentials = umap ^. L.umElemsL -- This does not include pointer addresses
-    --     delegsAndRewards = shelleyBasedEraConstraints sbe $ toDelegationsAndRewards network sbe dag
-
     case Map.lookup sCred accountsMap of
       Nothing -> pure ConditionNotMet
       Just _ -> do
@@ -424,7 +418,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
            ]
 
   -- Check the pledger/owner stake key was registered
-  delegsAndRewards <-
+  _ <-
       checkStakeKeyRegistered
         tap
         nodeConfigFile
@@ -434,10 +428,6 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
         poolownerstakeaddr
         ("spo-"<> show identifier <> "-requirements" </> "pledger.stake.info")
 
-  (pledgerSAddr, _rewards, _poolId) <- H.headM $ mergeDelegsAndRewards delegsAndRewards
-
-  -- Pledger and owner are and can be the same
-  Text.unpack (serialiseAddress pledgerSAddr) === poolownerstakeaddr
   let currentRegistedPoolsJson = workDir </> "current-registered.pools.json"
 
   poolId <- checkStakePoolRegistered

@@ -199,6 +199,7 @@ createSPOGenesisAndFiles
     ++ createTestnetDataFlag ShelleyEra
     ++ createTestnetDataFlag AlonzoEra
     ++ createTestnetDataFlag ConwayEra
+    ++ createTestnetDataFlag DijkstraEra
     ++
     [ "--testnet-magic", show genesisTestnetMagic
     , "--pools", show nPoolNodes
