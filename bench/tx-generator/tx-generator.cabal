@@ -58,8 +58,6 @@ library
                         -fno-warn-missing-import-lists
                         -fobject-code -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas
-                        -- TODO: switch back to -Wwarn=deprecations having removed createAndValidateTransactionBody in favour of createTransactionBody (Cardano.Api deprecation)
-                        -Wno-deprecations
 
   exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
