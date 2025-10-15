@@ -71,6 +71,7 @@ library
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
                       , Cardano.Benchmarking.Profile.Workload.CGroupMemory
+                      , Cardano.Benchmarking.Profile.Workload.Hydra
                       , Cardano.Benchmarking.Profile.Workload.Latency
                       , Cardano.Benchmarking.Profile.Workload.Voting
   build-depends:        base >=4.12 && <5
