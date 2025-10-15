@@ -149,12 +149,13 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
 -- It writes an error message on stderr
 handleOverflow :: [TraceObject] -> IO ()
 handleOverflow [] = pure ()
-handleOverflow (msg : msgs) =
+handleOverflow ms@(msg : msgs) =
     let lengthM = 1 + length msgs
         beginning = toTimestamp msg
         end = toTimestamp (last (msg : msgs))
         str = "TraceObject queue overflowed. Dropped " <> show lengthM <>
                 " messages from " <> show beginning <> " to " <> show end
+                <> "\n" <> unlines (map show ms)
     in hPutStrLn stderr str
 
 launchForwarders

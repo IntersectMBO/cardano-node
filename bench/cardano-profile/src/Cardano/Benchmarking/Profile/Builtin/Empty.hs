@@ -148,7 +148,8 @@ profilesNoEraEmpty = map baseNoDataset
         . P.analysisSizeSmall
   in [
      -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
-    ciTestHydra & P.name "ci-test-hydra" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.blocksize64k
+    ciTestHydra & P.name "ci-test-hydra"          . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.blocksize64k
+  , ciTestHydra & P.name "ci-test-hydra-notracer" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOff . P.newTracing . P.blocksize64k
   ]
   ++
   ------------------------------------------------------------------------------
