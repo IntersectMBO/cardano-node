@@ -21,7 +21,8 @@ import qualified Cardano.Benchmarking.Profile.Builtin.Miniature as M
 import qualified Cardano.Benchmarking.Profile.Primitives        as P
 import qualified Cardano.Benchmarking.Profile.Types             as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary        as V
-import qualified Cardano.Benchmarking.Profile.Workload.Voting   as W
+import qualified Cardano.Benchmarking.Profile.Workload.Hydra    as WH
+import qualified Cardano.Benchmarking.Profile.Workload.Voting   as WV
 
 --------------------------------------------------------------------------------
 
@@ -107,6 +108,21 @@ profilesNoEraPlayground =
   -- Voting profiles.
   , voting & P.name "development-voting"
            . P.dreps 1000
-           . P.workloadAppend W.votingWorkloadx2
+           . P.workloadAppend WV.votingWorkloadx2
            . P.traceForwardingOn . P.newTracing
+  -- Hydra profiles.
+  , P.empty & P.name "development-hydra"
+            . P.idle -- No `tx-generator`.
+            {-- For tx-generators use with a duration:
+            . P.fixedLoaded . V.valueLocal
+            --}
+            . P.workloadAppend WH.hydraWorkload
+            . P.uniCircle . V.hosts 2 . P.loopback
+            . V.genesisVariantLatest . V.timescaleCompressed
+            . V.datasetEmpty -- No UTxO.
+            -- One for a future tx-generator plus one for each node.
+            . P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 3
+            . P.traceForwardingOn . P.newTracing
+            . P.analysisOff -- Nothing to analyze.
   ]
+
