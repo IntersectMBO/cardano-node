@@ -2118,12 +2118,12 @@ instance MetaTrace (TraceGsmEvent selection) where
 
   severityFor ns _ =
     case ns of
-      Namespace _ ["InitializedInCaughtUp"]       -> Just Info
-      Namespace _ ["InitializedInPreSyncing"]     -> Just Info
-      Namespace _ ["EnterCaughtUp"]               -> Just Info
-      Namespace _ ["LeaveCaughtUp"]               -> Just Info
-      Namespace _ ["PreSyncingToSyncing"] -> Just Info
-      Namespace _ ["SyncingToPreSyncing"] -> Just Info
+      Namespace _ ["InitializedInCaughtUp"]       -> Just Notice
+      Namespace _ ["InitializedInPreSyncing"]     -> Just Notice
+      Namespace _ ["EnterCaughtUp"]               -> Just Notice
+      Namespace _ ["LeaveCaughtUp"]               -> Just Warning
+      Namespace _ ["PreSyncingToSyncing"]         -> Just Notice
+      Namespace _ ["SyncingToPreSyncing"]         -> Just Notice
       Namespace _ _                               -> Nothing
 
   documentFor = \case
@@ -2144,11 +2144,13 @@ instance MetaTrace (TraceGsmEvent selection) where
       Nothing
 
   metricsDocFor = \case
-    Namespace _ ["EnterCaughtUp"]       -> doc
-    Namespace _ ["LeaveCaughtUp"]       -> doc
-    Namespace _ ["PreSyncingToSyncing"] -> doc
-    Namespace _ ["SyncingToPreSyncing"] -> doc
-    Namespace _ _                       -> []
+    Namespace _ ["InitializedInCaughtUp"]   -> doc
+    Namespace _ ["InitializedInPreSyncing"] -> doc
+    Namespace _ ["EnterCaughtUp"]           -> doc
+    Namespace _ ["LeaveCaughtUp"]           -> doc
+    Namespace _ ["PreSyncingToSyncing"]     -> doc
+    Namespace _ ["SyncingToPreSyncing"]     -> doc
+    Namespace _ _                           -> []
     where
       doc =
         [ ("GSM.state"
