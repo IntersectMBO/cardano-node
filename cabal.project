@@ -76,15 +76,15 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: 16ca746cdf030ea1417ae454716eb1427850d4c9
-  --sha256: sha256-J07kFhn95mbkiUvfIHS28FZUgyzTj1oVPGqatezaTFk=
+  tag: ad48452f027c8657d797ab976aa592efc2b953e5
+  --sha256: sha256-J5WnKHuK6UiuqBh4CjXpY+dvMGcH8hdUMSfRko1f2Ds=
   subdir: cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: ef9796d852c4f7b57ff99b09a0f2084035607cab
-  --sha256: sha256-teInpI0ptB/71hyDzrxq/si5uuzti95zVjEsE2ZFvtA=
+  tag: 1c46afaaf60aae7adacdb6e8b2a31437471d9f77
+  --sha256: sha256-hGAEa+niqHu6Briwwo5bO5iJ1xC+fYS4bLd7erG51do=
   subdir:
     cardano-api
   
@@ -92,11 +92,10 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/plutus.git
   -- Candidate for Plutus release 1.53.1.0
-  tag: 9e57d691fed8a4a8c7f6dc32f07e80a6dd271d36
-  --sha256: sha256-TIKoJJoebIEbsgk5olrKcfb6upgmyhU5cXgP2TmfFO8=
+  tag: 549399f1b3d77f75d9fe6b2e2fbd0a5f1c3b0829
+  --sha256: sha256-4vSqK+3QJanTUBEQDLMFRn2N2VjAZzjWNQXMSbv6L4s=
   subdir:
     plutus-core
     plutus-ledger-api
     plutus-tx
     plutus-tx-plugin
-    plutus-metatheory
