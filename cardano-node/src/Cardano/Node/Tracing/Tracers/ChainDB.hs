@@ -2255,8 +2255,8 @@ instance MetaTrace V2.FlavorImplSpecificTrace where
   namespaceFor V2.TraceLedgerTablesHandleClose =
     Namespace [] ["LedgerTablesHandleClose"]
 
-  severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Info
-  severityFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Info
+  severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Debug
   severityFor _                          _ = Nothing
 
   -- suspicious
