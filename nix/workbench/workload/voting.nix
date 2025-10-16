@@ -141,6 +141,11 @@ in ''
 # desired_producer_tps: ${toString desired_producer_tps}
 # desired_producer_sleep: ${toString desired_producer_sleep}
 
+${import ./utils/keys.nix
+  { inherit coreutils jq cardano-cli testnet_magic;
+  }
+}
+
 ${import ./utils/utxo.nix
   { inherit coreutils cardano-cli jq testnet_magic;
     inherit outs_per_split_transaction funds_submit_tries;
@@ -149,108 +154,6 @@ ${import ./utils/utxo.nix
     inherit wait_proposal_id_tries wait_proposal_id_sleep;
     inherit wait_proposals_count_sleep;
   }
-}
-
-################################################################################
-# Hack: Given a node "i" and proposal number and a DRep number create always the
-# same address keys.
-# Only supports up to 99 nodes, 9999 proposals and 999999 DReps by adding the
-# missing Hex chars.
-# Returns the file path without the extensions (the ".skey" or ".vkey" part).
-################################################################################
-function create_node_prop_drep_key_files {
-
-  # Function arguments.
-  local node_str=$1 # String for the key file name (not for the socket).
-  local node_i=$2   # This "i" is part of the node name ("node-i").
-  local prop_i=$3
-  local drep_i=$4
-
-  local filename=./"''${node_str}"-prop-"''${prop_i}"-drep-"''${drep_i}"
-  # Now with the extensions.
-  local skey="''${filename}".skey
-  local vkey="''${filename}".vkey
-
-  # Only create if not already there!
-  if ! test -f "''${vkey}"
-  then
-      ${jq}/bin/jq --null-input \
-        --argjson node_i "''${node_i}" \
-        --argjson prop_i "''${prop_i}" \
-        --argjson drep_i "''${drep_i}" \
-        '
-          {"type": "PaymentSigningKeyShelley_ed25519",
-           "description": "Payment Signing Key",
-           "cborHex": (
-                "5820b02868d722df021278c78be3b7363759b37f5852b8747b488bab"
-              + (if   $node_i <=  9
-                 then ("0" + ($node_i | tostring))
-                 elif $node_i >= 10 and $node_i <= 99
-                 then (       $node_i | tostring)
-                 else (error ("Node ID above 99"))
-                 end
-                )
-              + (if   $prop_i <=      9
-                 then (   "000" + ($prop_i | tostring))
-                 elif $prop_i >=   10 and $prop_i <=   99
-                 then (    "00" + ($prop_i | tostring))
-                 elif $prop_i >=  100 and $prop_i <=  999
-                 then (     "0" + ($prop_i | tostring))
-                 elif $prop_i >= 1000 and $prop_i <= 9999
-                 then (           ($prop_i | tostring))
-                 else (error ("Proposal ID above 9999"))
-                 end
-                )
-              + (if   $drep_i <=      9
-                 then ( "00000" + ($drep_i | tostring))
-                 elif $drep_i >=     10 and $drep_i <=     99
-                 then (  "0000" + ($drep_i | tostring))
-                 elif $drep_i >=    100 and $drep_i <=    999
-                 then (   "000" + ($drep_i | tostring))
-                 elif $drep_i >=   1000 and $drep_i <=   9999
-                 then (    "00" + ($drep_i | tostring))
-                 elif $drep_i >=  10000 and $drep_i <=  99999
-                 then (     "0" + ($drep_i | tostring))
-                 elif $drep_i >= 100000 and $drep_i <= 999999
-                 then (           ($drep_i | tostring))
-                 else (error ("DRep ID above 999999"))
-                 end
-                )
-            )
-          }
-        ' \
-    > "''${skey}"
-    ${cardano-cli}/bin/cardano-cli conway key verification-key         \
-      --signing-key-file      "''${skey}"                              \
-      --verification-key-file "''${vkey}"
-  fi
-  ${coreutils}/bin/echo "''${filename}"
-}
-
-################################################################################
-# Get address of the node-proposal-drep combination!
-################################################################################
-function build_node_prop_drep_address {
-
-  # Function arguments.
-  local node_str=$1 # String for the key file name (not for the socket).
-  local node_i=$2   # This "i" is part of the node name ("node-i").
-  local prop_i=$3
-  local drep_i=$4
-
-  local filename addr
-  filename="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")"
-  addr="''${filename}.addr"
-  # Only create if not already there!
-  if ! test -f "''${addr}"
-  then
-    local vkey="''${filename}".vkey
-      ${cardano-cli}/bin/cardano-cli address build  \
-        --testnet-magic ${toString testnet_magic}   \
-        --payment-verification-key-file "''${vkey}" \
-    > "''${addr}"
-  fi
-  ${coreutils}/bin/cat "''${addr}"
 }
 
 ################################################################################
@@ -289,7 +192,7 @@ function governance_funds_genesis {
     )"
     local producer_addr
     # Drep 0 is No DRep (funds for the node).
-    producer_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" 0 0)"
+    producer_addr="$(build_x_y_z_address "''${producer_name}" "''${producer_i}" 0 0)"
     producers_addrs_array+=("''${producer_addr}")
     ${coreutils}/bin/echo "governance_funds_genesis: Splitting to: ''${producer_name} - ''${producer_i} - 0 - (''${producer_addr})"
   done
@@ -326,9 +229,9 @@ function governance_funds_producer {
       ../../node-specs.json              \
   )"
   local producer_addr producer_vkey producer_skey
-  producer_addr="$(build_node_prop_drep_address    "''${producer_name}" "''${producer_i}" 0 0)"
-  producer_vkey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" 0 0)".vkey
-  producer_skey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" 0 0)".skey
+  producer_addr="$(build_x_y_z_address    "''${producer_name}" "''${producer_i}" 0 0)"
+  producer_vkey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" 0 0)".vkey
+  producer_skey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" 0 0)".skey
 
   # Wait for initial funds to arrive!
   ${coreutils}/bin/echo "governance_funds_producer: Wait for funds:  $(${coreutils}/bin/date --rfc-3339=seconds)"
@@ -349,7 +252,7 @@ function governance_funds_producer {
   for prop_i in {1..${toString proposals_count}}
   do
     local producer_prop_addr
-    producer_prop_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)"
+    producer_prop_addr="$(build_x_y_z_address "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)"
     producer_prop_addr_array+=("''${producer_prop_addr}")
     ${coreutils}/bin/echo  "governance_funds_producer: Splitting to: ''${producer_name} - ''${producer_i} - ''${prop_i} - ''${producer_prop_addr}"
   done
@@ -374,8 +277,8 @@ function governance_funds_producer {
   do
 
     local producer_prop_vkey producer_prop_skey
-    producer_prop_vkey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".vkey
-    producer_prop_skey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".skey
+    producer_prop_vkey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".vkey
+    producer_prop_skey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".skey
 
     local producer_dreps_addrs_array=()
     local drep_step=0
@@ -385,7 +288,7 @@ function governance_funds_producer {
     do
       local producer_drep_addr
       actual_drep="$((drep_step + i))"
-      producer_drep_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" "''${prop_i}" "''${actual_drep}")"
+      producer_drep_addr="$(build_x_y_z_address "''${producer_name}" "''${producer_i}" "''${prop_i}" "''${actual_drep}")"
       producer_dreps_addrs_array+=("''${producer_drep_addr}")
       ${coreutils}/bin/echo  "governance_funds_producer: Splitting to: ''${producer_name} - ''${producer_i} - ''${prop_i} - ''${actual_drep} - ''${producer_drep_addr}"
     done
@@ -522,8 +425,8 @@ function governance_create_withdrawal {
   socket_path="$(get_socket_path "''${node_str}")"
 
   local node_drep_skey node_drep_addr
-  node_drep_skey="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" 0 "''${drep_i}")".skey
-  node_drep_addr="$(build_node_prop_drep_address    "''${node_str}" "''${node_i}" 0 "''${drep_i}")"
+  node_drep_skey="$(create_x_y_z_key_files "''${node_str}" "''${node_i}" 0 "''${drep_i}")".skey
+  node_drep_addr="$(build_x_y_z_address    "''${node_str}" "''${node_i}" 0 "''${drep_i}")"
 
   # Funds needed for this governance action ?
   local action_deposit
@@ -719,8 +622,8 @@ function governance_vote_proposal {
   for drep_i in ''${dreps_array[*]}
   do
     local node_drep_skey node_drep_addr
-    node_drep_skey="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")".skey
-    node_drep_addr="$(build_node_prop_drep_address    "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")"
+    node_drep_skey="$(create_x_y_z_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")".skey
+    node_drep_addr="$(build_x_y_z_address    "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")"
     # UTxO are created for 1 vote per transaction so all runs have the same
     # number of UTxOs. We grab the funds from the first address/UTxO.
     if test -z "''${funds_tx-}"
