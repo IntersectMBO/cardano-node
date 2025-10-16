@@ -11,6 +11,7 @@ let
 
   bashInteractive    = pkgs.bashInteractive;
   coreutils          = pkgs.coreutils;
+  wget               = pkgs.wget;
   jq                 = pkgs.jq;
   # Avoid rebuilding on every commit because of `set-git-rev`.
   cardano-cli        = pkgs.cardanoNodePackages.cardano-cli.passthru.noGitRev;
@@ -347,6 +348,14 @@ function governance_create_constitution {
   | ${jq}/bin/jq -r                                                  \
       '.nextRatifyState.nextEnactState.prevGovActionIds'
 
+  # Copy base-line anchor.
+  ${wget}/bin/wget                                                   \
+    --output-document ./constitution.anchor.json                     \
+    "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0100/cip-0100.common.schema.json"
+  # Calculate anchor hash.
+  ${cardano-cli}/bin/cardano-cli hash anchor-data                    \
+    --file-text ./constitution.anchor.json                           \
+    --out-file  ./constitution.anchor.hash
   # Create dummy constitution.
     ${coreutils}/bin/echo "My Constitution: free mate and asado"     \
   > ./constitution.txt
@@ -368,7 +377,7 @@ function governance_create_constitution {
   ${cardano-cli}/bin/cardano-cli conway governance action create-constitution \
     --testnet \
     --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0100/cip-0100.common.schema.json" \
-    --anchor-data-hash "9d99fbca260b2d77e6d3012204e1a8658f872637ae94cdb1d8a53f4369400aa9" \
+    --anchor-data-hash "$(${coreutils}/bin/cat ./constitution.anchor.hash)" \
     --constitution-url "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto" \
     --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
@@ -438,12 +447,21 @@ function governance_create_withdrawal {
   local funds_tx
   funds_tx="$(get_address_utxo_expected_id "''${node_drep_addr}")"
 
+  # Copy base-line anchor.
+  ${wget}/bin/wget                                                   \
+    --output-document ./treasury-withdrawal.json                     \
+    "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0108/examples/treasury-withdrawal.jsonld"
+  # Calculate anchor hash.
+  ${cardano-cli}/bin/cardano-cli hash anchor-data                    \
+    --file-text   ./treasury-withdrawal.json                         \
+    --out-file    ./treasury-withdrawal.hash
+ 
   local tx_filename=./create-withdrawal."''${node_str}"."''${drep_i}"
   # Create action.
   ${cardano-cli}/bin/cardano-cli conway governance action create-treasury-withdrawal \
     --testnet                                                                                                                    \
     --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0108/examples/treasury-withdrawal.jsonld" \
-    --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
+    --anchor-data-hash "$(${coreutils}/bin/cat ./treasury-withdrawal.hash)"                                                      \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
     --deposit-return-stake-verification-key-file  ../../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey \
