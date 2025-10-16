@@ -8,7 +8,6 @@ import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
 
-import qualified Cardano.Ledger.Compactible as L
 import           Cardano.Testnet
 
 import           Prelude

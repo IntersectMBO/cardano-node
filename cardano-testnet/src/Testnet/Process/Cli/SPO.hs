@@ -20,7 +20,6 @@ import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.State as L
-import qualified Cardano.Ledger.UMap as L
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
