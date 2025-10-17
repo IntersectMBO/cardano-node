@@ -9,7 +9,6 @@ module Testnet.Components.Configuration
   ( createConfigJson
   , createConfigJsonNoHash
   , createSPOGenesisAndFiles
-  , mkTopologyConfig
   , numSeededUTxOKeys
 
   , getByronGenesisHash
@@ -30,12 +29,6 @@ import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (unsafeNonZero)
 import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
-import           Cardano.Network.PeerSelection.Bootstrap
-import           Cardano.Network.PeerSelection.PeerTrustable
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
@@ -47,9 +40,6 @@ import           Data.Aeson.Key hiding (fromString)
 import           Data.Aeson.KeyMap hiding (map)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.List as List
-import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
@@ -243,42 +233,6 @@ createSPOGenesisAndFiles
     createTestnetDataFlag :: Pretty (eon era) => eon era -> [String]
     createTestnetDataFlag sbe =
         ["--spec-" ++ eraToString sbe, genesisInputFilepath sbe]
-
-ifaceAddress :: String
-ifaceAddress = "127.0.0.1"
-
--- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
--- to support current era on mainnet and the upcoming era.
-mkTopologyConfig :: Int -> [Int] -> Int -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port = A.encodePretty topologyP2P
-  where
-    rootConfig :: P2P.RootConfig RelayAccessPoint
-    rootConfig =
-      P2P.RootConfig
-        [ RelayAccessAddress (fromString ifaceAddress)
-                             (fromIntegral peerPort)
-        | peerPort <- allPorts List.\\ [port]
-        ]
-        P2P.DoNotAdvertisePeer
-
-    localRootPeerGroups :: P2P.LocalRootPeersGroups RelayAccessPoint
-    localRootPeerGroups =
-      P2P.LocalRootPeersGroups
-        [ P2P.LocalRootPeersGroup rootConfig
-                                  (HotValency (numNodes - 1))
-                                  (WarmValency (numNodes - 1))
-                                  IsNotTrustable
-                                  InitiatorAndResponderDiffusionMode
-        ]
-
-    topologyP2P :: P2P.NetworkTopology RelayAccessPoint
-    topologyP2P =
-      P2P.RealNodeTopology
-        localRootPeerGroups
-        []
-        DontUseLedgerPeers
-        DontUseBootstrapPeers
-        Nothing
 
 -- | Resolves different kinds of user-provided on-chain parameters
 -- into a unified, consistent set of Genesis files
