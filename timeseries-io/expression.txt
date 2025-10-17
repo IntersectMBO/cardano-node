@@ -1,0 +1,1 @@
+mean(mul(add($x, $y), $my_variable_42), min(5))
