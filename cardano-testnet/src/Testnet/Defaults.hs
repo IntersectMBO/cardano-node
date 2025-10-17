@@ -62,14 +62,15 @@ import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
-import qualified Cardano.Node.Configuration.TopologyP2P as Topology
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), NetworkTopology (..), PublicRootPeers (..),
                    RootConfig (..))
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import qualified Cardano.Node.Configuration.TopologyP2P as Topology
 import           Cardano.Tracing.Config
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection (AfterSlot (..), PeerAdvertise (..), RelayAccessPoint (..), UseLedgerPeers (..))
+import           Ouroboros.Network.PeerSelection (AfterSlot (..), PeerAdvertise (..),
+                   RelayAccessPoint (..), UseLedgerPeers (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -613,8 +614,8 @@ defaultP2PTopology addresses = P2P.RealNodeTopology
             { rootAccessPoints = addresses
             , rootAdvertise = DoNotAdvertisePeer
             }
-          , hotValency = HotValency 1
-          , warmValency = WarmValency 1
+          , hotValency = HotValency $ length addresses
+          , warmValency = WarmValency $ length addresses
           , trustable = IsTrustable
           , rootDiffusionMode = InitiatorAndResponderDiffusionMode
           }
