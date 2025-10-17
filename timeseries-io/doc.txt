@@ -1,0 +1,19 @@
+An instant of type `a` is the following data:
+— A set of labels
+— A timestamp
+— An element of `a`
+The set of labels identifies which timeseries the instant belongs to.
+We sometimes call this set of labels a "series identifier".
+
+An instant vector of type `a` is a set of `instant`s of type `a` where every two elements of the set have distinct:
+— Set of labels
+
+A timeseries of type `a` is:
+— A set of labels
+— a set of pairs of:
+  — A timestamp
+  — An element of `a`
+
+A timeseries vector of type `a` is a set of timeseries where every two elements of the set have distinct:
+— Set of labels
+

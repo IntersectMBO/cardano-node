@@ -1,0 +1,414 @@
+//  ----------- Definitions --------------
+
+A : Type
+----------------------
+InstantVector A : Type
+
+
+A : Type
+--------------------
+RangeVector A : Type
+
+
+Scalar : Type
+
+
+Bool : Type
+
+
+A : Type
+B : Type
+-------------
+(A, B) : Type
+
+
+Timestamp : Type
+
+
+Duration : Type
+
+
+t : (a, b)
+------------ ✔
+fst t : a
+
+
+t : (a, b)
+---------- ✔
+snd t : b
+
+
+a : A
+b : B
+--------------- ✔
+(a, b) : (A, B)
+
+
+a : Scalar
+b : Scalar
+------------- ✔
+a == b : Bool
+
+
+a : Scalar
+b : Scalar
+------------ ✔
+a < b : Bool
+
+
+a : Scalar
+b : Scalar
+------------- ✔
+a <= b : Bool
+
+
+a : Scalar
+b : Scalar
+------------ ✔
+a > b : Bool
+
+
+a : Scalar
+b : Scalar
+------------- ✔
+a >= b : Bool
+
+
+a : Scalar
+b : Scalar
+------------ ✔
+a + b : Bool
+
+
+a : Scalar
+b : Scalar
+------------ ✔
+a - b : Bool
+
+
+a : Scalar
+b : Scalar
+------------ ✔
+a * b : Bool
+
+
+a : Scalar
+b : Scalar
+------------ ✔
+a / b : Bool
+
+
+a : Bool
+------------ ✔
+not a : Bool
+
+
+a : Bool
+b : Bool
+------------- ✔
+a && b : Bool
+
+
+a : Bool
+b : Bool
+------------- ✔
+a || b : Bool
+
+
+n integer // integer literal
+-------------------- // Syntax sugar: <int>m ✔
+minutes n : Duration
+
+
+
+n integer // integer literal
+------------------ // Syntax hugar: <int>h ✔
+hours n : Duration
+
+
+now : Timestamp ✔
+
+
+t : Timestamp
+d : Duration
+---------------------- // Syntax sugar: t - d ✔
+rewind t d : Timestamp
+
+
+t : Timestamp
+------------------- ✔
+toScalar t : Scalar
+
+
+t : Bool
+------------------- ✔
+toScalar t : Scalar
+
+
+// Given a continuous timeseries vector and an interval computes a discrete timeseries vector
+s : Timestamp -> InstantVector a
+a : Timestamp
+b : Timestamp
+-------------------------------- ✔
+s[a; b] : RangeVector a
+
+
+// More general version with a sampling rate
+s : Timestamp -> InstantVector a
+a : Timestamp
+b : Timestamp
+d : Duration
+-------------------------------- ✔
+s[a; b; d] : RangeVector a
+
+
+// Takes a subset of the instant vector by keeping only those instants whose labels are in the provided set.
+v : InstantVector a
+ls Set label // must be a literal expression (doesn't have a type)
+----------------------- ✔
+v{ls} : InstantVector a
+
+
+v : InstantVector Scalar
+------------------------ ✔
+max v : Scalar
+
+
+v : InstantVector Scalar
+------------------------ ✔
+avg : Scalar
+
+
+f : A -> Bool
+v : InstantVector A
+---------------------------- ✔
+filter f v : InstantVector A
+
+
+u : InstantVector a
+v : InstantVector b
+---------------------------- // 1-to-1 match is a assumed ✔
+u ⊗ v : InstantVector (a, b)
+
+
+f : A -> B
+v : InstantVector A
+-------------------- ✔
+f u : InstantVector B
+
+
+t : Scalar
+-------------- ✔
+abs t : Scalar
+
+
+r : RangeVector Scalar
+--------------------------------- ✔
+increase r : InstantVector Scalar
+
+
+r : RangeVector Scalar
+----------------------------------- ✔
+rate r : InstantVector Scalar
+
+
+r : RangeVector Scalar
+-------------------------------------- ✔
+avg_over_time r : InstantVector Scalar
+
+
+r : RangeVector Scalar
+------------------------------------- ✔
+sum_over_time r : InstantVector Scalar
+
+
+q : Scalar // must be in range of [0; 1]
+r : RangeVector
+---------------------------------------------
+quantile_over_time q r : InstantVector Scalar
+
+
+u : InstantVector a
+v : InstantVector b
+----------------------------
+unless u v : InstantVector a
+
+
+a : InstantVector Scalar
+s : Scalar
+-------------------------------- // meta-level abbreviation
+a <= s : InstantVector Scalar
+a <= s ≡ filter (\v -> v <= s) a
+
+
+v : InstantVector Scalar
+s : Scalar
+-------------------------------- // meta-level abbreviation
+v <= bool s : InstantVector Bool
+v <= bool s ≡ (\x -> x <= s) v
+
+
+v : InstantVector Scalar
+s : Scalar
+---------------------------- // meta-level definition (define via map)
+v / s : InstantVector Scalar
+
+
+v : InstantVector Scalar
+s : Scalar
+---------------------------- // meta-level definition (define via map)
+v * s : InstantVector Scalar
+
+
+s : Scalar
+v : InstantVector Scalar
+----------------------------- // meta-level definition (define via map)
+s - v : InstantVector Scalar
+
+
+v : InstantVector Bool
+--------------------------------- // meta-level definition (define via map)
+toScalar v : InstantVector Scalar
+
+ls : Set Label
+q : Scalar
+v : InstantVector Scalar
+-----------------------------------------
+quantile-by ls q v : InstantVector Scalar
+
+// -----------------------------------
+
+
+
+// PromQL
+(
+   (abs(max(${blockMetric}{environment="${env}"}) - ${blockMetric}{environment="${env}"}) > bool ${toString lagBlocks})
+     -
+   (abs(max(${slotMetric}{environment="${env}"}) - on() group_right() ${slotMetric}{environment="${env}"}) < bool ${toString lagSeconds})
+) == 1
+
+// Ours
+let maxBlock = max ((${blockMetric} now) {environment = "${env}"})
+let maxSlot = max ((${slotMetric} now) {environment="${env}"})
+let block = (\x -> abs (maxBlock - x)) ((${blockMetric} now) {environment="${env}"})
+              > bool
+            ${toString lagBlocks}
+let slot = (\x -> abs (maxSlot - x)) ((${slotMetric} now) {environment="${env}"})
+             < bool
+           ${toString lagSeconds}
+(\x -> fst x && not (snd x)) (block ⊗ slot)
+
+
+
+
+
+
+//PromQL
+${kesPeriodsRemaining} <= ${toString periodNotice}
+
+//Ours
+${kesPeriodsRemaining} now <= ${toString periodNotice}
+
+
+
+
+
+
+//PromQL
+increase(cardano_node_metrics_Forge_forged_int[24h]) == 0
+
+//Ours
+increase cardano_node_metrics_Forge_forged_int[now - 24h; now] == 0.0
+
+
+
+
+
+//PromQL
+rate(cardano_node_metrics_slotsMissedNum_int[5m]) * 1 > 0.5
+
+//Ours
+rate cardano_node_metrics_slotsMissedNum_int[now - 5m; now] > 0.5
+
+
+
+
+
+
+//PromQL
+avg_over_time(netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average[5m]) > 500
+
+//Ours
+avg_over_time netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average[now - 5m; now] > 500.0
+
+
+
+
+
+
+//PromQL
+avg(quantile_over_time(0.95, cardano_node_metrics_blockadoption_forgeDelay_real[6h])) >= 4.5
+
+//Ours
+avg (quantile_over_time 0.95 cardano_node_metrics_blockadoption_forgeDelay_real[now - 6h; now]) >= 4.5
+
+
+
+
+
+
+
+//PromQL
+100 * avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize[6h]) / 90112) > ${highBlockUtilization}
+
+//Ours
+100.0 * avg(avg_over_time cardano_node_metrics_blockfetchclient_blocksize[now - 6h; now] / 90112.0) > ${highBlockUtilization}
+
+
+
+
+//PromQL
+cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.90
+
+//Ours
+cardano_node_metrics_blockfetchclient_blockdelay_cdfFive now < 0.90
+
+
+
+
+
+//PromQL
+round(increase((time() - cardano_node_metrics_nodeStartTime_int < bool 300)[1h:1m])) > 1
+
+//Ours
+round (increase (\t -> toScalar (t - cardano_node_metrics_nodeStartTime_int t < bool 300.0))[now-1h;now:1m]) > 1.0
+
+
+
+
+//PromQL
+(sum_over_time((cardano_node_metrics_blockNum_int != bool 0)[360m:1m]) < bool 350) > 0 unless cardano_node_metrics_blockNum_int"
+
+//Ours
+(sum_over_time (\t -> toScalar (cardano_node_metrics_blockNum_int t != bool 0.0))[now-360m;now:1m] < bool 350) > 0.0
+  unless cardano_node_metrics_blockNum_int now
+
+
+
+
+//PromQL
+100 * quantile by(environment) (0.2, (cardano_node_metrics_density_real * 20)) < ${chainDensityVeryLow}
+
+
+//Ours
+100 * quantile-by [environment] 0.2 (cardano_node_metrics_density_real now * 20) < ${chainDensityVeryLow}
+
+
+
+
+
+//PromQL
+100 * quantile by(environment) (0.2, (cardano_node_metrics_density_real{environment!~"preview"} * 20)) < ${chainDensityLow}
+
+//Ours
+// We need to enhance the filtering by operations other than "subset"

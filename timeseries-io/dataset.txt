@@ -1,0 +1,12 @@
+my_metric1 [node = "1"] 0 0
+my_metric1 [node = "1"] 2 2
+my_metric1 [node = "1"] 4 4
+my_metric1 [node = "2"] 8 10
+my_metric1 [node = "2"] 10 8
+my_metric1 [node = "2"] 12 4
+my_metric2 [node = "1"] 0 0
+my_metric2 [node = "1"] 2 2
+my_metric2 [node = "1"] 4 4
+my_metric2 [node = "2"] 8 10
+my_metric2 [node = "2"] 10 8
+my_metric2 [node = "2"] 12 4
