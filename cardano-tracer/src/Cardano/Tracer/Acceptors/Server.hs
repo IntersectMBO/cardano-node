@@ -29,7 +29,7 @@ import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
                    localAddressFromPath, localSnocket, makeLocalBearer, makeSocketBearer,
                    socketSnocket)
 import           Ouroboros.Network.Socket (ConnectionId (..),
-                   SomeResponderApplication (..), debuggingNetworkConnectTracers, nctHandshakeTracer)
+                   SomeResponderApplication (..))
 import qualified Ouroboros.Network.Server.Simple as Server
 
 import           Codec.CBOR.Term (Term)
@@ -127,7 +127,7 @@ doListenToForwarderLocal snocket address netMagic timeLimits app = do
       mempty -- LocalSocket does not need to be configured
       address
       HandshakeArguments {
-        haHandshakeTracer = nctHandshakeTracer debuggingNetworkConnectTracers, -- nullTracer,
+        haHandshakeTracer = nullTracer,
         haBearerTracer = nullTracer,
         haHandshakeCodec = Handshake.codecHandshake forwardingVersionCodec,
         haVersionDataCodec = Handshake.cborTermVersionDataCodec forwardingCodecCBORTerm,
