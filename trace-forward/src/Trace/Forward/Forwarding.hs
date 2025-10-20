@@ -30,7 +30,7 @@ import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFro
                    makeLocalBearer, LocalAddress, socketSnocket, makeSocketBearer, LocalSocket)
 import           Ouroboros.Network.Socket (ConnectToArgs (..),
                    HandshakeCallbacks (..), SomeResponderApplication (..),
-                   connectToNode, nullNetworkConnectTracers)
+                   debuggingNetworkConnectTracers, connectToNode)
 import qualified Ouroboros.Network.Server.Simple as Server
 
 import           Codec.CBOR.Term (Term)
@@ -232,6 +232,7 @@ launchForwardersViaLocalSocket
 
 doConnectToAcceptor
   :: forall fd addr. ()
+  => Show addr
   => NetworkMagic
   -> Snocket IO fd addr
   -> MakeBearer IO fd
@@ -273,7 +274,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
     ctaHandshakeTimeLimits = timeLimits,
     ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
-    ctaConnectTracers = nullNetworkConnectTracers,
+    ctaConnectTracers = debuggingNetworkConnectTracers, -- nullNetworkConnectTracers,
     ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
   forwarderApp
     :: [(RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
