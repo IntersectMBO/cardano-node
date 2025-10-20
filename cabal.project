@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-09-24T20:00:55Z
-  , cardano-haskell-packages 2025-09-30T09:59:24Z
+  , cardano-haskell-packages 2025-10-20T10:49:20Z
 
 packages:
   cardano-node
@@ -76,26 +76,14 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: ad48452f027c8657d797ab976aa592efc2b953e5
-  --sha256: sha256-J5WnKHuK6UiuqBh4CjXpY+dvMGcH8hdUMSfRko1f2Ds=
+  tag: dc4949d8abe33c7b5f4da6763f5a7880ae40d15d
+  --sha256: sha256-nwwhUeSS0LI8Cu65a/gMFZYYLBiXTdxFtySiPp+0Ezc=
   subdir: cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 1c46afaaf60aae7adacdb6e8b2a31437471d9f77
-  --sha256: sha256-hGAEa+niqHu6Briwwo5bO5iJ1xC+fYS4bLd7erG51do=
+  tag: 79163b1b9354db72568dd37e4128c1349526b70a
+  --sha256: sha256-JRl+usqWmzc2EEPjpzAXQ/IHfdfnRs8x09dfF1h25lc=
   subdir:
     cardano-api
-  
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/plutus.git
-  -- Candidate for Plutus release 1.53.1.0
-  tag: 549399f1b3d77f75d9fe6b2e2fbd0a5f1c3b0829
-  --sha256: sha256-4vSqK+3QJanTUBEQDLMFRn2N2VjAZzjWNQXMSbv6L4s=
-  subdir:
-    plutus-core
-    plutus-ledger-api
-    plutus-tx
-    plutus-tx-plugin
