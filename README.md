@@ -65,3 +65,5 @@ For some troubleshooting help with building or running `cardano-node`,
 the wiki has a [troubleshooting
 page](https://github.com/input-output-hk/cardano-node-wiki/wiki/Troubleshooting)
 that documents some common gotchas.
+<br>## Welcome to Plutus Smart Contracts<br>Cardano's Plutus enables secure dApps with Haskell—new contributors, start with the Haskell template for your first script. Tip: Use Cabal for build! <br>
+
