@@ -5,7 +5,7 @@ module Cardano.Logging.Utils
 import           Cardano.Logging.Types (HowToConnect)
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
-import           Control.Tracer (stdoutTracer, traceWith)
+-- import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL (toStrict)
 import qualified Data.Text.Lazy.Builder as T (toLazyText)
@@ -30,7 +30,7 @@ runInLoop action howToConnect prevDelayInSecs maxReconnectDelay =
       Just SomeAsyncException {} -> Nothing
       _ -> Just e
 
-  logTrace = traceWith stdoutTracer
+  logTrace = putStrLn -- traceWith stdoutTracer
 
   currentDelayInSecs =
     min (prevDelayInSecs * 2) maxReconnectDelay

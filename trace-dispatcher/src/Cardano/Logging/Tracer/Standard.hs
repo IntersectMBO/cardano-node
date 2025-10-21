@@ -1,6 +1,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module Cardano.Logging.Tracer.Standard (
     standardTracer
 ) where
@@ -22,7 +24,7 @@ import           System.IO (hFlush, stdout)
 
 -- | The state of a standard tracer
 newtype StandardTracerState =  StandardTracerState {
-    stRunning :: Maybe (InChan Text, OutChan Text, Async ())
+    _stRunning :: Maybe (InChan Text, OutChan Text, Async ())
 }
 
 emptyStandardTracerState :: StandardTracerState
@@ -41,28 +43,41 @@ standardTracer = do
       -> LoggingContext
       -> Either TraceControl FormattedMessage
       -> m ()
-    output stateRef LoggingContext {} (Right (FormattedHuman _c msg)) = liftIO $ do
+    output _stateRef LoggingContext {} (Right (FormattedHuman _c msg)) = liftIO $ do
+      writeStdout msg
+      {-
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} (Right (FormattedMachine msg)) = liftIO $ do
+      -}
+    output _stateRef LoggingContext {} (Right (FormattedMachine msg)) = liftIO $ do
+      writeStdout msg
+      {-
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} (Left TCReset) = liftIO $ do
+      -}
+    output _stateRef LoggingContext {} (Left TCReset) = liftIO $ do
+      pure ()
+      {-
       st <- readIORef stateRef
       case stRunning st of
         Nothing -> when (isNothing $ stRunning st) $
                       startStdoutThread stateRef
         Just _  -> pure ()
+        -}
     output _ lk c@(Left TCDocument {}) =
        docIt
         (Stdout MachineFormat) -- TODO Find out the right format
         (lk, c)
     output _stateRef LoggingContext {} _ = pure ()
 
+writeStdout :: Text -> IO ()
+writeStdout t = TIO.putStrLn t >> hFlush stdout
+
+{-
 -- | Forks a new thread, which writes messages to stdout
 startStdoutThread :: IORef StandardTracerState -> IO ()
 startStdoutThread stateRef = do
@@ -79,3 +94,4 @@ stdoutThread outChan = forever $ do
     readChan outChan
       >>= TIO.putStrLn
     hFlush stdout
+-}
