@@ -525,7 +525,7 @@ instance (Show term, Show ntcVersion) =>
         HS.MsgRefuse          {} -> "Refuse"
 
   forHuman (AnyMessageAndAgency stok msg) =
-    "Handshake (agency, message) = " <> "(" <> showT stok <> "," <> forHumanOrMachine (AnyMessage msg) <> ")"
+    "Handshake (agency, message) = " <> "(" <> showT stok <> "," <> showT msg <> ")"
 
 instance MetaTrace (AnyMessage (HS.Handshake a b)) where
   namespaceFor (AnyMessage msg) = Namespace [] $ case msg of
