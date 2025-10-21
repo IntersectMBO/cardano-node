@@ -53,7 +53,7 @@ let
        then go {} (__head eras) (__tail eras)
        else throw "configHardforksIntoEra:  unknown era '${era}'";
 
-  liveTablesPath = i: 
+  liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
     then "${profile.node.ssd_directory}/lmdb-node-${toString i}"
     else null;
@@ -196,6 +196,7 @@ let
       systemd.sockets = mkOption {};
       users = mkOption {};
       assertions = mkOption {};
+      warnings = mkOption {};
       environment = mkOption {};
     };
     eval = let

@@ -29,7 +29,7 @@ let
     #!${pkgs.runtimeShell}
     export PATH=$PATH:${makeBinPath [ pkgs.coreutils ]}
     set -euo pipefail
-    mkdir -p "$(dirname "${service.acceptingSocket or service.connectToSocket}")"
+    mkdir -p "$(dirname "${service.acceptAt or service.connectTo}")"
     ${service.script} $@
   '';
   in scriptBin // {

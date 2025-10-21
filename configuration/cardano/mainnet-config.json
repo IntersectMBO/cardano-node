@@ -8,7 +8,6 @@
   "ConsensusMode": "PraosMode",
   "ConwayGenesisFile": "mainnet-conway-genesis.json",
   "ConwayGenesisHash": "15a199f895e461ec0ffc6dd4e4028af28a492ab4e806d39cb674c88f7643ef62",
-  "EnableP2P": true,
   "LastKnownBlockVersion-Alt": 0,
   "LastKnownBlockVersion-Major": 3,
   "LastKnownBlockVersion-Minor": 0,
@@ -19,8 +18,7 @@
     "SnapshotInterval": 4320
   },
   "MaxKnownMajorProtocolVersion": 2,
-  "MinNodeVersion": "10.4.0",
-  "PeerSharing": true,
+  "MinNodeVersion": "10.6.0",
   "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresNoMagic",
   "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
