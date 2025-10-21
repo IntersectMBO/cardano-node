@@ -55,8 +55,8 @@ let
                               then "plutus-datum.json"
                               else null
         ;
-      } // optionalAttrs profile.node.tracer {
-        tracerSocketPath = "../tracer/tracer.socket";
+      # } // optionalAttrs profile.node.tracer {
+      #  tracerSocketPath = "../tracer/tracer.socket";
       } // optionalAttrs (!backend.useCabalRun) {
         # Use to `noGitRev` to avoid rebuilding on every commit.
         executable     = "${pkgs.cardanoNodePackages.tx-generator.passthru.noGitRev}/bin/tx-generator";
