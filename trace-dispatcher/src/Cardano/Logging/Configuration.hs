@@ -77,7 +77,7 @@ maybeSilent :: forall m a. (MonadIO m) =>
   -> Bool
   -> Trace m a
   -> m (Trace m a)
-maybeSilent selectorFunc prefixNames isMetrics (Trace tr) = do
+maybeSilent _selectorFunc prefixNames isMetrics (Trace tr) = do
     ref  <- liftIO (newIORef Nothing)
     contramapMCond (Trace tr) (mapFunc ref)
   where
@@ -88,13 +88,14 @@ maybeSilent selectorFunc prefixNames isMetrics (Trace tr) = do
           if silence == Just True
             then pure Nothing
             else pure $ Just (lc, Right a)
-        (lc, Left (TCConfig c)) -> do
-          silence <- liftIO $ readIORef ref
-          case silence of
-            Nothing -> do
-              let val = selectorFunc c (Namespace prefixNames [] :: Namespace a)
-              liftIO $ writeIORef ref (Just val)
-            Just _ -> pure ()
+        (lc, Left (TCConfig c)) -> --pure Nothing --do
+          -- some debug experiment
+          -- silence <- liftIO $ readIORef ref
+          -- case silence of
+          --   Nothing -> do
+          --     let val = selectorFunc c (Namespace prefixNames [] :: Namespace a)
+          --     liftIO $ writeIORef ref (Just val)
+          --   Just _ -> pure ()
           pure $ Just (lc, Left (TCConfig c))
         (lc, Left TCReset) -> do
           liftIO $ writeIORef ref Nothing
