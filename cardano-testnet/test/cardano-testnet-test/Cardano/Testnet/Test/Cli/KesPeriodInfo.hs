@@ -35,6 +35,7 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -222,29 +223,10 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  let topology = RealNodeTopology {
-        ntLocalRootPeersGroups =
-          (LocalRootPeersGroups
-            [ LocalRootPeersGroup {
-                localRoots = RootConfig {
-                    rootAccessPoints =
-                      [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4)
-                                           nodePort
-                      | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
-                      ],
-                    rootAdvertise = DoNotAdvertisePeer
-                  },
-                hotValency = 1,
-                warmValency = 1,
-                trustable = IsNotTrustable,
-                rootDiffusionMode = InitiatorAndResponderDiffusionMode
-              }
-            ]),
-        ntPublicRootPeers = [],
-        ntUseLedgerPeers = DontUseLedgerPeers,
-        ntUseBootstrapPeers = DontUseBootstrapPeers,
-        ntPeerSnapshotPath = Nothing
-      }
+  let topology = defaultP2PTopology
+                   [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4) nodePort
+                     | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                   ]
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
   let testSpoVrfVKey = work </> "vrf.vkey"
