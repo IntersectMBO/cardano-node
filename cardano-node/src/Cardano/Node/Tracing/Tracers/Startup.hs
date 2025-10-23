@@ -223,8 +223,8 @@ instance ( Show (BlockNodeToNodeVersion blk)
       mconcat [ "kind" .= String "LedgerPeerSnapshot"
               , "message" .= String (
                   mconcat [
-                   "Topology file misconfiguration: loaded but ignoring ",
-                   "input recorded ", showT wOrigin, " but topology specifies ",
+                   "Topology file misconfiguration: peer snapshot recorded  ",
+                   showT wOrigin, " but topology specifies ",
                    "to use ledger peers: ", showT useLedgerPeers,
                    ". Possible fix: update your big ledger peer snapshot ",
                    "or enable the use of ledger peers in the topology file."])]
@@ -373,6 +373,7 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
   severityFor (Namespace _ ["MovedTopLevelOption"]) _ = Just Warning
+  severityFor (Namespace _ ["LedgerPeerSnapshot"]) _ = Just Notice
   severityFor (Namespace _ ["LedgerPeerSnapshot", "Incompatible"]) _ = Just Warning
   severityFor _ _ = Just Info
 
