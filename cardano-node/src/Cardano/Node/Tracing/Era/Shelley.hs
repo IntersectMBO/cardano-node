@@ -1073,6 +1073,8 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
   ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
+  forMachine _verb (Conway.ConwayWithdrawalsMissingAccounts _) = mconcat [ "todo" .= String "todo"]
+  forMachine _verb (Conway.ConwayIncompleteWithdrawals _) = mconcat [ "todo" .= String "todo"]
   forMachine _ (Conway.ConwayTxRefScriptsSizeTooBig  Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
             , "actual" .= mismatchSupplied
