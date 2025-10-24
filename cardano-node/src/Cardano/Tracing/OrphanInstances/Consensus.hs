@@ -252,8 +252,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
 
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
 
-  getSeverityAnnotation (ChainDB.TracePerasCertDbEvent _) = undefined -- TODO @amesgen
-  getSeverityAnnotation (ChainDB.TraceAddPerasCertEvent _) = undefined -- TODO @amesgen
+  getSeverityAnnotation ChainDB.TracePerasCertDbEvent{} = Info
+  getSeverityAnnotation ChainDB.TraceAddPerasCertEvent{} = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -523,7 +523,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk)))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -788,8 +788,8 @@ instance ( ConvertRawHash blk
       ChainDB.TraceChainSelStarvationEvent ev -> case ev of
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
-      ChainDB.TracePerasCertDbEvent _ -> undefined -- TODO @amesgen
-      ChainDB.TraceAddPerasCertEvent _ -> undefined -- TODO @amesgen
+      ChainDB.TracePerasCertDbEvent ev -> showT ev
+      ChainDB.TraceAddPerasCertEvent ev -> showT ev
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -933,7 +933,7 @@ instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk)))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject _verb ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
@@ -1072,8 +1072,14 @@ instance ( ConvertRawHash blk
      chainLengthΔ :: AF.AnchoredFragment (Header blk) -> AF.AnchoredFragment (Header blk) -> Int
      chainLengthΔ = on (-) (fromWithOrigin (-1) . fmap (fromIntegral . unBlockNo) . AF.headBlockNo)
 
-  toObject _verb (ChainDB.TracePerasCertDbEvent _) = undefined -- TODO @amesgen
-  toObject _verb (ChainDB.TraceAddPerasCertEvent _) = undefined -- TODO @amesgen
+  toObject _verb (ChainDB.TracePerasCertDbEvent ev) =
+    mconcat [ "kind" .= String "TracePerasCertDbEvent"
+            , "event" .= show ev
+            ]
+  toObject _verb (ChainDB.TraceAddPerasCertEvent ev) =
+    mconcat [ "kind" .= String "TraceAddPerasCertEvent"
+            , "event" .= show ev
+            ]
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerDBEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceLedgerDBEvent ev) = case ev of
@@ -1466,9 +1472,6 @@ instance ( LedgerSupportsProtocol blk,
               , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
               , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info))
               ]
-
-instance ToObject (WeightedSelectView proto) where -- TODO @amesgen
-  toObject _ _ = undefined
 
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
 instance HasSeverityAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
