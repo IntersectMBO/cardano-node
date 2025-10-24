@@ -35,7 +35,6 @@ copyCfg "mainnet-conway-genesis.json"
 copyCfg "mainnet-peer-snapshot.json"
 copyCfg "mainnet-shelley-genesis.json"
 copyCfg "mainnet-topology.json"
-copyCfg "mainnet-topology.json"
 
 # Testnet-template
 copyTmplCfg "alonzo.json"
