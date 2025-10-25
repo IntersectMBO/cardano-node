@@ -524,6 +524,7 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith peerSharingTracer
       , NtN.tLeiosNotifyTracer = nullTracer {- Tracer $
           traceWith leiosNotifyTracer -}
+      , NtN.tLeiosFetchTracer = nullTracer
       }
 
 mkDiffusionTracers
