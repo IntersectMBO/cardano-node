@@ -571,6 +571,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       , NodeToNode.tKeepAliveTracer = nullTracer
       , NodeToNode.tPeerSharingTracer = nullTracer
+      , NodeToNode.tLeiosNotifyTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -1513,6 +1514,9 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tPeerSharingTracer =
       tracerOnOff (tracePeerSharingProtocol trSel)
                   verb "PeerSharingPrototocol" tr
+  , NodeToNode.tLeiosNotifyTracer = nullTracer {-  TODO
+      tracerOnOff (traceLeiosNotifyProtocol trSel)
+                  verb "LeiosNotifyPrototocol" tr -}
   }
 
 -- TODO @ouroboros-network
