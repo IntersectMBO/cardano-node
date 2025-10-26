@@ -169,6 +169,8 @@ import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
 
+import           LeiosDemoTypes (demoNewLeiosDbConnectionIO)
+
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
 {- HLINT ignore "Use fewer imports" -}
@@ -520,6 +522,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+              , rnNewLeiosDbConnection = demoNewLeiosDbConnectionIO
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -618,6 +621,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
+                , rnNewLeiosDbConnection = demoNewLeiosDbConnectionIO
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
