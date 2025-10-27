@@ -30,15 +30,14 @@ import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
+import           Ouroboros.Network.Logging ()
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.OrphanInstances ()
-import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
                    PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.Governor.Types (DemotionTimeoutException)
-import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -58,7 +57,6 @@ import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJS
 import           Data.Aeson.Types (listValue)
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.Foldable (Foldable (..))
-import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (pack)
@@ -72,20 +70,6 @@ import           Network.Socket (SockAddr (..))
 instance LogFormatting LocalAddress where
     forMachine _dtal (LocalAddress path) =
         mconcat ["path" .= path]
-
-instance LogFormatting NtN.RemoteAddress where
-    forMachine _dtal (SockAddrInet port addr) =
-        let ip = IP.fromHostAddress addr in
-        mconcat [ "addr" .= show ip
-                 , "port" .= show port
-                 ]
-    forMachine _dtal (SockAddrInet6 port _ addr _) =
-        let ip = IP.fromHostAddress6 addr in
-        mconcat [ "addr" .= show ip
-                 , "port" .= show port
-                 ]
-    forMachine _dtal (SockAddrUnix path) =
-        mconcat [ "path" .= show path ]
 
 --------------------------------------------------------------------------------
 -- LocalRootPeers Tracer
@@ -1127,130 +1111,6 @@ instance MetaTrace (PeerSelectionCounters extraCounters) where
 
     allNamespaces =[
       Namespace [] ["Counters"]
-      ]
-
-
---------------------------------------------------------------------------------
--- ChurnCounters Tracer
---------------------------------------------------------------------------------
-
-
-instance LogFormatting ChurnCounters where
-  forMachine _dtal (ChurnCounter action c) =
-    mconcat [ "kind" .= String "ChurnCounter"
-            , "action" .= String (pack $ show action)
-            , "counter" .= c
-            ]
-  asMetrics (ChurnCounter action c) =
-    [ IntM
-        ("peerSelection.churn." <> pack (show action))
-        (fromIntegral c)
-    ]
-
-instance MetaTrace ChurnCounters where
-    namespaceFor ChurnCounter {} = Namespace [] ["ChurnCounters"]
-
-    severityFor (Namespace _ ["ChurnCounters"]) _ = Just Info
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["ChurnCounters"]) = Just
-      "churn counters"
-    documentFor _ = Nothing
-
-    metricsDocFor (Namespace _ ["ChurnCounters"]) =
-     [ ("peerSelection.churn.DecreasedActivePeers", "number of decreased active peers")
-     , ("peerSelection.churn.IncreasedActivePeers", "number of increased active peers")
-     , ("peerSelection.churn.DecreasedActiveBigLedgerPeers", "number of decreased active big ledger peers")
-     , ("peerSelection.churn.IncreasedActiveBigLedgerPeers", "number of increased active big ledger peers")
-     , ("peerSelection.churn.DecreasedEstablishedPeers", "number of decreased established peers")
-     , ("peerSelection.churn.IncreasedEstablishedPeers", "number of increased established peers")
-     , ("peerSelection.churn.IncreasedEstablishedBigLedgerPeers", "number of increased established big ledger peers")
-     , ("peerSelection.churn.DecreasedEstablishedBigLedgerPeers", "number of decreased established big ledger peers")
-     , ("peerSelection.churn.DecreasedKnownPeers", "number of decreased known peers")
-     , ("peerSelection.churn.IncreasedKnownPeers", "number of increased known peers")
-     , ("peerSelection.churn.DecreasedKnownBigLedgerPeers", "number of decreased known big ledger peers")
-     , ("peerSelection.churn.IncreasedKnownBigLedgerPeers", "number of increased known big ledger peers")
-     ]
-    metricsDocFor _ = []
-
-    allNamespaces =[
-      Namespace [] ["ChurnCounters"]
-      ]
-
-
---------------------------------------------------------------------------------
--- PeerSelectionActions Tracer
---------------------------------------------------------------------------------
-
--- TODO: Write PeerStatusChangeType ToJSON at ouroboros-network
--- For that an export is needed at ouroboros-network
-instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) where
-  forMachine _dtal (PeerStatusChanged ps) =
-    mconcat [ "kind" .= String "PeerStatusChanged"
-             , "peerStatusChangeType" .= show ps
-             ]
-  forMachine _dtal (PeerStatusChangeFailure ps f) =
-    mconcat [ "kind" .= String "PeerStatusChangeFailure"
-             , "peerStatusChangeType" .= show ps
-             , "reason" .= show f
-             ]
-  forMachine _dtal (PeerMonitoringError connId s) =
-    mconcat [ "kind" .= String "PeerMonitoringError"
-             , "connectionId" .= toJSON connId
-             , "reason" .= show s
-             ]
-  forMachine _dtal (PeerMonitoringResult connId wf) =
-    mconcat [ "kind" .= String "PeerMonitoringResult"
-             , "connectionId" .= toJSON connId
-             , "withProtocolTemp" .= show wf
-             ]
-  forMachine _dtal (AcquireConnectionError exception) =
-    mconcat [ "kind" .= String "AcquireConnectionError"
-            , "error" .= displayException exception
-            ]
-  forMachine _dtal (PeerHotDuration connId dt) =
-    mconcat [ "kind" .= String "PeerHotDuration"
-            , "connectionId" .= toJSON connId
-            , "time" .= show dt]
-  forHuman = pack . show
-
-instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
-    namespaceFor PeerStatusChanged {} = Namespace [] ["StatusChanged"]
-    namespaceFor PeerStatusChangeFailure {} = Namespace [] ["StatusChangeFailure"]
-    namespaceFor PeerMonitoringError {} = Namespace [] ["MonitoringError"]
-    namespaceFor PeerMonitoringResult {} = Namespace [] ["MonitoringResult"]
-    namespaceFor AcquireConnectionError {} = Namespace [] ["ConnectionError"]
-    namespaceFor PeerHotDuration {} = Namespace [] ["PeerHotDuration"]
-
-    severityFor (Namespace _ ["StatusChanged"]) _ = Just Info
-    severityFor (Namespace _ ["StatusChangeFailure"]) _ = Just Error
-    severityFor (Namespace _ ["MonitoringError"]) _ = Just Error
-    severityFor (Namespace _ ["MonitoringResult"]) _ = Just Debug
-    severityFor (Namespace _ ["ConnectionError"]) _ = Just Error
-    severityFor (Namespace _ ["PeerHotDuration"]) _ = Just Info
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["StatusChanged"]) = Just
-      ""
-    documentFor (Namespace _ ["StatusChangeFailure"]) = Just
-      ""
-    documentFor (Namespace _ ["MonitoringError"]) = Just
-      ""
-    documentFor (Namespace _ ["MonitoringResult"]) = Just
-      ""
-    documentFor (Namespace _ ["ConnectionError"]) = Just
-      ""
-    documentFor (Namespace _ ["PeerHotDuration"]) = Just
-      "Reports how long the outbound connection was in hot state"
-    documentFor _ = Nothing
-
-    allNamespaces = [
-        Namespace [] ["StatusChanged"]
-      , Namespace [] ["StatusChangeFailure"]
-      , Namespace [] ["MonitoringError"]
-      , Namespace [] ["MonitoringResult"]
-      , Namespace [] ["ConnectionError"]
-      , Namespace [] ["PeerHotDuration"]
       ]
 
 --------------------------------------------------------------------------------

@@ -24,6 +24,14 @@ source-repository-package
   tag: c65e334b33a834169b7878b3d188a3fb5e9a8b42
   --sha256: 025k08shvm0wq5c08067s9lxa5d536baa1hc7gnwdcrasi0ay98v
 
+-- `ouroboros-network/ouroboros-network:logging` branch "fmaste/ouroboros-network".
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  subdir: ouroboros-network
+  tag: 9a45b2c632a0bba816f1c07eb8601f1c7b675ab7
+  --sha256: 14yg2p4b8j6rrg7d479095iir95nh5jhfawf48j8kjj90h3bh390
+
 -- `ouroboros-network/ouroboros-network:traces` branch "fmaste/ouroboros-network".
 source-repository-package
   type: git
