@@ -32,13 +32,13 @@ source-repository-package
   tag: 9a45b2c632a0bba816f1c07eb8601f1c7b675ab7
   --sha256: 14yg2p4b8j6rrg7d479095iir95nh5jhfawf48j8kjj90h3bh390
 
--- `ouroboros-network/ouroboros-network:traces` branch "fmaste/ouroboros-network".
+-- `ouroboros-network/ouroboros-network-framework:logging` branch "fmaste/ouroboros-network-framework".
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  subdir: ouroboros-network
-  tag: 7dcbfab966e55b6218f47af5f3b1c70ff23ecec3
-  --sha256: 09m1l0vi3z83brz2hakliqzifpgcg1saw38p0jspv1q4s02hkvf6
+  subdir: ouroboros-network-framework
+  tag: 3edf3aff5e7f40c06004300dbb9c41323778c4fe
+  --sha256: 09p5j57aqlwvzdsws8gjrpgzzbvp5ljdai785yd8l1h70v8x4ryd
 
 packages:
   cardano-node

@@ -196,6 +196,7 @@ library
                       , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.3
                       , ouroboros-network:logging
                       , ouroboros-network-framework ^>= 0.19.2
+                      , ouroboros-network-framework:logging
                       , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
                       , prettyprinter-ansi-terminal

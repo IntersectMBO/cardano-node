@@ -31,6 +31,7 @@ import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
 import           Ouroboros.Network.Logging ()
+import           Ouroboros.Network.Logging.Framework ()
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
@@ -62,14 +63,6 @@ import qualified Data.Set as Set
 import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
 
-
---------------------------------------------------------------------------------
--- Addresses
---------------------------------------------------------------------------------
-
-instance LogFormatting LocalAddress where
-    forMachine _dtal (LocalAddress path) =
-        mconcat ["path" .= path]
 
 --------------------------------------------------------------------------------
 -- LocalRootPeers Tracer
