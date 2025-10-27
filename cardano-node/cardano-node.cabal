@@ -168,7 +168,6 @@ library
                       , ekg-wai
                       , ekg-core
                       , filepath
-                      , formatting
                       , generic-data
                       , hashable
                       , hostname
@@ -178,6 +177,7 @@ library
                       , microlens
                       , mmap
                       , network-mux
+                      , network-mux:logging
                       , iproute
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg ^>= 0.2

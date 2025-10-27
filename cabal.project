@@ -16,6 +16,22 @@ index-state:
   , hackage.haskell.org 2025-10-17T00:26:22Z
   , cardano-haskell-packages 2025-10-24T13:50:12Z
 
+-- `ouroboros-network/network-mux:traces` branch "fmaste/network-mux".
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  subdir: network-mux
+  tag: c65e334b33a834169b7878b3d188a3fb5e9a8b42
+  --sha256: 025k08shvm0wq5c08067s9lxa5d536baa1hc7gnwdcrasi0ay98v
+
+-- `ouroboros-network/ouroboros-network:traces` branch "fmaste/ouroboros-network".
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  subdir: ouroboros-network
+  tag: 7dcbfab966e55b6218f47af5f3b1c70ff23ecec3
+  --sha256: 09m1l0vi3z83brz2hakliqzifpgcg1saw38p0jspv1q4s02hkvf6
+
 packages:
   cardano-node
   cardano-node-capi
