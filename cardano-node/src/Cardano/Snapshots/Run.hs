@@ -4,26 +4,56 @@
 
 module Cardano.Snapshots.Run (
     canonicalizeSnapshots,
+    spawnCanonicalizer,
     NodeDatabasePaths,
 ) where
 
 import qualified Cardano.Api.Consensus as Api
 import Cardano.Node.Configuration.LedgerDB
 import Cardano.Node.Configuration.POM
+import Cardano.Node.Parsers (nodeCLIParser)
 import Cardano.Node.Protocol
 import Cardano.Node.Types (ConfigYamlFilePath (..))
 import Control.Exception
-import Control.Monad (forM_)
+import Control.Monad (forM_, void)
+import Control.Monad.Class.MonadFork
 import Control.Monad.Except
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..))
+import Options.Applicative
 import Ouroboros.Consensus.Cardano.SnapshotConversion
 import Ouroboros.Consensus.Node (NodeDatabasePaths (..), immutableDbPath)
 import System.Directory (doesFileExist, listDirectory)
+import System.Environment
 import System.FilePath ((</>))
+import System.IO (hPutStrLn, stderr)
+import System.Process
 
-canonicalizeSnapshots :: FilePath -> Maybe NodeDatabasePaths -> IO ()
+spawnCanonicalizer :: IO ()
+spawnCanonicalizer =
+    void $ forkIO $ do
+        putStrLn "SPAWNING"
+        progName <- getExecutablePath
+        putStrLn progName
+        mPnc <- execParserPure defaultPrefs (info nodeCLIParser mempty) <$> getArgs
+        case mPnc of
+            Success pnc -> do
+                let cfg = case getLast $ pncConfigFile pnc of
+                           Nothing -> []
+                           Just (ConfigYamlFilePath cfgFile) -> ["--config", cfgFile]
+                    db = case getLast $ pncDatabaseFile pnc of
+                           Nothing -> []
+                           Just (OnePathForAllDbs p) -> ["--database-path", p]
+                           Just (MultipleDbPaths imm _) -> ["--database-path", imm]
+                (_, out, err) <-
+                    readProcessWithExitCode progName ("canonicalize-snapshots" : cfg ++ db) ""
+                putStrLn out
+                hPutStrLn stderr err
+            _ -> pure ()
+
+canonicalizeSnapshots :: Maybe FilePath -> Maybe NodeDatabasePaths -> IO ()
 canonicalizeSnapshots cfg (Last -> db) = do
-    configYamlPc <- parseNodeConfigurationFP $ Just $ ConfigYamlFilePath cfg
+    configYamlPc <- parseNodeConfigurationFP $ Just $ ConfigYamlFilePath $ fromMaybe "configuration/cardano/mainnet-config.json" cfg
 
     let cfgFromFile = defaultPartialNodeConfiguration <> configYamlPc
 

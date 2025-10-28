@@ -199,6 +199,7 @@ library
                       , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
                       , prettyprinter-ansi-terminal
+                      , process
                       , psqueues
                       , random
                       , resource-registry

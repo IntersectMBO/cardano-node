@@ -437,13 +437,13 @@ renderHelpDoc :: Int -> OptI.Doc -> String
 renderHelpDoc cols =
   (`OptI.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))
 
-parseSnapshotsCmd :: Parser (FilePath, Maybe NodeDatabasePaths)
+parseSnapshotsCmd :: Parser (Maybe FilePath, Maybe NodeDatabasePaths)
 parseSnapshotsCmd = subparser
                 (  commandGroup "Canonicalize snapshots"
                 <> metavar "run"
                 <> command "canonicalize-snapshots"
                      (info (((,)
-                             <$> parseConfigFile
+                             <$> optional parseConfigFile
                              <*> optional (parseDbPath <|> fmap OnePathForAllDbs parseImmutableDbPath)
                              ) <**> helper)
                            (progDesc "Canonicalize all snapshots" ))
