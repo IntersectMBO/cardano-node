@@ -81,7 +81,7 @@ main = do
 
 data Command = RunCmd PartialNodeConfiguration
              | TraceDocumentation TraceDocumentationCmd
-             | CanonicalizeSnapshotsCmd FilePath (Maybe NodeDatabasePaths)
+             | CanonicalizeSnapshotsCmd (Maybe FilePath) (Maybe NodeDatabasePaths)
              | VersionCmd
 
 -- Yes! A --version flag or version command. Either guess is right!

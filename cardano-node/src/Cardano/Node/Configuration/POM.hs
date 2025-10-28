@@ -174,6 +174,8 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+       , ncCanonicalSnapshotOutputPath :: Maybe FilePath
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -879,6 +881,7 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncCanonicalSnapshotOutputPath = getLast $ pncCanonicalSnapshotOutputPath pnc
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

@@ -79,13 +79,14 @@ mkDispatchTracers
   => NodeKernelData blk
   -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
+  -> Tracer IO (ChainDB.TraceEvent blk)
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
   -> SomeConsensusProtocol
   -> IO (Tracers RemoteAddress LocalAddress blk IO)
 
-mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = do
+mkDispatchTracers nodeKernel trBase trForward onChainDBEventTracer mbTrEKG trDataPoint trConfig p  = do
 
     configReflection <- emptyConfigReflection
 
@@ -175,6 +176,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = d
         chainDBTracer = Tracer (traceWith chainDBTr')
                       <> Tracer (traceWith replayBlockTr')
                       <> Tracer (SR.traceNodeStateChainDB p nodeStateDP)
+                      <> onChainDBEventTracer
       , consensusTracers = consensusTr
       , churnModeTracer = Tracer (traceWith churnModeTr)
       , nodeToClientTracers = nodeToClientTr
