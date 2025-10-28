@@ -223,7 +223,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
       mconcat [ "kind" .= String "LedgerPeerSnapshot"
               , "message" .= String (
                   mconcat [
-                   "Topology file misconfiguration: peer snapshot recorded  ",
+                   "Topology file misconfiguration: peer snapshot recorded ",
                    showT wOrigin, " but topology specifies ",
                    "to use ledger peers: ", showT useLedgerPeers,
                    ". Possible fix: update your big ledger peer snapshot ",

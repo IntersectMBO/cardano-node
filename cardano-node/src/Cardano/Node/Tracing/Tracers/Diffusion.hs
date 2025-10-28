@@ -17,23 +17,20 @@ module Cardano.Node.Tracing.Tracers.Diffusion
 
 import           Cardano.Logging
 import           Cardano.Node.Configuration.TopologyP2P ()
-
-#ifdef linux_HOST_OS
-import           Network.Mux.TCPInfo (StructTCPInfo (..))
-#endif
 import qualified Ouroboros.Network.Diffusion.Types as Diff
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
                    TraceLedgerPeers (..))
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
-import qualified Network.Mux as Mux
-import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
-import           Network.TypedProtocol.Codec (AnyMessage (..))
 
 import           Data.Aeson (Value (String), (.=))
 import qualified Data.List as List
 import           Data.Text (Text, pack)
 import           Data.Typeable
 import           Formatting
+import qualified Network.Mux as Mux
+import           Network.Mux.TCPInfo (StructTCPInfo (..))
+import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
+import           Network.TypedProtocol.Codec (AnyMessage (..))
 
 --------------------------------------------------------------------------------
 -- Mux Tracer
@@ -890,8 +887,6 @@ instance MetaTrace TraceLedgerPeers where
     severityFor (Namespace _ ["NotEnoughLedgerPeers"]) _ = Just Warning
     severityFor (Namespace _ ["NotEnoughBigLedgerPeers"]) _ = Just Warning
     severityFor (Namespace _ ["TraceLedgerPeersDomains"]) _ = Just Debug
-    severityFor (Namespace _ ["TraceLedgerPeersResult"]) _ = Just Debug
-    severityFor (Namespace _ ["TraceLedgerPeersFailure"]) _ = Just Debug
     severityFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) _ = Just Debug
     severityFor _ _ = Nothing
 
@@ -917,10 +912,6 @@ instance MetaTrace TraceLedgerPeers where
       ""
     documentFor (Namespace _ ["TraceLedgerPeersDomains"]) = Just
       ""
-    documentFor (Namespace _ ["TraceLedgerPeersResult"]) = Just
-      ""
-    documentFor (Namespace _ ["TraceLedgerPeersFailure"]) = Just
-      ""
     documentFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) = Just $ mconcat
       [ "Trace for when a request for big ledger peers is fulfilled from the snapshot file"
       , " defined in the topology configuration file."]
@@ -937,7 +928,5 @@ instance MetaTrace TraceLedgerPeers where
       , Namespace [] ["ReusingLedgerState"]
       , Namespace [] ["FallingBackToPublicRootPeers"]
       , Namespace [] ["TraceLedgerPeersDomains"]
-      , Namespace [] ["TraceLedgerPeersResult"]
-      , Namespace [] ["TraceLedgerPeersFailure"]
       , Namespace [] ["UsingBigLedgerPeerSnapshot"]
       ]

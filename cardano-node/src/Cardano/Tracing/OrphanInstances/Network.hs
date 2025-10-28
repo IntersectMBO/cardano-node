@@ -21,6 +21,12 @@ module Cardano.Tracing.OrphanInstances.Network
   , FetchDecisionToJSON (..)
   ) where
 
+import           Cardano.Network.Diffusion (CardanoDebugPeerSelection, CardanoPeerSelectionCounters,
+                   CardanoTraceLocalRootPeers, CardanoTracePeerSelection, TraceChurnMode (..))
+import           Cardano.Network.OrphanInstances ()
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
@@ -29,12 +35,6 @@ import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
                    HasTxs (..), TxId, txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
-import           Cardano.Network.Diffusion (CardanoDebugPeerSelection,
-                   CardanoTraceLocalRootPeers, CardanoTracePeerSelection,
-                   CardanoPeerSelectionCounters, TraceChurnMode (..))
-import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block
@@ -45,28 +45,29 @@ import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecl
 import qualified Ouroboros.Network.BlockFetch.Decision.Trace as BlockFetch
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
 import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
+import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
 import           Ouroboros.Network.ConnectionManager.State (ConnStateId (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
-import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
-import qualified Ouroboros.Network.Diffusion.Types as Diffusion
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import qualified Ouroboros.Network.Diffusion.Types as Diffusion
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import qualified Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion (..),
-                   RemoteAddress, TraceSendRecv (..))
+import           Ouroboros.Network.NodeToNode (NodeToNodeVersion (..), RemoteAddress,
+                   TraceSendRecv (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
                    PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
@@ -91,9 +92,6 @@ import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
                    TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
-
-import           Cardano.Network.OrphanInstances ()
-import           Ouroboros.Network.OrphanInstances ()
 
 import           Control.Exception (Exception (..))
 import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
@@ -237,8 +235,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       NotEnoughLedgerPeers {}        -> Warning
       NotEnoughBigLedgerPeers {}     -> Warning
       TraceLedgerPeersDomains {}     -> Debug
-      -- TraceLedgerPeersResult {}      -> Debug
-      -- TraceLedgerPeersFailure {}     -> Debug
+
       UsingBigLedgerPeerSnapshot {}  -> Debug
 
 
