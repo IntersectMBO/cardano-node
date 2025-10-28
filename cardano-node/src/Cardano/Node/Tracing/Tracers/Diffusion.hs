@@ -27,8 +27,11 @@ import qualified Data.List as List
 import           Data.Text (Text, pack)
 import           Data.Typeable
 import           Formatting
+
 import qualified Network.Mux as Mux
+#ifdef linux_HOST_OS
 import           Network.Mux.TCPInfo (StructTCPInfo (..))
+#endif
 import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
 import           Network.TypedProtocol.Codec (AnyMessage (..))
 
