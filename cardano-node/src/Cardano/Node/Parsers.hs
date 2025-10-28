@@ -11,6 +11,7 @@ module Cardano.Node.Parsers
   , parserHelpOptions
   , renderHelpDoc
   , parseHostPort
+  , parseSnapshotsCmd
   ) where
 
 import           Cardano.Logging.Types
@@ -140,6 +141,7 @@ nodeRunParser = do
            , pncPeerSharing = mempty
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty
+           , pncCanonicalSnapshotOutputPath = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
@@ -434,3 +436,15 @@ parserHelpOptions = fromMaybe mempty . OptI.unChunk . OptI.fullDesc (Opt.prefs m
 renderHelpDoc :: Int -> OptI.Doc -> String
 renderHelpDoc cols =
   (`OptI.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))
+
+parseSnapshotsCmd :: Parser (FilePath, Maybe NodeDatabasePaths)
+parseSnapshotsCmd = subparser
+                (  commandGroup "Canonicalize snapshots"
+                <> metavar "run"
+                <> command "canonicalize-snapshots"
+                     (info (((,)
+                             <$> parseConfigFile
+                             <*> optional (parseDbPath <|> fmap OnePathForAllDbs parseImmutableDbPath)
+                             ) <**> helper)
+                           (progDesc "Canonicalize all snapshots" ))
+                )
