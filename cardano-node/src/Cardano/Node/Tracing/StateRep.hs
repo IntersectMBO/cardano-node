@@ -36,7 +36,7 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
-import           Data.Aeson hiding (Result(..))
+import           Data.Aeson hiding (Result (..))
 import           Data.Text as T (Text, pack)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
@@ -112,6 +112,8 @@ deriving instance (NFData NodeState)
 
 instance LogFormatting NodeState where
   forMachine _ = \case
+    NodeTracingOnlineConfiguring -> mconcat
+      [ "kind" .= String "NodeTracingOnlineConfiguring" ]
     NodeOpeningDbs x -> mconcat
       [ "kind" .= String "NodeOpeningDbs",         "openingDb" .= toJSON x]
     NodeReplays x -> mconcat
@@ -119,7 +121,7 @@ instance LogFormatting NodeState where
     NodeInitChainSelection x -> mconcat
       [ "kind" .= String "NodeInitChainSelection", "chainSel"  .= toJSON x]
     NodeKernelOnline -> mconcat
-      [ "kind" .= String "NodeInitChainSelection"]
+      [ "kind" .= String "NodeKernelOnline"]
     NodeAddBlock x -> mconcat
       [ "kind" .= String "NodeAddBlock",           "addBlock"  .= toJSON x]
     NodeStartup x -> mconcat
@@ -128,7 +130,6 @@ instance LogFormatting NodeState where
       [ "kind" .= String "NodeShutdown",           "shutdown"  .= toJSON x]
     NodeTracingFailure x -> mconcat
       [ "kind" .= String "NodeTracingFailure",     "message"   .= toJSON x]
-    _ -> mempty
 
   forHuman (NodeTracingFailure errMsg) = T.pack errMsg
   forHuman _ = ""
@@ -186,9 +187,9 @@ instance MetaTrace NodeState where
   documentFor  (Namespace _ ["NodeInitChainSelection"]) = Just
     "Performing initial chain selection"
   documentFor  (Namespace _ ["NodeKernelOnline"]) = Just
-    ""
+    "Tracing system configured and node kernel is online"
   documentFor  (Namespace _ ["NodeAddBlock"]) = Just
-   "Applying block"
+    "Applying block"
   documentFor  (Namespace _ ["NodeStartup"]) = Just
     "Node startup"
   documentFor  (Namespace _ ["NodeShutdown"]) = Just
