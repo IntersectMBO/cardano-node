@@ -693,7 +693,7 @@ The consistency checks cover the following aspects:
 
 If the checker encounters any problems it emits a `TracerConsistencyWarnings` message through the
 `Cardano.Logging.TraceDispatcherMessage` type. The message is routed via the `Reflection` namespace
-and carries `Warninig` severity so that misconfigured namespaces are surfaced prominently in both the
+and carries `Warning` severity so that misconfigured namespaces are surfaced prominently in both the
 logs and forwarded tracing output.
 
 ## Trace Backends Overview
