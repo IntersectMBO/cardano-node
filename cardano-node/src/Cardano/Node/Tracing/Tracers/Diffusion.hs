@@ -878,8 +878,10 @@ instance MetaTrace TraceLedgerPeers where
     namespaceFor UsingBigLedgerPeerSnapshot {} =
       Namespace [] ["UsingBigLedgerPeerSnapshot"]
 
-    severityFor (Namespace _ ["PickedPeer"]) _ = Just Debug
-    severityFor (Namespace _ ["PickedPeers"]) _ = Just Info
+    severityFor (Namespace _ ["PickedLedgerPeer"]) _ = Just Debug
+    severityFor (Namespace _ ["PickedLedgerPeers"]) _ = Just Info
+    severityFor (Namespace _ ["PickedBigLedgerPeer"]) _ = Just Debug
+    severityFor (Namespace _ ["PickedBigLedgerPeers"]) _ = Just Info
     severityFor (Namespace _ ["FetchingNewLedgerState"]) _ = Just Info
     severityFor (Namespace _ ["DisabledLedgerPeers"]) _ = Just Info
     severityFor (Namespace _ ["TraceUseLedgerAfter"]) _ = Just Info
@@ -893,10 +895,14 @@ instance MetaTrace TraceLedgerPeers where
     severityFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) _ = Just Debug
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["PickedPeer"]) = Just
+    documentFor (Namespace _ ["PickedLedgerPeer"]) = Just
       "Trace for a peer picked with accumulated and relative stake of its pool."
-    documentFor (Namespace _ ["PickedPeers"]) = Just
+    documentFor (Namespace _ ["PickedLedgerPeers"]) = Just
       "Trace for the number of peers we wanted to pick and the list of peers picked."
+    documentFor (Namespace _ ["PickedBigLedgerPeer"]) = Just
+      "Trace for a big ledger peer picked with accumulated and relative stake of its pool."
+    documentFor (Namespace _ ["PickedBigLedgerPeers"]) = Just
+      "Trace for the number of big ledger peers we wanted to pick and the list of peers picked."
     documentFor (Namespace _ ["FetchingNewLedgerState"]) = Just $ mconcat
       [ "Trace for fetching a new list of peers from the ledger. Int is the number of peers"
       , " returned."
@@ -917,12 +923,14 @@ instance MetaTrace TraceLedgerPeers where
       ""
     documentFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) = Just $ mconcat
       [ "Trace for when a request for big ledger peers is fulfilled from the snapshot file"
-      , " defined in the topology configuration file."]
+      , " specified in the topology file."]
     documentFor _ = Nothing
 
     allNamespaces = [
-        Namespace [] ["PickedPeer"]
-      , Namespace [] ["PickedPeers"]
+        Namespace [] ["PickedLedgerPeer"]
+      , Namespace [] ["PickedLedgerPeers"]
+      , Namespace [] ["PickedBigLedgerPeer"]
+      , Namespace [] ["PickedBigLedgerPeers"]
       , Namespace [] ["FetchingNewLedgerState"]
       , Namespace [] ["DisabledLedgerPeers"]
       , Namespace [] ["TraceUseLedgerAfter"]
@@ -930,6 +938,8 @@ instance MetaTrace TraceLedgerPeers where
       , Namespace [] ["RequestForPeers"]
       , Namespace [] ["ReusingLedgerState"]
       , Namespace [] ["FallingBackToPublicRootPeers"]
+      , Namespace [] ["NotEnoughLedgerPeers"]
+      , Namespace [] ["NotEnoughBigLedgerPeers"]
       , Namespace [] ["TraceLedgerPeersDomains"]
       , Namespace [] ["UsingBigLedgerPeerSnapshot"]
       ]
