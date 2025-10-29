@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Parsec.Error</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier">PError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Distribution.Parsec.Error.html#showPError"><span class="hs-identifier">showPError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html"><span class="hs-identifier">Distribution.Parsec.Position</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../filepath-1.4.300.1/src/System.FilePath.html#/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span>              </span><span class="hs-special">(</span><span class="annot"><a href="../../filepath-1.4.300.1/src/System.FilePath.Posix.html#normalise/System.FilePath.Posix.html#normalise"><span class="hs-identifier">normalise</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="annot"><span class="hs-comment">-- | Parser error.</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">data</span><span> </span><span id="PError"><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-var">PError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PError"><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-var">PError</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Parsec.Position.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679383502"><span id="local-6989586621679383511"><span id="local-6989586621679383515"><span class="annot"><span class="annottext">Int -&gt; PError -&gt; ShowS
+[PError] -&gt; ShowS
+PError -&gt; String
+(Int -&gt; PError -&gt; ShowS)
+-&gt; (PError -&gt; String) -&gt; ([PError] -&gt; ShowS) -&gt; Show PError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PError -&gt; ShowS
+showsPrec :: Int -&gt; PError -&gt; ShowS
+$cshow :: PError -&gt; String
+show :: PError -&gt; String
+$cshowList :: [PError] -&gt; ShowS
+showList :: [PError] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679383520"><span id="local-6989586621679383522"><span class="annot"><span class="annottext">(forall x. PError -&gt; Rep PError x)
+-&gt; (forall x. Rep PError x -&gt; PError) -&gt; Generic PError
+forall x. Rep PError x -&gt; PError
+forall x. PError -&gt; Rep PError x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. PError -&gt; Rep PError x
+from :: forall x. PError -&gt; Rep PError x
+$cto :: forall x. Rep PError x -&gt; PError
+to :: forall x. Rep PError x -&gt; PError
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679383526"><span id="local-6989586621679383533"><span id="local-6989586621679383539"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-type">PError</span></a></span></span></span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-type">PError</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679383590"><span class="annot"><span class="annottext">rnf :: PError -&gt; ()
+</span><a href="#local-6989586621679383590"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PError -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="annot"><a href="Distribution.Parsec.Error.html#showPError"><span class="hs-identifier hs-type">showPError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#FilePath/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-type">PError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#String/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-20"></span><span id="showPError"><span class="annot"><span class="annottext">showPError :: String -&gt; PError -&gt; String
+</span><a href="Distribution.Parsec.Error.html#showPError"><span class="hs-identifier hs-var hs-var">showPError</span></a></span></span><span> </span><span id="local-6989586621679383594"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679383594"><span class="hs-identifier hs-var">fpath</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Parsec.Error.html#PError"><span class="hs-identifier hs-type">PError</span></a></span><span> </span><span id="local-6989586621679383595"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679383595"><span class="hs-identifier hs-var">pos</span></a></span></span><span> </span><span id="local-6989586621679383596"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679383596"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="annottext">ShowS
+</span><a href="../../filepath-1.4.300.1/src/System.FilePath.Posix.html#normalise/System.FilePath.Posix.html#normalise"><span class="hs-identifier hs-var">normalise</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679383594"><span class="hs-identifier hs-var">fpath</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;:&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Position -&gt; String
+</span><a href="Distribution.Parsec.Position.html#showPos"><span class="hs-identifier hs-var">showPos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679383595"><span class="hs-identifier hs-var">pos</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679383596"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-22"></span></pre></body></html>

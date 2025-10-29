@@ -1,0 +1,460 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679441298"><span id="local-6989586621679441299"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Types.Library</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier">Library</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Distribution.Types.Library.html#emptyLibrary"><span class="hs-identifier">emptyLibrary</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Distribution.Types.Library.html#explicitLibModules"><span class="hs-identifier">explicitLibModules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Distribution.Types.Library.html#libModulesAutogen"><span class="hs-identifier">libModulesAutogen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Prelude.html#/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.ModuleName.html"><span class="hs-identifier">Distribution.ModuleName</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html"><span class="hs-identifier">Distribution.Types.BuildInfo</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryVisibility.html"><span class="hs-identifier">Distribution.Types.LibraryVisibility</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.ModuleReexport.html"><span class="hs-identifier">Distribution.Types.ModuleReexport</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html"><span class="hs-identifier">Distribution.Types.LibraryName</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html"><span class="hs-identifier">Distribution.Types.BuildInfo.Lens</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="Library"><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-var">Library</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Library"><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-var">Library</span></a></span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="libName"><span class="annot"><span class="annottext">Library -&gt; LibraryName
+</span><a href="Distribution.Types.Library.html#libName"><span class="hs-identifier hs-var hs-var">libName</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="exposedModules"><span class="annot"><span class="annottext">Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#exposedModules"><span class="hs-identifier hs-var hs-var">exposedModules</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="reexportedModules"><span class="annot"><span class="annottext">Library -&gt; [ModuleReexport]
+</span><a href="Distribution.Types.Library.html#reexportedModules"><span class="hs-identifier hs-var hs-var">reexportedModules</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Types.ModuleReexport.html#ModuleReexport"><span class="hs-identifier hs-type">ModuleReexport</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="signatures"><span class="annot"><span class="annottext">Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#signatures"><span class="hs-identifier hs-var hs-var">signatures</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span>       </span><span class="annot"><span class="hs-comment">-- ^ What sigs need implementations?</span></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="libExposed"><span class="annot"><span class="annottext">Library -&gt; Bool
+</span><a href="Distribution.Types.Library.html#libExposed"><span class="hs-identifier hs-var hs-var">libExposed</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>               </span><span class="annot"><span class="hs-comment">-- ^ Is the lib to be exposed by default? (i.e. whether its modules available in GHCi for example)</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="libVisibility"><span class="annot"><span class="annottext">Library -&gt; LibraryVisibility
+</span><a href="Distribution.Types.Library.html#libVisibility"><span class="hs-identifier hs-var hs-var">libVisibility</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryVisibility.html#LibraryVisibility"><span class="hs-identifier hs-type">LibraryVisibility</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Whether this multilib can be used as a dependency for other packages.</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="libBuildInfo"><span class="annot"><span class="annottext">Library -&gt; BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var hs-var">libBuildInfo</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.BuildInfo.html#BuildInfo"><span class="hs-identifier hs-type">BuildInfo</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679441320"><span id="local-6989586621679441322"><span class="annot"><span class="annottext">(forall x. Library -&gt; Rep Library x)
+-&gt; (forall x. Rep Library x -&gt; Library) -&gt; Generic Library
+forall x. Rep Library x -&gt; Library
+forall x. Library -&gt; Rep Library x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Library -&gt; Rep Library x
+from :: forall x. Library -&gt; Rep Library x
+$cto :: forall x. Rep Library x -&gt; Library
+to :: forall x. Rep Library x -&gt; Library
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679441326"><span id="local-6989586621679441344"><span id="local-6989586621679441348"><span class="annot"><span class="annottext">Int -&gt; Library -&gt; ShowS
+[Library] -&gt; ShowS
+Library -&gt; String
+(Int -&gt; Library -&gt; ShowS)
+-&gt; (Library -&gt; String) -&gt; ([Library] -&gt; ShowS) -&gt; Show Library
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Library -&gt; ShowS
+showsPrec :: Int -&gt; Library -&gt; ShowS
+$cshow :: Library -&gt; String
+show :: Library -&gt; String
+$cshowList :: [Library] -&gt; ShowS
+showList :: [Library] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679441354"><span id="local-6989586621679441370"><span class="annot"><span class="annottext">Library -&gt; Library -&gt; Bool
+(Library -&gt; Library -&gt; Bool)
+-&gt; (Library -&gt; Library -&gt; Bool) -&gt; Eq Library
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Library -&gt; Library -&gt; Bool
+== :: Library -&gt; Library -&gt; Bool
+$c/= :: Library -&gt; Library -&gt; Bool
+/= :: Library -&gt; Library -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679441379"><span id="local-6989586621679441395"><span id="local-6989586621679441406"><span id="local-6989586621679441410"><span id="local-6989586621679441413"><span id="local-6989586621679441416"><span id="local-6989586621679441419"><span class="annot"><span class="annottext">Eq Library
+Eq Library =&gt;
+(Library -&gt; Library -&gt; Ordering)
+-&gt; (Library -&gt; Library -&gt; Bool)
+-&gt; (Library -&gt; Library -&gt; Bool)
+-&gt; (Library -&gt; Library -&gt; Bool)
+-&gt; (Library -&gt; Library -&gt; Bool)
+-&gt; (Library -&gt; Library -&gt; Library)
+-&gt; (Library -&gt; Library -&gt; Library)
+-&gt; Ord Library
+Library -&gt; Library -&gt; Bool
+Library -&gt; Library -&gt; Ordering
+Library -&gt; Library -&gt; Library
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Library -&gt; Library -&gt; Ordering
+compare :: Library -&gt; Library -&gt; Ordering
+$c&lt; :: Library -&gt; Library -&gt; Bool
+&lt; :: Library -&gt; Library -&gt; Bool
+$c&lt;= :: Library -&gt; Library -&gt; Bool
+&lt;= :: Library -&gt; Library -&gt; Bool
+$c&gt; :: Library -&gt; Library -&gt; Bool
+&gt; :: Library -&gt; Library -&gt; Bool
+$c&gt;= :: Library -&gt; Library -&gt; Bool
+&gt;= :: Library -&gt; Library -&gt; Bool
+$cmax :: Library -&gt; Library -&gt; Library
+max :: Library -&gt; Library -&gt; Library
+$cmin :: Library -&gt; Library -&gt; Library
+min :: Library -&gt; Library -&gt; Library
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679441425"><span id="local-6989586621679441429"><span id="local-6989586621679441432"><span id="local-6989586621679441466"><span class="annot"><span class="annottext">ReadPrec [Library]
+ReadPrec Library
+Int -&gt; ReadS Library
+ReadS [Library]
+(Int -&gt; ReadS Library)
+-&gt; ReadS [Library]
+-&gt; ReadPrec Library
+-&gt; ReadPrec [Library]
+-&gt; Read Library
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS Library
+readsPrec :: Int -&gt; ReadS Library
+$creadList :: ReadS [Library]
+readList :: ReadS [Library]
+$creadPrec :: ReadPrec Library
+readPrec :: ReadPrec Library
+$creadListPrec :: ReadPrec [Library]
+readListPrec :: ReadPrec [Library]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679441474"><span id="local-6989586621679441490"><span id="local-6989586621679441501"><span id="local-6989586621679441503"><span id="local-6989586621679441505"><span id="local-6989586621679441511"><span id="local-6989586621679441516"><span id="local-6989586621679441519"><span id="local-6989586621679441522"><span id="local-6989586621679441525"><span id="local-6989586621679441528"><span id="local-6989586621679441531"><span id="local-6989586621679441536"><span id="local-6989586621679441541"><span class="annot"><span class="annottext">Typeable Library
+Typeable Library =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Library -&gt; c Library)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Library)
+-&gt; (Library -&gt; Constr)
+-&gt; (Library -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Library))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Library))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Library -&gt; Library)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library)
+-&gt; Data Library
+Library -&gt; Constr
+Library -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Library -&gt; Library
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Library
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Library -&gt; c Library
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Library)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Library)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Library -&gt; c Library
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Library -&gt; c Library
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Library
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Library
+$ctoConstr :: Library -&gt; Constr
+toConstr :: Library -&gt; Constr
+$cdataTypeOf :: Library -&gt; DataType
+dataTypeOf :: Library -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Library)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Library)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Library)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Library)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Library -&gt; Library
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Library -&gt; Library
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Library -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Library -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Library -&gt; m Library
+</span><a href="../../base-4.18.2.1/src/Data.Data.html#Data/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441550"><span id="local-6989586621679441556"><span id="local-6989586621679441561"><span id="local-6989586621679441566"><span id="local-6989586621679441571"><span id="local-6989586621679441576"><span id="local-6989586621679441581"><span id="local-6989586621679441586"><span id="local-6989586621679441591"><span id="local-6989586621679441596"><span id="local-6989586621679441601"><span id="local-6989586621679441606"><span id="local-6989586621679441611"><span id="local-6989586621679441616"><span id="local-6989586621679441621"><span id="local-6989586621679441626"><span id="local-6989586621679441631"><span id="local-6989586621679441636"><span id="local-6989586621679441641"><span id="local-6989586621679441646"><span id="local-6989586621679441651"><span id="local-6989586621679441656"><span id="local-6989586621679441661"><span id="local-6989586621679441666"><span id="local-6989586621679441671"><span id="local-6989586621679441676"><span id="local-6989586621679441681"><span id="local-6989586621679441686"><span id="local-6989586621679441691"><span id="local-6989586621679441696"><span id="local-6989586621679441701"><span id="local-6989586621679441706"><span id="local-6989586621679441711"><span id="local-6989586621679441716"><span id="local-6989586621679441721"><span id="local-6989586621679441726"><span id="local-6989586621679441731"><span id="local-6989586621679441736"><span id="local-6989586621679441741"><span id="local-6989586621679441746"><span id="local-6989586621679441751"><span id="local-6989586621679441756"><span id="local-6989586621679441761"><span id="local-6989586621679441766"><span id="local-6989586621679441771"><span id="local-6989586621679441776"><span class="annot"><a href="Distribution.Types.BuildInfo.Lens.html#HasBuildInfo"><span class="hs-identifier hs-type">L.HasBuildInfo</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621679441783"><span class="annot"><span class="annottext">buildInfo :: Lens' Library BuildInfo
+</span><a href="#local-6989586621679441783"><span class="hs-identifier hs-var hs-var hs-var hs-var">buildInfo</span></a></span></span><span> </span><span id="local-6989586621679441785"><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679441785"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679441786"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679441786"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679441787"><span class="annot"><span class="annottext">BuildInfo
+</span><a href="#local-6989586621679441787"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679441786"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679441787"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(BuildInfo -&gt; Library) -&gt; f BuildInfo -&gt; f Library
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../base-4.18.2.1/src/Data.Functor.html#%3C%24%3E/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; f BuildInfo
+</span><a href="#local-6989586621679441785"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Library -&gt; BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679441786"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441790"><span id="local-6989586621679441797"><span id="local-6989586621679441803"><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span></span></span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441878"><span id="local-6989586621679441885"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span></span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679441994"><span class="annot"><span class="annottext">rnf :: Library -&gt; ()
+</span><a href="#local-6989586621679441994"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; ()
+forall a. (Generic a, GNFData (Rep a)) =&gt; a -&gt; ()
+</span><a href="Distribution.Compat.Prelude.html#genericRnf"><span class="hs-identifier hs-var">genericRnf</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Distribution.Types.Library.html#emptyLibrary"><span class="hs-identifier hs-type">emptyLibrary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span>
+</span><span id="line-41"></span><span id="emptyLibrary"><span class="annot"><span class="annottext">emptyLibrary :: Library
+</span><a href="Distribution.Types.Library.html#emptyLibrary"><span class="hs-identifier hs-var hs-var">emptyLibrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">libName :: LibraryName
+</span><a href="Distribution.Types.Library.html#libName"><span class="hs-identifier hs-var">libName</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="Distribution.Types.LibraryName.html#LMainLibName"><span class="hs-identifier hs-var">LMainLibName</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">exposedModules :: [ModuleName]
+</span><a href="Distribution.Types.Library.html#exposedModules"><span class="hs-identifier hs-var">exposedModules</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ModuleName]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">reexportedModules :: [ModuleReexport]
+</span><a href="Distribution.Types.Library.html#reexportedModules"><span class="hs-identifier hs-var">reexportedModules</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ModuleReexport]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">signatures :: [ModuleName]
+</span><a href="Distribution.Types.Library.html#signatures"><span class="hs-identifier hs-var">signatures</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ModuleName]
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">libExposed :: Bool
+</span><a href="Distribution.Types.Library.html#libExposed"><span class="hs-identifier hs-var">libExposed</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">libVisibility :: LibraryVisibility
+</span><a href="Distribution.Types.Library.html#libVisibility"><span class="hs-identifier hs-var">libVisibility</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryVisibility
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">libBuildInfo :: BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | This instance is not good.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- We need it for 'PackageDescription.Configuration.addBuildableCondition'.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- More correct method would be some kind of &quot;create empty clone&quot;.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- More concretely, 'addBuildableCondition' will make `libVisibility = False`</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- libraries when `buildable: false`. This may cause problems.</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442004"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621679442008"><span class="annot"><span class="annottext">mempty :: Library
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="Distribution.Types.Library.html#emptyLibrary"><span class="hs-identifier hs-var">emptyLibrary</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679442010"><span class="annot"><span class="annottext">mappend :: Library -&gt; Library -&gt; Library
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; Library -&gt; Library
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679442013"><span id="local-6989586621679442016"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679442026"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442026"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679442027"><span class="annot"><span class="annottext">&lt;&gt; :: Library -&gt; Library -&gt; Library
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679442028"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442028"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">libName :: LibraryName
+</span><a href="Distribution.Types.Library.html#libName"><span class="hs-identifier hs-var">libName</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName -&gt; LibraryName -&gt; LibraryName
+</span><a href="Distribution.Types.Library.html#combineLibraryName"><span class="hs-identifier hs-var">combineLibraryName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Library -&gt; LibraryName
+</span><a href="Distribution.Types.Library.html#libName"><span class="hs-identifier hs-var">libName</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442026"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Library -&gt; LibraryName
+</span><a href="Distribution.Types.Library.html#libName"><span class="hs-identifier hs-var">libName</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442028"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">exposedModules :: [ModuleName]
+</span><a href="Distribution.Types.Library.html#exposedModules"><span class="hs-identifier hs-var">exposedModules</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Library -&gt; [ModuleName]) -&gt; [ModuleName]
+forall {a}. Monoid a =&gt; (Library -&gt; a) -&gt; a
+</span><a href="#local-6989586621679442030"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#exposedModules"><span class="hs-identifier hs-var">exposedModules</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">reexportedModules :: [ModuleReexport]
+</span><a href="Distribution.Types.Library.html#reexportedModules"><span class="hs-identifier hs-var">reexportedModules</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Library -&gt; [ModuleReexport]) -&gt; [ModuleReexport]
+forall {a}. Monoid a =&gt; (Library -&gt; a) -&gt; a
+</span><a href="#local-6989586621679442030"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; [ModuleReexport]
+</span><a href="Distribution.Types.Library.html#reexportedModules"><span class="hs-identifier hs-var">reexportedModules</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">signatures :: [ModuleName]
+</span><a href="Distribution.Types.Library.html#signatures"><span class="hs-identifier hs-var">signatures</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Library -&gt; [ModuleName]) -&gt; [ModuleName]
+forall {a}. Monoid a =&gt; (Library -&gt; a) -&gt; a
+</span><a href="#local-6989586621679442030"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#signatures"><span class="hs-identifier hs-var">signatures</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">libExposed :: Bool
+</span><a href="Distribution.Types.Library.html#libExposed"><span class="hs-identifier hs-var">libExposed</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; Bool
+</span><a href="Distribution.Types.Library.html#libExposed"><span class="hs-identifier hs-var">libExposed</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442026"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Library -&gt; Bool
+</span><a href="Distribution.Types.Library.html#libExposed"><span class="hs-identifier hs-var">libExposed</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442028"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-comment">-- so False propagates</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">libVisibility :: LibraryVisibility
+</span><a href="Distribution.Types.Library.html#libVisibility"><span class="hs-identifier hs-var">libVisibility</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Library -&gt; LibraryVisibility) -&gt; LibraryVisibility
+forall {a}. Monoid a =&gt; (Library -&gt; a) -&gt; a
+</span><a href="#local-6989586621679442030"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; LibraryVisibility
+</span><a href="Distribution.Types.Library.html#libVisibility"><span class="hs-identifier hs-var">libVisibility</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">libBuildInfo :: BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Library -&gt; BuildInfo) -&gt; BuildInfo
+forall {a}. Monoid a =&gt; (Library -&gt; a) -&gt; a
+</span><a href="#local-6989586621679442030"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679442030"><span class="annot"><span class="annottext">combine :: (Library -&gt; a) -&gt; a
+</span><a href="#local-6989586621679442030"><span class="hs-identifier hs-var hs-var">combine</span></a></span></span><span> </span><span id="local-6989586621679442037"><span class="annot"><span class="annottext">Library -&gt; a
+</span><a href="#local-6989586621679442037"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; a
+</span><a href="#local-6989586621679442037"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442026"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; a
+</span><a href="#local-6989586621679442037"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442028"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- | Get all the module names from the library (exposed and internal modules)</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- which are explicitly listed in the package description which would</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- need to be compiled.  (This does not include reexports, which</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- do not need to be compiled.)  This may not include all modules for which</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- GHC generated interface files (i.e., implicit modules.)</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Distribution.Types.Library.html#explicitLibModules"><span class="hs-identifier hs-type">explicitLibModules</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span id="explicitLibModules"><span class="annot"><span class="annottext">explicitLibModules :: Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#explicitLibModules"><span class="hs-identifier hs-var hs-var">explicitLibModules</span></a></span></span><span> </span><span id="local-6989586621679442038"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442038"><span class="hs-identifier hs-var">lib</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#exposedModules"><span class="hs-identifier hs-var">exposedModules</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442038"><span class="hs-identifier hs-var">lib</span></a></span><span>
+</span><span id="line-82"></span><span>              </span><span class="annot"><span class="annottext">[ModuleName] -&gt; [ModuleName] -&gt; [ModuleName]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#otherModules"><span class="hs-identifier hs-var">otherModules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Library -&gt; BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442038"><span class="hs-identifier hs-var">lib</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>              </span><span class="annot"><span class="annottext">[ModuleName] -&gt; [ModuleName] -&gt; [ModuleName]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%2B%2B/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#signatures"><span class="hs-identifier hs-var">signatures</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442038"><span class="hs-identifier hs-var">lib</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- | Get all the auto generated module names from the library, exposed or not.</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- This are a subset of 'libModules'.</span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Distribution.Types.Library.html#libModulesAutogen"><span class="hs-identifier hs-type">libModulesAutogen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.Library.html#Library"><span class="hs-identifier hs-type">Library</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.ModuleName.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-88"></span><span id="libModulesAutogen"><span class="annot"><span class="annottext">libModulesAutogen :: Library -&gt; [ModuleName]
+</span><a href="Distribution.Types.Library.html#libModulesAutogen"><span class="hs-identifier hs-var hs-var">libModulesAutogen</span></a></span></span><span> </span><span id="local-6989586621679442040"><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442040"><span class="hs-identifier hs-var">lib</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuildInfo -&gt; [ModuleName]
+</span><a href="Distribution.Types.BuildInfo.html#autogenModules"><span class="hs-identifier hs-var">autogenModules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Library -&gt; BuildInfo
+</span><a href="Distribution.Types.Library.html#libBuildInfo"><span class="hs-identifier hs-var">libBuildInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Library
+</span><a href="#local-6989586621679442040"><span class="hs-identifier hs-var">lib</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- | Combine 'LibraryName'. in parsing we prefer value coming</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- from munged @name@ field over the @lib-name@.</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- /Should/ be irrelevant.</span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Distribution.Types.Library.html#combineLibraryName"><span class="hs-identifier hs-type">combineLibraryName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Types.LibraryName.html#LibraryName"><span class="hs-identifier hs-type">LibraryName</span></a></span><span>
+</span><span id="line-95"></span><span id="combineLibraryName"><span class="annot"><span class="annottext">combineLibraryName :: LibraryName -&gt; LibraryName -&gt; LibraryName
+</span><a href="Distribution.Types.Library.html#combineLibraryName"><span class="hs-identifier hs-var hs-var">combineLibraryName</span></a></span></span><span> </span><span id="local-6989586621679442042"><span class="annot"><span class="annottext">l :: LibraryName
+</span><a href="#local-6989586621679442042"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Types.LibraryName.html#LSubLibName"><span class="hs-identifier hs-type">LSubLibName</span></a></span><span> </span><span class="annot"><span class="annottext">UnqualComponentName
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679442042"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Distribution.Types.Library.html#combineLibraryName"><span class="hs-identifier hs-var">combineLibraryName</span></a></span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679442044"><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679442044"><span class="hs-identifier hs-var">l</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LibraryName
+</span><a href="#local-6989586621679442044"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-97"></span></pre></body></html>

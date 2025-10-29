@@ -1,0 +1,559 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP                         #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable          #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric               #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts            #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators               #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="annot"><span class="hs-comment">-- | Compatibility layer for &quot;Data.Semigroup&quot;</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Distribution.Compat.Semigroup</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier">Semigroup</span></a></span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator">(&lt;&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier">Mon.Monoid</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Semigroup.Internal.html#All/Data.Semigroup.Internal.html#All"><span class="hs-identifier">All</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Semigroup.Internal.html#Any/Data.Semigroup.Internal.html#Any"><span class="hs-identifier">Any</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#First%27"><span class="hs-identifier">First'</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier">Last'</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier">Option'</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#gmappend"><span class="hs-identifier">gmappend</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#gmempty"><span class="hs-identifier">gmempty</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Binary.html"><span class="hs-identifier">Distribution.Compat.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier">Binary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Structured.html"><span class="hs-identifier">Distribution.Utils.Structured</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier">Structured</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.html#/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- Data.Semigroup is available since GHC 8.0/base-4.9 in `base`</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- for older GHC/base, it's provided by `semigroups`</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Semigroup.html#/Data.Semigroup.html"><span class="hs-identifier">Data.Semigroup</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Monoid.html#/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mon</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | A copy of 'Data.Semigroup.First'.</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">newtype</span><span> </span><span id="First%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#First%27"><span class="hs-identifier hs-var">First'</span></a></span></span><span> </span><span id="local-6989586621679378960"><span class="annot"><a href="#local-6989586621679378960"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="First%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#First%27"><span class="hs-identifier hs-var">First'</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getFirst%27"><span class="annot"><span class="annottext">forall a. First' a -&gt; a
+</span><a href="Distribution.Compat.Semigroup.html#getFirst%27"><span class="hs-identifier hs-var hs-var">getFirst'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679378960"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679379148"><span id="local-6989586621679379152"><span class="annot"><span class="annottext">First' a -&gt; First' a -&gt; Bool
+(First' a -&gt; First' a -&gt; Bool)
+-&gt; (First' a -&gt; First' a -&gt; Bool) -&gt; Eq (First' a)
+forall a. Eq a =&gt; First' a -&gt; First' a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; First' a -&gt; First' a -&gt; Bool
+== :: First' a -&gt; First' a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; First' a -&gt; First' a -&gt; Bool
+/= :: First' a -&gt; First' a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379162"><span id="local-6989586621679379166"><span id="local-6989586621679379170"><span id="local-6989586621679379174"><span id="local-6989586621679379178"><span id="local-6989586621679379182"><span id="local-6989586621679379186"><span class="annot"><span class="annottext">Eq (First' a)
+Eq (First' a) =&gt;
+(First' a -&gt; First' a -&gt; Ordering)
+-&gt; (First' a -&gt; First' a -&gt; Bool)
+-&gt; (First' a -&gt; First' a -&gt; Bool)
+-&gt; (First' a -&gt; First' a -&gt; Bool)
+-&gt; (First' a -&gt; First' a -&gt; Bool)
+-&gt; (First' a -&gt; First' a -&gt; First' a)
+-&gt; (First' a -&gt; First' a -&gt; First' a)
+-&gt; Ord (First' a)
+First' a -&gt; First' a -&gt; Bool
+First' a -&gt; First' a -&gt; Ordering
+First' a -&gt; First' a -&gt; First' a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (First' a)
+forall a. Ord a =&gt; First' a -&gt; First' a -&gt; Bool
+forall a. Ord a =&gt; First' a -&gt; First' a -&gt; Ordering
+forall a. Ord a =&gt; First' a -&gt; First' a -&gt; First' a
+$ccompare :: forall a. Ord a =&gt; First' a -&gt; First' a -&gt; Ordering
+compare :: First' a -&gt; First' a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; First' a -&gt; First' a -&gt; Bool
+&lt; :: First' a -&gt; First' a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; First' a -&gt; First' a -&gt; Bool
+&lt;= :: First' a -&gt; First' a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; First' a -&gt; First' a -&gt; Bool
+&gt; :: First' a -&gt; First' a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; First' a -&gt; First' a -&gt; Bool
+&gt;= :: First' a -&gt; First' a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; First' a -&gt; First' a -&gt; First' a
+max :: First' a -&gt; First' a -&gt; First' a
+$cmin :: forall a. Ord a =&gt; First' a -&gt; First' a -&gt; First' a
+min :: First' a -&gt; First' a -&gt; First' a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379194"><span id="local-6989586621679379199"><span id="local-6989586621679379203"><span class="annot"><span class="annottext">Int -&gt; First' a -&gt; ShowS
+[First' a] -&gt; ShowS
+First' a -&gt; String
+(Int -&gt; First' a -&gt; ShowS)
+-&gt; (First' a -&gt; String) -&gt; ([First' a] -&gt; ShowS) -&gt; Show (First' a)
+forall a. Show a =&gt; Int -&gt; First' a -&gt; ShowS
+forall a. Show a =&gt; [First' a] -&gt; ShowS
+forall a. Show a =&gt; First' a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; First' a -&gt; ShowS
+showsPrec :: Int -&gt; First' a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; First' a -&gt; String
+show :: First' a -&gt; String
+$cshowList :: forall a. Show a =&gt; [First' a] -&gt; ShowS
+showList :: [First' a] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679378980"><span id="local-6989586621679379208"><span id="local-6989586621679379212"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#First%27"><span class="hs-identifier hs-type">First'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679378980"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679379217"><span class="annot"><span class="annottext">First' a
+</span><a href="#local-6989586621679379217"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679379218"><span class="annot"><span class="annottext">&lt;&gt; :: First' a -&gt; First' a -&gt; First' a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="annot"><span class="annottext">First' a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">First' a
+</span><a href="#local-6989586621679379217"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><span class="hs-comment">-- | A copy of 'Data.Semigroup.Last'.</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">newtype</span><span> </span><span id="Last%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier hs-var">Last'</span></a></span></span><span> </span><span id="local-6989586621679378981"><span class="annot"><a href="#local-6989586621679378981"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Last%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier hs-var">Last'</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getLast%27"><span class="annot"><span class="annottext">forall a. Last' a -&gt; a
+</span><a href="Distribution.Compat.Semigroup.html#getLast%27"><span class="hs-identifier hs-var hs-var">getLast'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679378981"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679379225"><span id="local-6989586621679379229"><span class="annot"><span class="annottext">Last' a -&gt; Last' a -&gt; Bool
+(Last' a -&gt; Last' a -&gt; Bool)
+-&gt; (Last' a -&gt; Last' a -&gt; Bool) -&gt; Eq (Last' a)
+forall a. Eq a =&gt; Last' a -&gt; Last' a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Last' a -&gt; Last' a -&gt; Bool
+== :: Last' a -&gt; Last' a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Last' a -&gt; Last' a -&gt; Bool
+/= :: Last' a -&gt; Last' a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379238"><span id="local-6989586621679379242"><span id="local-6989586621679379246"><span id="local-6989586621679379250"><span id="local-6989586621679379254"><span id="local-6989586621679379258"><span id="local-6989586621679379262"><span class="annot"><span class="annottext">Eq (Last' a)
+Eq (Last' a) =&gt;
+(Last' a -&gt; Last' a -&gt; Ordering)
+-&gt; (Last' a -&gt; Last' a -&gt; Bool)
+-&gt; (Last' a -&gt; Last' a -&gt; Bool)
+-&gt; (Last' a -&gt; Last' a -&gt; Bool)
+-&gt; (Last' a -&gt; Last' a -&gt; Bool)
+-&gt; (Last' a -&gt; Last' a -&gt; Last' a)
+-&gt; (Last' a -&gt; Last' a -&gt; Last' a)
+-&gt; Ord (Last' a)
+Last' a -&gt; Last' a -&gt; Bool
+Last' a -&gt; Last' a -&gt; Ordering
+Last' a -&gt; Last' a -&gt; Last' a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Last' a)
+forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Bool
+forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Ordering
+forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Last' a
+$ccompare :: forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Ordering
+compare :: Last' a -&gt; Last' a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Bool
+&lt; :: Last' a -&gt; Last' a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Bool
+&lt;= :: Last' a -&gt; Last' a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Bool
+&gt; :: Last' a -&gt; Last' a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Bool
+&gt;= :: Last' a -&gt; Last' a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Last' a
+max :: Last' a -&gt; Last' a -&gt; Last' a
+$cmin :: forall a. Ord a =&gt; Last' a -&gt; Last' a -&gt; Last' a
+min :: Last' a -&gt; Last' a -&gt; Last' a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379268"><span id="local-6989586621679379272"><span id="local-6989586621679379275"><span id="local-6989586621679379284"><span class="annot"><span class="annottext">ReadPrec [Last' a]
+ReadPrec (Last' a)
+Int -&gt; ReadS (Last' a)
+ReadS [Last' a]
+(Int -&gt; ReadS (Last' a))
+-&gt; ReadS [Last' a]
+-&gt; ReadPrec (Last' a)
+-&gt; ReadPrec [Last' a]
+-&gt; Read (Last' a)
+forall a. Read a =&gt; ReadPrec [Last' a]
+forall a. Read a =&gt; ReadPrec (Last' a)
+forall a. Read a =&gt; Int -&gt; ReadS (Last' a)
+forall a. Read a =&gt; ReadS [Last' a]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: forall a. Read a =&gt; Int -&gt; ReadS (Last' a)
+readsPrec :: Int -&gt; ReadS (Last' a)
+$creadList :: forall a. Read a =&gt; ReadS [Last' a]
+readList :: ReadS [Last' a]
+$creadPrec :: forall a. Read a =&gt; ReadPrec (Last' a)
+readPrec :: ReadPrec (Last' a)
+$creadListPrec :: forall a. Read a =&gt; ReadPrec [Last' a]
+readListPrec :: ReadPrec [Last' a]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379289"><span id="local-6989586621679379293"><span id="local-6989586621679379297"><span class="annot"><span class="annottext">Int -&gt; Last' a -&gt; ShowS
+[Last' a] -&gt; ShowS
+Last' a -&gt; String
+(Int -&gt; Last' a -&gt; ShowS)
+-&gt; (Last' a -&gt; String) -&gt; ([Last' a] -&gt; ShowS) -&gt; Show (Last' a)
+forall a. Show a =&gt; Int -&gt; Last' a -&gt; ShowS
+forall a. Show a =&gt; [Last' a] -&gt; ShowS
+forall a. Show a =&gt; Last' a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Last' a -&gt; ShowS
+showsPrec :: Int -&gt; Last' a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Last' a -&gt; String
+show :: Last' a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Last' a] -&gt; ShowS
+showList :: [Last' a] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379300"><span id="local-6989586621679379302"><span class="annot"><span class="annottext">(forall x. Last' a -&gt; Rep (Last' a) x)
+-&gt; (forall x. Rep (Last' a) x -&gt; Last' a) -&gt; Generic (Last' a)
+forall x. Rep (Last' a) x -&gt; Last' a
+forall x. Last' a -&gt; Rep (Last' a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Last' a) x -&gt; Last' a
+forall a x. Last' a -&gt; Rep (Last' a) x
+$cfrom :: forall a x. Last' a -&gt; Rep (Last' a) x
+from :: forall x. Last' a -&gt; Rep (Last' a) x
+$cto :: forall a x. Rep (Last' a) x -&gt; Last' a
+to :: forall x. Rep (Last' a) x -&gt; Last' a
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379307"><span id="local-6989586621679379311"><span id="local-6989586621679379315"><span class="annot"><span class="annottext">Get (Last' a)
+[Last' a] -&gt; Put
+Last' a -&gt; Put
+(Last' a -&gt; Put)
+-&gt; Get (Last' a) -&gt; ([Last' a] -&gt; Put) -&gt; Binary (Last' a)
+forall a. Binary a =&gt; Get (Last' a)
+forall a. Binary a =&gt; [Last' a] -&gt; Put
+forall a. Binary a =&gt; Last' a -&gt; Put
+forall t. (t -&gt; Put) -&gt; Get t -&gt; ([t] -&gt; Put) -&gt; Binary t
+$cput :: forall a. Binary a =&gt; Last' a -&gt; Put
+put :: Last' a -&gt; Put
+$cget :: forall a. Binary a =&gt; Get (Last' a)
+get :: Get (Last' a)
+$cputList :: forall a. Binary a =&gt; [Last' a] -&gt; Put
+putList :: [Last' a] -&gt; Put
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Binary</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379037"><span id="local-6989586621679379326"><span id="local-6989586621679379333"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379037"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier hs-type">Last'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379037"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379040"><span id="local-6989586621679379360"><span id="local-6989586621679379364"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier hs-type">Last'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379040"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">Last' a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679379368"><span class="annot"><span class="annottext">&lt;&gt; :: Last' a -&gt; Last' a -&gt; Last' a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679379369"><span class="annot"><span class="annottext">Last' a
+</span><a href="#local-6989586621679379369"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last' a
+</span><a href="#local-6989586621679379369"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379372"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier hs-type">Last'</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679379376"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Last' a -&gt; Last' b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#fmap/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679379377"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679379377"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier hs-type">Last'</span></a></span><span> </span><span id="local-6989586621679379378"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379378"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Last' b
+forall a. a -&gt; Last' a
+</span><a href="Distribution.Compat.Semigroup.html#Last%27"><span class="hs-identifier hs-var">Last'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679379377"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379378"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | A wrapper around 'Maybe', providing the 'Semigroup' and 'Monoid' instances</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- implemented for 'Maybe' since @base-4.11@.</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">newtype</span><span> </span><span id="Option%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-var">Option'</span></a></span></span><span> </span><span id="local-6989586621679379048"><span class="annot"><a href="#local-6989586621679379048"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Option%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-var">Option'</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getOption%27"><span class="annot"><span class="annottext">forall a. Option' a -&gt; Maybe a
+</span><a href="Distribution.Compat.Semigroup.html#getOption%27"><span class="hs-identifier hs-var hs-var">getOption'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379048"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679379383"><span id="local-6989586621679379388"><span class="annot"><span class="annottext">Option' a -&gt; Option' a -&gt; Bool
+(Option' a -&gt; Option' a -&gt; Bool)
+-&gt; (Option' a -&gt; Option' a -&gt; Bool) -&gt; Eq (Option' a)
+forall a. Eq a =&gt; Option' a -&gt; Option' a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Option' a -&gt; Option' a -&gt; Bool
+== :: Option' a -&gt; Option' a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Option' a -&gt; Option' a -&gt; Bool
+/= :: Option' a -&gt; Option' a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379397"><span id="local-6989586621679379402"><span id="local-6989586621679379406"><span id="local-6989586621679379410"><span id="local-6989586621679379414"><span id="local-6989586621679379418"><span id="local-6989586621679379422"><span class="annot"><span class="annottext">Eq (Option' a)
+Eq (Option' a) =&gt;
+(Option' a -&gt; Option' a -&gt; Ordering)
+-&gt; (Option' a -&gt; Option' a -&gt; Bool)
+-&gt; (Option' a -&gt; Option' a -&gt; Bool)
+-&gt; (Option' a -&gt; Option' a -&gt; Bool)
+-&gt; (Option' a -&gt; Option' a -&gt; Bool)
+-&gt; (Option' a -&gt; Option' a -&gt; Option' a)
+-&gt; (Option' a -&gt; Option' a -&gt; Option' a)
+-&gt; Ord (Option' a)
+Option' a -&gt; Option' a -&gt; Bool
+Option' a -&gt; Option' a -&gt; Ordering
+Option' a -&gt; Option' a -&gt; Option' a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Option' a)
+forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Bool
+forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Ordering
+forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Option' a
+$ccompare :: forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Ordering
+compare :: Option' a -&gt; Option' a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Bool
+&lt; :: Option' a -&gt; Option' a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Bool
+&lt;= :: Option' a -&gt; Option' a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Bool
+&gt; :: Option' a -&gt; Option' a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Bool
+&gt;= :: Option' a -&gt; Option' a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Option' a
+max :: Option' a -&gt; Option' a -&gt; Option' a
+$cmin :: forall a. Ord a =&gt; Option' a -&gt; Option' a -&gt; Option' a
+min :: Option' a -&gt; Option' a -&gt; Option' a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379428"><span id="local-6989586621679379432"><span id="local-6989586621679379435"><span id="local-6989586621679379444"><span class="annot"><span class="annottext">ReadPrec [Option' a]
+ReadPrec (Option' a)
+Int -&gt; ReadS (Option' a)
+ReadS [Option' a]
+(Int -&gt; ReadS (Option' a))
+-&gt; ReadS [Option' a]
+-&gt; ReadPrec (Option' a)
+-&gt; ReadPrec [Option' a]
+-&gt; Read (Option' a)
+forall a. Read a =&gt; ReadPrec [Option' a]
+forall a. Read a =&gt; ReadPrec (Option' a)
+forall a. Read a =&gt; Int -&gt; ReadS (Option' a)
+forall a. Read a =&gt; ReadS [Option' a]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: forall a. Read a =&gt; Int -&gt; ReadS (Option' a)
+readsPrec :: Int -&gt; ReadS (Option' a)
+$creadList :: forall a. Read a =&gt; ReadS [Option' a]
+readList :: ReadS [Option' a]
+$creadPrec :: forall a. Read a =&gt; ReadPrec (Option' a)
+readPrec :: ReadPrec (Option' a)
+$creadListPrec :: forall a. Read a =&gt; ReadPrec [Option' a]
+readListPrec :: ReadPrec [Option' a]
+</span><a href="../../base-4.18.2.1/src/GHC.Read.html#Read/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379448"><span id="local-6989586621679379453"><span id="local-6989586621679379457"><span class="annot"><span class="annottext">Int -&gt; Option' a -&gt; ShowS
+[Option' a] -&gt; ShowS
+Option' a -&gt; String
+(Int -&gt; Option' a -&gt; ShowS)
+-&gt; (Option' a -&gt; String)
+-&gt; ([Option' a] -&gt; ShowS)
+-&gt; Show (Option' a)
+forall a. Show a =&gt; Int -&gt; Option' a -&gt; ShowS
+forall a. Show a =&gt; [Option' a] -&gt; ShowS
+forall a. Show a =&gt; Option' a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Option' a -&gt; ShowS
+showsPrec :: Int -&gt; Option' a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Option' a -&gt; String
+show :: Option' a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Option' a] -&gt; ShowS
+showList :: [Option' a] -&gt; ShowS
+</span><a href="../../base-4.18.2.1/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379461"><span id="local-6989586621679379466"><span id="local-6989586621679379470"><span class="annot"><span class="annottext">Get (Option' a)
+[Option' a] -&gt; Put
+Option' a -&gt; Put
+(Option' a -&gt; Put)
+-&gt; Get (Option' a) -&gt; ([Option' a] -&gt; Put) -&gt; Binary (Option' a)
+forall a. Binary a =&gt; Get (Option' a)
+forall a. Binary a =&gt; [Option' a] -&gt; Put
+forall a. Binary a =&gt; Option' a -&gt; Put
+forall t. (t -&gt; Put) -&gt; Get t -&gt; ([t] -&gt; Put) -&gt; Binary t
+$cput :: forall a. Binary a =&gt; Option' a -&gt; Put
+put :: Option' a -&gt; Put
+$cget :: forall a. Binary a =&gt; Get (Option' a)
+get :: Get (Option' a)
+$cputList :: forall a. Binary a =&gt; [Option' a] -&gt; Put
+putList :: [Option' a] -&gt; Put
+</span><a href="../../binary-0.8.9.1/src/Data.Binary.Class.html#Binary/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Binary</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379475"><span id="local-6989586621679379477"><span class="annot"><span class="annottext">(forall x. Option' a -&gt; Rep (Option' a) x)
+-&gt; (forall x. Rep (Option' a) x -&gt; Option' a)
+-&gt; Generic (Option' a)
+forall x. Rep (Option' a) x -&gt; Option' a
+forall x. Option' a -&gt; Rep (Option' a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Option' a) x -&gt; Option' a
+forall a x. Option' a -&gt; Rep (Option' a) x
+$cfrom :: forall a x. Option' a -&gt; Rep (Option' a) x
+from :: forall x. Option' a -&gt; Rep (Option' a) x
+$cto :: forall a x. Rep (Option' a) x -&gt; Option' a
+to :: forall x. Rep (Option' a) x -&gt; Option' a
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679379480"><span id="local-6989586621679379485"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Option' a -&gt; Option' b)
+-&gt; (forall a b. a -&gt; Option' b -&gt; Option' a) -&gt; Functor Option'
+forall a b. a -&gt; Option' b -&gt; Option' a
+forall a b. (a -&gt; b) -&gt; Option' a -&gt; Option' b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Option' a -&gt; Option' b
+fmap :: forall a b. (a -&gt; b) -&gt; Option' a -&gt; Option' b
+$c&lt;$ :: forall a b. a -&gt; Option' b -&gt; Option' a
+&lt;$ :: forall a b. a -&gt; Option' b -&gt; Option' a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.Typeable.Internal.html#Typeable/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379074"><span id="local-6989586621679379495"><span id="local-6989586621679379502"><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379074"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Utils.Structured.html#Structured"><span class="hs-identifier hs-type">Structured</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-type">Option'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379074"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379077"><span id="local-6989586621679379522"><span id="local-6989586621679379526"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379077"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-type">Option'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379077"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-type">Option'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679379531"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379531"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679379532"><span class="annot"><span class="annottext">&lt;&gt; :: Option' a -&gt; Option' a -&gt; Option' a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-type">Option'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679379533"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379533"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; Option' a
+forall a. Maybe a -&gt; Option' a
+</span><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-var">Option'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379531"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379533"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-type">Option'</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span id="local-6989586621679379534"><span class="annot"><span class="annottext">Option' a
+</span><a href="#local-6989586621679379534"><span class="hs-identifier hs-var">b</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Option' a
+</span><a href="#local-6989586621679379534"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679379535"><span class="annot"><span class="annottext">Option' a
+</span><a href="#local-6989586621679379535"><span class="hs-identifier hs-var">a</span></a></span></span><span>                </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-type">Option'</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Option' a
+</span><a href="#local-6989586621679379535"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379080"><span id="local-6989586621679379542"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379080"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-type">Option'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379080"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679379546"><span class="annot"><span class="annottext">mempty :: Option' a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; Option' a
+forall a. Maybe a -&gt; Option' a
+</span><a href="Distribution.Compat.Semigroup.html#Option%27"><span class="hs-identifier hs-var">Option'</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679379548"><span class="annot"><span class="annottext">mappend :: Option' a -&gt; Option' a -&gt; Option' a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Option' a -&gt; Option' a -&gt; Option' a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- Stolen from Edward Kmett's BSD3-licensed `semigroups` package</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Generically generate a 'Semigroup' ('&lt;&gt;') operation for any type</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- implementing 'Generic'. This operation will append two values</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- by point-wise appending their component fields. It is only defined</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- for product types.</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- 'gmappend' a ('gmappend' b c) = 'gmappend' ('gmappend' a b) c</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-82"></span><span id="local-6989586621679379081"><span class="annot"><a href="Distribution.Compat.Semigroup.html#gmappend"><span class="hs-identifier hs-type">gmappend</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379081"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#Rep/GHC.Generics.html#Rep"><span class="hs-identifier hs-type">Rep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379081"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679379081"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679379081"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679379081"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-83"></span><span id="gmappend"><span class="annot"><span class="annottext">gmappend :: forall a. (Generic a, GSemigroup (Rep a)) =&gt; a -&gt; a -&gt; a
+</span><a href="Distribution.Compat.Semigroup.html#gmappend"><span class="hs-identifier hs-var hs-var">gmappend</span></a></span></span><span> </span><span id="local-6989586621679379555"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379555"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679379556"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379556"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rep a Any -&gt; a
+forall a x. Generic a =&gt; Rep a x -&gt; a
+forall x. Rep a x -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#to/GHC.Generics.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rep a Any -&gt; Rep a Any -&gt; Rep a Any
+forall p. Rep a p -&gt; Rep a p -&gt; Rep a p
+forall (f :: * -&gt; *) p. GSemigroup f =&gt; f p -&gt; f p -&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-var">gmappend'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Rep a Any
+forall x. a -&gt; Rep a x
+forall a x. Generic a =&gt; a -&gt; Rep a x
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#from/GHC.Generics.html#from"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379555"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Rep a Any
+forall x. a -&gt; Rep a x
+forall a x. Generic a =&gt; a -&gt; Rep a x
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#from/GHC.Generics.html#from"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379556"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">class</span><span> </span><span id="GSemigroup"><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-var">GSemigroup</span></a></span></span><span> </span><span id="local-6989586621679379085"><span class="annot"><a href="#local-6989586621679379085"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>    </span><span id="gmappend%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-type">gmappend'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679379084"><span class="annot"><a href="#local-6989586621679379085"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379084"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679379085"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379084"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679379085"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379084"><span class="hs-identifier hs-type">p</span></a></span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379088"><span id="local-6989586621679379089"><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379088"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#K1/GHC.Generics.html#K1"><span class="hs-identifier hs-type">K1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379089"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379088"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>    </span><span id="local-6989586621679379565"><span class="annot"><span class="annottext">gmappend' :: forall p. K1 i a p -&gt; K1 i a p -&gt; K1 i a p
+</span><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-var hs-var hs-var hs-var">gmappend'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#K1/GHC.Generics.html#K1"><span class="hs-identifier hs-type">K1</span></a></span><span> </span><span id="local-6989586621679379567"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379567"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#K1/GHC.Generics.html#K1"><span class="hs-identifier hs-type">K1</span></a></span><span> </span><span id="local-6989586621679379568"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379568"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; K1 i a p
+forall k i c (p :: k). c -&gt; K1 i c p
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#K1/GHC.Generics.html#K1"><span class="hs-identifier hs-var">K1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379567"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679379568"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379098"><span id="local-6989586621679379099"><span id="local-6989586621679379100"><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379098"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#M1/GHC.Generics.html#M1"><span class="hs-identifier hs-type">M1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379099"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379100"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379098"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679379573"><span class="annot"><span class="annottext">gmappend' :: forall p. M1 i c f p -&gt; M1 i c f p -&gt; M1 i c f p
+</span><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-var hs-var hs-var hs-var">gmappend'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#M1/GHC.Generics.html#M1"><span class="hs-identifier hs-type">M1</span></a></span><span> </span><span id="local-6989586621679379575"><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379575"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#M1/GHC.Generics.html#M1"><span class="hs-identifier hs-type">M1</span></a></span><span> </span><span id="local-6989586621679379576"><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379576"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f p -&gt; M1 i c f p
+forall k i (c :: Meta) (f :: k -&gt; *) (p :: k). f p -&gt; M1 i c f p
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#M1/GHC.Generics.html#M1"><span class="hs-identifier hs-var">M1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f p -&gt; f p -&gt; f p
+forall p. f p -&gt; f p -&gt; f p
+forall (f :: * -&gt; *) p. GSemigroup f =&gt; f p -&gt; f p -&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-var">gmappend'</span></a></span><span> </span><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379575"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379576"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379109"><span id="local-6989586621679379110"><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379109"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379110"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679379109"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#%3A%2A%3A/GHC.Generics.html#%3A%2A%3A"><span class="hs-operator hs-type">:*:</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379110"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621679379583"><span class="annot"><span class="annottext">gmappend' :: forall p. (:*:) f g p -&gt; (:*:) f g p -&gt; (:*:) f g p
+</span><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-var hs-var hs-var hs-var">gmappend'</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679379584"><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379584"><span class="hs-identifier hs-var">x1</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#%3A%2A%3A/GHC.Generics.html#%3A%2A%3A"><span class="hs-operator hs-type">:*:</span></a></span><span> </span><span id="local-6989586621679379586"><span class="annot"><span class="annottext">g p
+</span><a href="#local-6989586621679379586"><span class="hs-identifier hs-var">x2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679379587"><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379587"><span class="hs-identifier hs-var">y1</span></a></span></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#%3A%2A%3A/GHC.Generics.html#%3A%2A%3A"><span class="hs-operator hs-type">:*:</span></a></span><span> </span><span id="local-6989586621679379588"><span class="annot"><span class="annottext">g p
+</span><a href="#local-6989586621679379588"><span class="hs-identifier hs-var">y2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f p -&gt; f p -&gt; f p
+forall p. f p -&gt; f p -&gt; f p
+forall (f :: * -&gt; *) p. GSemigroup f =&gt; f p -&gt; f p -&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-var">gmappend'</span></a></span><span> </span><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379584"><span class="hs-identifier hs-var">x1</span></a></span><span> </span><span class="annot"><span class="annottext">f p
+</span><a href="#local-6989586621679379587"><span class="hs-identifier hs-var">y1</span></a></span><span> </span><span class="annot"><span class="annottext">f p -&gt; g p -&gt; (:*:) f g p
+forall k (f :: k -&gt; *) (g :: k -&gt; *) (p :: k).
+f p -&gt; g p -&gt; (:*:) f g p
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#%3A%2A%3A/GHC.Generics.html#%3A%2A%3A"><span class="hs-operator hs-var">:*:</span></a></span><span> </span><span class="annot"><span class="annottext">g p -&gt; g p -&gt; g p
+forall p. g p -&gt; g p -&gt; g p
+forall (f :: * -&gt; *) p. GSemigroup f =&gt; f p -&gt; f p -&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmappend%27"><span class="hs-identifier hs-var">gmappend'</span></a></span><span> </span><span class="annot"><span class="annottext">g p
+</span><a href="#local-6989586621679379586"><span class="hs-identifier hs-var">x2</span></a></span><span> </span><span class="annot"><span class="annottext">g p
+</span><a href="#local-6989586621679379588"><span class="hs-identifier hs-var">y2</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- | Generically generate a 'Monoid' 'mempty' for any product-like type</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- implementing 'Generic'.</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- It is only defined for product types.</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- 'gmappend' 'gmempty' a = a = 'gmappend' a 'gmempty'</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span id="local-6989586621679379116"><span class="annot"><a href="Distribution.Compat.Semigroup.html#gmempty"><span class="hs-identifier hs-type">gmempty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#Generic/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379116"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-type">GMonoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#Rep/GHC.Generics.html#Rep"><span class="hs-identifier hs-type">Rep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379116"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679379116"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-107"></span><span id="gmempty"><span class="annot"><span class="annottext">gmempty :: forall a. (Generic a, GMonoid (Rep a)) =&gt; a
+</span><a href="Distribution.Compat.Semigroup.html#gmempty"><span class="hs-identifier hs-var hs-var">gmempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rep a Any -&gt; a
+forall a x. Generic a =&gt; Rep a x -&gt; a
+forall x. Rep a x -&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#to/GHC.Generics.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">Rep a Any
+forall p. Rep a p
+forall (f :: * -&gt; *) p. GMonoid f =&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-var">gmempty'</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GSemigroup"><span class="hs-identifier hs-type">GSemigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379120"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="GMonoid"><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-var">GMonoid</span></a></span></span><span> </span><span id="local-6989586621679379120"><span class="annot"><a href="#local-6989586621679379120"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-110"></span><span>    </span><span id="gmempty%27"><span class="annot"><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-type">gmempty'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679379119"><span class="annot"><a href="#local-6989586621679379120"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379119"><span class="hs-identifier hs-type">p</span></a></span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379123"><span id="local-6989586621679379124"><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379123"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379123"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-type">GMonoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#K1/GHC.Generics.html#K1"><span class="hs-identifier hs-type">K1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379124"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379123"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679379603"><span class="annot"><span class="annottext">gmempty' :: forall p. K1 i a p
+</span><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-var hs-var hs-var hs-var">gmempty'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; K1 i a p
+forall k i c (p :: k). c -&gt; K1 i c p
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#K1/GHC.Generics.html#K1"><span class="hs-identifier hs-var">K1</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379129"><span id="local-6989586621679379130"><span id="local-6989586621679379131"><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-type">GMonoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379129"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-type">GMonoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#M1/GHC.Generics.html#M1"><span class="hs-identifier hs-type">M1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379130"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379131"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379129"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-116"></span><span>    </span><span id="local-6989586621679379611"><span class="annot"><span class="annottext">gmempty' :: forall p. M1 i c f p
+</span><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-var hs-var hs-var hs-var">gmempty'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f p -&gt; M1 i c f p
+forall k i (c :: Meta) (f :: k -&gt; *) (p :: k). f p -&gt; M1 i c f p
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#M1/GHC.Generics.html#M1"><span class="hs-identifier hs-var">M1</span></a></span><span> </span><span class="annot"><span class="annottext">f p
+forall p. f p
+forall (f :: * -&gt; *) p. GMonoid f =&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-var">gmempty'</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679379135"><span id="local-6989586621679379136"><span class="hs-special">(</span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-type">GMonoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379135"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-type">GMonoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379136"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Distribution.Compat.Semigroup.html#GMonoid"><span class="hs-identifier hs-type">GMonoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679379135"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Generics.html#%3A%2A%3A/GHC.Generics.html#%3A%2A%3A"><span class="hs-operator hs-type">:*:</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679379136"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621679379622"><span class="annot"><span class="annottext">gmempty' :: forall p. (:*:) f g p
+</span><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-var hs-var hs-var hs-var">gmempty'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f p
+forall p. f p
+forall (f :: * -&gt; *) p. GMonoid f =&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-var">gmempty'</span></a></span><span> </span><span class="annot"><span class="annottext">f p -&gt; g p -&gt; (:*:) f g p
+forall k (f :: k -&gt; *) (g :: k -&gt; *) (p :: k).
+f p -&gt; g p -&gt; (:*:) f g p
+</span><a href="../../base-4.18.2.1/src/GHC.Generics.html#%3A%2A%3A/GHC.Generics.html#%3A%2A%3A"><span class="hs-operator hs-var">:*:</span></a></span><span> </span><span class="annot"><span class="annottext">g p
+forall p. g p
+forall (f :: * -&gt; *) p. GMonoid f =&gt; f p
+</span><a href="Distribution.Compat.Semigroup.html#gmempty%27"><span class="hs-identifier hs-var">gmempty'</span></a></span><span>
+</span><span id="line-120"></span></pre></body></html>
