@@ -145,6 +145,7 @@ import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 import qualified Data.Bits as Bits
 import qualified Data.Vector as V
 import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, leiosEbBytesSize, leiosTxBytesSize, prettyBitmap, prettyEbHash)
+import           LeiosDemoTypes (TraceLeiosKernel, TraceLeiosPeer, traceLeiosKernelToObject, traceLeiosPeerToObject)
 import qualified LeiosDemoOnlyTestFetch as LF
 import qualified LeiosDemoOnlyTestNotify as LN
 
@@ -2964,3 +2965,26 @@ instance ToObject (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
     where
 --      agency :: Aeson.Object
 --      agency = "agency" .= show stok
+
+instance Transformable Text IO TraceLeiosKernel where
+  trTransformer = trStructured
+
+instance ToObject TraceLeiosKernel where
+  toObject _verb = traceLeiosKernelToObject
+
+instance HasPrivacyAnnotation TraceLeiosKernel
+
+instance HasSeverityAnnotation TraceLeiosKernel where
+  getSeverityAnnotation _ = Debug
+
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer TraceLeiosPeer) where
+  trTransformer = trStructured
+
+instance ToObject TraceLeiosPeer where
+  toObject _verb = traceLeiosPeerToObject
+
+instance HasPrivacyAnnotation TraceLeiosPeer
+
+instance HasSeverityAnnotation TraceLeiosPeer where
+  getSeverityAnnotation _ = Debug

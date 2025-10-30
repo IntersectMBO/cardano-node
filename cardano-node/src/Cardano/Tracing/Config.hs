@@ -187,6 +187,8 @@ type TraceLeiosFetchProtocol = ("TraceLeiosFetchProtocol" :: Symbol)
 type TraceGsm = ("TraceGsm" :: Symbol)
 type TraceCsj = ("TraceCsj" :: Symbol)
 type TraceDevotedBlockFetch = ("TraceDevotedBlockFetch" :: Symbol)
+type TraceLeiosKernel = ("TraceLeiosKernel" :: Symbol)
+type TraceLeiosPeer = ("TraceLeiosPeer" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -265,6 +267,8 @@ data TraceSelection
   , traceGsm :: OnOff TraceGsm
   , traceCsj :: OnOff TraceCsj
   , traceDevotedBlockFetch :: OnOff TraceDevotedBlockFetch
+  , traceLeiosKernel :: OnOff TraceLeiosKernel
+  , traceLeiosPeer :: OnOff TraceLeiosPeer
   } deriving (Eq, Show)
 
 
@@ -337,6 +341,8 @@ data PartialTraceSelection
       , pTraceGsm :: Last (OnOff TraceGsm)
       , pTraceCsj :: Last (OnOff TraceCsj)
       , pTraceDevotedBlockFetch :: Last (OnOff TraceDevotedBlockFetch)
+      , pTraceLeiosKernel :: Last (OnOff TraceLeiosKernel)
+      , pTraceLeiosPeer :: Last (OnOff TraceLeiosPeer)
       } deriving (Eq, Generic, Show)
 
 
@@ -410,6 +416,8 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceGsm) v
       <*> parseTracer (Proxy @TraceCsj) v
       <*> parseTracer (Proxy @TraceDevotedBlockFetch) v
+      <*> parseTracer (Proxy @TraceLeiosKernel) v
+      <*> parseTracer (Proxy @TraceLeiosPeer) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -480,6 +488,8 @@ defaultPartialTraceConfiguration =
     , pTraceGsm = pure $ OnOff True
     , pTraceCsj = pure $ OnOff True
     , pTraceDevotedBlockFetch = pure $ OnOff True
+    , pTraceLeiosKernel = pure $ OnOff True
+    , pTraceLeiosPeer = pure $ OnOff True
     }
 
 
@@ -552,6 +562,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
    traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
+   traceLeiosKernel <- proxyLastToEither (Proxy @TraceLeiosKernel) pTraceLeiosKernel
+   traceLeiosPeer <- proxyLastToEither (Proxy @TraceLeiosPeer) pTraceLeiosPeer
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -617,6 +629,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceGsm = traceGsm
              , traceCsj = traceCsj
              , traceDevotedBlockFetch = traceDevotedBlockFetch
+             , traceLeiosKernel = traceLeiosKernel
+             , traceLeiosPeer = traceLeiosPeer
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -686,6 +700,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
   traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
+  traceLeiosKernel <- proxyLastToEither (Proxy @TraceLeiosKernel) pTraceLeiosKernel
+  traceLeiosPeer <- proxyLastToEither (Proxy @TraceLeiosPeer) pTraceLeiosPeer
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -751,6 +767,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceGsm = traceGsm
             , traceCsj = traceCsj
             , traceDevotedBlockFetch = traceDevotedBlockFetch
+            , traceLeiosKernel = traceLeiosKernel
+            , traceLeiosPeer = traceLeiosPeer
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)

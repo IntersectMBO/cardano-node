@@ -362,6 +362,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "DevotedBlockFetch"]
     configureTracers configReflection trConfig [consensusDbfTr]
 
+    !consensusLeiosKernelTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosKernel"]
+    configureTracers configReflection trConfig [consensusLeiosKernelTr]
+
+    !consensusLeiosPeerTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosPeer"]
+    configureTracers configReflection trConfig [consensusLeiosPeerTr]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -408,6 +418,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusCsjTr
       , Consensus.dbfTracer = Tracer $
           traceWith consensusDbfTr
+      , Consensus.leiosKernelTracer = Tracer $
+          traceWith consensusLeiosKernelTr
+      , Consensus.leiosPeerTracer = Tracer $
+          traceWith consensusLeiosPeerTr
       }
 
 mkNodeToClientTracers :: forall blk.

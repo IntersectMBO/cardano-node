@@ -101,7 +101,7 @@ import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 
-import           LeiosDemoTypes (LeiosPoint, LeiosEb, LeiosTx)
+import           LeiosDemoTypes (LeiosPoint, LeiosEb, LeiosTx, TraceLeiosKernel, TraceLeiosPeer)
 import           LeiosDemoOnlyTestFetch (LeiosFetch)
 import           LeiosDemoOnlyTestNotify (LeiosNotify)
 
@@ -210,7 +210,10 @@ getAllNamespaces =
                         (allNamespaces :: [Namespace (Jumping.TraceEventCsj peer blk)])
         dbfNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "DevotedBlockFetch"])
                         (allNamespaces :: [Namespace (Jumping.TraceEventDbf peer)])
-
+        leiosKernelNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "LeiosKernel"])
+                        (allNamespaces :: [Namespace TraceLeiosKernel])
+        leiosPeerNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "LeiosPeer"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer remotePeer TraceLeiosPeer)])
 -- Node to client
         keepAliveClientNS = map (nsGetTuple . nsReplacePrefix ["Net"])
                                 (allNamespaces :: [Namespace  (TraceKeepAliveClient peer)])
@@ -435,6 +438,8 @@ getAllNamespaces =
             <> gsmNS
             <> csjNS
             <> dbfNS
+            <> leiosKernelNS
+            <> leiosPeerNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS
