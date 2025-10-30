@@ -67,7 +67,7 @@ playground $ txhash=8a3d63d4d95f669ef62570f2936ad50d2cfad399e04808ca21474e70b119
 playground $ balance=97640000
 ```
 
-Find out much much will remain after paying `1000000 lovelace` to the target account:
+Find out how much will remain after paying `1000000 lovelace` to the target account:
 
 ```bash
 playground $ remaining=$(echo "$balance - 1000000 - 180000" | bc)
