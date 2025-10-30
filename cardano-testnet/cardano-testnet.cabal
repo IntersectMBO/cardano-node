@@ -99,7 +99,6 @@ library
                       , time
                       , transformers
                       , transformers-except
-                      , vector
                       , yaml
 
   hs-source-dirs:       src
