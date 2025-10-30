@@ -62,12 +62,13 @@ import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
-import           RIO (runRIO)
 
 import           Hedgehog
 import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion, readJsonFile)
 import qualified Hedgehog.Extras as H
+
+import           RIO (runRIO)
 
 -- | Test CLI queries
 -- Execute me with:
