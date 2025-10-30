@@ -29,11 +29,17 @@ import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PS
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad.Class.MonadTime.SI (Time (..))
-import           Data.Aeson (ToJSON (..), Value (String), (.=))
+import           Data.Aeson (ToJSON (..), Value (Array, Number, String), (.=))
 import           Data.Proxy (Proxy (..))
 import           Data.Time (DiffTime)
 import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
+
+import qualified Data.Bits as Bits
+import qualified Data.Vector as V
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, leiosEbBytesSize, leiosTxBytesSize, prettyBitmap, prettyEbHash)
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -466,3 +472,122 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
   documentFor _ = Just ""
 
   allNamespaces = [Namespace [] ["KeepAliveClient"]]
+
+-----
+
+instance ToJSON EbHash where toJSON = toJSON . prettyEbHash
+
+instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+  forHuman = showT
+
+  forMachine _dtal (AnyMessageAndAgency _stok msg) = case msg of
+
+    LN.MsgLeiosNotificationRequestNext ->
+      mconcat [ "kind" .= String "MsgLeiosNotificationRequestNext"
+              ]
+
+    LN.MsgLeiosBlockAnnouncement () ->
+      mconcat [ "kind" .= String "MsgLeiosBlockAnnouncement"
+              ]
+    LN.MsgLeiosBlockOffer (MkLeiosPoint ebSlot ebHash) ebBytesSize ->
+      mconcat [ "kind" .= String "MsgLeiosBlockOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              , "ebBytesSize" .= ebBytesSize
+              ]
+    LN.MsgLeiosBlockTxsOffer (MkLeiosPoint ebSlot ebHash) ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxsOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              ]
+
+    LN.MsgDone ->
+      mconcat [ "kind" .= String "MsgDone"
+              ]
+
+instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
+  forHuman = showT
+
+  forMachine _dtal (AnyMessageAndAgency _stok msg) = case msg of
+
+    LF.MsgLeiosBlockRequest (MkLeiosPoint ebSlot ebHash) ->
+      mconcat [ "kind" .= String "MsgLeiosBlockRequest"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              ]
+
+    LF.MsgLeiosBlock eb ->
+      mconcat [ "kind" .= String "MsgLeiosBlock"
+              , "eb" .= String "<elided>"
+              , "ebBytesSize" .= Number (fromIntegral $ leiosEbBytesSize eb)
+              ]
+
+    LF.MsgLeiosBlockTxsRequest (MkLeiosPoint ebSlot ebHash) bitmaps ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxsRequest"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              , "numTxs" .= Number (fromIntegral $ sum $ map (Bits.popCount . snd) bitmaps)
+              , "bitmaps" .= Array (V.fromList $ map (String . pack . prettyBitmap) bitmaps)
+              ]
+
+    LF.MsgLeiosBlockTxs txs ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxs"
+              , "numTxs" .= Number (fromIntegral (V.length txs))
+              , "txsBytesSize" .= Number (fromIntegral $ V.sum $ V.map leiosTxBytesSize txs)
+              , "txs" .= String "<elided>"
+              ]
+
+    -- LF.MsgLeiosVotesRequest
+    -- LF.MsgLeiosVoteDelivery
+
+    -- LF.MsgLeiosBlockRangeRequest
+    -- LF.MsgLeiosNextBlockAndTxsInRange
+    -- LF.MsgLeiosLastBlockAndTxsInRange
+
+    LF.MsgDone ->
+      mconcat [ "kind" .= String "MsgDone"
+              ]
+
+    where
+--      agency :: Aeson.Object
+--      agency = "agency" .= show stok
+
+instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+    namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
+      LN.MsgLeiosNotificationRequestNext {} -> Namespace [] ["RequestNext"]
+      LN.MsgLeiosBlockAnnouncement {} -> Namespace [] ["BlockAnnouncement"]
+      LN.MsgLeiosBlockOffer {} -> Namespace [] ["BlockOffer"]
+      LN.MsgLeiosBlockTxsOffer {} -> Namespace [] ["BlockTxsOffer"]
+      LN.MsgDone -> Namespace [] ["Done"]
+
+    severityFor _ _ = Just Debug
+
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["RequestNext"]
+      , Namespace [] ["BlockAnnouncement"]
+      , Namespace [] ["BlockOffer"]
+      , Namespace [] ["BlockTxsOffer"]
+      , Namespace [] ["Done"]
+      ]
+
+instance MetaTrace (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
+    namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
+      LF.MsgLeiosBlockRequest {} -> Namespace [] ["BlockRequest"]
+      LF.MsgLeiosBlock {} -> Namespace [] ["Block"]
+      LF.MsgLeiosBlockTxsRequest {} -> Namespace [] ["BlockTxsRequest"]
+      LF.MsgLeiosBlockTxs {} -> Namespace [] ["BlockTxs"]
+      LF.MsgDone -> Namespace [] ["Done"]
+
+    severityFor _ _ = Just Debug
+
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["BlockRequest"]
+      , Namespace [] ["Block"]
+      , Namespace [] ["BlockTxsRequest"]
+      , Namespace [] ["BlockTxs"]
+      , Namespace [] ["Done"]
+      ]

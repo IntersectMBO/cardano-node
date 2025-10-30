@@ -1515,12 +1515,12 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tPeerSharingTracer =
       tracerOnOff (tracePeerSharingProtocol trSel)
                   verb "PeerSharingPrototocol" tr
-  , NodeToNode.tLeiosNotifyTracer = nullTracer {-  TODO
+  , NodeToNode.tLeiosNotifyTracer =
       tracerOnOff (traceLeiosNotifyProtocol trSel)
-                  verb "LeiosNotifyPrototocol" tr -}
-  , NodeToNode.tLeiosFetchTracer = nullTracer {-  TODO
+                  verb "LeiosNotifyPrototocol" tr
+  , NodeToNode.tLeiosFetchTracer =
       tracerOnOff (traceLeiosFetchProtocol trSel)
-                  verb "LeiosFetchPrototocol" tr -}
+                  verb "LeiosFetchPrototocol" tr
   }
 
 -- TODO @ouroboros-network

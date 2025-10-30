@@ -68,7 +68,7 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
-import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
+import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (SockAddr)
@@ -501,12 +501,17 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 trBase trForward mbTrEKG
                 ["PeerSharing", "Remote"]
     configureTracers configReflection trConfig [peerSharingTracer]
-{-
+
     !leiosNotifyTracer  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["LeiosNotify", "Remote"]
     configureTracers configReflection trConfig [leiosNotifyTracer]
--}
+
+    !leiosFetchTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosFetch", "Remote"]
+    configureTracers configReflection trConfig [leiosFetchTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -522,9 +527,10 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith keepAliveTracer
       , NtN.tPeerSharingTracer = Tracer $
           traceWith peerSharingTracer
-      , NtN.tLeiosNotifyTracer = nullTracer {- Tracer $
-          traceWith leiosNotifyTracer -}
-      , NtN.tLeiosFetchTracer = nullTracer
+      , NtN.tLeiosNotifyTracer = Tracer $
+          traceWith leiosNotifyTracer
+      , NtN.tLeiosFetchTracer = Tracer $
+          traceWith leiosFetchTracer
       }
 
 mkDiffusionTracers
