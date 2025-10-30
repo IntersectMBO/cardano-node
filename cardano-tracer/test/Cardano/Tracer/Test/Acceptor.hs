@@ -19,6 +19,7 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
+import           Control.Concurrent.Chan.Unagi (newChan)
 import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
@@ -67,6 +68,8 @@ launchAcceptorsSimple mode localSock dpName = do
 
   registry <- newRegistry
 
+  (inChan, _outChan) <- newChan
+
   let tracerEnv :: TracerEnv
       tracerEnv = TracerEnv
         { teConfig                = mkConfig
@@ -82,6 +85,7 @@ launchAcceptorsSimple mode localSock dpName = do
         , teRegistry              = registry
         , teStateDir              = Nothing
         , teMetricsHelp           = []
+        , teInChan                = inChan
         }
 
       tracerEnvRTView :: TracerEnvRTView
