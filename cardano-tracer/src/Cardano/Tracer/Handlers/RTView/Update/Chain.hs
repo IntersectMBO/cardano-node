@@ -10,6 +10,7 @@ import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
+import           Data.Text (isInfixOf)
 import           Data.Text.Read (double)
 import           Data.Time.Clock (UTCTime)
 
@@ -22,11 +23,11 @@ updateBlockchainHistory
   -> IO ()
 updateBlockchainHistory nodeId (ChainHistory cHistory) metricName metricValue now =
   case metricName of
-    "ChainDB.Density"     -> updateChainDensity
-    "ChainDB.SlotNum"     -> updateSlotNum
-    "ChainDB.BlockNum"    -> updateBlockNum
-    "ChainDB.SlotInEpoch" -> updateSlotInEpoch
-    "ChainDB.Epoch"       -> updateEpoch
+    x | "density"     `isInfixOf` x  -> updateChainDensity
+    x | "slotNum"     `isInfixOf` x  -> updateSlotNum
+    x | "blockNum"    `isInfixOf` x  -> updateBlockNum
+    x | "slotInEpoch" `isInfixOf` x  -> updateSlotInEpoch
+    x | "epoch"       `isInfixOf` x  -> updateEpoch
     _ -> return ()
  where
   updateChainDensity =
