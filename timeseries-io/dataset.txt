@@ -1,0 +1,6 @@
+my_metric1 [node = "1"] 1000 0
+my_metric1 [node = "1"] 1001 2
+my_metric1 [node = "1"] 1002 4
+my_metric1 [node = "2"] 0 0
+my_metric1 [node = "2"] 10 10
+my_metric2 [] 0 99
