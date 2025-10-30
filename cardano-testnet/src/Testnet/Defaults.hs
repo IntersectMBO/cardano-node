@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -89,9 +90,7 @@ import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
-import qualified Data.Vector as Vector
 import           Data.Word (Word64)
-import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           Numeric.Natural
 import           System.FilePath ((</>))
@@ -182,7 +181,7 @@ defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
     <> tracers
-    <> fromList [("TraceOptions", Aeson.Object mempty)]
+    <> [("TraceOptions", Aeson.Object mempty)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
  where
@@ -332,25 +331,23 @@ defaultYamlConfig =
     -- See: https://github.com/input-output-hk/cardano-ledger/blob/master/eras/byron/ledger/impl/doc/network-magic.md
     , ("RequiresNetworkMagic", "RequiresMagic")
 
-    -- Enable P2P, non-P2P is gone
-    , ("EnableP2P", Aeson.Bool True)
     , ("PeerSharing", Aeson.Bool False)
 
     -- Logging related
     , ("setupScribes", setupScribes)
     , ("rotation", rotationObject)
     , ("defaultScribes", defaultScribes)
-    , ("setupBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
-    , ("defaultBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
+    , ("setupBackends", Aeson.Array ["KatipBK"])
+    , ("defaultBackends", Aeson.Array ["KatipBK"])
     , ("options", Aeson.object mempty)
     ]
   where
     genesisPath era = Aeson.String $ Text.pack $ defaultGenesisFilepath era
     defaultScribes :: Aeson.Value
     defaultScribes =
-      Aeson.Array $ Vector.fromList
-        [ Aeson.Array $ Vector.fromList ["FileSK","logs/mainnet.log"]
-        , Aeson.Array $ Vector.fromList ["StdoutSK","stdout"]
+      Aeson.Array
+        [ Aeson.Array ["FileSK","logs/mainnet.log"]
+        , Aeson.Array ["StdoutSK","stdout"]
         ]
     rotationObject :: Aeson.Value
     rotationObject =
@@ -362,7 +359,7 @@ defaultYamlConfig =
           ]
     setupScribes :: Aeson.Value
     setupScribes =
-      Aeson.Array $ Vector.fromList
+      Aeson.Array
         [ Aeson.Object $ mconcat $ map (uncurry Aeson.singleton)
             [ ("scKind", "FileSK")
             , ("scName", "logs/node.log")
