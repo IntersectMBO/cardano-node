@@ -10,6 +10,7 @@
     cardano-automation = {
       url = "github:input-output-hk/cardano-automation";
       inputs = {
+        hackageNix.follows = "hackageNix";
         haskellNix.follows = "haskellNix";
         nixpkgs.follows = "nixpkgs";
       };
