@@ -1773,6 +1773,7 @@ instance ToJSON KnownPeerInfo where
             nKnownPeerSharing
             nKnownPeerAdvertise
             nKnownSuccessfulConnection
+            nKnownPeerReciprocal
          ) =
     Aeson.object [ "kind" .= String "KnownPeerInfo"
                  , "failCount" .= nKnownPeerFailCount
@@ -1780,6 +1781,7 @@ instance ToJSON KnownPeerInfo where
                  , "peerSharing" .= nKnownPeerSharing
                  , "peerAdvertise" .= nKnownPeerAdvertise
                  , "successfulConnection" .= nKnownSuccessfulConnection
+                 , "reciprocal" .= nKnownPeerReciprocal
                  ]
 
 instance ToJSON PeerStatus where
