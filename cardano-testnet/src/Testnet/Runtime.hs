@@ -14,6 +14,8 @@ module Testnet.Runtime
   ( startNode
   , startLedgerNewEpochStateLogging
   , NodeStartFailure (..)
+  -- Exposed for testing purposes
+  , asyncRegister_
   ) where
 
 import           Cardano.Api
@@ -362,3 +364,20 @@ instance (L.EraTxOut ledgerera, L.EraGov ledgerera, L.EraCertState ledgerera, L.
       , "rewardUpdate" .= nesRu
       , "currentStakeDistribution" .= nesPd
       ]
+
+
+-- | Runs an action in background, and registers its cancellation to 'MonadResource'.
+asyncRegister_ :: HasCallStack
+               => MonadResource m
+               => IO a -- ^ Action to run in background
+               -> m (ReleaseKey, H.Async a)
+asyncRegister_ act = GHC.withFrozenCallStack $ do 
+      allocate 
+        (do a <- H.async act
+            H.link a 
+            return a   
+        ) 
+        cleanUp
+  where
+    cleanUp :: H.Async a -> IO ()
+    cleanUp = H.cancel 
