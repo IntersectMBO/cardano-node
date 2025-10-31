@@ -32,6 +32,8 @@ packages:
   trace-resources
   trace-forward
 
+  test-cputicks-darwin
+
 -- Needed when cross compiling
 extra-packages: alex
 
