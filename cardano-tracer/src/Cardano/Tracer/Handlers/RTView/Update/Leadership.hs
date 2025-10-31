@@ -9,6 +9,7 @@ import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
+import           Data.Text (isInfixOf)
 import           Data.Time.Clock (UTCTime)
 
 updateLeadershipHistory
@@ -21,23 +22,23 @@ updateLeadershipHistory
 updateLeadershipHistory nodeId (ChainHistory cHistory) metricName metricValue now =
   case metricName of
     -- Slot when the node was a leader, but couldn't forge the block.
-    "Forge.NodeCannotForge"         -> updateNodeCannotForge
+    x | "nodeCannotForge" `isInfixOf` x         -> updateNodeCannotForge
     -- Slot when this node forged last block.
-    "Forge.ForgedSlotLast"          -> updateForgedSlotLast
+    x | "forgedSlotLast" `isInfixOf` x          -> updateForgedSlotLast
     -- Slot when this node is leader.
-    "Forge.NodeIsLeader"            -> updateNodeIsLeader
+    x | "Forge.node-is-leader" `isInfixOf` x    -> updateNodeIsLeader
     -- Slot when this node made leadership check and concludes it's not leader.
-    "Forge.NodeNotLeader"           -> updateNodeIsNotLeader
+    x | "Forge.node-not-leader" `isInfixOf` x   -> updateNodeIsNotLeader
     -- Slot when invalid block was forged.
-    "Forge.ForgedInvalidSlotLast"   -> updateForgedInvalidSlotLast
+    x | "Forge.forged-invalid" `isInfixOf` x    -> updateForgedInvalidSlotLast
     -- Slot when the node adopted the block it forged.
-    "Forge.AdoptedOwnBlockSlotLast" -> updateAdoptedSlotLast
+    x | "Forge.adopted" `isInfixOf` x -> updateAdoptedSlotLast
     -- Slot when the node didn't adopted the block it forged, but the block was valid.
-    "Forge.NotAdoptedSlotLast"      -> updateNotAdoptedSlotLast
+    x | "Forge.didnt-adopt" `isInfixOf` x       -> updateNotAdoptedSlotLast
     -- Slot when the leadership check is started.
-    "Forge.AboutToLeadSlotLast"     -> updateAboutToLeadSlotLast
+    x | "Forge.about-to-lead" `isInfixOf` x     -> updateAboutToLeadSlotLast
     -- Slot when the leadership check is failed.
-    "Forge.CouldNotForgeSlotLast"   -> updateCouldNotForgeSlotLast
+    x | "Forge.could-not-forge" `isInfixOf` x   -> updateCouldNotForgeSlotLast
     _ -> return ()
  where
   updateNodeCannotForge =

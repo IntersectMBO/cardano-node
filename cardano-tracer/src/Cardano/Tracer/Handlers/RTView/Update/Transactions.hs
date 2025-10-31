@@ -10,6 +10,7 @@ import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
+import           Data.Text (isInfixOf)
 import           Data.Text.Read (decimal)
 import           Data.Time.Clock (UTCTime)
 
@@ -22,9 +23,9 @@ updateTransactionsHistory
   -> IO ()
 updateTransactionsHistory nodeId (TXHistory tHistory) metricName metricValue now =
   case metricName of
-    "Mempool.TxsProcessedNum" -> updateTxsProcessedNum
-    "Mempool.MempoolBytes"    -> updateMempoolBytes
-    "Mempool.TxsInMempool"    -> updateTxsInMempool
+    x | "txsProcessedNum" `isInfixOf` x -> updateTxsProcessedNum
+    x | "mempoolBytes" `isInfixOf` x    -> updateMempoolBytes
+    x | "txsInMempool" `isInfixOf` x    -> updateTxsInMempool
     _ -> return ()
  where
   updateTxsProcessedNum =

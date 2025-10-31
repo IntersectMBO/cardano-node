@@ -18,7 +18,7 @@ import           Cardano.Tracer.Utils
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Map.Strict as M
-import           Data.Text (pack)
+import           Data.Text (isInfixOf, pack)
 import           Data.Text.Read (decimal)
 import           Text.Printf (printf)
 
@@ -33,13 +33,13 @@ updateKESInfo tracerEnv settings displayed =
   forAcceptedMetricsUI_ tracerEnv $ \(nodeId@(NodeId anId), (ekgStore, _)) ->
     forMM_ (liftIO $ getListOfMetrics ekgStore) $ \(metricName, metricValue) ->
       case metricName of
-        "Forge.CurrentKESPeriod" ->
+        x | "currentKESPeriod" `isInfixOf` x ->
           setDisplayedValue nodeId displayed (anId <> "__node-current-kes-period") metricValue
-        "Forge.OperationalCertificateExpiryKESPeriod" ->
+        x | "operationalCertificateExpiryKESPeriod" `isInfixOf` x ->
           setDisplayedValue nodeId displayed (anId <> "__node-op-cert-expiry-kes-period") metricValue
-        "Forge.OperationalCertificateStartKESPeriod" ->
+        x | "operationalCertificateStartKESPeriod" `isInfixOf` x ->
           setDisplayedValue nodeId displayed (anId <> "__node-op-cert-start-kes-period") metricValue
-        "Forge.RemainingKESPeriods" -> do
+        x | "remainingKESPeriods" `isInfixOf` x -> do
           setDisplayedValue nodeId displayed (anId <> "__node-remaining-kes-periods") metricValue
           allSettings <- liftIO $ readTVarIO settings
           whenJust (M.lookup nodeId allSettings) $

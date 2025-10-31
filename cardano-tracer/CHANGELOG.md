@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Next
+* Updated metric names
+
 ## 0.3.4 (July, 2025)
 * Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.
 

@@ -15,6 +15,7 @@ import           Cardano.Tracer.Types
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import qualified Data.Map.Strict as M
+import           Data.Text (isInfixOf)
 import           Data.Text.Read (decimal)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word (Word64)
@@ -29,14 +30,14 @@ updateResourcesHistory
   -> IO ()
 updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName metricValue now =
   case metricName of
-    "Stat.cputicks"    -> updateCPUUsage
-    "Mem.resident"     -> updateRSSMemory
-    "RTS.gcLiveBytes"  -> updateGCLiveMemory
-    "RTS.gcMajorNum"   -> updateGCMajorNum
-    "RTS.gcMinorNum"   -> updateGCMinorNum
-    "RTS.gcticks"      -> updateCPUTimeGC
-    "RTS.mutticks"     -> updateCPUTimeApp
-    "Stat.threads"     -> updateThreadsNum
+    x | "Stat.cputicks" `isInfixOf` x    -> updateCPUUsage
+    x | "Mem.resident" `isInfixOf` x     -> updateRSSMemory
+    x | "RTS.gcLiveBytes" `isInfixOf` x  -> updateGCLiveMemory
+    x | "RTS.gcMajorNum" `isInfixOf` x   -> updateGCMajorNum
+    x | "RTS.gcMinorNum" `isInfixOf` x   -> updateGCMinorNum
+    x | "RTS.gcticks" `isInfixOf` x      -> updateCPUTimeGC
+    x | "RTS.mutticks" `isInfixOf` x     -> updateCPUTimeApp
+    x | "RTS.threads" `isInfixOf` x      -> updateThreadsNum
     _ -> return ()
  where
   updateCPUUsage =

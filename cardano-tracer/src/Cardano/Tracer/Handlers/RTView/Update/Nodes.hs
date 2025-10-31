@@ -24,8 +24,8 @@ import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
-import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Handlers.RTView.Utils
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
@@ -36,9 +36,9 @@ import           Control.Monad.Extra (whenJust, whenJustM, whenM)
 import           Data.List (find)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as M
-import           Data.Maybe (fromMaybe)
 import           Data.Set (Set, (\\))
 import qualified Data.Set as S
+import           Data.Text (isInfixOf)
 import qualified Data.Text as T
 import           Data.Text.Read (decimal, double)
 import           Data.Time.Calendar (diffDays)
@@ -253,7 +253,7 @@ setBlockReplayProgress connected acceptedMetrics = do
   forM_ connected $ \nodeId ->
     whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do
       metrics <- liftIO $ getListOfMetrics ekgStore
-      whenJust (lookup "ChainDB.BlockReplayProgress" metrics) $ \metricValue ->
+      whenJust (find (\(x, _) -> "blockReplayProgress" `isInfixOf` x) metrics) $ \(_, metricValue) ->
         updateBlockReplayProgress nodeId metricValue
  where
   updateBlockReplayProgress (NodeId anId) mValue =
@@ -276,8 +276,7 @@ setProducerMode connected acceptedMetrics = do
     whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) ->
       forMM_ (liftIO $ getListOfMetrics ekgStore) $ \(mName, _) ->
         case mName of
-          "Forge.NodeIsLeader"    -> showProducerMode anId
-          "Forge.NodeIsLeaderNum" -> showProducerMode anId
+          x | "nodeIsLeader" `isInfixOf` x -> showProducerMode anId
           _ -> return ()
  where
   -- The presence of these metrics is a proof that this node is
@@ -299,13 +298,13 @@ setLeadershipStats connected displayed acceptedMetrics = do
       forM_ metrics $ \(mName, mValue) ->
         case mName of
           -- How many times this node was a leader.
-          "Forge.NodeIsLeaderNum"    -> setDisplayedValue nodeId displayed (anId <> "__node-leadership") mValue
+          x | "nodeIsLeader" `isInfixOf` x       -> setDisplayedValue nodeId displayed (anId <> "__node-leadership") mValue
           -- How many blocks were forged by this node.
-          "Forge.BlocksForgedNum"    -> setDisplayedValue nodeId displayed (anId <> "__node-forged-blocks") mValue
+          x | "blocksForged" `isInfixOf` x    -> setDisplayedValue nodeId displayed (anId <> "__node-forged-blocks") mValue
           -- How many times this node could not forge.
-          "Forge.NodeCannotForgeNum" -> setDisplayedValue nodeId displayed (anId <> "__node-cannot-forge") mValue
+          x | "nodeCannotForge" `isInfixOf` x -> setDisplayedValue nodeId displayed (anId <> "__node-cannot-forge") mValue
           -- How many slots were missed in this node.
-          "Forge.SlotsMissed"        -> setDisplayedValue nodeId displayed (anId <> "__node-missed-slots") mValue
+          x | "slotsMissed" `isInfixOf` x        -> setDisplayedValue nodeId displayed (anId <> "__node-missed-slots") mValue
           _ -> return ()
 
 setEraEpochInfo
@@ -322,7 +321,7 @@ setEraEpochInfo connected displayed acceptedMetrics nodesEraSettings = do
       case M.lookup nodeId allMetrics of
         Just (ekgStore, _) -> do
           metrics <- liftIO $ getListOfMetrics ekgStore
-          return $ fromMaybe "" $ lookup "ChainDB.Epoch" metrics
+          return $ maybe "" snd (find (\(x, _) -> "epoch" `isInfixOf` x) metrics)
         Nothing -> return ""
     unless (T.null epochS) $
       setDisplayedValue nodeId displayed (anId <> "__node-epoch-num") epochS
@@ -377,7 +376,7 @@ setEraEpochInfo connected displayed acceptedMetrics nodesEraSettings = do
   updateEpochSlotProgress EraSettings{esEpochLength} nodeId@(NodeId anId) allMetrics =
     whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do
       metrics <- liftIO $ getListOfMetrics ekgStore
-      whenJust (lookup "ChainDB.SlotInEpoch" metrics) $ \slotInEpochS ->
+      whenJust (find (\(x, _) -> "slotInEpoch" `isInfixOf` x) metrics) $ \(_, slotInEpochS) ->
         case decimal slotInEpochS of
           Left _ -> return ()
           Right (slotInEpoch :: Int, _) -> do
