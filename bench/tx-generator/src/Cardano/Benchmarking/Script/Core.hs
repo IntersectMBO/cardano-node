@@ -70,13 +70,14 @@ liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
 withEra era action = do
   case era of
-    AnyCardanoEra ConwayEra  -> action AsConwayEra
-    AnyCardanoEra BabbageEra -> action AsBabbageEra
-    AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
-    AnyCardanoEra MaryEra    -> action AsMaryEra
-    AnyCardanoEra AllegraEra -> action AsAllegraEra
-    AnyCardanoEra ShelleyEra -> action AsShelleyEra
-    AnyCardanoEra ByronEra   -> error "byron not supported"
+    AnyCardanoEra ConwayEra   -> action AsConwayEra
+    AnyCardanoEra BabbageEra  -> action AsBabbageEra
+    AnyCardanoEra AlonzoEra   -> action AsAlonzoEra
+    AnyCardanoEra MaryEra     -> action AsMaryEra
+    AnyCardanoEra AllegraEra  -> action AsAllegraEra
+    AnyCardanoEra ShelleyEra  -> action AsShelleyEra
+    AnyCardanoEra ByronEra    -> error "byron not supported"
+    AnyCardanoEra DijkstraEra -> action AsDijkstraEra 
 
 setProtocolParameters :: ProtocolParametersSource -> ActionM ()
 setProtocolParameters s = case s of

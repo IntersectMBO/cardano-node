@@ -14,16 +14,16 @@ let serviceConfigToJSON =
         inherit (cfg) networkMagic resourceFreq metricsHelp;
         # loRequestNum = 100;
         network =
-          if        cfg.acceptingSocket != null
+          if        cfg.acceptAt != null
           then {
             tag      = "AcceptAt";
-            contents = cfg.acceptingSocket;
-          } else if cfg.connectToSocket != null
+            contents = cfg.acceptAt;
+          } else if cfg.connectTo != null
           then {
             tag      = "ConnectTo";
-            contents = cfg.connectToSocket;
+            contents = cfg.connectTo;
           } else
-            throw "cardano-tracer-service:  either acceptingSocket or connectToSocket must be provided.";
+            throw "cardano-tracer-service:  either 'acceptAt' or 'connectTo' options must be provided.";
         logging = [{
           inherit (cfg) logRoot;
 
@@ -75,8 +75,8 @@ in pkgs.commonLib.defServiceModule
       extraOptionDecls = {
         ### You can actually change those!
         networkMagic    = opt    int 764824073 "Network magic (764824073 for Cardano mainnet).";
-        acceptingSocket = mayOpt str           "Socket path: as acceptor.";
-        connectToSocket = mayOpt str           "Socket path: connect to.";
+        acceptAt        = mayOpt str           "Socket path or HOST:PORT: as acceptor.";
+        connectTo       = mayOpt str           "Socket path or HOST:PORT: connect to.";
         logRoot         = opt    str null      "Log storage root directory.";
         rotation        = opt    attrs {}      "Log rotation overrides: see cardano-tracer documentation.";
         RTView          = opt    attrs {}      "RTView config overrides: see cardano-tracer documentation.";

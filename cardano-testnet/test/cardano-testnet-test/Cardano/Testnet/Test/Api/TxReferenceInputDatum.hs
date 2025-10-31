@@ -131,7 +131,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
 
     utxo <- findAllUtxos epochStateView sbe
 
-    BalancedTxBody _ txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats' datums) _) _ _) _ fee <-
+    BalancedTxBody _ txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) _ fee <-
       H.leftFail $
         makeTransactionBodyAutoBalance
           sbe
@@ -210,7 +210,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
             & setTxOuts [txOut]
             & setTxProtocolParams (pure $ pure pparams)
 
-    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats' datums) _) _ _) <-
+    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) <-
       H.leftFail $ createTransactionBody sbe content
 
     let bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
@@ -257,7 +257,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
             & setTxOuts [txOut]
             & setTxProtocolParams (pure $ pure pparams)
 
-    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats' datums) _) _ _) <-
+    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) <-
       H.leftFail $ createTransactionBody sbe content
 
     let bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData

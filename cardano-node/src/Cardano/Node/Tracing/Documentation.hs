@@ -44,14 +44,14 @@ import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -78,12 +78,11 @@ import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
-import qualified Ouroboros.Network.Diffusion.Common as Common
+import           Ouroboros.Network.Diffusion.Types (DiffusionTracer)
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
@@ -102,15 +101,11 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuer
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
-import qualified Ouroboros.Network.Server2 as Server (Trace (..))
+import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.Subscription.Dns (DnsTrace (..), WithDomainName (..))
-import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
-import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
-import           Control.Exception (SomeException)
 import           Control.Monad (forM_)
 import           Data.Aeson.Types (ToJSON)
 import           Data.Proxy (Proxy (..))
@@ -560,27 +555,12 @@ docTracersFirstPhase condConfigFileName = do
     dtLocalMuxTrDoc <- documentTracer (dtLocalMuxTr ::
       Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace))
 
-    dtHandshakeTr   <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Handshake", "Remote"]
-    configureTracers configReflection trConfig [dtHandshakeTr]
-    dtHandshakeTrDoc <- documentTracer (dtHandshakeTr ::
-      Logging.Trace IO (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion))
-
-    dtLocalHandshakeTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                 ["Net", "Handshake", "Local"]
-    configureTracers configReflection trConfig [dtLocalHandshakeTr]
-    dtLocalHandshakeTrDoc <- documentTracer (dtLocalHandshakeTr ::
-      Logging.Trace IO
-        (NtC.HandshakeTr LocalAddress NtC.NodeToClientVersion))
-
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Startup", "DiffusionInit"]
     configureTracers configReflection trConfig [dtDiffusionInitializationTr]
     dtDiffusionInitializationTrDoc <- documentTracer (dtDiffusionInitializationTr ::
-      Logging.Trace IO (Common.DiffusionTracer Socket.SockAddr LocalAddress))
+      Logging.Trace IO (DiffusionTracer Socket.SockAddr LocalAddress))
 
     dtLedgerPeersTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -595,7 +575,7 @@ docTracersFirstPhase condConfigFileName = do
       ["Net", "Peers", "LocalRoot"]
     configureTracers configReflection trConfig [localRootPeersTr]
     localRootPeersTrDoc <- documentTracer (localRootPeersTr ::
-      Logging.Trace IO (TraceLocalRootPeers PeerTrustable RemoteAddress SomeException))
+      Logging.Trace IO (TraceLocalRootPeers PeerTrustable RemoteAddress))
 
     publicRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -709,44 +689,6 @@ docTracersFirstPhase condConfigFileName = do
     localInboundGovernorTrDoc <- documentTracer (localInboundGovernorTr ::
       Logging.Trace IO (InboundGovernor.Trace LocalAddress))
 
-
--- -- DiffusionTracersExtra nonP2P
-
-    dtIpSubscriptionTr   <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Subscription", "IP"]
-    configureTracers configReflection trConfig [dtIpSubscriptionTr]
-    dtIpSubscriptionTrDoc <- documentTracer (dtIpSubscriptionTr ::
-      Logging.Trace IO (WithIPList (SubscriptionTrace Socket.SockAddr)))
-
-    dtDnsSubscriptionTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Subscription", "DNS"]
-    configureTracers configReflection trConfig [dtDnsSubscriptionTr]
-    dtDnsSubscriptionTrDoc <- documentTracer (dtDnsSubscriptionTr ::
-      Logging.Trace IO (WithDomainName (SubscriptionTrace Socket.SockAddr)))
-
-    dtDnsResolverTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "DNSResolver"]
-    configureTracers configReflection trConfig [dtDnsResolverTr]
-    dtDnsResolverTrDoc <- documentTracer (dtDnsResolverTr ::
-      Logging.Trace IO (WithDomainName DnsTrace))
-
-    dtErrorPolicyTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "ErrorPolicy", "Remote"]
-    configureTracers configReflection trConfig [dtErrorPolicyTr]
-    dtErrorPolicyTrDoc <- documentTracer (dtErrorPolicyTr ::
-      Logging.Trace IO (WithAddr Socket.SockAddr ErrorPolicyTrace))
-
-    dtLocalErrorPolicyTr <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "ErrorPolicy", "Local"]
-    configureTracers configReflection trConfig [dtLocalErrorPolicyTr]
-    dtLocalErrorPolicyTrDoc <- documentTracer (dtLocalErrorPolicyTr ::
-      Logging.Trace IO (WithAddr LocalAddress ErrorPolicyTrace))
-
     dtAcceptPolicyTr    <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "AcceptPolicy"]
@@ -810,8 +752,6 @@ docTracersFirstPhase condConfigFileName = do
 -- Diffusion
             <> dtMuxTrDoc
             <> dtLocalMuxTrDoc
-            <> dtHandshakeTrDoc
-            <> dtLocalHandshakeTrDoc
             <> dtDiffusionInitializationTrDoc
             <> dtLedgerPeersTrDoc
 -- DiffusionTracersExtra P2P
@@ -831,12 +771,6 @@ docTracersFirstPhase condConfigFileName = do
             <> localConnectionManagerTrDoc
             <> localServerTrDoc
             <> localInboundGovernorTrDoc
--- DiffusionTracersExtra nonP2P
-            <> dtIpSubscriptionTrDoc
-            <> dtDnsSubscriptionTrDoc
-            <> dtDnsResolverTrDoc
-            <> dtErrorPolicyTrDoc
-            <> dtLocalErrorPolicyTrDoc
             <> dtAcceptPolicyTrDoc
 -- Internal tracer
             <> internalTrDoc

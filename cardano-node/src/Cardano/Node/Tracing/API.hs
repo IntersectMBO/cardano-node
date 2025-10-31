@@ -10,8 +10,6 @@ module Cardano.Node.Tracing.API
 
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
-import qualified Cardano.Logging.Types as Net
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
@@ -26,12 +24,8 @@ import           Cardano.Node.Tracing.Tracers.LedgerMetrics
 import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
-import           Ouroboros.Consensus.Node (NetworkP2PMode)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.ConnectionId (ConnectionId)
@@ -57,7 +51,7 @@ import           Trace.Forward.Utils.TraceObject (writeToSink)
 
 
 initTraceDispatcher ::
-  forall blk p2p.
+  forall blk.
   ( TraceConstraints blk
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
@@ -68,10 +62,9 @@ initTraceDispatcher ::
   -> SomeConsensusProtocol
   -> NetworkMagic
   -> NodeKernelData blk
-  -> NetworkP2PMode p2p
   -> Bool
-  -> IO (Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO)
-initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
+  -> IO (Tracers RemoteAddress LocalAddress blk  IO)
+initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
   trConfig <- readConfigurationWithDefault
                 (unConfigPath $ ncConfigFile nc)
                 defaultCardanoConfig
@@ -116,7 +109,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
     :: TraceConfig
     -> IO ( IO ()
           , IO (Maybe String)
-          , Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO
+          , Tracers RemoteAddress LocalAddress blk IO
           )
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
@@ -134,7 +127,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
         then do
           -- TODO: check if this is the correct way to use withIOManager
           (forwardSink, dpStore, kickoffForwarder) <- withIOManager $ \iomgr -> do
-            let tracerSocketMode :: Maybe (Net.HowToConnect, ForwarderMode)
+            let tracerSocketMode :: Maybe (HowToConnect, ForwarderMode)
                 tracerSocketMode = ncTraceForwardSocket nc
 
                 forwardingConf :: TraceOptionForwarder
@@ -154,7 +147,6 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
         (Just ekgTrace)
         dpTracer
         trConfig
-        p2pMode
         p
 
    where

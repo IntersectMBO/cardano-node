@@ -31,14 +31,13 @@ import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -65,12 +64,12 @@ import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
-import qualified Ouroboros.Network.Diffusion.Common as Common
+import           Ouroboros.Network.Diffusion (DiffusionTracer)
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters)
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
@@ -79,6 +78,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
@@ -89,14 +89,11 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuer
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
-import qualified Ouroboros.Network.Server2 as Server (Trace (..))
+import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.Subscription.Dns (DnsTrace (..), WithDomainName (..))
-import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
-import           Control.Exception (SomeException)
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
@@ -268,9 +265,21 @@ getAllNamespaces =
         dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
+        dtMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Bearer"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Channel"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
         dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace)])
+        dtLocalMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Bearer"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
+                             (allNamespaces :: [Namespace
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
         dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "Handshake", "Remote"])
                             (allNamespaces :: [Namespace
@@ -283,7 +292,7 @@ getAllNamespaces =
         dtDiffusionInitializationNS = map (nsGetTuple . nsReplacePrefix
                                             ["Startup", "DiffusionInit"])
                                           (allNamespaces :: [Namespace
-                                            (Common.DiffusionTracer Socket.SockAddr
+                                            (DiffusionTracer Socket.SockAddr
                                                 LocalAddress)])
         dtLedgerPeersNS = map (nsGetTuple . nsReplacePrefix
                                ["Net", "Peers", "Ledger"])
@@ -294,7 +303,7 @@ getAllNamespaces =
         localRootPeersNS = map (nsGetTuple . nsReplacePrefix
                                ["Net", "Peers", "LocalRoot"])
                                (allNamespaces :: [Namespace
-                                 (TraceLocalRootPeers PeerTrustable RemoteAddress SomeException)])
+                                 (TraceLocalRootPeers PeerTrustable RemoteAddress)])
         publicRootPeersNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "Peers", "PublicRoot"])
                                (allNamespaces :: [Namespace TracePublicRootPeers])
@@ -363,28 +372,9 @@ getAllNamespaces =
                                         (InboundGovernor.Trace LocalAddress)])
 
 
--- -- DiffusionTracersExtra nonP2P
-
-        dtIpSubscriptionNS = map (nsGetTuple . nsReplacePrefix
-                                   ["Net", "Subscription", "IP"])
-                                 (allNamespaces :: [Namespace
-                                   (SubscriptionTrace Socket.SockAddr)])
-        dtDnsSubscriptionNS = map (nsGetTuple . nsReplacePrefix
-                                    ["Net", "Subscription", "DNS"])
-                                  (allNamespaces :: [Namespace
-                                    (WithDomainName (SubscriptionTrace Socket.SockAddr))])
         dtDnsResolverNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "DNSResolver"])
-                              (allNamespaces :: [Namespace
-                                (WithDomainName DnsTrace)])
-        dtErrorPolicyNS = map (nsGetTuple . nsReplacePrefix
-                                ["Net", "ErrorPolicy", "Remote"])
-                              (allNamespaces :: [Namespace
-                                 (WithAddr Socket.SockAddr ErrorPolicyTrace)])
-        dtLocalErrorPolicyNS = map (nsGetTuple . nsReplacePrefix
-                                     ["Net", "ErrorPolicy", "Local"])
-                                   (allNamespaces :: [Namespace
-                                     (WithAddr LocalAddress ErrorPolicyTrace)])
+                              (allNamespaces :: [Namespace DNSTrace])
         dtAcceptPolicyNS = map (nsGetTuple . nsReplacePrefix
                                  ["Net", "AcceptPolicy"])
                                (allNamespaces :: [Namespace
@@ -434,7 +424,11 @@ getAllNamespaces =
             <> txSubmission2NS
 -- Diffusion
             <> dtMuxNS
+            <> dtMuxBearerNS
+            <> dtMuxChannelNS
             <> dtLocalMuxNS
+            <> dtLocalMuxBearerNS
+            <> dtLocalMuxChannelNS
             <> dtHandshakeNS
             <> dtLocalHandshakeNS
             <> dtDiffusionInitializationNS
@@ -457,12 +451,6 @@ getAllNamespaces =
             <> localConnectionManagerNS
             <> localServerNS
             <> localInboundGovernorNS
-
--- DiffusionTracersExtra nonP2P
-            <> dtIpSubscriptionNS
-            <> dtDnsSubscriptionNS
             <> dtDnsResolverNS
-            <> dtErrorPolicyNS
-            <> dtLocalErrorPolicyNS
             <> dtAcceptPolicyNS
     in allNamespaces'

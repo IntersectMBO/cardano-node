@@ -1,8 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors.Server
   ( runAcceptorsServer
   ) where
+
+import "contra-tracer" Control.Tracer (nullTracer)
 
 import           Cardano.Logging (TraceObject)
 import qualified Cardano.Logging.Types as Net
@@ -12,32 +15,29 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (deregisterNodeId, traceObjectsHandler)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (connIdToNodeId)
-import           Ouroboros.Network.Context (MinimalInitiatorContext (..), ResponderContext (..))
+import           Ouroboros.Network.Context (ResponderContext (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
-import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), OuroborosApplication (..),
                    OuroborosApplicationWithMinimalCtx, RunMiniProtocol (..), miniProtocolLimits,
                    miniProtocolNum, miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                   codecHandshake, noTimeLimitsHandshake, timeLimitsHandshake)
-import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
-                   simpleSingletonVersions)
+import           Ouroboros.Network.Protocol.Handshake (Handshake, HandshakeArguments (..))
+import qualified Ouroboros.Network.Protocol.Handshake as Handshake
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
                    localAddressFromPath, localSnocket, makeLocalBearer, makeSocketBearer,
                    socketSnocket)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectionId (..),
-                   HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
-                   newNetworkMutableState, nullNetworkServerTracers, withServerNode)
+import           Ouroboros.Network.Socket (ConnectionId (..),
+                   SomeResponderApplication (..))
+import qualified Ouroboros.Network.Server.Simple as Server
 
 import           Codec.CBOR.Term (Term)
-import           Control.Concurrent.Async (race_, wait)
+import           Control.Concurrent.Async (wait)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Text as Text
+import           Data.Functor (void)
 import           Data.Void (Void)
 import           Data.Word (Word32)
 import qualified Network.Mux as Mux
@@ -71,7 +71,7 @@ runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig,
         (localSnocket iocp)
         (localAddressFromPath p)
         (TC.networkMagic $ teConfig tracerEnv)
-        noTimeLimitsHandshake $
+        Handshake.noTimeLimitsHandshake $
         -- Please note that we always run all the supported protocols,
         -- there is no mechanism to disable some of them.
         appResponder
@@ -86,7 +86,7 @@ runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig,
         (socketSnocket iocp)
         (Socket.addrAddress listenAddress)
         (TC.networkMagic $ teConfig tracerEnv)
-        timeLimitsHandshake $
+        Handshake.timeLimitsHandshake $
         -- Please note that we always run all the supported protocols,
         -- there is no mechanism to disable some of them.
         appResponder
@@ -118,33 +118,30 @@ doListenToForwarderLocal
   -> LocalAddress
   -> Word32
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
-  -> OuroborosApplication 'Mux.ResponderMode
-                          (MinimalInitiatorContext LocalAddress)
-                          (ResponderContext LocalAddress)
-                          LBS.ByteString IO Void ()
+  -> OuroborosApplicationWithMinimalCtx Mux.ResponderMode LocalAddress LBS.ByteString IO Void ()
   -> IO ()
 doListenToForwarderLocal snocket address netMagic timeLimits app = do
-  networkState <- newNetworkMutableState
-  race_ (cleanNetworkMutableState networkState) do
-    withServerNode
+  void $ Server.with
       snocket
       makeLocalBearer
       mempty -- LocalSocket does not need to be configured
-      nullNetworkServerTracers
-      networkState
-      (AcceptedConnectionsLimit maxBound maxBound 0)
       address
-      (codecHandshake forwardingVersionCodec)
-      timeLimits
-      (cborTermVersionDataCodec forwardingCodecCBORTerm)
-      (HandshakeCallbacks acceptableVersion queryVersion)
-      (simpleSingletonVersions
+      HandshakeArguments {
+        haHandshakeTracer = nullTracer,
+        haBearerTracer = nullTracer,
+        haHandshakeCodec = Handshake.codecHandshake forwardingVersionCodec,
+        haVersionDataCodec = Handshake.cborTermVersionDataCodec forwardingCodecCBORTerm,
+        haAcceptVersion = Handshake.acceptableVersion,
+        haQueryVersion = Handshake.queryVersion,
+        haTimeLimits = timeLimits
+      }
+      (Handshake.simpleSingletonVersions
         ForwardingV_1
         (ForwardingVersionData $ NetworkMagic netMagic)
         (\_ -> SomeResponderApplication app)
       )
-      nullErrorPolicies
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
+
 
 doListenToForwarderSocket
   :: Snocket IO Socket.Socket Socket.SockAddr
@@ -154,27 +151,27 @@ doListenToForwarderSocket
   -> OuroborosApplicationWithMinimalCtx Mux.ResponderMode Socket.SockAddr LBS.ByteString IO Void ()
   -> IO ()
 doListenToForwarderSocket snocket address netMagic timeLimits app = do
-  networkState <- newNetworkMutableState
-  race_ (cleanNetworkMutableState networkState) do
-    withServerNode
+  void $ Server.with
       snocket
       makeSocketBearer
       mempty -- LocalSocket does not need to be configured
-      nullNetworkServerTracers
-      networkState
-      (AcceptedConnectionsLimit maxBound maxBound 0)
       address
-      (codecHandshake forwardingVersionCodec)
-      timeLimits
-      (cborTermVersionDataCodec forwardingCodecCBORTerm)
-      (HandshakeCallbacks acceptableVersion queryVersion)
-      (simpleSingletonVersions
+      HandshakeArguments {
+        haHandshakeTracer = nullTracer,
+        haBearerTracer = nullTracer,
+        haHandshakeCodec = Handshake.codecHandshake forwardingVersionCodec,
+        haVersionDataCodec = Handshake.cborTermVersionDataCodec forwardingCodecCBORTerm,
+        haAcceptVersion = Handshake.acceptableVersion,
+        haQueryVersion = Handshake.queryVersion,
+        haTimeLimits = timeLimits
+      }
+      (Handshake.simpleSingletonVersions
         ForwardingV_1
         (ForwardingVersionData $ NetworkMagic netMagic)
         (\_ -> SomeResponderApplication app)
       )
-      nullErrorPolicies
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
+
 
 runEKGAcceptor
   :: Show addr

@@ -31,7 +31,7 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader (..),
-                   Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, pointHash,
+                   Header, RealPoint (..), blockNo, blockPoint, blockPrevHash, getHeader, pointHash,
                    realPointHash, realPointSlot, withOriginToMaybe)
 import           Ouroboros.Consensus.Block.SupportsSanityCheck
 import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
@@ -61,6 +61,7 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
@@ -81,6 +82,7 @@ import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
+import           Control.Exception
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))
@@ -93,6 +95,7 @@ import           Data.Word (Word32)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core
 import           Numeric (showFFloat)
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 
 
 {- HLINT ignore "Use const" -}
@@ -147,11 +150,12 @@ instance ConvertRawHash blk => ConvertRawHash (HeaderWithTime blk) where
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK {} -> Info
+    ChainDB.IgnoreBlockOlderThanImmTip {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
     ChainDB.AddedBlockToQueue {} -> Debug
     ChainDB.PoppedBlockFromQueue {} -> Debug
+    ChainDB.PoppingFromQueue {} -> Debug
     ChainDB.AddedBlockToVolatileDB {} -> Debug
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
@@ -166,7 +170,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.ValidCandidate {} -> Info
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.PipeliningEvent {} -> Debug
-    ChainDB.AddedReprocessLoEBlocksToQueue -> Debug
+    ChainDB.AddedReprocessLoEBlocksToQueue {} -> Debug
     ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
     ChainDB.ChainSelectionLoEDebug _ _ -> Debug
 
@@ -289,14 +293,13 @@ instance HasSeverityAnnotation (TraceChainSyncServerEvent blk) where
 instance HasPrivacyAnnotation (TraceEventMempool blk)
 instance HasSeverityAnnotation (TraceEventMempool blk) where
   getSeverityAnnotation TraceMempoolAddedTx{} = Info
+  getSeverityAnnotation TraceMempoolTipMovedBetweenSTMBlocks{} = Info
   getSeverityAnnotation TraceMempoolRejectedTx{} = Info
   getSeverityAnnotation TraceMempoolRemoveTxs{} = Debug
   getSeverityAnnotation TraceMempoolManuallyRemovedTxs{} = Warning
   getSeverityAnnotation TraceMempoolSyncNotNeeded{} = Debug
   getSeverityAnnotation TraceMempoolSynced{} = Debug
   getSeverityAnnotation TraceMempoolAttemptingAdd{} = Debug
-  getSeverityAnnotation TraceMempoolLedgerFound{} = Debug
-  getSeverityAnnotation TraceMempoolLedgerNotFound{} = Debug
 
 instance HasPrivacyAnnotation ()
 instance HasSeverityAnnotation () where
@@ -528,8 +531,8 @@ instance ( ConvertRawHash blk
     formatText tev _obj = case tev of
       ChainDB.TraceLastShutdownUnclean -> "ChainDB is not clean. Validating all immutable chunks"
       ChainDB.TraceAddBlockEvent ev -> case ev of
-        ChainDB.IgnoreBlockOlderThanK pt ->
-          "Ignoring block older than K: " <> renderRealPointAsPhrase pt
+        ChainDB.IgnoreBlockOlderThanImmTip pt ->
+          "Ignoring block older than ImmTip: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
           "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreInvalidBlock pt _reason ->
@@ -540,19 +543,16 @@ instance ( ConvertRawHash blk
               "About to add block to queue: " <> renderRealPointAsPhrase pt
             FallingEdgeWith sz ->
               "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
-        ChainDB.AddedReprocessLoEBlocksToQueue ->
+        ChainDB.AddedReprocessLoEBlocksToQueue {} ->
           "Added request to queue to reprocess blocks postponed by LoE."
         ChainDB.PoppedReprocessLoEBlocksFromQueue ->
           "Poppped request from queue to reprocess blocks postponed by LoE."
         ChainDB.ChainSelectionLoEDebug {} ->
           "ChainDB LoE debug event"
-
-        ChainDB.PoppedBlockFromQueue edgePt ->
-          case edgePt of
-            RisingEdge ->
-              "Popping block from queue"
-            FallingEdgeWith pt ->
-              "Popped block from queue: " <> renderRealPointAsPhrase pt
+        ChainDB.PoppingFromQueue ->
+          "Popping block from queue"
+        ChainDB.PoppedBlockFromQueue pt ->
+          "Popped block from queue: " <> renderRealPointAsPhrase pt
         ChainDB.StoreButDontChange pt ->
           "Ignoring block: " <> renderRealPointAsPhrase pt
         ChainDB.TryAddToCurrentChain pt ->
@@ -931,8 +931,8 @@ instance ( ConvertRawHash blk
   toObject _verb ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK pt ->
-      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
+    ChainDB.IgnoreBlockOlderThanImmTip pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanImmTip"
                , "block" .= toObject verb pt ]
     ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
@@ -947,11 +947,13 @@ instance ( ConvertRawHash blk
                , case edgeSz of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
-    ChainDB.PoppedBlockFromQueue edgePt ->
+    ChainDB.PoppingFromQueue ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.PoppingFromQueue"
+              ]
+    ChainDB.PoppedBlockFromQueue pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of
-                   RisingEdge         -> "risingEdge" .= True
-                   FallingEdgeWith pt -> "block" .= toObject verb pt ]
+              , "block" .= toObject verb pt
+              ]
     ChainDB.StoreButDontChange pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.StoreButDontChange"
                , "block" .= toObject verb pt ]
@@ -1027,8 +1029,10 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
                  , "block" .= renderPointForVerbosity verb (blockPoint hdr)
                  ]
-    ChainDB.AddedReprocessLoEBlocksToQueue ->
+    ChainDB.AddedReprocessLoEBlocksToQueue RisingEdge ->
        mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
+    ChainDB.AddedReprocessLoEBlocksToQueue (FallingEdgeWith _) ->
+       mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue TODO" ]
     ChainDB.PoppedReprocessLoEBlocksFromQueue ->
        mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
     ChainDB.ChainSelectionLoEDebug curChain loeFrag ->
@@ -1586,15 +1590,10 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       [ "kind" .= String "TraceMempoolAttemptingAdd"
       , "tx" .= toObject verb tx
       ]
-  toObject verb (TraceMempoolLedgerFound p) =
+
+  toObject _verb TraceMempoolTipMovedBetweenSTMBlocks =
     mconcat
-      [ "kind" .= String "TraceMempoolLedgerFound"
-      , "tip" .= toObject verb p
-      ]
-  toObject verb (TraceMempoolLedgerNotFound p) =
-    mconcat
-      [ "kind" .= String "TraceMempoolLedgerNotFound"
-      , "tip" .= toObject verb p
+      [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
       ]
 
 instance ToObject MempoolSize where
@@ -1763,6 +1762,8 @@ instance HasSeverityAnnotation (TraceGsmEvent selection) where
     GsmEventLeaveCaughtUp{}       -> Warning
     GsmEventPreSyncingToSyncing{} -> Notice
     GsmEventSyncingToPreSyncing{} -> Notice
+    GsmEventInitializedInCaughtUp{}   -> Notice
+    GsmEventInitializedInPreSyncing{} -> Notice
 
 instance ToObject selection => Transformable Text IO (TraceGsmEvent selection) where
   trTransformer = trStructured
@@ -1787,6 +1788,14 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
   toObject _verb GsmEventSyncingToPreSyncing =
     mconcat
       [ "kind" .= String "GsmEventSyncingToPreSyncing"
+      ]
+  toObject _verb GsmEventInitializedInCaughtUp =
+    mconcat
+      [ "kind" .= String "GsmEventInitializedInCaughtUp"
+      ]
+  toObject _verb GsmEventInitializedInPreSyncing =
+    mconcat
+      [ "kind" .= String "GsmEventInitializedInPreSyncing"
       ]
 
 instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
@@ -1862,3 +1871,67 @@ instance ConvertRawHash blk => ToObject (Tip blk) where
             , "tipHash" .= renderHeaderHash (Proxy @blk) hash
             , "tipBlockNo" .= toJSON bNo
             ]
+
+instance ToObject KESAgentClientTrace where
+  toObject _verb (KESAgentClientException exc) =
+    mconcat [ "kind" .= String "KESAgentClientException"
+            , "exception" .= String (pack $ displayException exc)
+            ]
+  toObject verb (KESAgentClientTrace trc) =
+    mconcat [ "kind" .= String "KESAgentClientTrace"
+            , "trace" .= toObject verb trc
+            ]
+
+instance HasPrivacyAnnotation KESAgentClientTrace where
+
+instance HasSeverityAnnotation KESAgentClientTrace where
+  getSeverityAnnotation = \case
+    KESAgentClientException{}       -> Error
+    KESAgentClientTrace{}       -> Info
+
+instance Transformable Text IO KESAgentClientTrace where
+  trTransformer = trStructured
+
+instance ToObject Agent.ServiceClientTrace where
+  toObject _dtal = \case
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeTrace" ]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeFailed" ]
+    Agent.ServiceClientDriverTrace _sdt ->
+      mconcat [ "kind" .= String "ServiceClientDriverTrace" ]
+    Agent.ServiceClientSocketClosed ->
+      mconcat [ "kind" .= String "ServiceClientSocketClosed" ]
+    Agent.ServiceClientConnected _s ->
+      mconcat [ "kind" .= String "ServiceClientConnected" ]
+    Agent.ServiceClientAttemptReconnect _ _ _ _ ->
+      mconcat [ "kind" .= String "ServiceClientAttemptReconnect" ]
+    Agent.ServiceClientReceivedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientReceivedKey" ]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientDeclinedKey" ]
+    Agent.ServiceClientDroppedKey ->
+      mconcat [ "kind" .= String "ServiceClientDroppedKey" ]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      mconcat [ "kind" .= String "ServiceClientOpCertNumberCheck" ]
+    Agent.ServiceClientAbnormalTermination _s ->
+      mconcat [ "kind" .= String "ServiceClientAbnormalTermination" ]
+    Agent.ServiceClientStopped ->
+      mconcat [ "kind" .= String "ServiceClientStopped" ]
+
+instance HasPrivacyAnnotation Agent.ServiceClientTrace where
+
+instance HasSeverityAnnotation Agent.ServiceClientTrace where
+  getSeverityAnnotation = \case
+    Agent.ServiceClientVersionHandshakeTrace{} -> Debug
+    Agent.ServiceClientVersionHandshakeFailed{} -> Error
+    Agent.ServiceClientDriverTrace{} -> Debug
+    Agent.ServiceClientSocketClosed{} -> Info
+    Agent.ServiceClientConnected{} -> Info
+    Agent.ServiceClientAttemptReconnect{} -> Info
+    Agent.ServiceClientReceivedKey{} -> Info
+    Agent.ServiceClientDeclinedKey{} -> Info
+    Agent.ServiceClientDroppedKey{} -> Info
+    Agent.ServiceClientOpCertNumberCheck{} -> Debug
+    Agent.ServiceClientAbnormalTermination{} -> Error
+    Agent.ServiceClientStopped{} -> Info

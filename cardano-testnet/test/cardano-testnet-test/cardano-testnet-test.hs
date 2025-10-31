@@ -26,9 +26,8 @@ import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
-import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.MainnetParams
-import qualified Cardano.Testnet.Test.P2PTopology
+import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.RunTestnet
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
@@ -117,7 +116,6 @@ tests = do
         , T.testGroup "Cardano-testnet"
           [ ignoreOnWindows "Produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
           , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
-          , ignoreOnMacAndWindows "Can be started with P2P topology file" Cardano.Testnet.Test.P2PTopology.hprop_p2p_topology
           , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
           ]

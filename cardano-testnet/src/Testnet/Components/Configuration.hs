@@ -9,7 +9,6 @@ module Testnet.Components.Configuration
   ( createConfigJson
   , createConfigJsonNoHash
   , createSPOGenesisAndFiles
-  , mkTopologyConfig
   , numSeededUTxOKeys
 
   , getByronGenesisHash
@@ -29,13 +28,7 @@ import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesis
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (unsafeNonZero)
-import           Cardano.Network.PeerSelection.Bootstrap
-import           Cardano.Network.PeerSelection.PeerTrustable
-import qualified Cardano.Node.Configuration.Topology as NonP2P
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
@@ -47,9 +40,6 @@ import           Data.Aeson.Key hiding (fromString)
 import           Data.Aeson.KeyMap hiding (map)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.List as List
-import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
@@ -84,12 +74,14 @@ createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ d
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
+  dijkstraGenesisHash  <- getHash DijkstraEra  "DijkstraGenesisHash"
 
   pure $ mconcat
     [ byronGenesisHash
     , shelleyGenesisHash
     , alonzoGenesisHash
     , conwayGenesisHash
+    , dijkstraGenesisHash
     , Defaults.defaultYamlHardforkViaConfig sbe
     ]
    where
@@ -146,10 +138,9 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 getDefaultAlonzoGenesis :: ()
   => HasCallStack
   => MonadTest m
-  => ShelleyBasedEra era
-  -> m AlonzoGenesis
-getDefaultAlonzoGenesis sbe =
-  H.evalEither $ first prettyError (Defaults.defaultAlonzoGenesis sbe)
+  => m AlonzoGenesis
+getDefaultAlonzoGenesis =
+  H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
@@ -181,17 +172,18 @@ createSPOGenesisAndFiles
         { sgSecurityParam = unsafeNonZero 5
         , sgUpdateQuorum = 2
         }
-  alonzoGenesis' <- getDefaultAlonzoGenesis sbe
+  alonzoGenesis' <- getDefaultAlonzoGenesis
   let conwayGenesis' = Defaults.defaultConwayGenesis
+      dijkstraGenesis' = dijkstraGenesisDefaults
 
-  (alonzoGenesis, conwayGenesis, shelleyGenesis) <- resolveOnChainParams onChainParams
-    (alonzoGenesis', conwayGenesis', shelleyGenesis')
+  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis) <- resolveOnChainParams onChainParams
+    (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGenesis')
 
   -- Write Genesis files to disk, so they can be picked up by create-testnet-data
-  H.evalIO $ do
-    LBS.writeFile inputGenesisAlonzoFp $ A.encodePretty alonzoGenesis
-    LBS.writeFile inputGenesisConwayFp $ A.encodePretty conwayGenesis
-    LBS.writeFile inputGenesisShelleyFp $ A.encodePretty shelleyGenesis
+  H.lbsWriteFile inputGenesisAlonzoFp $ A.encodePretty alonzoGenesis
+  H.lbsWriteFile inputGenesisConwayFp $ A.encodePretty conwayGenesis
+  H.lbsWriteFile inputGenesisShelleyFp $ A.encodePretty shelleyGenesis
+  H.lbsWriteFile inputGenesisDijkstraFp $ A.encodePretty dijkstraGenesis
 
   H.note_ $ "Number of pools: " <> show nPoolNodes
   H.note_ $ "Number of stake delegators: " <> show numStakeDelegators
@@ -207,6 +199,7 @@ createSPOGenesisAndFiles
     ++ createTestnetDataFlag ShelleyEra
     ++ createTestnetDataFlag AlonzoEra
     ++ createTestnetDataFlag ConwayEra
+    ++ createTestnetDataFlag DijkstraEra
     ++
     [ "--testnet-magic", show genesisTestnetMagic
     , "--pools", show nPoolNodes
@@ -233,6 +226,7 @@ createSPOGenesisAndFiles
     inputGenesisShelleyFp = genesisInputFilepath ShelleyEra
     inputGenesisAlonzoFp  = genesisInputFilepath AlonzoEra
     inputGenesisConwayFp  = genesisInputFilepath ConwayEra
+    inputGenesisDijkstraFp  = genesisInputFilepath DijkstraEra
     nPoolNodes = cardanoNumPools testnetOptions
     CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply, cardanoNumDReps} = testnetOptions
     genesisInputFilepath :: Pretty (eon era) => eon era -> FilePath
@@ -241,60 +235,14 @@ createSPOGenesisAndFiles
     createTestnetDataFlag sbe =
         ["--spec-" ++ eraToString sbe, genesisInputFilepath sbe]
 
-ifaceAddress :: String
-ifaceAddress = "127.0.0.1"
-
--- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
--- to support current era on mainnet and the upcoming era.
-mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
-  where
-    topologyNonP2P :: NonP2P.NetworkTopology NonP2P.RemoteAddress
-    topologyNonP2P =
-      NonP2P.RealNodeTopology
-        [ NonP2P.RemoteAddress (fromString ifaceAddress)
-                               (fromIntegral peerPort)
-                               (numNodes - 1)
-        | peerPort <- allPorts List.\\ [port]
-        ]
-mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
-  where
-    rootConfig :: P2P.RootConfig RelayAccessPoint
-    rootConfig =
-      P2P.RootConfig
-        [ RelayAccessAddress (fromString ifaceAddress)
-                             (fromIntegral peerPort)
-        | peerPort <- allPorts List.\\ [port]
-        ]
-        P2P.DoNotAdvertisePeer
-
-    localRootPeerGroups :: P2P.LocalRootPeersGroups RelayAccessPoint
-    localRootPeerGroups =
-      P2P.LocalRootPeersGroups
-        [ P2P.LocalRootPeersGroup rootConfig
-                                  (HotValency (numNodes - 1))
-                                  (WarmValency (numNodes - 1))
-                                  IsNotTrustable
-                                  InitiatorAndResponderDiffusionMode
-        ]
-
-    topologyP2P :: P2P.NetworkTopology RelayAccessPoint
-    topologyP2P =
-      P2P.RealNodeTopology
-        localRootPeerGroups
-        []
-        DontUseLedgerPeers
-        DontUseBootstrapPeers
-        Nothing
-
 -- | Resolves different kinds of user-provided on-chain parameters
 -- into a unified, consistent set of Genesis files
 resolveOnChainParams :: ()
  => (MonadTest m, MonadIO m)
  => HasCallStack
  => TestnetOnChainParams
- -> (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
- -> m (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
+ -> (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
+ -> m (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
 resolveOnChainParams onChainParams geneses = case onChainParams of
 
   DefaultParams -> pure geneses

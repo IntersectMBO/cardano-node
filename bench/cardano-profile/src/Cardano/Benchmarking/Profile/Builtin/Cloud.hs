@@ -54,7 +54,7 @@ baseVoltaire =
 baseVoting :: Types.Profile -> Types.Profile
 baseVoting =
     baseVoltaire
-  . P.voting . P.v10Preview
+  . P.voting
 
 --------------------------------------------------------------------------------
 
@@ -187,12 +187,12 @@ profilesNoEraCloud =
   , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.newTracing . P.rtsGcParallel . P.rtsGcLoadBalance
   , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . P.newTracing . lmdb
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
-  , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000 . P.newTracing . P.v10Preview
-  , blst      & P.name "plutusv3-blst-stepx15-nomadperf"                   . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsOneAndAHalf
-  , blst      & P.name "plutusv3-blst-stepx2-nomadperf"                    . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsDouble
-  , ripemd    & P.name "plutusv3-ripemd-nomadperf"                         . P.dreps  10000 . P.newTracing . P.v10Preview
-  , ripemd    & P.name "plutusv3-ripemd-stepx15-nomadperf"                 . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsOneAndAHalf
-  , ripemd    & P.name "plutusv3-ripemd-stepx2-nomadperf"                  . P.dreps  10000 . P.newTracing . P.v10Preview . P.budgetBlockStepsDouble
+  , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000 . P.newTracing
+  , blst      & P.name "plutusv3-blst-stepx15-nomadperf"                   . P.dreps  10000 . P.newTracing . P.budgetBlockStepsOneAndAHalf
+  , blst      & P.name "plutusv3-blst-stepx2-nomadperf"                    . P.dreps  10000 . P.newTracing . P.budgetBlockStepsDouble
+  , ripemd    & P.name "plutusv3-ripemd-nomadperf"                         . P.dreps  10000 . P.newTracing
+  , ripemd    & P.name "plutusv3-ripemd-stepx15-nomadperf"                 . P.dreps  10000 . P.newTracing . P.budgetBlockStepsOneAndAHalf
+  , ripemd    & P.name "plutusv3-ripemd-stepx2-nomadperf"                  . P.dreps  10000 . P.newTracing . P.budgetBlockStepsDouble
   ]
   ----------
   -- Voting.

@@ -23,10 +23,10 @@ import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeSta
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..), OneEraTiebreakerView (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraSelectView (..),
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..),
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History
@@ -36,7 +36,7 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, TiebreakerView, SelectView(..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -349,19 +349,21 @@ instance LogFormatting (ForgeStateUpdateError blk) => LogFormatting (WrapForgeSt
 -- instances for HardForkSelectView
 --
 
-instance All (LogFormatting `Compose` WrapSelectView) xs => LogFormatting (HardForkSelectView xs) where
-    -- elide BlockNo as it is already contained in every per-era SelectView
-    -- TODO: use level DMinimal for a textual representation without the block number,
-    -- like this: `forMachine DMinimal . getHardForkSelectView`, and update the different SelectView instances
-    -- to not print the blockNr
-    forMachine dtal = forMachine dtal . dropBlockNo . getHardForkSelectView
+instance All (LogFormatting `Compose` WrapTiebreakerView) xs => LogFormatting (HardForkTiebreakerView xs) where
+    forMachine dtal = forMachine dtal . getHardForkTiebreakerView
 
-instance All (LogFormatting `Compose` WrapSelectView) xs => LogFormatting (OneEraSelectView xs) where
+instance LogFormatting (TiebreakerView protocol) => LogFormatting (SelectView protocol) where
+    forMachine dtal sv = mconcat
+        [ "blockNo"  .= svBlockNo sv
+        , forMachine dtal (svTiebreakerView sv)
+        ]
+
+instance All (LogFormatting `Compose` WrapTiebreakerView) xs => LogFormatting (OneEraTiebreakerView xs) where
     forMachine dtal =
           hcollapse
-        . hcmap (Proxy @(LogFormatting `Compose` WrapSelectView))
+        . hcmap (Proxy @(LogFormatting `Compose` WrapTiebreakerView))
                 (K . forMachine dtal)
-        . getOneEraSelectView
+        . getOneEraTiebreakerView
 
-instance LogFormatting (SelectView (BlockProtocol blk)) => LogFormatting (WrapSelectView blk) where
-    forMachine dtal = forMachine dtal . unwrapSelectView
+instance LogFormatting (TiebreakerView (BlockProtocol blk)) => LogFormatting (WrapTiebreakerView blk) where
+  forMachine dtal  = forMachine dtal  . unwrapTiebreakerView

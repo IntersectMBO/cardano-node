@@ -26,13 +26,14 @@ import           GHC.Stack
 -- regardless of which particular era.
 liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
 liftAnyEra f x = case x of
-  InAnyCardanoEra ByronEra a   ->   InAnyCardanoEra ByronEra $ f a
-  InAnyCardanoEra ShelleyEra a ->   InAnyCardanoEra ShelleyEra $ f a
-  InAnyCardanoEra AllegraEra a ->   InAnyCardanoEra AllegraEra $ f a
-  InAnyCardanoEra MaryEra a    ->   InAnyCardanoEra MaryEra $ f a
-  InAnyCardanoEra AlonzoEra a  ->   InAnyCardanoEra AlonzoEra $ f a
-  InAnyCardanoEra BabbageEra a ->   InAnyCardanoEra BabbageEra $ f a
-  InAnyCardanoEra ConwayEra a  ->   InAnyCardanoEra ConwayEra $ f a
+  InAnyCardanoEra ByronEra a     ->   InAnyCardanoEra ByronEra $ f a
+  InAnyCardanoEra ShelleyEra a   ->   InAnyCardanoEra ShelleyEra $ f a
+  InAnyCardanoEra AllegraEra a   ->   InAnyCardanoEra AllegraEra $ f a
+  InAnyCardanoEra MaryEra a      ->   InAnyCardanoEra MaryEra $ f a
+  InAnyCardanoEra AlonzoEra a    ->   InAnyCardanoEra AlonzoEra $ f a
+  InAnyCardanoEra BabbageEra a   ->   InAnyCardanoEra BabbageEra $ f a
+  InAnyCardanoEra ConwayEra a    ->   InAnyCardanoEra ConwayEra $ f a
+  InAnyCardanoEra DijkstraEra a  ->   InAnyCardanoEra DijkstraEra $ f a
 
 -- | `keyAddress` determines an address for the relevant era.
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era

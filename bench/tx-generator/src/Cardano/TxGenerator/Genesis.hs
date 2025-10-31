@@ -123,7 +123,7 @@ mkGenesisTransaction key ttl fee txins txouts
   = bimap
       ApiError
       (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
-      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   txBodyContent = defaultTxBodyContent shelleyBasedEra
     & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
