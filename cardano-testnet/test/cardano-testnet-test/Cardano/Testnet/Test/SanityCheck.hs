@@ -1,11 +1,13 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Testnet.Test.SanityCheck
-  ( hprop_ledger_events_sanity_check
+  ( hprop_asyncRegister_sanity_check
+  , hprop_ledger_events_sanity_check
   ) where
 
 import           Cardano.Api
@@ -13,12 +15,16 @@ import           Cardano.Api
 import           Cardano.Testnet
 
 import           Prelude
-
+import           RIO
+import           Control.Monad.Trans.Resource
+import           Control.Monad.Trans.Resource.Internal
 import           Data.Default.Class
-import           GHC.IO.Exception (IOException)
+import          Data.Time.Clock
+import           GHC.Conc (threadStatus, ThreadStatus (..))
 import           GHC.Stack
 
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Runtime
 import           Testnet.Start.Types
 
 import           Hedgehog
@@ -50,6 +56,7 @@ hprop_ledger_events_sanity_check = integrationRetryWorkspace 2 "ledger-events-sa
 
   TestnetRuntime{configurationFile, testnetNodes}
     <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+
   nr@TestnetNode{nodeSprocket} <- H.headM testnetNodes
   let socketPath = nodeSocketPath nr
 
@@ -88,3 +95,35 @@ foldBlocksAccumulator _ _ allEvents _ _ =
   filterPoolReap :: LedgerEvent -> Bool
   filterPoolReap (PoolReap _) = True
   filterPoolReap _ = False
+
+
+hprop_asyncRegister_sanity_check :: Property
+hprop_asyncRegister_sanity_check = 
+    withTests 1 . property $ lift $ do 
+
+     beforeForkedThread <- getCurrentTime
+     (internalState,tId) <- runResourceT $ do 
+        s <- getInternalState
+        (_,asyncA) <- asyncRegister_ (threadDelay 10_000_000)
+        let tId = asyncThreadId asyncA
+        return (s,tId)
+     afterForkedThread <- getCurrentTime
+     let diff' = diffUTCTime afterForkedThread beforeForkedThread
+     -- The forked thread (asyncRegister_) may be some long running IO action.
+     -- When the ResourceT block has finished this action should be cancelled. 
+     -- Therefore we check to see that the thread is indeed cancelled when the 
+     -- ResourceT block has finished.
+     when (diff' >= 5) $
+       throwString $ "Forked thread took too long: " <> show diff'
+
+     stat <- threadStatus tId
+
+     case stat of 
+       ThreadFinished -> return () 
+       _ -> throwString $ "Async thread not finished as expected, status: " <> show stat
+     
+     rMap <- readIORef internalState
+     case rMap of 
+      ReleaseMapClosed -> return () 
+      _ -> throwString "Release map should be closed" 
+
