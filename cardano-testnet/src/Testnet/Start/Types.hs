@@ -40,6 +40,8 @@ module Testnet.Start.Types
   , NodeConfiguration
   , NodeConfigurationYaml
   , mkConf
+  , mkConfigAbs
+  , mkConfig
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
@@ -58,6 +60,7 @@ import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
 import qualified Network.HTTP.Simple as HTTP
+import           System.Directory (createDirectory, doesDirectoryExist, makeAbsolute)
 import           System.FilePath (addTrailingPathSeparator)
 
 import           Testnet.Filepath
@@ -273,17 +276,33 @@ data Conf = Conf
   , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
--- and updating time stamps disabled.
 -- Logs the argument in the test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
   H.note_ tempAbsPath'
-  pure $ Conf
+  pure $ mkConfig tempAbsPath'
+
+-- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
+mkConfig :: FilePath -> Conf
+mkConfig tempAbsPath' = 
+  Conf
     { genesisHashesPolicy = WithHashes
     , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     , updateTimestamps = DontUpdateTimestamps
     }
+
+mkConfigAbs :: FilePath -> IO Conf
+mkConfigAbs userOutputDir = do 
+  absUserOutputDir <-  makeAbsolute userOutputDir
+  dirExists <- doesDirectoryExist absUserOutputDir
+  let conf = mkConfig absUserOutputDir 
+  if dirExists then
+    -- Happens when the environment has previously been created by the user
+    return conf
+  else do
+    createDirectory absUserOutputDir
+    return conf
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@
 anyEraToString :: AnyCardanoEra -> String
