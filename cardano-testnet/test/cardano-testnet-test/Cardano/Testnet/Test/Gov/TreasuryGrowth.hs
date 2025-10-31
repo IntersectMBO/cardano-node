@@ -9,6 +9,7 @@ import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Ledger.Shelley.LedgerState as L
+import qualified Cardano.Ledger.State as L
 import           Cardano.Testnet as TN
 
 import           Prelude
@@ -77,7 +78,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
   where
     handler :: AnyNewEpochState -> SlotNo -> BlockNo -> StateT (Map EpochNo Integer) IO ConditionResult
     handler (AnyNewEpochState _ newEpochState _) _slotNo _blockNo = do
-      let (Coin coin) = newEpochState ^. L.nesEsL . L.esAccountStateL . L.asTreasuryL
+      let (Coin coin) = newEpochState ^. L.nesEsL . L.chainAccountStateL . L.casTreasuryL
           epochNo = newEpochState ^. L.nesELL
       -- handler is executed multiple times per epoch, so we keep only the latest treasury value
       modify $ M.insert epochNo coin

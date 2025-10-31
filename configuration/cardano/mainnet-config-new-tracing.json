@@ -51,13 +51,7 @@
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
     },
-    "Net.Subscription.DNS": {
-      "severity": "Info"
-    },
     "Startup.DiffusionInit": {
-      "severity": "Info"
-    },
-    "Net.ErrorPolicy": {
       "severity": "Info"
     },
     "Forge.Loop": {
@@ -67,12 +61,6 @@
       "severity": "Info"
     },
     "Net.InboundGovernor.Remote": {
-      "severity": "Info"
-    },
-    "Net.Subscription.IP": {
-      "severity": "Info"
-    },
-    "Net.ErrorPolicy.Local": {
       "severity": "Info"
     },
     "Mempool": {

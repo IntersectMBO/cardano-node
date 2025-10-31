@@ -8,6 +8,7 @@ module Cardano.Testnet.Test.Utils
   ) where
 
 import           Cardano.Api (BlockNo (..), ChainTip (..), MonadIO)
+
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
 
 import           Prelude
@@ -20,7 +21,7 @@ import           System.Exit (ExitCode (..))
 import qualified System.Process as IO
 
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Types (TestnetNode(..), TestnetRuntime (..), isTestnetNodeSpo)
+import           Testnet.Types (TestnetNode (..), TestnetRuntime (..), isTestnetNodeSpo)
 
 import           Hedgehog ((===))
 import qualified Hedgehog as H
@@ -42,11 +43,11 @@ nodesProduceBlocks envDir TestnetRuntime{testnetNodes, testnetMagic} = do
   TestnetNode
     { nodeProcessHandle
     , nodeSprocket
-    } <- case testnetNodes of
-      [spoNode, _relayNode1, _relayNode2] -> do
-        (isTestnetNodeSpo <$> testnetNodes) === [True, False, False]
-        pure spoNode
-      _ -> H.failure
+    } <- case filter isTestnetNodeSpo testnetNodes of
+      [spoNode] -> pure spoNode
+      spoNodes -> do
+        H.note_ $ "Number of SPO nodes different than 1. SPO nodes: " <> show (nodeName <$> spoNodes)
+        H.failure
 
   -- Check that blocks have been produced on the chain after 2 minutes at most
   H.byDurationM 5 120 "Expected blocks to be minted" $ do

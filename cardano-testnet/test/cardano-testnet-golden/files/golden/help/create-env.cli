@@ -10,7 +10,6 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--active-slots-coeff DOUBLE]
   --output DIRECTORY
   [--params-file FILEPATH | --params-mainnet]
-  [--p2p-topology]
 
   Create a sandbox for Cardano testnet
 
@@ -46,6 +45,4 @@ Available options:
                            Blockfrost format:
                            https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
   --params-mainnet         Use mainnet on-chain parameters
-  --p2p-topology           Use P2P topology files instead of "direct" topology
-                           files
   -h,--help                Show this help text

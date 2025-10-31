@@ -54,15 +54,6 @@ TraceOptions:
   Net.DNSResolver:
     severity: Info
 
-  Net.ErrorPolicy:
-    severity: Info
-
-  Net.Subscription.IP:
-    severity: Info
-
-  SubscriptionDNS:
-    severity: Info
-
   Resources:
     severity: Info
 

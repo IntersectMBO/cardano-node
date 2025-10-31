@@ -58,7 +58,7 @@ let
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.json" (toJSON (if (cfg.useNewTopology) then assertNewTopology i else oldTopology i));
+    else toFile "topology.json" (toJSON (if (cfg.useNewTopology != false) then assertNewTopology i else oldTopology i));
 
   topology = i:
     if cfg.useSystemdReload
@@ -72,10 +72,17 @@ let
               // (mapAttrs' (era: epoch:
                 nameValuePair "Test${era}HardForkAtEpoch" epoch
               ) cfg.forceHardForks)
-              // (optionalAttrs cfg.useNewTopology (
+              // (optionalAttrs (cfg.useNewTopology != false) (
                 {
-                  EnableP2P = true;
                   MaxConcurrencyBulkSync = 2;
+                } // optionalAttrs (cfg.useNewTopology == true) {
+                  # Starting with node 10.6.0, p2p is the only network
+                  # operating mode and EnableP2P becomes a no-op and is not
+                  # declared by default.
+                  #
+                  # Older node versions which still require an explicit
+                  # declaration can set useNewTopology true.
+                  EnableP2P = true;
                 } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
                   TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
                 } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
@@ -164,6 +171,10 @@ let
       "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
     ] ++ optionals (cfg.tracerSocketPathConnect i != null) [
       "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
+    ] ++ optionals (cfg.tracerSocketNetworkAccept i != null) [
+      "--tracer-socket-network-accept ${cfg.tracerSocketNetworkAccept i}"
+    ] ++ optionals (cfg.tracerSocketNetworkConnect i != null) [
+      "--tracer-socket-network-connect ${cfg.tracerSocketNetworkConnect i}"
     ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
       echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -448,6 +459,26 @@ in {
         '';
       };
 
+      tracerSocketNetworkAccept = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          Listen for an incoming cardano-tracer connection at HOST:PORT,
+          for each instance.
+        '';
+      };
+
+      tracerSocketNetworkConnect = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          Connect to a cardano-tracer listening at HOST:PORT,
+          for each instance.
+        '';
+      };
+
       socketGroup = mkOption {
         type = str;
         default = "cardano-node";
@@ -545,6 +576,9 @@ in {
         description = ''
           Routes to public peers. Only used if slot is less than
           useLedgerAfterSlot.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
@@ -555,6 +589,9 @@ in {
           Routes to public peers. Only used if slot is less than
           useLedgerAfterSlot and specific to a given instance when
           multiple instances are used.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
@@ -569,7 +606,12 @@ in {
           advertise = false;
           valency = 1;
         }];
-        description = ''Static routes to local peers.'';
+        description = ''
+          Static routes to local peers.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
+        '';
       };
 
       instanceProducers = mkOption {
@@ -578,14 +620,34 @@ in {
         description = ''
           Static routes to local peers, specific to a given instance when
           multiple instances are used.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
       useNewTopology = mkOption {
-        type = bool;
-        default = cfg.nodeConfig.EnableP2P or false;
+        type = nullOr bool;
+        default = cfg.nodeConfig.EnableP2P or null;
         description = ''
-          Use new, peer to peer and ledger peers compatible topology.
+          Use new, p2p and ledger peers compatible topology.
+
+          The useNewTopology option is deprecated and will be removed in the
+          future. As of cardano-node 10.6.0, this option should remain null.
+          For older node versions, a bool value can be set, but this will only
+          be supported until the Dijkstra hard fork at which point all
+          cardano-node versions will be compelled to upgrade and the
+          useNewTopology option will be removed.
+
+          For node version < 10.6.0, useNewTopology will need to be explicitly
+          declared true or false to behave accordingly.  If left null while
+          also using the auto-generated p2p topology, node will fail to start.
+
+          For node version >= 10.6.0, useNewTopology should be left as null
+          until the option is removed after the Dijkstra hard fork.  If
+          explicitly declared true, node will continue to work, but if declared
+          false while using the auto-generated legacy topology, node will fail to
+          start.
         '';
       };
 
@@ -611,11 +673,18 @@ in {
 
       bootstrapPeers = mkOption {
         type = nullOr (listOf attrs);
-        default = map (e: {address = e.addr; inherit (e) port;}) envConfig.edgeNodes;
+        default =
+          map (e:
+            {address = e.addr;}
+              // optionalAttrs (e ? port && e.port != null) {inherit (e) port;})
+          envConfig.edgeNodes;
         description = ''
           If set, it will enable bootstrap peers. To disable, set this to null.
           To enable, set this to a list of attributes of address and port,
           example: [{ address = "addr"; port = 3001; }]
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
@@ -775,8 +844,12 @@ in {
       peerSnapshotFile = mkOption {
         type = funcToOr nullOrStr;
         default = i:
-          # Node config in 10.5 will default to genesis mode for preview and preprod.
-          if cfg.useNewTopology && elem cfg.environment ["preview" "preprod"]
+          # As of node `10.5.0` preview and preprod will default to a
+          # `ConsensusMode` of `GenesisMode` and utilize a peer snapshot.
+          #
+          # Mainnet does not yet require it, but declaring it will also
+          # facilitate testing.
+          if (cfg.useNewTopology != false)
           then
             if cfg.useSystemdReload
             then "peer-snapshot-${toString i}.json"
@@ -785,14 +858,20 @@ in {
         example = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";
         apply = x: if lib.isFunction x then x else _: x;
         description = ''
-          If set, cardano-node will load a peer snapshot file from the declared path which can
-          be absolute or relative.  If a relative path is given, it will be interpreted relative
-          to the location of the topology file which it is declared in.
+          If set, the topology file will include a peer snapshot file from the
+          declared path which can be absolute or relative.  If a relative path
+          is given, it will be interpreted relative to the location of the
+          topology file which it is declared in.
 
-          The peer snapshot file contains a snapshot of big ledger peers taken at some arbitrary slot.
-          These are the largest pools that cumulatively hold 90% of total stake.
+          The peer snapshot file contains a snapshot of big ledger peers taken
+          at some arbitrary slot. These are the largest pools that cumulatively
+          hold 90% of total stake.
 
-          A peer snapshot file can be generated with a `cardano-cli query ledger-peer-snapshot` command.
+          When cardano-node `ConsensusMode` configuration is set to
+          `GenesisMode` the peer snapshot file will be loaded and used.
+
+          A peer snapshot file can be generated with a command:
+            `cardano-cli query ledger-peer-snapshot`
         '';
       };
     };
@@ -818,7 +897,7 @@ in {
             (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.json".source = selectTopology i;}) {}
           (range 0 (cfg.instances - 1)))
         )
-        (mkIf (cfg.useNewTopology && cfg.useSystemdReload)
+        (mkIf ((cfg.useNewTopology != false) && cfg.useSystemdReload)
           (foldl'
             (acc: i: recursiveUpdate acc (
               optionalAttrs (cfg.peerSnapshotFile i != null) {
@@ -842,12 +921,12 @@ in {
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
         partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
-        reloadTriggers = mkIf (cfg.useSystemdReload && cfg.useNewTopology) [ (selectTopology i) ];
+        reloadTriggers = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) [ (selectTopology i) ];
         script = mkScript cfg i;
         serviceConfig = {
           User = "cardano-node";
           Group = "cardano-node";
-          ExecReload = mkIf (cfg.useSystemdReload && cfg.useNewTopology) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+          ExecReload = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           Restart = "always";
           RuntimeDirectory = mkIf (!cfg.systemdSocketActivation)
             (removePrefix cfg.runDirBase (runtimeDir i));
@@ -900,7 +979,7 @@ in {
     {
       assertions = [
         {
-          assertion = all (i : hasPrefix cfg.stateDirBase (cfg.stateDir i))
+          assertion = all (i: hasPrefix cfg.stateDirBase (cfg.stateDir i))
                                    (genList trivial.id cfg.instances);
           message = "The option services.cardano-node.stateDir should have ${cfg.stateDirBase}
                      as a prefix, for each instance!";
@@ -910,14 +989,30 @@ in {
           message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
         }
         {
-          assertion = !(cfg.systemdSocketActivation && cfg.useNewTopology);
+          assertion = !(cfg.systemdSocketActivation && (cfg.useNewTopology != false));
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
         }
         {
           assertion = (length lmdbPaths) == (length (lists.unique lmdbPaths));
           message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
         }
+        {
+          assertion = count (o: o != null) (with cfg; [
+            (tracerSocketPathAccept i)
+            (tracerSocketPathConnect i)
+            (tracerSocketNetworkAccept i)
+            (tracerSocketNetworkConnect i)
+          ]) <= 1;
+          message   = "Only one option of services.cardano-node.tracerSocket(PathAccept|PathConnect|NetworkAccept|NetworkConnect) can be declared.";
+        }
       ];
+
+      warnings = optional (cfg.useNewTopology != null) ''
+        The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
+        For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
+        cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.  See the services.cardano-node.useNewTopology
+        option description for further details.
+      '';
     }
   ]);
 }

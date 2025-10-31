@@ -54,7 +54,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Ref Script/"@
 hprop_ref_plutus_cost_calculation :: Property
-hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -202,7 +202,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
 
 -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Normal Script/"@
 hprop_included_plutus_cost_calculation :: Property
-hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included plutus script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-plutus-script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -312,7 +312,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
 
 -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Simple Script/"@
 hprop_included_simple_script_cost_calculation :: Property
-hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "included simple script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "included-simple-script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

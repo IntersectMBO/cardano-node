@@ -28,7 +28,8 @@ sizedMetadata = testGroup "properties of the CBOR encoding relevant for generati
   , testCase "Mary metadata ByteString costs"      $ assertBool "metadata ByteString costs" prop_bsCostsMary
   , testCase "Alonzo metadata map costs"           $ assertBool "metadata map costs" prop_mapCostsAlonzo
   , testCase "Alonzo metadata ByteString costs"    $ assertBool "metadata ByteString costs" prop_bsCostsAlonzo
-  , testCase "Babbage metadata map costs"           $ assertBool "metadata map costs" prop_mapCostsBabbage
-  , testCase "Babbage metadata ByteString costs"    $ assertBool "metadata ByteString costs" prop_bsCostsBabbage
-  , testCase "Test mkMetadata" $ assertBool "" True --WIP
+  , testCase "Babbage metadata map costs"          $ assertBool "metadata map costs" prop_mapCostsBabbage
+  , testCase "Babbage metadata ByteString costs"   $ assertBool "metadata ByteString costs" prop_bsCostsBabbage
+  , testCase "Conway metadata map costs"           $ assertBool "metadata map costs" prop_mapCostsConway
+  , testCase "Conway metadata ByteString costs"    $ assertBool "metadata ByteString costs" prop_bsCostsConway
   ]

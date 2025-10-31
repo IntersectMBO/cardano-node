@@ -14,8 +14,6 @@ ShelleyGenesisHash: 1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d927
 CheckpointsFile: mainnet-checkpoints.json
 CheckpointsFileHash: 3e6dee5bae7acc6d870187e72674b37c929be8c66e62a552cf6a876b1af31ade
 
-EnableP2P: True
-
 ##### Core protocol parameters #####
 
 Protocol: Cardano
@@ -36,11 +34,10 @@ MaxKnownMajorProtocolVersion: 2
 
 ##### Network Configuration #####
 
-PeerSharing: True
-
 # The following control the number of outbound connections to strictly our upstream peers
 # cf. https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/topology
-# defaults are provided by ouroboros-network, but can be overridden by uncommenting below:
+#
+# Defaults are provided by ouroboros-network, but can be overridden by uncommenting below:
 # SyncTargetNumberOfActiveBigLedgerPeers: 30
 # SyncTargetNumberOfActivePeers: 5
 # SyncTargetNumberOfEstablishedBigLedgerPeers: 40
@@ -53,8 +50,15 @@ PeerSharing: True
 # TargetNumberOfEstablishedBigLedgerPeers: 10
 # TargetNumberOfEstablishedPeers: 30
 # TargetNumberOfKnownBigLedgerPeers: 15
-# TargetNumberOfKnownPeers: 150
-# TargetNumberOfRootPeers: 60
+#
+# Additionally, as of ouroboros-network `0.22.2` with cardano-node `10.6.0`,
+# the following three node config parameters which previously required
+# explicit configuration depending on whether the node is a forger are now
+# handled automatically.
+#
+# PeerSharing: false for forgers, true for non-forgers
+# TargetNumberOfKnownPeers: set according to forging status
+# TargetNumberOfRootPeers: set according to forging status
 
 # When syncing in Genesis mode, this is the minimum number of active connections
 # to big ledger peers needed to continue:
@@ -85,7 +89,11 @@ LedgerDB:
 
 ##### Version Information #####
 
-MinNodeVersion: 10.4.0
+# Min is currently 10.6.0 for proper default handling of PeerSharing,
+# TargetNumberOfKnownPeers and TargetNumberOfRootPeers parameters depending
+# on whether node is a forger or not, as well as removal of legacy
+# networking mode.
+MinNodeVersion: 10.6.0
 
 ##### Logging configuration #####
 
@@ -216,12 +224,6 @@ TraceOptions:
   Net.ConnectionManager.Remote.ConnectionManagerCounters:
     severity: Silence
 
-  Net.ErrorPolicy:
-    severity: Info
-
-  Net.ErrorPolicy.Local:
-    severity: Info
-
   Net.InboundGovernor:
     severity: Warning
 
@@ -233,12 +235,6 @@ TraceOptions:
 
   Net.PeerSelection:
     severity: Silence
-
-  Net.Subscription.DNS:
-    severity: Info
-
-  Net.Subscription.IP:
-    severity: Info
 
   Resources:
     severity: Silence
@@ -255,12 +251,6 @@ TraceOptions:
     severity: Silence
 
   Mempool.AttemptAdd:
-    severity: Silence
-
-  Mempool.LedgerFound:
-    severity: Silence
-
-  Mempool.LedgerNotFound:
     severity: Silence
 
   Mempool.SyncNotNeeded:

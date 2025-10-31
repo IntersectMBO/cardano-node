@@ -43,7 +43,7 @@ profilesNoEraModel =
         . P.desc "Status-quo dataset, 7 epochs"
       secp       = V.plutusDoubleSaturation . V.plutusTypeECDSA . P.analysisSizeModerate
       value      = V.valueBase . P.tps 9 -- "value" with the Plutus `txFee`.
-      postPlomin = V.genesisVariantVoltaire . P.v10Preview
+      postPlomin = V.genesisVariantVoltaire
   in [
     model & P.name "model-secp-ecdsa-stepx2" . secp  . postPlomin . P.budgetBlockStepsDouble . V.datasetCurrent
   , model & P.name "model-secp-ecdsa"        . secp  . postPlomin                            . V.datasetCurrent

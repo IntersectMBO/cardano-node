@@ -33,8 +33,7 @@ tests = do
               , "goodConfig.yaml"
               )
             , (  [ "Config namespace error: Illegal namespace ChainDB.CopyToImmutableDBEvent2.CopiedBlockToImmutableDB"
-                  , "Config namespace error: Illegal namespace SubscriptionDNS"
-                  ]
+                 ]
               , testSubdir
               , "badConfig.yaml"
               )

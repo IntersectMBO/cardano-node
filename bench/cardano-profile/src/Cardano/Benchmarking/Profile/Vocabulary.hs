@@ -97,7 +97,7 @@ genesisVariant300 = P.pparamsEpoch 300
 
 -- should always reference the latest entry in data/genesis/epoch-timeline.json
 genesisVariantLatest :: Types.Profile -> Types.Profile
-genesisVariantLatest = P.pparamsEpoch 507
+genesisVariantLatest = P.pparamsEpoch 537
 
 -- references the latest Babbage epoch in data/genesis/epoch-timeline.json
 genesisVariantBabbageLatest :: Types.Profile -> Types.Profile
