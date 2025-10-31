@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Parsers.Run
@@ -11,13 +10,14 @@ module Parsers.Run
   ) where
 
 import           Cardano.CLI.Environment
+import           Control.Monad
 
 import           Data.Default.Class (def)
 import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
-
-import           Testnet.Property.Run
+import           RIO (runRIO)
+import           RIO.Orphans 
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 
@@ -60,8 +60,8 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvGenesisOptions=genesisOptions
   , createEnvOutputDir=outputDir
   , createEnvCreateEnvOptions=ceOptions
-  } =
-    testnetRoutine (UserProvidedEnv outputDir) $ \conf -> do
+  } = do 
+      conf <- mkConfigAbs outputDir
       createTestnetEnv
         testnetOptions genesisOptions ceOptions
         -- Do not add hashes to the main config file, so that genesis files
@@ -70,25 +70,25 @@ createEnvOptions CardanoTestnetCreateEnvOptions
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
 runCardanoOptions CardanoTestnetCliOptions
-  { cliTestnetOptions=testnetOptions@CardanoTestnetOptions{cardanoOutputDir}
+  { cliTestnetOptions=testnetOptions
   , cliGenesisOptions=genesisOptions
   , cliNodeEnvironment=env
-  , cliUpdateTimestamps=updateTimestamps
-  } =
+  , cliUpdateTimestamps=updateTimestamps'
+  } = do 
     case env of
-      NoUserProvidedEnv ->
+      NoUserProvidedEnv -> do
         -- Create the sandbox, then run cardano-testnet.
         -- It is not necessary to honor `cliUpdateTimestamps` here, because
         -- the genesis files will be created with up-to-date stamps already.
-        runTestnet cardanoOutputDir $ \conf -> do
-          createTestnetEnv
-            testnetOptions genesisOptions def
-            conf
-          cardanoTestnet testnetOptions conf
-      UserProvidedEnv nodeEnvPath ->
+        conf <- mkConfigAbs "testnet"
+        runRIO () $ createTestnetEnv
+                   testnetOptions genesisOptions def
+                   conf
+        withResourceMap (\rm -> void . runRIO rm $ cardanoTestnet testnetOptions conf)
+      UserProvidedEnv nodeEnvPath -> do
         -- Run cardano-testnet in the sandbox provided by the user
         -- In that case, 'cardanoOutputDir' is not used
-        runTestnet (UserProvidedEnv nodeEnvPath) $ \conf ->
-          cardanoTestnet
+        conf <- mkConfigAbs nodeEnvPath
+        withResourceMap (\rm -> void . runRIO rm $ cardanoTestnet
             testnetOptions
-            conf{updateTimestamps=updateTimestamps}
+            conf{updateTimestamps=updateTimestamps'})
