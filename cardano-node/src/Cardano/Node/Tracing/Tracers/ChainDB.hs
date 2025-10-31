@@ -28,7 +28,7 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError (..))
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
@@ -37,7 +37,11 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore as V1
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB as LMDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Backend as V2
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
+import qualified Ouroboros.Consensus.Storage.PerasCertDB.Impl as PerasCertDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
@@ -52,6 +56,9 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
 import           Numeric (showFFloat)
+import Data.Void (absurd)
+import Data.Typeable (Typeable, cast)
+import Ouroboros.Consensus.Peras.SelectView
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
@@ -79,7 +86,7 @@ withAddedToCurrentChainEmptyLimited tr = do
 instance (  LogFormatting (Header blk)
           , LogFormatting (LedgerEvent blk)
           , LogFormatting (RealPoint blk)
-          , LogFormatting (SelectView (BlockProtocol blk))
+          , LogFormatting (WeightedSelectView (BlockProtocol blk))
           , ConvertRawHash blk
           , ConvertRawHash (Header blk)
           , LedgerSupportsProtocol blk
@@ -103,6 +110,8 @@ instance (  LogFormatting (Header blk)
           "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) ->
           "Chain Selection was unstarved by " <> renderRealPoint pt
+  forHuman (ChainDB.TracePerasCertDbEvent ev) = forHuman ev
+  forHuman (ChainDB.TraceAddPerasCertEvent ev) = forHuman ev
 
   forMachine _ ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "LastShutdownUnclean" ]
@@ -132,6 +141,11 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
+  forMachine details (ChainDB.TracePerasCertDbEvent v) =
+    forMachine details v
+  forMachine details (ChainDB.TraceAddPerasCertEvent v) =
+    forMachine details v
+
 
   asMetrics ChainDB.TraceLastShutdownUnclean         = []
   asMetrics (ChainDB.TraceChainSelStarvationEvent _) = []
@@ -145,6 +159,8 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceLedgerDBEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
+  asMetrics (ChainDB.TracePerasCertDbEvent v)       = asMetrics v
+  asMetrics (ChainDB.TraceAddPerasCertEvent v)      = asMetrics v
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
@@ -172,6 +188,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
+  namespaceFor (ChainDB.TracePerasCertDbEvent ev) =
+    nsPrependInner "PerasCertDbEvent" (namespaceFor ev)
+  namespaceFor (ChainDB.TraceAddPerasCertEvent ev) =
+    nsPrependInner "AddPerasCertEvent" (namespaceFor ev)
 
   severityFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Info
   severityFor (Namespace _ ["ChainSelStarvationEvent"]) _ = Just Debug
@@ -215,6 +235,14 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
+  severityFor (Namespace out ("PerasCertDbEvent" : tl)) (Just (ChainDB.TracePerasCertDbEvent ev')) =
+    severityFor (Namespace out tl) (Just ev')
+  severityFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  severityFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
+    severityFor (Namespace out tl) (Just ev')
+  severityFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (ChainDB.TraceAddPerasCertEvent blk)) Nothing
   severityFor _ns _ = Nothing
 
   privacyFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Public
@@ -259,6 +287,14 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
+  privacyFor (Namespace out ("PerasCertDbEvent" : tl)) (Just (ChainDB.TracePerasCertDbEvent ev')) =
+    privacyFor (Namespace out tl) (Just ev')
+  privacyFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  privacyFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
+    privacyFor (Namespace out tl) (Just ev')
+  privacyFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (ChainDB.TraceAddPerasCertEvent blk)) Nothing
   privacyFor _ _ = Nothing
 
   detailsFor (Namespace _ ["LastShutdownUnclean"]) _ = Just DNormal
@@ -303,6 +339,14 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: (Namespace (VolDB.TraceEvent blk))) Nothing
+  detailsFor (Namespace out ("PerasCertDbEvent" : tl)) (Just (ChainDB.TracePerasCertDbEvent ev')) =
+    detailsFor (Namespace out tl) (Just ev')
+  detailsFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  detailsFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
+    detailsFor (Namespace out tl) (Just ev')
+  detailsFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (ChainDB.TraceAddPerasCertEvent blk)) Nothing
   detailsFor _ _ = Nothing
 
   metricsDocFor (Namespace out ("AddBlockEvent" : tl)) =
@@ -356,6 +400,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     documentFor (Namespace out tl :: Namespace (ImmDB.TraceEvent blk))
   documentFor (Namespace out ("VolatileDbEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk))
+  documentFor (Namespace out ("PerasCertDbEvent" : tl)) =
+    documentFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk))
+  documentFor (Namespace out ("AddPerasCertEvent" : tl)) =
+    documentFor (Namespace out tl :: Namespace (ChainDB.TraceAddPerasCertEvent blk))
   documentFor _ = Nothing
 
   allNamespaces =
@@ -381,6 +429,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (ImmDB.TraceEvent blk)])
           ++ map  (nsPrependInner "VolatileDbEvent")
                   (allNamespaces :: [Namespace (VolDB.TraceEvent blk)])
+          ++ map  (nsPrependInner "PerasCertDbEvent")
+                  (allNamespaces :: [Namespace (PerasCertDB.TraceEvent blk)])
+          ++ map  (nsPrependInner "AddPerasCertEvent")
+                  (allNamespaces :: [Namespace (ChainDB.TraceAddPerasCertEvent blk)])
             )
 
 
@@ -392,7 +444,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
 instance ( LogFormatting (Header blk)
          , LogFormatting (LedgerEvent blk)
          , LogFormatting (RealPoint blk)
-         , LogFormatting (SelectView (BlockProtocol blk))
+         , LogFormatting (WeightedSelectView (BlockProtocol blk))
          , ConvertRawHash blk
          , ConvertRawHash (Header blk)
          , LedgerSupportsProtocol blk
@@ -491,10 +543,10 @@ instance ( LogFormatting (Header blk)
       in mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails DDetailed (AF.headPoint extended)
-               , "newTipSelectView" .= forMachine DDetailed (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine DDetailed (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine DDetailed oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine DDetailed oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (forMachine DDetailed `map` addedHdrsNewChain base extended)
                ]
@@ -507,10 +559,10 @@ instance ( LogFormatting (Header blk)
       mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint extended)
-               , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine dtal (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine dtal oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
@@ -526,10 +578,10 @@ instance ( LogFormatting (Header blk)
       in mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails DDetailed (AF.headPoint new)
-               , "newTipSelectView" .= forMachine DDetailed (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine DDetailed (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine DDetailed oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine DDetailed oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (forMachine DDetailed `map` addedHdrsNewChain old new)
                ]
@@ -542,10 +594,10 @@ instance ( LogFormatting (Header blk)
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint new)
-               , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= forMachine dtal (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= forMachine dtal oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
@@ -1920,52 +1972,93 @@ instance MetaTrace LedgerDB.FlavorImplSpecificTrace where
     nsPrependInner "V2" (namespaceFor ev)
 
   severityFor (Namespace out ("V1" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTrace) Nothing
+    severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) Nothing
   severityFor (Namespace out ("V1" : tl)) (Just (LedgerDB.FlavorImplSpecificTraceV1 ev)) =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTrace) (Just ev)
+    severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) (Just ev)
   severityFor (Namespace out ("V2" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V2.FlavorImplSpecificTrace) Nothing
+    severityFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace) Nothing
   severityFor (Namespace out ("V2" : tl)) (Just (LedgerDB.FlavorImplSpecificTraceV2 ev)) =
-    severityFor (Namespace out tl :: Namespace V2.FlavorImplSpecificTrace) (Just ev)
+    severityFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace) (Just ev)
   severityFor _ _ = Nothing
 
   documentFor (Namespace out ("V1" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTrace)
+    documentFor (Namespace out tl :: Namespace V1.SomeBackendTrace)
   documentFor (Namespace out ("V2" : tl)) =
-    documentFor (Namespace out tl :: Namespace V2.FlavorImplSpecificTrace)
+    documentFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace)
   documentFor _ = Nothing
 
   allNamespaces =
        map (nsPrependInner "V1")
-         (allNamespaces :: [Namespace V1.FlavorImplSpecificTrace])
+         (allNamespaces :: [Namespace V1.SomeBackendTrace])
     ++ map (nsPrependInner "V2")
-         (allNamespaces :: [Namespace V2.FlavorImplSpecificTrace])
+         (allNamespaces :: [Namespace V2.LedgerDBV2Trace])
 
 --------------------------------------------------------------------------------
 -- V1
 --------------------------------------------------------------------------------
 
-instance LogFormatting V1.FlavorImplSpecificTrace where
-  forMachine dtal (V1.FlavorImplSpecificTraceInMemory ev) = forMachine dtal ev
-  forMachine dtal (V1.FlavorImplSpecificTraceOnDisk ev) = forMachine dtal ev
+unwrapV1Trace :: forall a backend. Typeable backend => (V1.Trace LMDB.LMDB -> a) -> V1.Trace backend -> a
+unwrapV1Trace g ev =
+  case cast @(V1.Trace backend) @(V1.Trace LMDB.LMDB) ev of
+    Just t -> g t
+    _ -> error "blah"
 
-  forHuman (V1.FlavorImplSpecificTraceInMemory ev) = forHuman ev
-  forHuman (V1.FlavorImplSpecificTraceOnDisk ev) = forHuman ev
+instance LogFormatting V1.SomeBackendTrace where
+  forMachine dtal (V1.SomeBackendTrace ev) =
+    unwrapV1Trace (forMachine dtal) ev
 
-instance LogFormatting V1.FlavorImplSpecificTraceInMemory where
-  forMachine _dtal V1.InMemoryBackingStoreInitialise = mempty
-  forMachine dtal (V1.InMemoryBackingStoreTrace ev) = forMachine dtal ev
+  forHuman (V1.SomeBackendTrace ev) =
+    unwrapV1Trace forHuman ev
 
-  forHuman V1.InMemoryBackingStoreInitialise = "Initializing in-memory backing store"
-  forHuman (V1.InMemoryBackingStoreTrace ev) = forHuman ev
+instance MetaTrace V1.SomeBackendTrace where
+  namespaceFor (V1.SomeBackendTrace ev) =
+    unwrapV1Trace (nsPrependInner "LMDB" . namespaceFor) ev
 
-instance LogFormatting V1.FlavorImplSpecificTraceOnDisk where
-  forMachine _dtal (V1.OnDiskBackingStoreInitialise limits) =
-    mconcat [ "limits" .= showT limits ]
-  forMachine dtal (V1.OnDiskBackingStoreTrace ev) = forMachine dtal ev
+  severityFor (Namespace out ("LMDB" : tl)) (Just (V1.SomeBackendTrace ev)) =
+    unwrapV1Trace (severityFor (Namespace out tl :: Namespace (V1.Trace LMDB.LMDB)) . Just) ev
+  severityFor (Namespace _ ("LMDB" : _)) Nothing =
+    Just Debug
+  severityFor _ _ = Nothing
 
-  forHuman (V1.OnDiskBackingStoreInitialise limits) = "Initializing on-disk backing store with limits " <> showT limits
-  forHuman (V1.OnDiskBackingStoreTrace ev) = forHuman ev
+  documentFor (Namespace _ ("LMDB" : _)) =
+    Just "An LMDB trace"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    map (nsPrependInner "LMDB")
+        (allNamespaces :: [Namespace (V1.Trace LMDB.LMDB)])
+
+instance LogFormatting (V1.Trace LMDB.LMDB) where
+  forMachine _dtal (LMDB.OnDiskBackingStoreInitialise limits) =
+    mconcat [ "kind" .= String "LMDBBackingStoreInitialise", "limits" .= showT limits ]
+  forMachine dtal (LMDB.OnDiskBackingStoreTrace ev) = forMachine dtal ev
+
+  forHuman (LMDB.OnDiskBackingStoreInitialise limits) = "Initializing LMDB backing store with limits " <> showT limits
+  forHuman (LMDB.OnDiskBackingStoreTrace ev) = forHuman ev
+
+instance MetaTrace (V1.Trace LMDB.LMDB) where
+  namespaceFor LMDB.OnDiskBackingStoreInitialise{} =
+    Namespace [] ["Initialise"]
+  namespaceFor (LMDB.OnDiskBackingStoreTrace ev) =
+    nsPrependInner "BackingStoreEvent" (namespaceFor ev)
+
+  severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
+  severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
+  severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (LMDB.OnDiskBackingStoreTrace ev)) =
+    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ("Initialise" : _)) = Just
+    "Backing store is being initialised"
+  documentFor (Namespace out ("BackingStoreEvent" : tl)) =
+    documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
+  documentFor _ = Nothing
+
+  allNamespaces =
+    Namespace [] ["Initialise"]
+    : map (nsPrependInner "BackingStoreEvent")
+          (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
 instance LogFormatting V1.BackingStoreTrace where
   forMachine _dtals V1.BSOpening = mempty
@@ -2004,81 +2097,6 @@ instance LogFormatting V1.BackingStoreValueHandleTrace where
   forMachine _dtals V1.BSVHRead = mempty
   forMachine _dtals V1.BSVHStatting = mempty
   forMachine _dtals V1.BSVHStatted = mempty
-
-instance MetaTrace V1.FlavorImplSpecificTrace where
-  namespaceFor (V1.FlavorImplSpecificTraceInMemory ev) =
-    nsPrependInner "InMemory" (namespaceFor ev)
-  namespaceFor (V1.FlavorImplSpecificTraceOnDisk ev) =
-    nsPrependInner "OnDisk" (namespaceFor ev)
-
-  severityFor (Namespace out ("InMemory" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceInMemory) Nothing
-  severityFor (Namespace out ("InMemory" : tl)) (Just (V1.FlavorImplSpecificTraceInMemory ev)) =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceInMemory) (Just ev)
-  severityFor (Namespace out ("OnDisk" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk) Nothing
-  severityFor (Namespace out ("OnDisk" : tl)) (Just (V1.FlavorImplSpecificTraceOnDisk ev)) =
-    severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk) (Just ev)
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace out ("InMemory" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceInMemory)
-  documentFor (Namespace out ("OnDisk" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk)
-  documentFor _ = Nothing
-
-  allNamespaces =
-    map (nsPrependInner "InMemory")
-        (allNamespaces :: [Namespace V1.FlavorImplSpecificTraceInMemory])
-    ++ map (nsPrependInner "OnDisk")
-        (allNamespaces :: [Namespace V1.FlavorImplSpecificTraceOnDisk])
-
-instance MetaTrace V1.FlavorImplSpecificTraceInMemory where
-  namespaceFor V1.InMemoryBackingStoreInitialise = Namespace [] ["Initialise"]
-  namespaceFor (V1.InMemoryBackingStoreTrace bsTrace) =
-    nsPrependInner "BackingStoreEvent" (namespaceFor bsTrace)
-
-  severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (V1.InMemoryBackingStoreTrace ev)) =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace _ ("Initialise" : _)) = Just
-    "Backing store is being initialised"
-  documentFor (Namespace out ("BackingStoreEvent" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
-  documentFor _ = Nothing
-
-  allNamespaces =
-    Namespace [] ["Initialise"]
-    : map (nsPrependInner "BackingStoreEvent")
-          (allNamespaces :: [Namespace V1.BackingStoreTrace])
-
-instance MetaTrace V1.FlavorImplSpecificTraceOnDisk where
-  namespaceFor V1.OnDiskBackingStoreInitialise{} =
-    Namespace [] ["Initialise"]
-  namespaceFor (V1.OnDiskBackingStoreTrace ev) =
-    nsPrependInner "BackingStoreEvent" (namespaceFor ev)
-
-  severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (V1.OnDiskBackingStoreTrace ev)) =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace _ ("Initialise" : _)) = Just
-    "Backing store is being initialised"
-  documentFor (Namespace out ("BackingStoreEvent" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
-  documentFor _ = Nothing
-
-  allNamespaces =
-    Namespace [] ["Initialise"]
-    : map (nsPrependInner "BackingStoreEvent")
-          (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
 instance MetaTrace V1.BackingStoreTrace where
   namespaceFor V1.BSOpening = Namespace [] ["Opening"]
@@ -2238,42 +2256,87 @@ instance MetaTrace V1.BackingStoreValueHandleTrace where
     , Namespace [] ["Statted"]
     ]
 
-instance LogFormatting V2.FlavorImplSpecificTrace where
+{-------------------------------------------------------------------------------
+  V2
+-------------------------------------------------------------------------------}
+
+instance LogFormatting V2.LedgerDBV2Trace where
   forMachine _dtal V2.TraceLedgerTablesHandleCreate =
     mconcat [ "kind" .= String "LedgerTablesHandleCreate" ]
   forMachine _dtal V2.TraceLedgerTablesHandleClose =
     mconcat [ "kind" .= String "LedgerTablesHandleClose" ]
+  forMachine dtal (V2.BackendTrace ev) = forMachine dtal ev
 
   forHuman V2.TraceLedgerTablesHandleCreate =
     "Created a new 'LedgerTablesHandle', potentially by duplicating an existing one"
   forHuman V2.TraceLedgerTablesHandleClose =
     "Closed a 'LedgerTablesHandle'"
+  forHuman (V2.BackendTrace ev) = forHuman ev
 
-instance MetaTrace V2.FlavorImplSpecificTrace where
+instance MetaTrace V2.LedgerDBV2Trace where
   namespaceFor V2.TraceLedgerTablesHandleCreate =
     Namespace [] ["LedgerTablesHandleCreate"]
   namespaceFor V2.TraceLedgerTablesHandleClose =
     Namespace [] ["LedgerTablesHandleClose"]
+  namespaceFor (V2.BackendTrace ev) = nsPrependInner "BackendTrace" (namespaceFor ev)
 
   severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Debug
   severityFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Debug
+  severityFor (Namespace _ ("BackendTrace":_)) _ = Just Debug
   severityFor _                          _ = Nothing
 
-  -- suspicious
-  privacyFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Public
-  privacyFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Public
-  privacyFor _                          _ = Just Public
-
   documentFor (Namespace _ ["LedgerTablesHandleCreate"]) =
-    Just "An in-memory backing store event"
+    Just "Created a ledger tables handle"
   documentFor (Namespace _ ["LedgerTablesHandleClose"]) =
-    Just "An on-disk backing store event"
+    Just "Closed a ledger tables handle"
   documentFor _ = Nothing
 
   allNamespaces =
     [ Namespace [] ["LedgerTablesHandleCreate"]
     , Namespace [] ["LedgerTablesHandleClose"]
-    ]
+    ] ++ map (nsPrependInner "BackendTrace") (allNamespaces :: [Namespace V2.SomeBackendTrace])
+
+instance LogFormatting V2.SomeBackendTrace where
+  forMachine dtal (V2.SomeBackendTrace ev) = unwrapV2Trace (forMachine dtal) ev
+
+  forHuman (V2.SomeBackendTrace ev) = unwrapV2Trace forHuman ev
+
+instance MetaTrace V2.SomeBackendTrace where
+  namespaceFor (V2.SomeBackendTrace ev) =
+    unwrapV2Trace (nsPrependInner "LSM" . namespaceFor) ev
+
+  severityFor (Namespace _ ("LSM" : _)) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace out ("LSM" : tl)) = documentFor @(V2.Trace LSM.LSM) (Namespace out tl)
+  documentFor _ = Nothing
+
+  allNamespaces =
+    map (nsPrependInner "LSM") (allNamespaces :: [Namespace (V2.Trace LSM.LSM)])
+
+instance LogFormatting (V2.Trace LSM.LSM) where
+  forMachine _dtal (LSM.LSMTreeTrace ev) = mconcat [ "kind" .= String "LSMTreeTrace", "content" .= showT ev]
+  forHuman (LSM.LSMTreeTrace ev) = showT ev
+
+instance MetaTrace (V2.Trace LSM.LSM) where
+  namespaceFor LSM.LSMTreeTrace{} = Namespace [] ["LSMTrace"]
+  severityFor (Namespace _ ["LSMTrace"]) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["LSMTrace"]) =
+    Just "A trace from the LSM-trees backend"
+  documentFor _ = Nothing
+
+  allNamespaces = [Namespace [] ["LSMTrace"]]
+
+unwrapV2Trace :: forall a backend. Typeable backend => (V2.Trace LSM.LSM -> a) -> V2.Trace backend -> a
+unwrapV2Trace g ev =
+  case cast @(V2.Trace backend) @(V2.Trace InMemory.Mem) ev of
+    Just (InMemory.NoTrace v) -> absurd v
+    Nothing ->
+      case cast @(V2.Trace backend) @(V2.Trace LSM.LSM) ev of
+        Just t -> g t
+        _ -> error "blah"
 
 --------------------------------------------------------------------------------
 -- ImmDB.TraceEvent
@@ -2889,3 +2952,186 @@ instance (Show (PBFT.PBftVerKeyHash c))
       [ "kind" .= String "PBftCannotForgeThresholdExceeded"
       , "numForged" .= numForged
       ]
+
+-- PerasCertDB.TraceEvent instances
+instance LogFormatting (PerasCertDB.TraceEvent blk) where
+  forHuman (PerasCertDB.AddedPerasCert _cert _peer) = "Added Peras certificate to database"
+  forHuman (PerasCertDB.IgnoredCertAlreadyInDB _cert _peer) = "Ignored Peras certificate already in database"
+  forHuman PerasCertDB.OpenedPerasCertDB = "Opened Peras certificate database"
+  forHuman PerasCertDB.ClosedPerasCertDB = "Closed Peras certificate database"
+  forHuman (PerasCertDB.AddingPerasCert _cert _peer) = "Adding Peras certificate to database"
+
+  forMachine _dtal (PerasCertDB.AddedPerasCert cert _peer) =
+    mconcat ["kind" .= String "AddedPerasCert",
+             "cert" .= String (Text.pack $ show cert)]
+  forMachine _dtal (PerasCertDB.IgnoredCertAlreadyInDB cert _peer) =
+    mconcat ["kind" .= String "IgnoredCertAlreadyInDB",
+             "cert" .= String (Text.pack $ show cert)]
+  forMachine _dtal PerasCertDB.OpenedPerasCertDB =
+    mconcat ["kind" .= String "OpenedPerasCertDB"]
+  forMachine _dtal PerasCertDB.ClosedPerasCertDB =
+    mconcat ["kind" .= String "ClosedPerasCertDB"]
+  forMachine _dtal (PerasCertDB.AddingPerasCert cert _peer) =
+    mconcat ["kind" .= String "AddingPerasCert",
+             "cert" .= String (Text.pack $ show cert)]
+
+  asMetrics _ = []
+
+-- ChainDB.TraceAddPerasCertEvent instances
+instance ConvertRawHash blk => LogFormatting (ChainDB.TraceAddPerasCertEvent blk) where
+  forHuman (ChainDB.AddedPerasCertToQueue roundNo boostedBlock _queueSize) =
+    "Added Peras certificate for round " <> Text.pack (show roundNo) <>
+    " boosting block " <> renderPoint boostedBlock <> " to queue"
+  forHuman (ChainDB.PoppedPerasCertFromQueue roundNo boostedBlock) =
+    "Popped Peras certificate for round " <> Text.pack (show roundNo) <>
+    " boosting block " <> renderPoint boostedBlock <> " from queue"
+  forHuman (ChainDB.IgnorePerasCertTooOld roundNo boostedBlock immutableSlot) =
+    "Ignored Peras certificate for round " <> Text.pack (show roundNo) <>
+    " boosting block " <> renderPoint boostedBlock <>
+    " (too old, immutable slot: " <> renderPoint (AF.anchorToPoint immutableSlot) <> ")"
+  forHuman (ChainDB.PerasCertBoostsCurrentChain roundNo boostedBlock) =
+    "Peras certificate for round " <> Text.pack (show roundNo) <>
+    " boosts current chain block " <> renderPoint boostedBlock
+  forHuman (ChainDB.PerasCertBoostsGenesis roundNo) =
+    "Peras certificate for round " <> Text.pack (show roundNo) <> " boosts Genesis"
+  forHuman (ChainDB.PerasCertBoostsBlockNotYetReceived roundNo boostedBlock) =
+    "Peras certificate for round " <> Text.pack (show roundNo) <>
+    " boosts block " <> renderPoint boostedBlock <> " not yet received"
+  forHuman (ChainDB.ChainSelectionForBoostedBlock roundNo boostedBlock) =
+    "Chain selection for block " <> renderPoint boostedBlock <>
+    " boosted by Peras certificate from round " <> Text.pack (show roundNo)
+
+  forMachine _dtal (ChainDB.AddedPerasCertToQueue roundNo boostedBlock queueSize) =
+    mconcat ["kind" .= String "AddedPerasCertToQueue",
+             "round" .= String (Text.pack $ show roundNo),
+             "boostedBlock" .= String (renderPoint boostedBlock),
+             "queueSize" .= toJSON queueSize]
+  forMachine _dtal (ChainDB.PoppedPerasCertFromQueue roundNo boostedBlock) =
+    mconcat ["kind" .= String "PoppedPerasCertFromQueue",
+             "round" .= String (Text.pack $ show roundNo),
+             "boostedBlock" .= String (renderPoint boostedBlock)]
+  forMachine _dtal (ChainDB.IgnorePerasCertTooOld roundNo boostedBlock immutableSlot) =
+    mconcat ["kind" .= String "IgnorePerasCertTooOld",
+             "round" .= String (Text.pack $ show roundNo),
+             "boostedBlock" .= String (renderPoint boostedBlock),
+             "immutableSlot" .= String (renderPoint (AF.anchorToPoint immutableSlot))]
+  forMachine _dtal (ChainDB.PerasCertBoostsCurrentChain roundNo boostedBlock) =
+    mconcat ["kind" .= String "PerasCertBoostsCurrentChain",
+             "round" .= String (Text.pack $ show roundNo),
+             "boostedBlock" .= String (renderPoint boostedBlock)]
+  forMachine _dtal (ChainDB.PerasCertBoostsGenesis roundNo) =
+    mconcat ["kind" .= String "PerasCertBoostsGenesis",
+             "round" .= String (Text.pack $ show roundNo)]
+  forMachine _dtal (ChainDB.PerasCertBoostsBlockNotYetReceived roundNo boostedBlock) =
+    mconcat ["kind" .= String "PerasCertBoostsBlockNotYetReceived",
+             "round" .= String (Text.pack $ show roundNo),
+             "boostedBlock" .= String (renderPoint boostedBlock)]
+  forMachine _dtal (ChainDB.ChainSelectionForBoostedBlock roundNo boostedBlock) =
+    mconcat ["kind" .= String "ChainSelectionForBoostedBlock",
+             "round" .= String (Text.pack $ show roundNo),
+             "boostedBlock" .= String (renderPoint boostedBlock)]
+
+  asMetrics _ = []
+
+-- PerasCertDB.TraceEvent MetaTrace instance
+instance MetaTrace (PerasCertDB.TraceEvent blk) where
+  namespaceFor (PerasCertDB.AddedPerasCert _ _) =
+    Namespace [] ["AddedPerasCert"]
+  namespaceFor (PerasCertDB.IgnoredCertAlreadyInDB _ _) =
+    Namespace [] ["IgnoredCertAlreadyInDB"]
+  namespaceFor PerasCertDB.OpenedPerasCertDB =
+    Namespace [] ["OpenedPerasCertDB"]
+  namespaceFor PerasCertDB.ClosedPerasCertDB =
+    Namespace [] ["ClosedPerasCertDB"]
+  namespaceFor (PerasCertDB.AddingPerasCert _ _) =
+    Namespace [] ["AddingPerasCert"]
+
+  severityFor (Namespace _ ["AddedPerasCert"]) _ = Just Info
+  severityFor (Namespace _ ["IgnoredCertAlreadyInDB"]) _ = Just Info
+  severityFor (Namespace _ ["OpenedPerasCertDB"]) _ = Just Info
+  severityFor (Namespace _ ["ClosedPerasCertDB"]) _ = Just Info
+  severityFor (Namespace _ ["AddingPerasCert"]) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  privacyFor (Namespace _ ["AddedPerasCert"]) _ = Just Public
+  privacyFor (Namespace _ ["IgnoredCertAlreadyInDB"]) _ = Just Public
+  privacyFor (Namespace _ ["OpenedPerasCertDB"]) _ = Just Public
+  privacyFor (Namespace _ ["ClosedPerasCertDB"]) _ = Just Public
+  privacyFor (Namespace _ ["AddingPerasCert"]) _ = Just Public
+  privacyFor _ _ = Nothing
+
+  detailsFor (Namespace _ ["AddedPerasCert"]) _ = Just DNormal
+  detailsFor (Namespace _ ["IgnoredCertAlreadyInDB"]) _ = Just DNormal
+  detailsFor (Namespace _ ["OpenedPerasCertDB"]) _ = Just DNormal
+  detailsFor (Namespace _ ["ClosedPerasCertDB"]) _ = Just DNormal
+  detailsFor (Namespace _ ["AddingPerasCert"]) _ = Just DDetailed
+  detailsFor _ _ = Nothing
+
+  documentFor (Namespace _ ["AddedPerasCert"]) = Just "Certificate added to Peras certificate database"
+  documentFor (Namespace _ ["IgnoredCertAlreadyInDB"]) = Just "Certificate ignored as it was already in the database"
+  documentFor (Namespace _ ["OpenedPerasCertDB"]) = Just "Peras certificate database opened"
+  documentFor (Namespace _ ["ClosedPerasCertDB"]) = Just "Peras certificate database closed"
+  documentFor (Namespace _ ["AddingPerasCert"]) = Just "Adding certificate to Peras certificate database"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [Namespace [] ["AddedPerasCert"],
+     Namespace [] ["IgnoredCertAlreadyInDB"],
+     Namespace [] ["OpenedPerasCertDB"],
+     Namespace [] ["ClosedPerasCertDB"],
+     Namespace [] ["AddingPerasCert"]]
+
+-- ChainDB.TraceAddPerasCertEvent MetaTrace instance
+instance MetaTrace (ChainDB.TraceAddPerasCertEvent blk) where
+  namespaceFor ChainDB.AddedPerasCertToQueue{} = Namespace [] ["AddedPerasCertToQueue"]
+  namespaceFor (ChainDB.PoppedPerasCertFromQueue _ _) = Namespace [] ["PoppedPerasCertFromQueue"]
+  namespaceFor ChainDB.IgnorePerasCertTooOld{} = Namespace [] ["IgnorePerasCertTooOld"]
+  namespaceFor (ChainDB.PerasCertBoostsCurrentChain _ _) = Namespace [] ["PerasCertBoostsCurrentChain"]
+  namespaceFor (ChainDB.PerasCertBoostsGenesis _) = Namespace [] ["PerasCertBoostsGenesis"]
+  namespaceFor (ChainDB.PerasCertBoostsBlockNotYetReceived _ _) = Namespace [] ["PerasCertBoostsBlockNotYetReceived"]
+  namespaceFor (ChainDB.ChainSelectionForBoostedBlock _ _) = Namespace [] ["ChainSelectionForBoostedBlock"]
+
+  severityFor (Namespace _ ["AddedPerasCertToQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["PoppedPerasCertFromQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["IgnorePerasCertTooOld"]) _ = Just Info
+  severityFor (Namespace _ ["PerasCertBoostsCurrentChain"]) _ = Just Info
+  severityFor (Namespace _ ["PerasCertBoostsGenesis"]) _ = Just Info
+  severityFor (Namespace _ ["PerasCertBoostsBlockNotYetReceived"]) _ = Just Info
+  severityFor (Namespace _ ["ChainSelectionForBoostedBlock"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  privacyFor (Namespace _ ["AddedPerasCertToQueue"]) _ = Just Public
+  privacyFor (Namespace _ ["PoppedPerasCertFromQueue"]) _ = Just Public
+  privacyFor (Namespace _ ["IgnorePerasCertTooOld"]) _ = Just Public
+  privacyFor (Namespace _ ["PerasCertBoostsCurrentChain"]) _ = Just Public
+  privacyFor (Namespace _ ["PerasCertBoostsGenesis"]) _ = Just Public
+  privacyFor (Namespace _ ["PerasCertBoostsBlockNotYetReceived"]) _ = Just Public
+  privacyFor (Namespace _ ["ChainSelectionForBoostedBlock"]) _ = Just Public
+  privacyFor _ _ = Nothing
+
+  detailsFor (Namespace _ ["AddedPerasCertToQueue"]) _ = Just DDetailed
+  detailsFor (Namespace _ ["PoppedPerasCertFromQueue"]) _ = Just DDetailed
+  detailsFor (Namespace _ ["IgnorePerasCertTooOld"]) _ = Just DNormal
+  detailsFor (Namespace _ ["PerasCertBoostsCurrentChain"]) _ = Just DNormal
+  detailsFor (Namespace _ ["PerasCertBoostsGenesis"]) _ = Just DNormal
+  detailsFor (Namespace _ ["PerasCertBoostsBlockNotYetReceived"]) _ = Just DNormal
+  detailsFor (Namespace _ ["ChainSelectionForBoostedBlock"]) _ = Just DNormal
+  detailsFor _ _ = Nothing
+
+  documentFor (Namespace _ ["AddedPerasCertToQueue"]) = Just "Peras certificate added to processing queue"
+  documentFor (Namespace _ ["PoppedPerasCertFromQueue"]) = Just "Peras certificate popped from processing queue"
+  documentFor (Namespace _ ["IgnorePerasCertTooOld"]) = Just "Peras certificate ignored as it is too old compared to immutable slot"
+  documentFor (Namespace _ ["PerasCertBoostsCurrentChain"]) = Just "Peras certificate boosts a block on the current selection"
+  documentFor (Namespace _ ["PerasCertBoostsGenesis"]) = Just "Peras certificate boosts the Genesis point"
+  documentFor (Namespace _ ["PerasCertBoostsBlockNotYetReceived"]) = Just "Peras certificate boosts a block not yet received"
+  documentFor (Namespace _ ["ChainSelectionForBoostedBlock"]) = Just "Perform chain selection for block boosted by Peras certificate"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [Namespace [] ["AddedPerasCertToQueue"],
+     Namespace [] ["PoppedPerasCertFromQueue"],
+     Namespace [] ["IgnorePerasCertTooOld"],
+     Namespace [] ["PerasCertBoostsCurrentChain"],
+     Namespace [] ["PerasCertBoostsGenesis"],
+     Namespace [] ["PerasCertBoostsBlockNotYetReceived"],
+     Namespace [] ["ChainSelectionForBoostedBlock"]]
