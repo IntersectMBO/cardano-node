@@ -74,6 +74,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 
 import           Prelude
 
+import           Control.Exception (Exception (..))
 import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
@@ -106,6 +107,10 @@ instance Api.Error AlonzoGenesisError where
 newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
+
+instance Exception AlonzoGenesisError where 
+  displayException = Api.docToString . Api.prettyError
+
 
 defaultAlonzoGenesis :: ShelleyBasedEra era -> Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis sbe = do
