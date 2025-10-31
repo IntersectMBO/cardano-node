@@ -23,6 +23,8 @@ module Testnet.Start.Cardano
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
   , retryOnAddressInUseError
+
+  , liftToIntegration
   ) where
 
 
@@ -77,8 +79,12 @@ testMinimumConfigurationRequirements :: ()
   => CardanoTestnetOptions -> m ()
 testMinimumConfigurationRequirements options = withFrozenCallStack $ do
   when (cardanoNumPools options < 1) $ do
-    H.note_ "Need at least one SPO node to produce blocks, but got none."
-    H.failure
+    throwM $ MinimumConfigRequirementsError "Need at least one SPO node to produce blocks, but got none."
+
+liftToIntegration :: RIO ResourceMap a -> H.Integration a 
+liftToIntegration  r = do 
+   rMap <- lift $ lift getInternalState 
+   liftIOAnnotated $ runRIO rMap r
 
 createTestnetEnv :: ()
   => HasCallStack
