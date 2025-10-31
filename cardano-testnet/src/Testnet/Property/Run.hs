@@ -3,7 +3,6 @@
 
 module Testnet.Property.Run
   ( runTestnet
-  , testnetRoutine
   -- Ignore tests on various OSs
   , ignoreOn
   , ignoreOnWindows
@@ -119,21 +118,7 @@ testnetProperty env runTn =
       void $ runTn conf
       H.failure -- Intentional failure to force failure report
 
--- | Runs a routine, which is supposed to end in finite duration
-testnetRoutine :: UserProvidedEnv -> (Conf -> H.Integration ()) -> IO ()
-testnetRoutine env runRoutine = void . H.check $ case env of
-  NoUserProvidedEnv ->
-    integrationWorkspace "testnet" $ mkConf >=> runRoutine
-  UserProvidedEnv userOutputDir -> integration $ do
-    absUserOutputDir <- H.evalIO $ makeAbsolute userOutputDir
-    dirExists <- H.evalIO $ doesDirectoryExist absUserOutputDir
-    if dirExists then
-      -- Happens when the environment has previously been created by the user
-      H.note_ $ "Reusing " <> absUserOutputDir
-    else do
-      liftIO $ createDirectory absUserOutputDir
-      H.note_ $ "Created " <> absUserOutputDir
-    mkConf absUserOutputDir >>= runRoutine
+
 
 -- Ignore properties on various OSs
 
