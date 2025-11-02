@@ -1,5 +1,8 @@
 # Revision history for trace-resources
 
+## 0.2.4
+* Patch up CPU time metric on darwin
+
 ## 0,2,3
 
 * New names for metrics
