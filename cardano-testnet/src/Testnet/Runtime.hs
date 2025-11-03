@@ -37,7 +37,7 @@ import           Data.Algorithm.Diff
 import           Data.Algorithm.DiffOutput
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as BSC
-import           Data.List (isInfixOf)
+import           Data.List (isInfixOf, uncons)
 import qualified Data.List as List
 import           GHC.Stack
 import qualified GHC.Stack as GHC
@@ -297,8 +297,11 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
   liftIOAnnotated $ IO.doesFileExist logFile >>= \case
     True -> return () 
     False -> liftIO $ appendFile logFile ""
-  
-  let socketPath =  H.sprocketSystemName $ head (testnetSprockets testnetRuntime)
+
+  let socketPath = case uncons (testnetSprockets testnetRuntime) of
+        Just (sprocket, _) -> H.sprocketSystemName sprocket
+        Nothing            -> throwString "No testnet sprocket available"
+
   let act = runExceptT $
               foldEpochState
                 (configurationFile testnetRuntime)
