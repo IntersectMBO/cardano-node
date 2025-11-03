@@ -47,6 +47,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class (def)
 import           Data.Either
 import           Data.Functor
+import           Data.List (uncons)
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
@@ -396,7 +397,9 @@ cardanoTestnet
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
-  let node1sprocket = head $ testnetSprockets runtime
+  node1sprocket <- case uncons $ testnetSprockets runtime of
+        Just (sprocket, _) -> pure sprocket
+        Nothing            -> throwString "No testnet sprocket available"
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   forM_ wallets $ \wallet -> do
