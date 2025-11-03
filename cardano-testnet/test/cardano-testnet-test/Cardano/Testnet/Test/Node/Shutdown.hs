@@ -13,7 +13,6 @@ module Cardano.Testnet.Test.Node.Shutdown
 import           Cardano.Api
 
 import           Cardano.Testnet
-import qualified Cardano.Testnet as Testnet
 
 import           Prelude
 
@@ -36,11 +35,12 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import           System.Process (interruptProcessGroupOf)
 
-import           Testnet.Components.Configuration
+import qualified Testnet.Components.Configuration as Testnet
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, initiateProcess, procNode)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Byron
+import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 
 import           Hedgehog (Property, (===))
@@ -53,6 +53,7 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
+import Testnet.Process.RunIO (liftIOAnnotated)
 
 {- HLINT ignore "Redundant <&>" -}
 
@@ -106,8 +107,8 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- Testnet.getDefaultAlonzoGenesis
-  H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
+  gen <- liftToIntegration $ Testnet.getDefaultAlonzoGenesis sbe
+  liftIOAnnotated $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
   conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.conway.spec.json"
@@ -121,7 +122,8 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
     , "--start-time", formatIso8601 startTime
     ]
 
-  byronGenesisHash <- getByronGenesisHash $ byronGenesisOutputDir </> "genesis.json"
+  byronGenesisHash <- liftToIntegration $ Testnet.getByronGenesisHash $ byronGenesisOutputDir </> "genesis.json"
+
   -- Move the files to the paths expected by 'defaultYamlHardforkViaConfig' below
   H.renameFile (byronGenesisOutputDir </> "genesis.json") (tempAbsPath' </> defaultGenesisFilepath ByronEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
@@ -130,9 +132,12 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   -- TODO: once 'cardano-cli latest genesis create' supports dijkstra, make this a copy instead of writing a default
   H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode dijkstraGenesisDefaults
 
-  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
-  alonzoGenesisHash  <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
-
+  (shelleyGenesisHash,alonzoGenesisHash)  <- 
+    liftToIntegration $ do  
+      shelleyGenesisHash <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
+      alonzoGenesisHash  <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
+      return (shelleyGenesisHash, alonzoGenesisHash)
+      
   let finalYamlConfig :: LBS.ByteString
       finalYamlConfig = encode . Object
                                  $ mconcat [ byronGenesisHash
@@ -166,7 +171,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   eProcess <- runExceptT $ initiateProcess process
   case eProcess of
     Left e -> H.failMessage GHC.callStack $ mconcat ["Failed to initiate node process: ", show e]
-    Right (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) -> do
+    Right (mStdin, _mStdout, _mStderr, pHandle, _) -> do
       H.threadDelay $ 10 * 1000000
 
       mExitCodeRunning <- H.evalIO $ IO.getProcessExitCode pHandle
