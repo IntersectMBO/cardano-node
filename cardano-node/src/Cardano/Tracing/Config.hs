@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -59,7 +60,11 @@ module Cardano.Tracing.Config
   , TraceLocalTxSubmissionServer
   , TraceMempool
   , TraceMux
+  , TraceMuxBearer
+  , TraceMuxChannel
   , TraceLocalMux
+  , TraceLocalMuxBearer
+  , TraceLocalMuxChannel
   , TracePeerSelection
   , TracePeerSelectionCounters
   , TracePeerSelectionActions
@@ -166,7 +171,11 @@ type TraceLocalTxSubmissionServer = ("TraceLocalTxSubmissionServer" :: Symbol)
 type TraceMempool = ("TraceMempool" :: Symbol)
 type TraceBackingStore = ("TraceBackingStore" :: Symbol)
 type TraceMux = ("TraceMux" :: Symbol)
+type TraceMuxBearer = ("TraceMuxBearer" :: Symbol)
+type TraceMuxChannel = ("TraceMuxChannel" :: Symbol)
 type TraceLocalMux = ("TraceLocalMux" :: Symbol)
+type TraceLocalMuxBearer = ("TraceLocalMuxBearer" :: Symbol)
+type TraceLocalMuxChannel = ("TraceLocalMuxChannel" :: Symbol)
 type TracePeerSelection = ("TracePeerSelection" :: Symbol)
 type TracePeerSelectionCounters = ("TracePeerSelectionCounters" :: Symbol)
 type TracePeerSelectionActions = ("TracePeerSelectionActions" :: Symbol)
@@ -184,7 +193,10 @@ type TraceKeepAliveProtocol = ("TraceKeepAliveProtocol" :: Symbol)
 type TracePeerSharingProtocol = ("TracePeerSharingProtocol" :: Symbol)
 type TraceGsm = ("TraceGsm" :: Symbol)
 type TraceCsj = ("TraceCsj" :: Symbol)
+type TraceKesAgent = ("TraceKesAgent" :: Symbol)
 type TraceDevotedBlockFetch = ("TraceDevotedBlockFetch" :: Symbol)
+type TraceChurnMode = ("TraceChurnMode" :: Symbol)
+type TraceDNS = ("TraceDNS" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -237,6 +249,8 @@ data TraceSelection
   , traceLocalHandshake :: OnOff TraceLocalHandshake
   , traceLocalInboundGovernor :: OnOff TraceLocalInboundGovernor
   , traceLocalMux :: OnOff TraceLocalMux
+  , traceLocalMuxBearer :: OnOff TraceLocalMuxBearer
+  , traceLocalMuxChannel :: OnOff TraceLocalMuxChannel
   , traceLocalRootPeers :: OnOff TraceLocalRootPeers
   , traceLocalServer :: OnOff TraceLocalServer
   , traceLocalStateQueryProtocol :: OnOff TraceLocalStateQueryProtocol
@@ -246,6 +260,8 @@ data TraceSelection
   , traceMempool :: OnOff TraceMempool
   , traceBackingStore :: OnOff TraceBackingStore
   , traceMux :: OnOff TraceMux
+  , traceMuxBearer :: OnOff TraceMuxBearer
+  , traceMuxChannel :: OnOff TraceMuxChannel
   , tracePeerSelection :: OnOff TracePeerSelection
   , tracePeerSelectionCounters :: OnOff TracePeerSelectionCounters
   , tracePeerSelectionActions :: OnOff TracePeerSelectionActions
@@ -260,7 +276,10 @@ data TraceSelection
   , tracePeerSharingProtocol :: OnOff TracePeerSharingProtocol
   , traceGsm :: OnOff TraceGsm
   , traceCsj :: OnOff TraceCsj
+  , traceKesAgent :: OnOff TraceKesAgent
   , traceDevotedBlockFetch :: OnOff TraceDevotedBlockFetch
+  , traceChurnMode :: OnOff TraceChurnMode
+  , traceDNS :: OnOff TraceDNS
   } deriving (Eq, Show)
 
 
@@ -307,6 +326,8 @@ data PartialTraceSelection
       , pTraceLocalHandshake :: Last (OnOff TraceLocalHandshake)
       , pTraceLocalInboundGovernor :: Last (OnOff TraceLocalInboundGovernor)
       , pTraceLocalMux :: Last (OnOff TraceLocalMux)
+      , pTraceLocalMuxBearer :: Last (OnOff TraceLocalMuxBearer)
+      , pTraceLocalMuxChannel :: Last (OnOff TraceLocalMuxChannel)
       , pTraceLocalRootPeers :: Last (OnOff TraceLocalRootPeers)
       , pTraceLocalServer :: Last (OnOff TraceLocalServer)
       , pTraceLocalStateQueryProtocol :: Last (OnOff TraceLocalStateQueryProtocol)
@@ -316,6 +337,8 @@ data PartialTraceSelection
       , pTraceMempool :: Last (OnOff TraceMempool)
       , pTraceBackingStore :: Last (OnOff TraceBackingStore)
       , pTraceMux :: Last (OnOff TraceMux)
+      , pTraceMuxBearer :: Last (OnOff TraceMuxBearer)
+      , pTraceMuxChannel :: Last (OnOff TraceMuxChannel)
       , pTracePeerSelection :: Last (OnOff TracePeerSelection)
       , pTracePeerSelectionCounters :: Last (OnOff TracePeerSelectionCounters)
       , pTracePeerSelectionActions :: Last (OnOff TracePeerSelectionActions)
@@ -331,6 +354,9 @@ data PartialTraceSelection
       , pTraceGsm :: Last (OnOff TraceGsm)
       , pTraceCsj :: Last (OnOff TraceCsj)
       , pTraceDevotedBlockFetch :: Last (OnOff TraceDevotedBlockFetch)
+      , pTraceChurnMode :: Last (OnOff TraceChurnMode)
+      , pTraceDNS :: Last (OnOff TraceDNS)
+      , pTraceKesAgent :: Last (OnOff TraceKesAgent)
       } deriving (Eq, Generic, Show)
 
 
@@ -378,6 +404,8 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceLocalHandshake) v
       <*> parseTracer (Proxy @TraceLocalInboundGovernor) v
       <*> parseTracer (Proxy @TraceLocalMux) v
+      <*> parseTracer (Proxy @TraceLocalMuxBearer) v
+      <*> parseTracer (Proxy @TraceLocalMuxChannel) v
       <*> parseTracer (Proxy @TraceLocalRootPeers) v
       <*> parseTracer (Proxy @TraceLocalServer) v
       <*> parseTracer (Proxy @TraceLocalStateQueryProtocol) v
@@ -387,6 +415,8 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceMempool) v
       <*> parseTracer (Proxy @TraceBackingStore) v
       <*> parseTracer (Proxy @TraceMux) v
+      <*> parseTracer (Proxy @TraceMuxBearer) v
+      <*> parseTracer (Proxy @TraceMuxChannel) v
       <*> parseTracer (Proxy @TracePeerSelection) v
       <*> parseTracer (Proxy @TracePeerSelectionCounters) v
       <*> parseTracer (Proxy @TracePeerSelectionActions) v
@@ -402,6 +432,9 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceGsm) v
       <*> parseTracer (Proxy @TraceCsj) v
       <*> parseTracer (Proxy @TraceDevotedBlockFetch) v
+      <*> parseTracer (Proxy @TraceChurnMode) v
+      <*> parseTracer (Proxy @TraceDNS) v
+      <*> parseTracer (Proxy @TraceKesAgent) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -446,6 +479,8 @@ defaultPartialTraceConfiguration =
     , pTraceLocalHandshake = pure $ OnOff True
     , pTraceLocalInboundGovernor = pure $ OnOff True
     , pTraceLocalMux = pure $ OnOff False
+    , pTraceLocalMuxBearer = pure $ OnOff False
+    , pTraceLocalMuxChannel = pure $ OnOff False
     , pTraceLocalTxMonitorProtocol = pure $ OnOff False
     , pTraceLocalRootPeers = pure $ OnOff False
     , pTraceLocalServer = pure $ OnOff True
@@ -454,7 +489,9 @@ defaultPartialTraceConfiguration =
     , pTraceLocalTxSubmissionServer = pure $ OnOff False
     , pTraceMempool = pure $ OnOff True
     , pTraceBackingStore = pure $ OnOff False
-    , pTraceMux = pure $ OnOff True
+    , pTraceMux = pure $ OnOff False
+    , pTraceMuxBearer = pure $ OnOff False
+    , pTraceMuxChannel = pure $ OnOff False
     , pTracePeerSelection = pure $ OnOff True
     , pTracePeerSelectionCounters = pure $ OnOff True
     , pTracePeerSelectionActions = pure $ OnOff True
@@ -470,6 +507,9 @@ defaultPartialTraceConfiguration =
     , pTraceGsm = pure $ OnOff True
     , pTraceCsj = pure $ OnOff True
     , pTraceDevotedBlockFetch = pure $ OnOff True
+    , pTraceChurnMode = pure $ OnOff True
+    , pTraceDNS = pure $ OnOff True
+    , pTraceKesAgent = pure $ OnOff False
     }
 
 
@@ -516,6 +556,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalHandshake
    traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalInboundGovernor
    traceLocalMux <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalMux
+   traceLocalMuxBearer <- proxyLastToEither (Proxy @TraceLocalMuxBearer) pTraceLocalMuxBearer
+   traceLocalMuxChannel <- proxyLastToEither (Proxy @TraceLocalMuxChannel) pTraceLocalMuxChannel
    traceLocalTxMonitorProtocol <- proxyLastToEither (Proxy @TraceLocalTxMonitorProtocol) pTraceLocalTxMonitorProtocol
    traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalRootPeers
    traceLocalServer <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalServer
@@ -525,6 +567,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceMempool <- proxyLastToEither (Proxy @TraceMempool) pTraceMempool
    traceBackingStore <- proxyLastToEither (Proxy @TraceBackingStore) pTraceBackingStore
    traceMux <- proxyLastToEither (Proxy @TraceMux) pTraceMux
+   traceMuxBearer <- proxyLastToEither (Proxy @TraceMuxBearer) pTraceMuxBearer
+   traceMuxChannel <- proxyLastToEither (Proxy @TraceMuxChannel) pTraceMuxChannel
    tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelection) pTracePeerSelection
    tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
    tracePeerSelectionActions <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelectionActions
@@ -539,7 +583,10 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    tracePeerSharingProtocol <- proxyLastToEither (Proxy @TracePeerSharingProtocol) pTracePeerSharingProtocol
    traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
+   traceKesAgent <- proxyLastToEither (Proxy @TraceKesAgent) pTraceKesAgent
    traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
+   traceChurnMode <- proxyLastToEither (Proxy @TraceChurnMode) pTraceChurnMode
+   traceDNS <- proxyLastToEither (Proxy @TraceDNS) pTraceDNS
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -579,6 +626,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceLocalHandshake = traceLocalHandshake
              , traceLocalInboundGovernor = traceLocalInboundGovernor
              , traceLocalMux = traceLocalMux
+             , traceLocalMuxBearer = traceLocalMuxBearer
+             , traceLocalMuxChannel = traceLocalMuxChannel
              , traceLocalTxMonitorProtocol = traceLocalTxMonitorProtocol
              , traceLocalRootPeers = traceLocalRootPeers
              , traceLocalServer = traceLocalServer
@@ -588,6 +637,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceMempool = traceMempool
              , traceBackingStore = traceBackingStore
              , traceMux = traceMux
+             , traceMuxBearer = traceMuxBearer
+             , traceMuxChannel = traceMuxChannel
              , tracePeerSelection = tracePeerSelection
              , tracePeerSelectionCounters = tracePeerSelectionCounters
              , tracePeerSelectionActions = tracePeerSelectionActions
@@ -603,6 +654,9 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceGsm = traceGsm
              , traceCsj = traceCsj
              , traceDevotedBlockFetch = traceDevotedBlockFetch
+             , traceChurnMode
+             , traceDNS
+             , traceKesAgent = traceKesAgent
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -646,6 +700,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalHandshake
   traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalInboundGovernor
   traceLocalMux <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalMux
+  traceLocalMuxBearer <- proxyLastToEither (Proxy @TraceLocalMuxBearer) pTraceLocalMuxBearer
+  traceLocalMuxChannel <- proxyLastToEither (Proxy @TraceLocalMuxChannel) pTraceLocalMuxChannel
   traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalRootPeers
   traceLocalServer <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalServer
   traceLocalTxMonitorProtocol <- proxyLastToEither (Proxy @TraceLocalTxMonitorProtocol) pTraceLocalTxMonitorProtocol
@@ -655,6 +711,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceMempool <- proxyLastToEither (Proxy @TraceMempool) pTraceMempool
   traceBackingStore <- proxyLastToEither (Proxy @TraceBackingStore) pTraceBackingStore
   traceMux <- proxyLastToEither (Proxy @TraceMux) pTraceMux
+  traceMuxBearer <- proxyLastToEither (Proxy @TraceMuxBearer) pTraceMuxBearer
+  traceMuxChannel <- proxyLastToEither (Proxy @TraceMuxChannel) pTraceMuxChannel
   tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelection) pTracePeerSelection
   tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
   tracePeerSelectionActions <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelectionActions
@@ -669,7 +727,10 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   tracePeerSharingProtocol <- proxyLastToEither (Proxy @TracePeerSharingProtocol) pTracePeerSharingProtocol
   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
+  traceKesAgent <- proxyLastToEither (Proxy @TraceKesAgent) pTraceKesAgent
   traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
+  traceChurnMode <- proxyLastToEither (Proxy @TraceChurnMode) pTraceChurnMode
+  traceDNS <- proxyLastToEither (Proxy @TraceDNS) pTraceDNS
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -709,6 +770,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceLocalHandshake = traceLocalHandshake
             , traceLocalInboundGovernor = traceLocalInboundGovernor
             , traceLocalMux = traceLocalMux
+            , traceLocalMuxBearer = traceLocalMuxBearer
+            , traceLocalMuxChannel = traceLocalMuxChannel
             , traceLocalRootPeers = traceLocalRootPeers
             , traceLocalServer = traceLocalServer
             , traceLocalStateQueryProtocol = traceLocalStateQueryProtocol
@@ -718,6 +781,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceMempool = traceMempool
             , traceBackingStore = traceBackingStore
             , traceMux = traceMux
+            , traceMuxBearer = traceMuxBearer
+            , traceMuxChannel = traceMuxChannel
             , tracePeerSelection = tracePeerSelection
             , tracePeerSelectionCounters = tracePeerSelectionCounters
             , tracePeerSelectionActions = tracePeerSelectionActions
@@ -733,6 +798,9 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceGsm = traceGsm
             , traceCsj = traceCsj
             , traceDevotedBlockFetch = traceDevotedBlockFetch
+            , traceChurnMode
+            , traceDNS
+            , traceKesAgent = traceKesAgent
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)

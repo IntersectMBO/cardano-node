@@ -1,5 +1,8 @@
 # ChangeLog
 
+## 2.3.1 - Oct 2025
+* Updated to `ekg-forward-1.0`, `ouroboros-network-framework-0.19.2` and `typed-protocols-1.0`.
+
 ## 2.3.0 - Jul 2025
 
 * Remove unused `forwarderEndpoint` and `acceptorEndpoint` fields from forwarder / acceptor configuration types.

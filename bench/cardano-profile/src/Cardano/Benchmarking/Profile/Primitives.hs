@@ -41,7 +41,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Set the epoch number from the "epoch-timeline".
   , pparamsEpoch
   -- Overlays to use.
-  , v8Preview, v9Preview, v10Preview
+  , v8Preview, v9Preview
   -- Budget overlays:
   -- -- Block:
   -- -- -- Steps:
@@ -417,9 +417,6 @@ v8Preview = helper_addOverlayOrDie "v8-preview"
 --       v9Preview = helper_addOverlayOrDie "v9-preview" . v8Preview
 v9Preview :: HasCallStack => Types.Profile -> Types.Profile
 v9Preview = helper_addOverlayOrDie "v9-preview"
-
-v10Preview :: HasCallStack => Types.Profile -> Types.Profile
-v10Preview = helper_addOverlayOrDie "v10-preview"
 
 -- Budget:
 

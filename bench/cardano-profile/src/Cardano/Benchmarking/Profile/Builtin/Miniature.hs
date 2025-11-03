@@ -91,8 +91,8 @@ profilesNoEraMiniature =
   , ciBench02Plutus   & P.name "ci-bench-plutus-secp-ecdsa"      . ecdsa        . P.dreps  0 . P.traceForwardingOn  . P.newTracing
   , ciBench02Plutus   & P.name "ci-bench-plutus-secp-schnorr"    . schnorr      . P.dreps  0 . P.traceForwardingOn  . P.newTracing
   , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-blst"          . blst         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd"        . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.v10Preview
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd-step2x" . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.v10Preview . P.budgetBlockStepsDouble
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd"        . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd-step2x" . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.budgetBlockStepsDouble
   -- 10 nodes, local
   , ciBench10Value    & P.name "10"                              . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing
   , ciBench10Value    & P.name "10-notracer"                     . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing

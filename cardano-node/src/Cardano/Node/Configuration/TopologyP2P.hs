@@ -7,6 +7,10 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 
+-- TODO: We need `2a89d89775 orphan-instances: more flexible NetworkTopology
+-- JSON encoding` in `ouroboros-network-0.23` for `networkTopologyFromJSON` in
+-- `Ouroboros.Network.OrphanInstances` to implement a drop in replacement using
+-- `Ouroboros.Network.Diffusion.Topology` API.
 module Cardano.Node.Configuration.TopologyP2P
   ( TopologyError(..)
   , NetworkTopology(..)
@@ -18,12 +22,18 @@ module Cardano.Node.Configuration.TopologyP2P
   , NodeHostIPv4Address(..)
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
-  , PeerAdvertise(..)
   , nodeAddressToSockAddr
   , readTopologyFile
   , readPeerSnapshotFile
   , readTopologyFileOrError
   , rootConfigToRelayAccessPoint
+  -- * Re-exports
+  , DiffusionMode(..)
+  , PeerAdvertise(..)
+  , PeerTrustable(..)
+  , RelayAccessPoint(..)
+  , UseBootstrapPeers(..)
+  , UseLedgerPeers(..)
   )
 where
 
@@ -34,13 +44,12 @@ import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..)
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   UseLedgerPeers (..))
+                   UseLedgerPeers (..), RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -59,6 +68,11 @@ import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           GHC.Generics (Generic)
 import           System.FilePath (takeDirectory, (</>))
+
+newtype TopologyError
+  = NodeIdNotFoundInToplogyFile FilePath
+  deriving Show
+
 
 data NodeSetup adr = NodeSetup
   { nodeId          :: !Word64
@@ -232,7 +246,8 @@ instance ToJSON adr => ToJSON (NetworkTopology adr) where
 -- | Read the `NetworkTopology` configuration from the specified file.
 readTopologyFile :: ()
   => forall adr. FromJSON adr
-  => NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text (NetworkTopology adr))
+  => NodeConfiguration
+  -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text (NetworkTopology adr))
 readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode, ncProtocolFiles} tracer = runExceptT $ do
   bs <- handleIOExceptionsLiftWith handler $ BS.readFile topologyFilePath
   topology@RealNodeTopology{ntUseLedgerPeers, ntUseBootstrapPeers, ntPeerSnapshotPath} <-

@@ -126,7 +126,7 @@ in with final;
   tracerDockerImage =
     let
       defaultConfig = rec {
-        acceptingSocket = "/ipc/tracer.socket";
+        acceptAt = "/ipc/tracer.socket";
         stateDir = "/logs";
         logging = [
           {

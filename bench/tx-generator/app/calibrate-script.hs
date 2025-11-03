@@ -531,7 +531,7 @@ approximateTxProperties script protocolParameters (summary, redeemer) = do
       where
         txbody =
           either (error . docToString . prettyError) id
-            $ createAndValidateTransactionBody era content
+            $ createTransactionBody era content
 
         content =
           defaultTxBodyContent era

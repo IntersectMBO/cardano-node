@@ -13,14 +13,14 @@ module Cardano.Node.Tracing.Tracers.P2P
   () where
 
 import           Cardano.Logging
+import           Cardano.Network.Diffusion (TraceChurnMode (..))
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
-import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Tracing.OrphanInstances.Network ()
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
@@ -30,15 +30,17 @@ import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
+import           Ouroboros.Network.Logging ()
+import           Ouroboros.Network.Logging.Framework ()
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
                    PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.Governor.Types (DemotionTimeoutException)
-import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
@@ -47,7 +49,7 @@ import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.Types ()
 import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..))
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
-import           Ouroboros.Network.Server2 as Server
+import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 
 import           Control.Exception (displayException, fromException)
@@ -62,7 +64,6 @@ import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
 
 
-
 --------------------------------------------------------------------------------
 -- LocalRootPeers Tracer
 --------------------------------------------------------------------------------
@@ -72,8 +73,7 @@ instance
   , ToJSON ntnAddr
   , ToJSONKey RelayAccessPoint
   , Show ntnAddr
-  , Show exception
-  ) => LogFormatting (TraceLocalRootPeers PeerTrustable ntnAddr exception) where
+  ) => LogFormatting (TraceLocalRootPeers PeerTrustable ntnAddr) where
   forMachine _dtal (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
@@ -83,11 +83,6 @@ instance
              , "domainAddress" .= toJSON d
              , "diffTime" .= show dt
              ]
-  forMachine _dtal (TraceLocalRootResult d res) =
-    mconcat [ "kind" .= String "LocalRootResult"
-             , "domainAddress" .= toJSON d
-             , "result" .= toJSONList res
-             ]
   forMachine _dtal (TraceLocalRootGroups groups) =
     mconcat [ "kind" .= String "LocalRootGroups"
              , "localRootGroups" .= toJSON groups
@@ -95,12 +90,12 @@ instance
   forMachine _dtal (TraceLocalRootFailure d exception) =
     mconcat [ "kind" .= String "LocalRootFailure"
              , "domainAddress" .= toJSON d
-             , "reason" .= show exception
+             , "reason" .= displayException exception
              ]
   forMachine _dtal (TraceLocalRootError d exception) =
     mconcat [ "kind" .= String "LocalRootError"
-             , "domainAddress" .= toJSON d
-             , "reason" .= show exception
+             , "domainAddress" .= String (pack . show $ d)
+             , "reason" .= displayException exception
              ]
   forMachine _dtal (TraceLocalRootReconfigured d exception) =
     mconcat [ "kind" .= String "LocalRootReconfigured"
@@ -114,11 +109,10 @@ instance
       ]
   forHuman = pack . show
 
-instance MetaTrace (TraceLocalRootPeers ntnAddr extraFlags exception) where
+instance MetaTrace (TraceLocalRootPeers ntnAddr extraFlags) where
   namespaceFor = \case
     TraceLocalRootDomains {}      -> Namespace [] ["LocalRootDomains"]
     TraceLocalRootWaiting {}      -> Namespace [] ["LocalRootWaiting"]
-    TraceLocalRootResult {}       -> Namespace [] ["LocalRootResult"]
     TraceLocalRootGroups {}       -> Namespace [] ["LocalRootGroups"]
     TraceLocalRootFailure {}      -> Namespace [] ["LocalRootFailure"]
     TraceLocalRootError {}        -> Namespace [] ["LocalRootError"]
@@ -127,7 +121,6 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr extraFlags exception) where
 
   severityFor (Namespace [] ["LocalRootDomains"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootWaiting"]) _ = Just Info
-  severityFor (Namespace [] ["LocalRootResult"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootGroups"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootFailure"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootError"]) _ = Just Info
@@ -138,8 +131,6 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr extraFlags exception) where
   documentFor (Namespace [] ["LocalRootDomains"]) = Just
     ""
   documentFor (Namespace [] ["LocalRootWaiting"]) = Just
-    ""
-  documentFor (Namespace [] ["LocalRootResult"]) = Just
     ""
   documentFor (Namespace [] ["LocalRootGroups"]) = Just
     ""
@@ -156,7 +147,6 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr extraFlags exception) where
   allNamespaces =
     [ Namespace [] ["LocalRootDomains"]
     , Namespace [] ["LocalRootWaiting"]
-    , Namespace [] ["LocalRootResult"]
     , Namespace [] ["LocalRootGroups"]
     , Namespace [] ["LocalRootFailure"]
     , Namespace [] ["LocalRootError"]
@@ -177,45 +167,25 @@ instance LogFormatting TracePublicRootPeers where
     mconcat [ "kind" .= String "PublicRootDomains"
              , "domainAddresses" .= toJSONList domains
              ]
-  forMachine _dtal (TracePublicRootResult b res) =
-    mconcat [ "kind" .= String "PublicRootResult"
-             , "domain" .= show b
-             , "result" .= toJSONList res
-             ]
-  forMachine _dtal (TracePublicRootFailure b d) =
-    mconcat [ "kind" .= String "PublicRootFailure"
-             , "domain" .= show b
-             , "reason" .= show d
-             ]
   forHuman = pack . show
 
 instance MetaTrace TracePublicRootPeers where
   namespaceFor TracePublicRootRelayAccessPoint {} = Namespace [] ["PublicRootRelayAccessPoint"]
   namespaceFor TracePublicRootDomains {} = Namespace [] ["PublicRootDomains"]
-  namespaceFor TracePublicRootResult {} = Namespace [] ["PublicRootResult"]
-  namespaceFor TracePublicRootFailure {} = Namespace [] ["PublicRootFailure"]
 
   severityFor (Namespace [] ["PublicRootRelayAccessPoint"]) _ = Just Info
   severityFor (Namespace [] ["PublicRootDomains"]) _ = Just Info
-  severityFor (Namespace [] ["PublicRootResult"]) _ = Just Info
-  severityFor (Namespace [] ["PublicRootFailure"]) _ = Just Info
   severityFor _ _ = Nothing
 
   documentFor (Namespace [] ["PublicRootRelayAccessPoint"]) = Just
     ""
   documentFor (Namespace [] ["PublicRootDomains"]) = Just
     ""
-  documentFor (Namespace [] ["PublicRootResult"]) = Just
-    ""
-  documentFor (Namespace [] ["PublicRootFailure"]) = Just
-    ""
   documentFor _ = Nothing
 
   allNamespaces = [
       Namespace [] ["PublicRootRelayAccessPoint"]
     , Namespace [] ["PublicRootDomains"]
-    , Namespace [] ["PublicRootResult"]
-    , Namespace [] ["PublicRootFailure"]
     ]
 
 --------------------------------------------------------------------------------
@@ -495,9 +465,6 @@ instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerT
     mconcat [ "kind" .= String "ChurnWait"
              , "diffTime" .= toJSON dt
              ]
-  forMachine _dtal (TraceChurnMode c) =
-    mconcat [ "kind" .= String "ChurnMode"
-             , "event" .= show c ]
   forMachine _dtal (TracePickInboundPeers targetNumberOfKnownPeers numberOfKnownPeers selected available) =
     mconcat [ "kind" .= String "PickInboundPeers"
             , "targetKnown" .= targetNumberOfKnownPeers
@@ -594,6 +561,8 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       Namespace [] ["PeerShareResults"]
     namespaceFor TracePeerShareResultsFiltered {} =
       Namespace [] ["PeerShareResultsFiltered"]
+    namespaceFor TracePickInboundPeers {} =
+      Namespace [] ["PickInboundPeers"]
     namespaceFor TracePromoteColdPeers {}      =
       Namespace [] ["PromoteColdPeers"]
     namespaceFor TracePromoteColdLocalPeers {} =
@@ -670,10 +639,6 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       Namespace [] ["GovernorWakeup"]
     namespaceFor TraceChurnWait {}             =
       Namespace [] ["ChurnWait"]
-    namespaceFor TraceChurnMode {}             =
-      Namespace [] ["ChurnMode"]
-    namespaceFor TracePickInboundPeers {} =
-      Namespace [] ["PickInboundPeers"]
     namespaceFor TraceLedgerStateJudgementChanged {} =
       Namespace [] ["LedgerStateJudgementChanged"]
     namespaceFor TraceOnlyBootstrapPeers {} =
@@ -706,6 +671,7 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     severityFor (Namespace [] ["PeerShareRequests"]) _ = Just Debug
     severityFor (Namespace [] ["PeerShareResults"]) _ = Just Debug
     severityFor (Namespace [] ["PeerShareResultsFiltered"]) _ = Just Info
+    severityFor (Namespace [] ["PickInboundPeers"]) _ = Just Info
     severityFor (Namespace [] ["PromoteColdPeers"]) _ = Just Info
     severityFor (Namespace [] ["PromoteColdLocalPeers"]) _ = Just Info
     severityFor (Namespace [] ["PromoteColdFailed"]) _ = Just Info
@@ -744,8 +710,6 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     severityFor (Namespace [] ["DemoteBigLedgerPeersAsynchronous"]) _ = Just Info
     severityFor (Namespace [] ["GovernorWakeup"]) _ = Just Info
     severityFor (Namespace [] ["ChurnWait"]) _ = Just Info
-    severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
-    severityFor (Namespace [] ["PickInboundPeers"]) _ = Just Info
     severityFor (Namespace [] ["LedgerStateJudgementChanged"]) _ = Just Info
     severityFor (Namespace [] ["OnlyBootstrapPeers"]) _ = Just Info
     severityFor (Namespace [] ["UseBootstrapPeersChanged"]) _ = Just Notice
@@ -814,7 +778,6 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     documentFor (Namespace [] ["DemoteLocalAsynchronous"]) = Just  ""
     documentFor (Namespace [] ["GovernorWakeup"]) = Just  ""
     documentFor (Namespace [] ["ChurnWait"]) = Just  ""
-    documentFor (Namespace [] ["ChurnMode"]) = Just  ""
     documentFor (Namespace [] ["PickInboundPeers"]) = Just
       "An inbound connection was added to known set of outbound governor"
     documentFor (Namespace [] ["OutboundGovernorCriticalFailure"]) = Just
@@ -849,6 +812,7 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       , Namespace [] ["PeerShareRequests"]
       , Namespace [] ["PeerShareResults"]
       , Namespace [] ["PeerShareResultsFiltered"]
+      , Namespace [] ["PickInboundPeers"]
       , Namespace [] ["PromoteColdPeers"]
       , Namespace [] ["PromoteColdLocalPeers"]
       , Namespace [] ["PromoteColdFailed"]
@@ -887,16 +851,14 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       , Namespace [] ["DemoteBigLedgerPeersAsynchronous"]
       , Namespace [] ["GovernorWakeup"]
       , Namespace [] ["ChurnWait"]
-      , Namespace [] ["ChurnMode"]
-      , Namespace [] ["PickInboundPeers"]
-      , Namespace [] ["LedgerStateJudgementChanged"]
-      , Namespace [] ["OnlyBootstrapPeers"]
-      , Namespace [] ["UseBootstrapPeersChanged"]
-      , Namespace [] ["VerifyPeerSnapshot"]
-      , Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
-      , Namespace [] ["OutboundGovernorCriticalFailure"]
       , Namespace [] ["ChurnAction"]
       , Namespace [] ["ChurnTimeout"]
+      , Namespace [] ["LedgerStateJudgementChanged"]
+      , Namespace [] ["OnlyBootstrapPeers"]
+      , Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
+      , Namespace [] ["UseBootstrapPeersChanged"]
+      , Namespace [] ["VerifyPeerSnapshot"]
+      , Namespace [] ["OutboundGovernorCriticalFailure"]
       , Namespace [] ["DebugState"]
       ]
 
@@ -1142,121 +1104,6 @@ instance MetaTrace (PeerSelectionCounters extraCounters) where
 
     allNamespaces =[
       Namespace [] ["Counters"]
-      ]
-
-
---------------------------------------------------------------------------------
--- ChurnCounters Tracer
---------------------------------------------------------------------------------
-
-
-instance LogFormatting ChurnCounters where
-  forMachine _dtal (ChurnCounter action c) =
-    mconcat [ "kind" .= String "ChurnCounter"
-            , "action" .= String (pack $ show action)
-            , "counter" .= c
-            ]
-  asMetrics (ChurnCounter action c) =
-    [ IntM
-        ("peerSelection.churn." <> pack (show action))
-        (fromIntegral c)
-    ]
-
-instance MetaTrace ChurnCounters where
-    namespaceFor ChurnCounter {} = Namespace [] ["ChurnCounters"]
-
-    severityFor (Namespace _ ["ChurnCounters"]) _ = Just Info
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["ChurnCounters"]) = Just
-      "churn counters"
-    documentFor _ = Nothing
-
-    metricsDocFor (Namespace _ ["ChurnCounters"]) =
-     [ ("peerSelection.churn.DecreasedActivePeers", "number of decreased active peers")
-     , ("peerSelection.churn.IncreasedActivePeers", "number of increased active peers")
-     , ("peerSelection.churn.DecreasedActiveBigLedgerPeers", "number of decreased active big ledger peers")
-     , ("peerSelection.churn.IncreasedActiveBigLedgerPeers", "number of increased active big ledger peers")
-     , ("peerSelection.churn.DecreasedEstablishedPeers", "number of decreased established peers")
-     , ("peerSelection.churn.IncreasedEstablishedPeers", "number of increased established peers")
-     , ("peerSelection.churn.IncreasedEstablishedBigLedgerPeers", "number of increased established big ledger peers")
-     , ("peerSelection.churn.DecreasedEstablishedBigLedgerPeers", "number of decreased established big ledger peers")
-     , ("peerSelection.churn.DecreasedKnownPeers", "number of decreased known peers")
-     , ("peerSelection.churn.IncreasedKnownPeers", "number of increased known peers")
-     , ("peerSelection.churn.DecreasedKnownBigLedgerPeers", "number of decreased known big ledger peers")
-     , ("peerSelection.churn.IncreasedKnownBigLedgerPeers", "number of increased known big ledger peers")
-     ]
-    metricsDocFor _ = []
-
-    allNamespaces =[
-      Namespace [] ["ChurnCounters"]
-      ]
-
-
---------------------------------------------------------------------------------
--- PeerSelectionActions Tracer
---------------------------------------------------------------------------------
-
--- TODO: Write PeerStatusChangeType ToJSON at ouroboros-network
--- For that an export is needed at ouroboros-network
-instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) where
-  forMachine _dtal (PeerStatusChanged ps) =
-    mconcat [ "kind" .= String "PeerStatusChanged"
-             , "peerStatusChangeType" .= show ps
-             ]
-  forMachine _dtal (PeerStatusChangeFailure ps f) =
-    mconcat [ "kind" .= String "PeerStatusChangeFailure"
-             , "peerStatusChangeType" .= show ps
-             , "reason" .= show f
-             ]
-  forMachine _dtal (PeerMonitoringError connId s) =
-    mconcat [ "kind" .= String "PeerMonitoringError"
-             , "connectionId" .= toJSON connId
-             , "reason" .= show s
-             ]
-  forMachine _dtal (PeerMonitoringResult connId wf) =
-    mconcat [ "kind" .= String "PeerMonitoringResult"
-             , "connectionId" .= toJSON connId
-             , "withProtocolTemp" .= show wf
-             ]
-  forMachine _dtal (AcquireConnectionError exception) =
-    mconcat [ "kind" .= String "AcquireConnectionError"
-            , "error" .= displayException exception
-            ]
-  forHuman = pack . show
-
-instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
-    namespaceFor PeerStatusChanged {} = Namespace [] ["StatusChanged"]
-    namespaceFor PeerStatusChangeFailure {} = Namespace [] ["StatusChangeFailure"]
-    namespaceFor PeerMonitoringError {} = Namespace [] ["MonitoringError"]
-    namespaceFor PeerMonitoringResult {} = Namespace [] ["MonitoringResult"]
-    namespaceFor AcquireConnectionError {} = Namespace [] ["ConnectionError"]
-
-    severityFor (Namespace _ ["StatusChanged"]) _ = Just Info
-    severityFor (Namespace _ ["StatusChangeFailure"]) _ = Just Error
-    severityFor (Namespace _ ["MonitoringError"]) _ = Just Error
-    severityFor (Namespace _ ["MonitoringResult"]) _ = Just Debug
-    severityFor (Namespace _ ["ConnectionError"]) _ = Just Error
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["StatusChanged"]) = Just
-      ""
-    documentFor (Namespace _ ["StatusChangeFailure"]) = Just
-      ""
-    documentFor (Namespace _ ["MonitoringError"]) = Just
-      ""
-    documentFor (Namespace _ ["MonitoringResult"]) = Just
-      ""
-    documentFor (Namespace _ ["ConnectionError"]) = Just
-      ""
-    documentFor _ = Nothing
-
-    allNamespaces = [
-        Namespace [] ["StatusChanged"]
-      , Namespace [] ["StatusChangeFailure"]
-      , Namespace [] ["MonitoringError"]
-      , Namespace [] ["MonitoringResult"]
-      , Namespace [] ["ConnectionError"]
       ]
 
 --------------------------------------------------------------------------------
@@ -1705,7 +1552,7 @@ instance LogFormatting (InboundGovernor.Trace LocalAddress) where
   asMetrics _ = []
 
 
-forMachineGov :: (ToJSON adr, Show adr) => DetailLevel -> InboundGovernor.Trace adr -> Object
+forMachineGov :: (ToJSON adr, Show adr, ToJSONKey adr) => DetailLevel -> InboundGovernor.Trace adr -> Object
 forMachineGov _dtal (TrNewConnection p connId)            =
   mconcat [ "kind" .= String "NewConnection"
             , "provenance" .= show p
@@ -2001,3 +1848,95 @@ instance MetaTrace NtN.AcceptConnectionsPolicyTrace where
       , Namespace [] ["ConnectionHardLimit"]
       , Namespace [] ["ConnectionLimitResume"]
       ]
+
+--------------------------------------------------------------------------------
+-- DNSTrace Tracer
+--------------------------------------------------------------------------------
+
+instance LogFormatting DNSTrace where
+  forMachine _dtal (DNSLookupResult peerKind domain Nothing results) =
+    mconcat [ "kind" .= String "DNSLookupResult"
+            , "peerKind" .= String (pack . show $ peerKind)
+            , "domain" .= String (pack . show $ domain)
+            , "results" .= results
+            ]
+  forMachine _dtal (DNSLookupResult peerKind domain (Just srv) results) =
+    mconcat [ "kind" .= String "DNSLookupResult"
+            , "peerKind" .= String (pack . show $ peerKind)
+            , "domain" .= String (pack . show $ domain)
+            , "srv" .= String (pack . show $ srv)
+            , "results" .= results
+            ]
+  forMachine _dtal  (DNSLookupError peerKind lookupType domain dnsError) =
+    mconcat [ "kind" .= String "DNSLookupError"
+            , "peerKind" .= String (pack . show $ peerKind)
+            , "lookupKind" .= String (pack . show $ lookupType)
+            , "domain" .= String (pack . show $ domain)
+            , "dnsError" .= String (pack . show $ dnsError)
+            ]
+  forMachine _dtal (SRVLookupResult peerKind domain results) =
+    mconcat [ "kind" .= String "SRVLookupResult"
+            , "peerKind" .= String (pack . show $ peerKind)
+            , "domain" .= String (pack . show $ domain)
+            , "results" .= [ (show a, b, c, d, e)
+                           | (a, b, c, d, e) <- results
+                           ]
+            ]
+  forMachine _dtal  (SRVLookupError peerKind domain) =
+    mconcat [ "kind" .= String "SRVLookupError"
+            , "peerKind" .= String (pack . show $ peerKind)
+            , "domain" .= String (pack . show $ domain)
+            ]
+
+instance MetaTrace DNSTrace where
+  namespaceFor DNSLookupResult {} =
+    Namespace [] ["DNSLookupResult"]
+  namespaceFor DNSLookupError {} =
+    Namespace [] ["DNSLookupError"]
+  namespaceFor SRVLookupResult {} =
+    Namespace [] ["SRVLookupResult"]
+  namespaceFor SRVLookupError {} =
+    Namespace [] ["SRVLookupError"]
+
+  severityFor _ (Just DNSLookupResult {}) = Just Info
+  severityFor _ (Just DNSLookupError {}) = Just Info
+  severityFor _ (Just SRVLookupResult{}) = Just Info
+  severityFor _ (Just SRVLookupError{}) = Just Info
+  severityFor _ Nothing = Nothing
+
+  documentFor _ = Nothing
+
+  allNamespaces = [
+      Namespace [] ["DNSLookupResult"]
+    , Namespace [] ["DNSLookupError"]
+    , Namespace [] ["SRVLookupResult"]
+    , Namespace [] ["SRVLookupError"]
+    ]
+
+--------------------------------------------------------------------------------
+-- ChurnMode Tracer
+--------------------------------------------------------------------------------
+
+instance LogFormatting TraceChurnMode where
+  forMachine _dtal (TraceChurnMode mode) =
+    mconcat [ "kind" .= String "ChurnMode"
+            , "churnMode" .= String (pack . show $ mode)
+            ]
+
+instance MetaTrace TraceChurnMode where
+  namespaceFor TraceChurnMode {} =
+    Namespace [] ["PeerSelection", "ChurnMode"]
+  severityFor _ (Just TraceChurnMode {}) = Just Info
+  severityFor _ Nothing = Nothing
+
+  documentFor (Namespace _ ["PeerSelection", "ChurnMode"]) = Just $ mconcat
+    ["Affects churning strategy. For a synced node or operating in GenesisMode "
+    , " consensus mode, the default strategy is used. Otherwise for a syncing PraosMode"
+    , " node, the legacy bulk sync churning intervals are used whose durations"
+    , " depend on whether bootstrap peers are enabled."
+    ]
+  documentFor _ = Nothing
+
+  allNamespaces = [
+      Namespace [] ["PeerSelection", "ChurnMode"]
+    ]

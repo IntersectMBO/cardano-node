@@ -195,7 +195,7 @@ gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
     let firstUnixSocket :: Maybe LocalSocket
         firstUnixSocket = join $ listToMaybe . (\(_, _, a) -> a) <$> systemDSockets
 
-    -- only when 'ncSocketpath' is specified or a unix socket is passed through
+    -- only when 'ncSocketPath' is specified or a UNIX socket is passed through
     -- socket activation
     local <- case (getLast ncSocketPath, firstUnixSocket) of
       (Nothing, Nothing)    -> return Nothing
