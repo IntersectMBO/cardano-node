@@ -35,7 +35,15 @@ case "$op" in
         scenario_setup_exit_trap              "$dir"
         # Trap start
         ############
+        for workload in $(jq -r '.workloads[] | select(.before_nodes == true) | .name' "$dir"/profile.json)
+        do
+            backend start-workload-by-name "$dir" "$workload"
+        done
         backend start-nodes          "$dir"
+        for workload in $(jq -r '.workloads[] | select(.before_nodes == false) | .name' "$dir"/profile.json)
+        do
+            backend start-workload-by-name "$dir" "$workload"
+        done
         backend wait-pools-stopped   "$dir"
         # Trap end
         ##########
