@@ -40,6 +40,7 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import qualified Testnet.Process.Run as H
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -101,18 +102,18 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   let comKeyCred1 = L.KeyHashObj comKeyHash1
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
-
-  createTestnetEnv fastTestnetOptions genesisOptions def conf
+      
+  liftToIntegration $ createTestnetEnv fastTestnetOptions genesisOptions def conf
 
   H.rewriteJsonFile (tempAbsBasePath' </> "conway-genesis.json") $
     \conwayGenesis -> conwayGenesis { L.cgCommittee = committee }
-
+  
   TestnetRuntime
     { testnetMagic
     , testnetNodes
     , wallets=wallet0:_wallet1:_
     , configurationFile
-    } <- cardanoTestnet fastTestnetOptions conf
+    } <- liftToIntegration $ cardanoTestnet fastTestnetOptions conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
