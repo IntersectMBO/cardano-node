@@ -43,6 +43,7 @@ import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
+import           RIO (runRIO)
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
@@ -50,15 +51,13 @@ import qualified System.Process as IO
 
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
-import           Testnet.Process.Run
+import           Testnet.Process.Run (ProcessError (..), initiateProcess)
+import           Testnet.Process.RunIO (procNode, liftIOAnnotated)
 import           Testnet.Types (TestnetNode (..), TestnetRuntime (configurationFile),
                    showIpv4Address, testnetSprockets)
 
-import           Hedgehog (MonadTest)
-import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
-import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 
 data NodeStartFailure
@@ -105,7 +104,6 @@ startNode
   => MonadResource m
   => MonadCatch m
   => MonadFail m
-  => MonadTest m
   => TmpAbsolutePath
   -- ^ The temporary absolute path
   -> String
@@ -151,14 +149,14 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
                              , "--port", show port
                              , "--host-addr", showIpv4Address ipv4
                              ]
-
-    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ procNode completeNodeCmd
+    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ runRIO () $ procNode completeNodeCmd
 
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
-    -- is out of CLOSING state.
-    H.note_ $ "Waiting for port " <> show port <> " to be available before starting node"
-    H.assertM $ Ping.waitForPortClosed 30 0.1 port
+
+    isClosed <- liftIOAnnotated $ Ping.waitForPortClosed 30 0.1 port
+    unless isClosed $ 
+      throwString $ "Port  is still in use after 30 seconds before starting node: " <> show port 
 
     (Just stdIn, _, _, hProcess, _)
       <- firstExceptT ProcessRelatedFailure $ initiateProcess
@@ -175,18 +173,18 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
 
     -- We then log the pid in the temp dir structure.
-    liftIO $ IO.writeFile nodePidFile $ show pid
+    liftIOAnnotated $ IO.writeFile nodePidFile $ show pid
 
     -- Wait for socket to be created
     eSprocketError <-
-      H.evalIO $
+      liftIOAnnotated $
         Ping.waitForSprocket
           120  -- timeout
           0.2 -- check interval
           sprocket
 
     -- If we do have anything on stderr, fail.
-    stdErrContents <- liftIO $ IO.readFile nodeStderrFile
+    stdErrContents <- liftIOAnnotated $ IO.readFile nodeStderrFile
     unless (null stdErrContents) $
       throwError $ mkNodeNonEmptyStderrError stdErrContents
 
@@ -282,7 +280,6 @@ startLedgerNewEpochStateLogging
   :: HasCallStack
   => MonadCatch m
   => MonadResource m
-  => MonadTest m
   => TestnetRuntime
   -> FilePath -- ^ tmp workspace directory
   -> m ()
@@ -292,29 +289,25 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       logFile = logDir </> "ledger-epoch-state.log"
       diffFile = logDir </> "ledger-epoch-state-diffs.log"
 
-  H.evalIO (IO.doesDirectoryExist logDir) >>= \case
+  liftIOAnnotated $ IO.doesDirectoryExist logDir >>= \case
     True -> pure ()
     False -> do
-      H.note_ $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
-      H.failure
+      throwString $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
 
-  H.evalIO (IO.doesFileExist logFile) >>= \case
-    True -> do
-      H.note_ $ "Epoch states logging to " <> logFile <> " is already started."
-    False -> do
-      H.evalIO $ appendFile logFile ""
-      socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (testnetSprockets testnetRuntime)
-
-      _ <- H.asyncRegister_ . runExceptT $
-        foldEpochState
-          (configurationFile testnetRuntime)
-          (Api.File socketPath)
-          Api.QuickValidation
-          (EpochNo maxBound)
-          Nothing
-          (handler logFile diffFile)
-
-      H.note_ $ "Started logging epoch states to: " <> logFile <> "\nEpoch state diffs are logged to: " <> diffFile
+  liftIOAnnotated $ IO.doesFileExist logFile >>= \case
+    True -> return () 
+    False -> liftIO $ appendFile logFile ""
+  
+  let socketPath =  H.sprocketSystemName $ head (testnetSprockets testnetRuntime)
+  let act = runExceptT $
+              foldEpochState
+                (configurationFile testnetRuntime)
+                (Api.File socketPath)
+                Api.QuickValidation
+                (EpochNo maxBound)
+                Nothing
+                (handler logFile diffFile)
+  void $ asyncRegister_ act
   where
     handler :: FilePath -- ^ log file
             -> FilePath -- ^ diff file
