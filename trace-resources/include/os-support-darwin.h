@@ -35,3 +35,4 @@ long c_get_boot_time2();
 int c_get_sys_cpu_times2(CPU_TIMES *counters);
 int c_get_sys_network_io_counters2(NET_IO *counters);
 int c_get_sys_disk_io_counters2(DISK_COUNTERS *counters);
+uint64_t c_get_process_cpu_time_microseconds(pid_t);

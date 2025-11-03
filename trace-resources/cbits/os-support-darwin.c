@@ -12,6 +12,7 @@
 #include <mach/mach_host.h>
 #include <net/route.h>
 #include <net/if_dl.h>
+#include <libproc.h>
 
 /*
 // includes for c_get_sys_disk_io_counters
@@ -269,4 +270,20 @@ int c_get_sys_network_io_counters2(NET_IO *counters) {
     counters->nifs = noutput;
     free(msghdrbuf);
     return 1;
+}
+
+uint64_t c_get_process_cpu_time_microseconds(pid_t pid) {
+    struct proc_taskinfo ti;
+
+    int ret = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &ti, sizeof(ti));
+
+    if (ret <= 0) {
+        perror("proc_pidinfo");
+        return 0;
+    }
+
+    uint64_t user_microsec = ti.pti_total_user / 1e3;
+    uint64_t sys_microsec  = ti.pti_total_system / 1e3;
+
+    return user_microsec + sys_microsec;
 }
