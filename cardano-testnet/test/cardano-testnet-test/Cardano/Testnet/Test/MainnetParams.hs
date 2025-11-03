@@ -17,6 +17,7 @@ import           Lens.Micro ((^?))
 
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..),
                    UserProvidedEnv (..), TestnetOnChainParams (..))
 
@@ -38,14 +39,14 @@ hprop_mainnet_params = integrationRetryWorkspace 2 "mainnet-params" $ \tmpDir ->
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  createTestnetEnv
+  liftToIntegration $ createTestnetEnv
     testnetOptions genesisOptions createEnvOptions conf
 
   -- Run testnet with mainnet on-chain params
   TestnetRuntime
     { testnetNodes
     , testnetMagic
-    } <- cardanoTestnet testnetOptions conf
+    } <- liftToIntegration $ cardanoTestnet testnetOptions conf
 
   -- Get a running node
   TestnetNode{nodeSprocket} <- H.headM testnetNodes
