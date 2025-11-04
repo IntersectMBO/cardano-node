@@ -72,3 +72,10 @@ if impl (ghc >= 9.12)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-network.git
+  tag: 97ceb22b911c76aa3764651d913f98a4f7fe360e
+  subdir:
+    ouroboros-network
+  --sha256: sha256-qjzuN1e4hUyZ54xBKR1PzB+GDakn8Hp9Q5px5run048=
