@@ -52,6 +52,13 @@ extra-doc-files:    CHANGELOG.md
 
 common warnings
     ghc-options: -Wall
+                 
+                 -- to ease development only
+                 -Wno-unused-matches
+                 -Wno-unused-top-binds
+                 -Wno-unused-local-binds
+                 -Wno-unused-imports
+
 
 executable timeseries-io
     -- Import common warning flags.

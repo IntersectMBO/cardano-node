@@ -31,5 +31,7 @@ main = do
         Left err -> die err
         Right expr -> do
           print expr
-          print $ interp store expr 15
+          
+          -- no instance Show Value
+          -- print $ interp store expr 15
 
