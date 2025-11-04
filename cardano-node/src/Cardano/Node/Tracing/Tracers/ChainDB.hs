@@ -1538,11 +1538,13 @@ instance ( StandardHash blk
   forMachine dtals (LedgerDB.LedgerReplayEvent ev) = forMachine dtals ev
   forMachine dtals (LedgerDB.LedgerDBForkerEvent ev) = forMachine dtals ev
   forMachine dtals (LedgerDB.LedgerDBFlavorImplEvent ev) = forMachine dtals ev
+  forMachine _dtals LedgerDB.LedgerDBPreOpenForker = mconcat [ "kind" .= String "PreOpenForker" ]
 
   forHuman (LedgerDB.LedgerDBSnapshotEvent ev) = forHuman ev
   forHuman (LedgerDB.LedgerReplayEvent ev) = forHuman ev
   forHuman (LedgerDB.LedgerDBForkerEvent ev) = forHuman ev
   forHuman (LedgerDB.LedgerDBFlavorImplEvent ev) = forHuman ev
+  forHuman LedgerDB.LedgerDBPreOpenForker = "Pre-opening forker (acquiring read lock)"
 
 instance MetaTrace (LedgerDB.TraceEvent blk) where
 
@@ -1554,6 +1556,8 @@ instance MetaTrace (LedgerDB.TraceEvent blk) where
     nsPrependInner "Forker" (namespaceFor ev)
   namespaceFor (LedgerDB.LedgerDBFlavorImplEvent ev) =
     nsPrependInner "Flavor" (namespaceFor ev)
+  namespaceFor LedgerDB.LedgerDBPreOpenForker =
+    Namespace [] ["PreOpenForker"]
 
   severityFor (Namespace out ("Snapshot" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk)) Nothing
@@ -1571,6 +1575,7 @@ instance MetaTrace (LedgerDB.TraceEvent blk) where
     severityFor (Namespace out tl :: Namespace LedgerDB.FlavorImplSpecificTrace) Nothing
   severityFor (Namespace out ("Flavor" : tl)) (Just (LedgerDB.LedgerDBFlavorImplEvent ev)) =
     severityFor (Namespace out tl :: Namespace LedgerDB.FlavorImplSpecificTrace) (Just ev)
+  severityFor (Namespace _ ["PreOpenForker"]) _ = Just Debug
   severityFor _ _ = Nothing
 
   documentFor (Namespace o ("Snapshot" : tl)) =
@@ -1592,6 +1597,7 @@ instance MetaTrace (LedgerDB.TraceEvent blk) where
          (allNamespaces :: [Namespace LedgerDB.TraceForkerEventWithKey])
     ++ map (nsPrependInner "Flavor")
          (allNamespaces :: [Namespace LedgerDB.FlavorImplSpecificTrace])
+    ++ [ Namespace [] ["PreOpenForker"] ]
 
 instance ( StandardHash blk
          , ConvertRawHash blk)
@@ -1822,29 +1828,29 @@ instance LogFormatting LedgerDB.TraceForkerEventWithKey where
     "Forker " <> showT k <> ": " <> forHuman ev
 
 instance LogFormatting LedgerDB.TraceForkerEvent where
-  forMachine _dtals LedgerDB.ForkerOpen = mempty
-  forMachine _dtals LedgerDB.ForkerCloseUncommitted = mempty
-  forMachine _dtals LedgerDB.ForkerCloseCommitted = mempty
-  forMachine _dtals LedgerDB.ForkerReadTablesStart = mempty
-  forMachine _dtals LedgerDB.ForkerReadTablesEnd = mempty
-  forMachine _dtals LedgerDB.ForkerRangeReadTablesStart = mempty
-  forMachine _dtals LedgerDB.ForkerRangeReadTablesEnd = mempty
-  forMachine _dtals LedgerDB.ForkerReadStatistics = mempty
-  forMachine _dtals LedgerDB.ForkerPushStart = mempty
-  forMachine _dtals LedgerDB.ForkerPushEnd = mempty
-  forMachine _dtals LedgerDB.DanglingForkerClosed = mempty
+  forMachine _dtals (LedgerDB.ForkerOpen s) = mconcat [ "kind" .= String "ForkerOpen", "location" .= String (showT s) ]
+  forMachine _dtals LedgerDB.ForkerWasCommitted = mconcat [ "kind" .= String "ForkerOpen" ]
+  forMachine _dtals LedgerDB.ForkerPromote = mconcat [ "kind" .= String "ForkerPromote" ]
+  forMachine _dtals (LedgerDB.ForkerReadTables f) = mconcat [ "kind" .= String "ForkerReadTables", "edge" .= showT f ]
+  forMachine _dtals (LedgerDB.ForkerRangeReadTables f) = mconcat [ "kind" .= String "ForkerRangeReadTables", "edge" .= showT f ]
+  forMachine _dtals LedgerDB.ForkerReadStatistics = mconcat [ "kind" .= String "ForkerReadStatistics" ]
+  forMachine _dtals (LedgerDB.ForkerPush f) = mconcat [ "kind" .= String "ForkerPush", "edge" .= showT f ]
+  forMachine _dtals LedgerDB.ForkerClose = mconcat [ "kind" .= String "ForkerClose" ]
 
-  forHuman LedgerDB.ForkerOpen = "Opened forker"
-  forHuman LedgerDB.ForkerCloseUncommitted = "Forker closed without committing"
-  forHuman LedgerDB.ForkerCloseCommitted = "Forker closed after committing"
-  forHuman LedgerDB.ForkerReadTablesStart = "Started to read tables"
-  forHuman LedgerDB.ForkerReadTablesEnd = "Finish reading tables"
-  forHuman LedgerDB.ForkerRangeReadTablesStart = "Started to range read tables"
-  forHuman LedgerDB.ForkerRangeReadTablesEnd = "Finish range reading tables"
+  forHuman (LedgerDB.ForkerOpen s) = "Opened forker with purpose " <> showT s
+  forHuman LedgerDB.ForkerPromote = "Forker being promoted (releasing read lock)"
+  forHuman LedgerDB.ForkerWasCommitted = "Forker is closing and it was committed"
+  forHuman (LedgerDB.ForkerReadTables f) = case f of
+    RisingEdge -> "Starting to read tables"
+    FallingEdgeWith t -> "Read tables, took: " <> showT t
+  forHuman (LedgerDB.ForkerRangeReadTables f) = case f of
+    RisingEdge -> "Starting to range read tables"
+    FallingEdgeWith t -> "Range read tables, took: " <> showT t
   forHuman LedgerDB.ForkerReadStatistics = "Gathering statistics"
-  forHuman LedgerDB.ForkerPushStart = "Started to push"
-  forHuman LedgerDB.ForkerPushEnd = "Pushed"
-  forHuman LedgerDB.DanglingForkerClosed = "Closed dangling forker"
+  forHuman (LedgerDB.ForkerPush f) = case f of
+    RisingEdge -> "Starting to push"
+    FallingEdgeWith t -> "Pushed, took: " <> showT t
+  forHuman LedgerDB.ForkerClose = "Closed forker"
 
 instance MetaTrace LedgerDB.TraceForkerEventWithKey where
   namespaceFor (LedgerDB.TraceForkerEventWithKey _ ev) =
@@ -1857,49 +1863,28 @@ instance MetaTrace LedgerDB.TraceForkerEventWithKey where
   allNamespaces = map nsCast $ allNamespaces @LedgerDB.TraceForkerEvent
 
 instance MetaTrace LedgerDB.TraceForkerEvent where
-  namespaceFor LedgerDB.ForkerOpen = Namespace [] ["Open"]
-  namespaceFor LedgerDB.ForkerCloseUncommitted = Namespace [] ["CloseUncommitted"]
-  namespaceFor LedgerDB.ForkerCloseCommitted = Namespace [] ["CloseCommitted"]
-  namespaceFor LedgerDB.ForkerReadTablesStart = Namespace [] ["StartRead"]
-  namespaceFor LedgerDB.ForkerReadTablesEnd = Namespace [] ["FinishRead"]
-  namespaceFor LedgerDB.ForkerRangeReadTablesStart = Namespace [] ["StartRangeRead"]
-  namespaceFor LedgerDB.ForkerRangeReadTablesEnd = Namespace [] ["FinishRangeRead"]
+  namespaceFor LedgerDB.ForkerOpen{} = Namespace [] ["Open"]
+  namespaceFor LedgerDB.ForkerWasCommitted = Namespace [] ["ForkerWasCommitted"]
+  namespaceFor LedgerDB.ForkerPromote = Namespace [] ["ForkerPromote"]
+  namespaceFor LedgerDB.ForkerReadTables{} = Namespace [] ["Read"]
+  namespaceFor LedgerDB.ForkerRangeReadTables{} = Namespace [] ["RangeRead"]
   namespaceFor LedgerDB.ForkerReadStatistics = Namespace [] ["Statistics"]
-  namespaceFor LedgerDB.ForkerPushStart = Namespace [] ["StartPush"]
-  namespaceFor LedgerDB.ForkerPushEnd = Namespace [] ["FinishPush"]
-  namespaceFor LedgerDB.DanglingForkerClosed = Namespace [] ["DanglingForkerClosed"]
+  namespaceFor LedgerDB.ForkerPush{} = Namespace [] ["Push"]
+  namespaceFor LedgerDB.ForkerClose = Namespace [] ["ForkerClose"]
 
   severityFor _ _ = Just Debug
 
-  documentFor (Namespace _ ("Open" : _tl)) = Just
-   "A forker is being opened"
-  documentFor (Namespace _ ("CloseUncommitted" : _tl)) = Just $
-   mconcat [ "A forker was closed without being committed."
-           , " This is usually the case with forkers that are not opened for chain selection,"
-           , " and for forkers on discarded forks"]
-  documentFor (Namespace _ ("CloseCommitted" : _tl)) = Just "A forker was committed (the LedgerDB was modified accordingly) and closed"
-  documentFor (Namespace _ ("StartRead" : _tl)) = Just "The process for reading ledger tables started"
-  documentFor (Namespace _ ("FinishRead" : _tl)) = Just "Values from the ledger tables were read"
-  documentFor (Namespace _ ("StartRangeRead" : _tl)) = Just "The process for range reading ledger tables started"
-  documentFor (Namespace _ ("FinishRangeRead" : _tl)) = Just "Values from the ledger tables were range-read"
-  documentFor (Namespace _ ("Statistics" : _tl)) = Just "Statistics were gathered from the forker"
-  documentFor (Namespace _ ("StartPush" : _tl)) = Just "A ledger state is going to be pushed to the forker"
-  documentFor (Namespace _ ("FinishPush" : _tl)) = Just "A ledger state was pushed to the forker"
-  documentFor (Namespace _ ("DanglingForkerClosed" : _tl)) = Just "A dangling forker was closed"
-  documentFor _ = Nothing
+  documentFor _ = Just ""
 
   allNamespaces = [
       Namespace [] ["Open"]
-    , Namespace [] ["CloseUncommitted"]
-    , Namespace [] ["CloseCommitted"]
-    , Namespace [] ["StartRead"]
-    , Namespace [] ["FinishRead"]
-    , Namespace [] ["StartRangeRead"]
-    , Namespace [] ["FinishRangeRead"]
+    , Namespace [] ["ForkerWasCommitted"]
+    , Namespace [] ["ForkerPromote"]
+    , Namespace [] ["Read"]
+    , Namespace [] ["RangeRead"]
     , Namespace [] ["Statistics"]
-    , Namespace [] ["StartPush"]
-    , Namespace [] ["FinishPush"]
-    , Namespace [] ["DanglingForkerClosed"]
+    , Namespace [] ["Push"]
+    , Namespace [] ["ForkerClose"]
     ]
 
 --------------------------------------------------------------------------------
@@ -1948,9 +1933,17 @@ instance MetaTrace LedgerDB.FlavorImplSpecificTrace where
 instance LogFormatting V1.FlavorImplSpecificTrace where
   forMachine dtal (V1.FlavorImplSpecificTraceInMemory ev) = forMachine dtal ev
   forMachine dtal (V1.FlavorImplSpecificTraceOnDisk ev) = forMachine dtal ev
+  forMachine _ (V1.FlavorImplFlushAcqFree t) = mconcat [ "kind" .= String "FlushAcqFree", "edge" .= showT t ]
+  forMachine _ (V1.FlavorImplFlush t) = mconcat [ "kind" .= String "Flush", "edge" .= showT t ]
 
   forHuman (V1.FlavorImplSpecificTraceInMemory ev) = forHuman ev
   forHuman (V1.FlavorImplSpecificTraceOnDisk ev) = forHuman ev
+  forHuman (V1.FlavorImplFlushAcqFree t) = case t of
+    RisingEdge -> "Going to acquire the write lock to flush"
+    FallingEdgeWith t' -> "Flushed, since request to aquire the write lock: " <> showT t'
+  forHuman (V1.FlavorImplFlush t) = case t of
+    RisingEdge -> "Acquired write lock. Going to flush"
+    FallingEdgeWith t' -> "Performed flush, took: " <> showT t'
 
 instance LogFormatting V1.FlavorImplSpecificTraceInMemory where
   forMachine _dtal V1.InMemoryBackingStoreInitialise = mempty
@@ -2010,6 +2003,8 @@ instance MetaTrace V1.FlavorImplSpecificTrace where
     nsPrependInner "InMemory" (namespaceFor ev)
   namespaceFor (V1.FlavorImplSpecificTraceOnDisk ev) =
     nsPrependInner "OnDisk" (namespaceFor ev)
+  namespaceFor V1.FlavorImplFlushAcqFree{} = Namespace [] ["FlavorImplFlushAcqFree"]
+  namespaceFor V1.FlavorImplFlush{} = Namespace [] ["FlavorImplFlush"]
 
   severityFor (Namespace out ("InMemory" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceInMemory) Nothing
@@ -2019,6 +2014,8 @@ instance MetaTrace V1.FlavorImplSpecificTrace where
     severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk) Nothing
   severityFor (Namespace out ("OnDisk" : tl)) (Just (V1.FlavorImplSpecificTraceOnDisk ev)) =
     severityFor (Namespace out tl :: Namespace V1.FlavorImplSpecificTraceOnDisk) (Just ev)
+  severityFor (Namespace _ ["FlavorImplFlushAcqFree"]) _ = Just Debug
+  severityFor (Namespace _ ["FlavorImplFlush"]) _ = Just Debug
   severityFor _ _ = Nothing
 
   documentFor (Namespace out ("InMemory" : tl)) =
@@ -2032,6 +2029,7 @@ instance MetaTrace V1.FlavorImplSpecificTrace where
         (allNamespaces :: [Namespace V1.FlavorImplSpecificTraceInMemory])
     ++ map (nsPrependInner "OnDisk")
         (allNamespaces :: [Namespace V1.FlavorImplSpecificTraceOnDisk])
+    ++ [Namespace [] ["FlavorImplFlushAcqFree"], Namespace [] ["FlavorImplFlush"]]
 
 instance MetaTrace V1.FlavorImplSpecificTraceInMemory where
   namespaceFor V1.InMemoryBackingStoreInitialise = Namespace [] ["Initialise"]

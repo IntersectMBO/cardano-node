@@ -184,6 +184,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
         LedgerDB.InitFailureRead (LedgerDB.ReadMetadataError _ LedgerDB.MetadataFileDoesNotExist) -> Warning
         _ -> Error
     LedgerDB.LedgerReplayEvent {} -> Info
+    LedgerDB.LedgerDBPreOpenForker {} -> Debug
     LedgerDB.LedgerDBForkerEvent {} -> Debug
     LedgerDB.LedgerDBFlavorImplEvent {} -> Debug
 
@@ -592,6 +593,7 @@ instance ( ConvertRawHash blk
           ChainDB.OutdatedTentativeHeader hdr -> "Tentative header is now outdated" <> renderPointAsPhrase (blockPoint hdr)
 
       ChainDB.TraceLedgerDBEvent ev -> case ev of
+        LedgerDB.LedgerDBPreOpenForker -> "Pre-opening a forker (acquiring read lock)"
         LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
           LedgerDB.InvalidSnapshot snap failure ->
             "Invalid snapshot " <> showT snap <> showT failure <> context
@@ -1067,6 +1069,7 @@ instance ( ConvertRawHash blk
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerDBEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceLedgerDBEvent ev) = case ev of
+    LedgerDB.LedgerDBPreOpenForker -> mconcat [ "kind" .= String "TracePreOpenForker" ]
     LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
       LedgerDB.TookSnapshot snap pt enclosedTiming ->
         mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
