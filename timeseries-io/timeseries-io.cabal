@@ -69,6 +69,7 @@ executable timeseries-io
                    Cardano.Timeseries.Domain.Interval,
                    Cardano.Timeseries.Domain.Timeseries,
                    Cardano.Timeseries.Domain.Types,
+                   Cardano.Timeseries.Import.PlainCBOR,
                    Cardano.Timeseries.Query,
                    Cardano.Timeseries.Query.Expr,
                    Cardano.Timeseries.Query.Parser,
@@ -92,7 +93,9 @@ executable timeseries-io
                       attoparsec,
                       vector,
                       text,
+                      serialise,
                       statistics,
+                      time,
                       containers
 
     -- Directories containing source files.
