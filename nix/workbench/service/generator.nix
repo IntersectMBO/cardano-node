@@ -57,6 +57,9 @@ let
         ;
       } // optionalAttrs profile.node.tracer {
         tracerSocketPath = "../tracer/tracer.socket";
+      } // optionalAttrs (!backend.useCabalRun) {
+        # Use to `noGitRev` to avoid rebuilding on every commit.
+        executable     = "${pkgs.cardanoNodePackages.tx-generator.passthru.noGitRev}/bin/tx-generator";
       } // optionalAttrs backend.useCabalRun {
         executable     = "tx-generator";
       });
@@ -112,6 +115,7 @@ let
           systemd.sockets = mkOption {};
           users = mkOption {};
           assertions = mkOption {};
+          warnings = mkOption {};
           environment = mkOption {};
         };
         eval =

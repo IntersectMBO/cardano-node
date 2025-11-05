@@ -21,7 +21,7 @@ let
     {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault "ghc96";
+      compiler-nix-name = lib.mkDefault "ghc912";
       # Extra-compilers
       # flake.variants = lib.genAttrs ["ghc$VERSION"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
@@ -34,12 +34,21 @@ let
         -- When cross compiling we don't have a `ghc` package
         package plutus-tx-plugin
           flags: +use-ghc-stub
+      ''
+      # systemd can't be statically linked
+      + lib.optionalString pkgs.stdenv.hostPlatform.isMusl ''
+        package cardano-git-rev
+          flags: -systemd
+        package cardano-node
+          flags: -systemd
+        package cardano-tracer
+          flags: -systemd
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
       };
       shell = {
-        name = "cabal-dev-shell";
+        name = lib.mkDefault "cabal-dev-shell";
 
         # These programs will be available inside the nix-shell.
         nativeBuildInputs = with pkgs.pkgsBuildBuild; [
@@ -115,6 +124,7 @@ let
         [
           ({ lib, pkgs, ... }: {
             packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
+            package-keys = ["plutus-tx-plugin"];
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
 
             packages.fs-api.components.library.doHaddock = false;
@@ -132,6 +142,7 @@ let
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
+            packages.basement.configureFlags = [ "--hsc2hs-option=--cflag=-Wno-int-conversion" ];
             # This fix seems fairly fishy; but somehow it's required to make this work :confused_parrot:
             packages.unix-compat.postPatch = ''
               sed -i 's/msvcrt//g' unix-compat.cabal
@@ -139,10 +150,6 @@ let
             packages.unix-time.postPatch = ''
               sed -i 's/mingwex//g' unix-time.cabal
             '';
-            # For these two packages the custom setups fail, as we end up with multiple instances of
-            # lib:Cabal. Likely a haskell.nix bug.
-            packages.entropy.package.buildType = lib.mkForce "Simple";
-            packages.HsOpenSSL.package.buildType = lib.mkForce "Simple";
             #packages.plutus-core.components.library.preBuild = ''
             #  export ISERV_ARGS="-v +RTS -Dl"
             #  export PROXY_ARGS=-v
@@ -192,7 +199,7 @@ let
               mainnetConfigFiles = [
                 "configuration/cardano/mainnet-config.yaml"
                 "configuration/cardano/mainnet-config.json"
-                "configuration/cardano/mainnet-config-new-tracing.json"
+                "configuration/cardano/mainnet-config-legacy.json"
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
@@ -200,14 +207,7 @@ let
               ];
               cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.json.golden"
                 "cardano-testnet/test/cardano-testnet-test/files/input/sample-constitution.txt"
                 "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
@@ -216,6 +216,7 @@ let
             in
             {
               # split data output for ekg to reduce closure size
+              package-keys = ["ekg"];
               packages.ekg.components.library.enableSeparateDataOutput = true;
               packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
                 lib.mkForce [
@@ -287,15 +288,7 @@ let
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. [
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
-                  ];
+                  filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
                 in
                 ''
                   ${exportCliPath}
@@ -323,38 +316,33 @@ let
             # <no location info>: error: ghc: ghc-iserv terminated (-11)
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
-          ({ lib, ... }@args: {
-            options.packages = lib.mkOption {
-              type = lib.types.attrsOf (lib.types.submodule (
-                { config, lib, ... }:
-                lib.mkIf config.package.isLocal
-                {
-                  configureFlags = [ "--ghc-option=-Werror"]
-                    ++ lib.optional (args.config.compiler.version == "8.10.7") "--ghc-option=-Wwarn=unused-packages";
-                }
-              ));
-            };
-          })
-          ({ lib, pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
-            # systemd can't be statically linked
-            packages.cardano-git-rev.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
-            packages.cardano-node.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
-            packages.cardano-tracer.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
+          ({ config, lib, ... }: {
+            options.packages = lib.genAttrs config.package-keys (_:
+              lib.mkOption {
+                type = lib.types.submodule (
+                  { config, lib, ... }:
+                  lib.mkIf config.package.isLocal
+                  {
+                    configureFlags = [ "--ghc-option=-Werror"];
+                  }
+                );
+              });
           })
           # disable haddock
           # Musl libc fully static build
-          ({ lib, ... }: {
-            options.packages = lib.mkOption {
-              type = lib.types.attrsOf (lib.types.submodule (
-                { config, lib, pkgs, ...}:
-                lib.mkIf (pkgs.stdenv.hostPlatform.isMusl && config.package.isLocal)
-                {
-                  # Module options which adds GHC flags and libraries for a fully static build
-                  enableShared = true; # TH code breaks if this is false.
-                  enableStatic = true;
-                }
-              ));
-            };
+          ({ config, lib, ... }: {
+            options.packages = lib.genAttrs config.package-keys (_:
+              lib.mkOption {
+                type = lib.types.submodule (
+                  { config, lib, pkgs, ...}:
+                  lib.mkIf (pkgs.stdenv.hostPlatform.isMusl && config.package.isLocal)
+                  {
+                    # Module options which adds GHC flags and libraries for a fully static build
+                    enableShared = true; # TH code breaks if this is false.
+                    enableStatic = true;
+                  }
+                );
+              });
             config =
               lib.mkIf pkgs.stdenv.hostPlatform.isMusl
               {
@@ -363,8 +351,8 @@ let
               };
           })
           ({ lib, pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
-            # Remove hsc2hs build-tool dependencies (suitable version will be available as part of the ghc derivation)
-            packages.Win32.components.library.build-tools = lib.mkForce [ ];
+            # TODO: error: The option `packages.Win32' does not exist.
+            #   packages.Win32.components.library.build-tools = lib.mkForce [ ];
             packages.terminal-size.components.library.build-tools = lib.mkForce [ ];
             packages.network.components.library.build-tools = lib.mkForce [ ];
           })

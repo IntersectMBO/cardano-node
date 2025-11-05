@@ -1,7 +1,8 @@
-# our packages overlay
+# Our packages overlay
 final: prev:
 
 let
+  inherit (builtins) foldl' fromJSON listToAttrs map readFile;
   inherit (final) pkgs;
   inherit (prev.pkgs) lib;
   inherit (prev) customConfig;
@@ -35,23 +36,17 @@ in with final;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
-  # TODO Use `compiler-nix-name` here instead of `"ghc928"`
-  # and fix the resulting `hlint` 3.6.1 warnings.
-  hlint = haskell-nix.tool "ghc928" "hlint" ({config, ...}: {
-    version = {
-      ghc8107 = "3.4.1";
-      ghc927 = "3.5";
-      ghc928 = "3.5";
-    }.${config.compiler-nix-name} or "3.6.1";
-    index-state = "2024-12-24T12:56:48Z";
-  });
+  hlint = haskell-nix.tool "ghc96" "hlint" {
+    version = "3.8";
+    index-state = "2025-04-22T00:00:00Z";
+  };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
     version = "0.8.7";
     index-state = "2024-12-24T12:56:48Z";
   };
 
-  # The ghc-hls point release compatibility table is documented at
+  # The ghc-hls point release compatibility table is documented at:
   # https://haskell-language-server.readthedocs.io/en/latest/support/ghc-version-support.html
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
     src = {
@@ -63,8 +58,8 @@ in with final;
       ghc963 = haskell-nix.sources."hls-2.5";
       ghc964 = haskell-nix.sources."hls-2.6";
       ghc981 = haskell-nix.sources."hls-2.6";
-    }.${compiler-nix-name} or haskell-nix.sources."hls-2.8";
-    cabalProject = builtins.readFile (src + "/cabal.project");
+    }.${compiler-nix-name} or haskell-nix.sources."hls-2.10";
+    cabalProject = readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
 
@@ -87,8 +82,11 @@ in with final;
 
   cardanolib-py = callPackage ./cardanolib-py { };
 
-  scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs; })
-    (import ./scripts-submit-api.nix { inherit pkgs; });
+  scripts = foldl' lib.recursiveUpdate {} [
+    (import ./scripts.nix { inherit pkgs; })
+    (import ./scripts-submit-api.nix { inherit pkgs; })
+    (import ./scripts-tracer.nix { inherit pkgs; })
+  ];
 
   clusterTests = import ./workbench/tests { inherit pkgs; };
 
@@ -125,12 +123,35 @@ in with final;
       script = "submit-api";
     };
 
+  tracerDockerImage =
+    let
+      defaultConfig = rec {
+        acceptAt = "/ipc/tracer.socket";
+        stateDir = "/logs";
+        logging = [
+          {
+            logRoot = stateDir;
+            logMode = "FileMode";
+            logFormat = "ForHuman";
+          }
+        ];
+      };
+    in
+    callPackage ./docker/tracer.nix {
+      exe = "cardano-tracer";
+      scripts = import ./scripts-tracer.nix {
+        inherit pkgs;
+        customConfigs = [ defaultConfig customConfig ];
+      };
+      script = "tracer";
+    };
+
   all-profiles-json = workbench.profile-names-json;
 
   # The profile data and backend data of the cloud / "*-nomadperf" profiles.
   # Useful to mix workbench and cardano-node commits, mostly because of scripts.
-  profile-data-nomadperf = builtins.listToAttrs (
-    builtins.map
+  profile-data-nomadperf = listToAttrs (
+    map
     (cloudName:
       # Only Conway era cloud profiles are flake outputs.
       let profileName = "${cloudName}-coay";
@@ -169,7 +190,7 @@ in with final;
         }
     )
     # Fetch all "*-nomadperf" profiles.
-    (__fromJSON (__readFile
+    (fromJSON (readFile
       (pkgs.runCommand "cardano-profile-names-cloud-noera" {} ''
         ${cardanoNodePackages.cardano-profile}/bin/cardano-profile names-cloud-noera > $out
       ''
@@ -178,7 +199,7 @@ in with final;
   );
 
   # Disable failing python uvloop tests
-  python39 = prev.python39.override {
+  python310 = prev.python310.override {
     packageOverrides = pythonFinal: pythonPrev: {
       uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
         disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" "tests/test_dns.py" ];

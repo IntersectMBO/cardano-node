@@ -28,7 +28,7 @@
     };
 
     em = {
-      url = "github:deepfire/em";
+      url = "github:mgmeier/em";
       flake = false;
     };
 
@@ -40,14 +40,12 @@
     };
 
     hackageNix = {
-      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
+      url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
 
     haskellNix = {
-      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
-      # Unpin this once we no longer need GHC 8.10.7.
-      url = "github:input-output-hk/haskell.nix/cb139fa956158397aa398186bb32dd26f7318784";
+      url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
@@ -55,7 +53,7 @@
     incl.url = "github:divnix/incl";
 
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/jl/10.6.0-pre-updates";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -147,6 +145,12 @@
           in recursiveUpdate
                (set-git-rev cli)
                {passthru = {noGitRev = cli;};}
+        ;
+        cardano-submit-api =
+          let submit-api = project.exes.cardano-submit-api;
+          in recursiveUpdate
+               (set-git-rev submit-api)
+               {passthru = {noGitRev = submit-api;};}
         ;
       } // optionalAttrs (project.exes ? tx-generator) {
         tx-generator =
@@ -242,6 +246,7 @@
         in {
           "dockerImage/node" = pkgs.dockerImage;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+          "dockerImage/tracer" = pkgs.tracerDockerImage;
 
           # This is a very light profile, no caching and pinning needed.
           workbench-ci-test = workbenchTest {
@@ -488,7 +493,16 @@
             customConfig.haskellNix
           ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser tx-generator;
+        inherit (final.cardanoNodePackages)
+          bech32
+          cardano-cli
+          cardano-node
+          cardano-submit-api
+          cardano-tracer
+          db-analyser
+          locli
+          snapshot-converter
+          tx-generator;
       };
       nixosModules = {
         cardano-node = {
@@ -506,6 +520,14 @@
         }: {
           imports = [./nix/nixos/cardano-submit-api-service.nix];
           services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+        };
+        cardano-tracer = {
+          pkgs,
+          lib,
+          ...
+        }: {
+          imports = [./nix/nixos/cardano-tracer-service.nix];
+          services.cardano-tracer.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
         };
       };
     };

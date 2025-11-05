@@ -35,15 +35,24 @@ let
       } // lib.optionalAttrs (env.nodeConfig ? CheckpointsFile) {
         CheckpointsFile = "checkpoints.json";
       };
+
       nodeConfig = pkgs.writeText
         "config.json"
         (builtins.toJSON
           (env.nodeConfig // genesisAttrs));
 
-      nodeConfigBp = pkgs.writeText
-        "config-bp.json"
+      nodeConfigLegacy= pkgs.writeText
+        "config-legacy.json"
         (builtins.toJSON
-          (env.nodeConfigBp // genesisAttrs));
+          (env.nodeConfigLegacy // genesisAttrs));
+
+      submitApiConfig = pkgs.writeText
+        "submit-api-config.json"
+        (builtins.toJSON env.submitApiConfig);
+
+      tracerConfig = pkgs.writeText
+        "tracer-config.json"
+        (builtins.toJSON env.tracerConfig);
 
       peerSnapshot = pkgs.writeText
         "peer-snapshot.json"
@@ -51,17 +60,19 @@ let
 
       topologyConfig = pkgs.cardanoLib.mkTopology env;
 
-      # Genesis files are the same for env.nodeConfig and env.nodeConfigBp
       inherit (env.nodeConfig)
         ByronGenesisFile ShelleyGenesisFile AlonzoGenesisFile;
     in
-      # Format the node config file and copy the genesis files
+      # Format the node config file and copy the genesis files. Normalize the
+      # topology file peer snapshot ref for per env dir placement.
       ''
         mkdir -p "share/${name}"
         jq . < "${nodeConfig}" > share/${name}/config.json
-        jq . < "${nodeConfigBp}" > share/${name}/config-bp.json
+        jq . < "${nodeConfigLegacy}" > share/${name}/config-legacy.json
+        jq . < "${submitApiConfig}" > share/${name}/submit-api-config.json
+        jq . < "${tracerConfig}" > share/${name}/tracer-config.json
         jq . < "${peerSnapshot}" > share/${name}/peer-snapshot.json
-        jq . < "${topologyConfig}" > share/${name}/topology.json
+        jq '.peerSnapshotFile = "peer-snapshot.json"' < "${topologyConfig}" > share/${name}/topology.json
         cp -n --remove-destination -v \
           "${ByronGenesisFile}" \
            share/${name}/byron-genesis.json

@@ -8,6 +8,9 @@
 with pkgs.lib;
 
 let
+  # For testing the transition from cardano-tracer-service-workbench to
+  # cardano-tracer-service.
+  useWorkbenchTracerService = true;
 
   ## Given an env config, evaluate it and produce the service.
   ##
@@ -17,17 +20,12 @@ let
     let
       tracerConfig =
         {
+          enable = true;
           ## In both the local and remote scenarios, it's most frequently
           ## convenient to act as an acceptor.
-          acceptingSocket = "tracer.socket";
+          acceptAt = "tracer.socket";
           networkMagic = profile.genesis.network_magic;
-          dsmPassthrough = {
-            # rtsOpts = ["-xc"];
-          } // optionalAttrs (profile.tracer.withresources or false) {
-            rtsOpts = [ "-scardano-tracer.gcstats" ];
-          };
           configFile     = "config.json";
-          logRoot        = ".";
           metricsHelp    = "../../../cardano-tracer/configuration/metrics_help.json";
         } // optionalAttrs backend.useCabalRun {
           executable     = "cardano-tracer";
@@ -38,6 +36,25 @@ let
           };
         } // optionalAttrs (profile.tracer.withresources or false) {
           resourceFreq = 1000;
+        } // optionalAttrs useWorkbenchTracerService {
+          dsmPassthrough = {
+            # rtsOpts = ["-xc"];
+          } // optionalAttrs (profile.tracer.withresources or false) {
+            rtsOpts = [ "-scardano-tracer.gcstats" ];
+          };
+          logRoot    = ".";
+        } // optionalAttrs (!useWorkbenchTracerService) {
+          logging = [
+            {
+              logRoot    = ".";
+              logMode    = "FileMode";
+              logFormat  = "ForMachine";
+            }
+          ];
+          rtsArgs =
+            # ["-xc"] ++
+            optionals (profile.tracer.withresources or false) ["-scardano-tracer.gcstats"];
+          stateDir = null;
         }
       ;
       systemdCompat.options = {
@@ -45,29 +62,28 @@ let
         systemd.sockets = mkOption {};
         users = mkOption {};
         assertions = mkOption {};
+        warnings = mkOption {};
         environment = mkOption {};
       };
-      eval =
-        let
-          extra = {
-            services.cardano-tracer = {
-              enable = true;
-            } // tracerConfig;
-          };
-        in evalModules {
-          prefix = [];
-          modules =    import ../../nixos/module-list.nix
-                    ++ [
-                         (import ../../nixos/cardano-tracer-service.nix pkgs)
-                           systemdCompat
-                           extra
-                           { config._module.args = { inherit pkgs; }; }
-                       ]
-                    ++ [ backend.service-modules.tracer or {} ]
+      eval = evalModules {
+        prefix = [];
+
+        modules = [
+          (import ../../nixos/cardano-node-service.nix)
+          (import ../../nixos/cardano-submit-api-service.nix)
+          { config._module.args = { inherit pkgs; }; }
+          { services.cardano-tracer = tracerConfig; }
+          systemdCompat
+        ]
+          ++ [ backend.service-modules.tracer or {} ]
+          ++ optionals useWorkbenchTracerService
+            [ (import ../../nixos/cardano-tracer-service-workbench.nix pkgs) ]
+          ++ optionals (!useWorkbenchTracerService)
+            [ (import ../../nixos/cardano-tracer-service.nix) ]
           ;
-          # args = { inherit pkgs; };
-        }
-      ;
+
+        # args = { inherit pkgs; };
+      };
     in
       eval.config.services.cardano-tracer;
 
@@ -78,7 +94,9 @@ let
     (nodeSpecs:
     let
       nixosServiceConfig    = tracerConfigServiceConfig;
-      execConfig            = nixosServiceConfig.configJSONfn nixosServiceConfig;
+      execConfig            = if useWorkbenchTracerService
+                              then nixosServiceConfig.configJSONfn nixosServiceConfig
+                              else nixosServiceConfig.tracerConfig;
     in {
       start =
         ''

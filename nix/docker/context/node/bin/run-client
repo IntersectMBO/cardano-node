@@ -1,0 +1,14 @@
+#!/bin/env bash
+
+[[ -n $DEBUG ]] && set -x
+
+# Shift the first option by one index
+shift
+
+if [[ -z $CARDANO_NODE_SOCKET_PATH ]]; then
+  # Breaking change from the historical default of: /opt/cardano/ipc/socket
+  # in order to align both the "scripts" and "custom" modes of image operation.
+  export CARDANO_NODE_SOCKET_PATH="/ipc/node.socket"
+fi
+
+/usr/local/bin/cardano-cli "$@"

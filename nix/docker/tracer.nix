@@ -1,9 +1,9 @@
 ############################################################################
-# Docker image builder for cardano-node
+# Docker image builder for cardano-tracer
 #
 # To build and load into the Docker engine:
 #
-#   nix build .#dockerImage/node
+#   nix build .#dockerImage/tracer
 #   docker load -i result
 #
 # Include `-L` in the nix build command args to see build logs.
@@ -16,9 +16,7 @@
 , dockerTools
 
 # The main contents of the image.
-, cardano-cli
-, cardano-node
-, snapshot-converter
+, cardano-tracer
 , scripts
 
 # Set gitrev to null, to ensure the version below is used
@@ -43,7 +41,6 @@
 }:
 
 let
-  inherit (lib) concatStringsSep escapeShellArgs getAttrs mapAttrsToList;
 
   # Layer of tools which aren't going to change much between versions.
   baseImage = dockerTools.buildImage {
@@ -52,7 +49,7 @@ let
       name = "image-root";
       pathsToLink = ["/"];
       paths = [
-        cardano-cli       # Provide cardano-cli capability
+        cardano-tracer    # Provide cardano-tracer capability
         bashInteractive   # Provide the BASH shell
         cacert            # X.509 certificates of public CA's
         coreutils         # Basic utilities expected in GNU OS's
@@ -76,7 +73,7 @@ let
   # For "script" mode, generate scripts for iohk-nix networks which can be
   # utilized by setting the environment NETWORK variable to the desired
   # network in the docker command: `-e NETWORK <network>`
-  clusterStatements = concatStringsSep "\n" (mapAttrsToList (env: scripts: let
+  clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
     scriptBin = scripts.${script};
     in ''
       elif [[ "$NETWORK" == "${env}" ]]; then
@@ -95,38 +92,28 @@ let
   '';
 
   # The docker context with static content
-  context = ./context/node;
+  context = ./context/tracer;
 
   genCfgs = let
-    environments' = getAttrs [ "mainnet" "preprod" "preview" ] commonLib.environments;
+    environments' = lib.getAttrs [ "mainnet" "preprod" "preview" ] commonLib.environments;
     cardano-deployment = commonLib.mkConfigHtml environments';
   in
     pkgs.runCommand "cardano-html" {} ''
       mkdir "$out"
-      cp "${cardano-deployment}/index.html" "$out/"
-      cp "${cardano-deployment}/rest-config.json" "$out/"
 
-      ENVS=(${escapeShellArgs (builtins.attrNames environments')})
+      ENVS=(${lib.escapeShellArgs (builtins.attrNames environments')})
       for ENV in "''${ENVS[@]}"; do
         # Migrate each env from a flat dir to an ENV subdir
         mkdir -p "$out/config/$ENV"
-        for i in $(find ${cardano-deployment} -type f -name "$ENV-*" -printf "%f\n"); do
+        for i in $(find ${cardano-deployment} -type f -name "$ENV-tracer-config*" -printf "%f\n"); do
           cp -v "${cardano-deployment}/$i" "$out/config/$ENV/''${i#"$ENV-"}"
+
+          # Adjust from iohk-nix default config for the oci environment
+          sed -i -r \
+            -e 's|"contents": ".*"|"contents": "/ipc/tracer.socket"|g' \
+            -e 's|"logRoot": ".*"|"logRoot": "/logs"|g' \
+            "$out/config/$ENV/''${i#"$ENV-"}"
         done
-
-        # Adjust genesis file, config refs
-        for i in config config-legacy db-sync-config; do
-          if [ -f "$out/config/$ENV/$i.json" ]; then
-            sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
-          fi
-        done
-
-        # Normalize the topology file peer snapshot ref for per ENV dir placement
-        ${jq}/bin/jq '.peerSnapshotFile = "peer-snapshot.json"' < "$out/config/$ENV/topology.json" > "$ENV-topology.json"
-        mv -v "$ENV-topology.json" "$out/config/$ENV/topology.json"
-
-        # Adjust index.html file refs
-        sed -i "s|$ENV-|config/$ENV/|g" "$out/index.html"
       done
     '';
 
@@ -143,7 +130,6 @@ in
       # The "scripts" operation mode of this image, when the NETWORK env var is
       # set to a valid network, will use the following default directories
       # mounted at /:
-      mkdir -p data
       mkdir -p ipc
 
       # Similarly, make a root level dir for logs:
@@ -157,7 +143,6 @@ in
       # permit use of volume mounts at the root directory location regardless
       # of which mode the image is operating in.
       mkdir -p opt/cardano
-      ln -sv /data opt/cardano/data
       ln -sv /ipc opt/cardano/ipc
       ln -sv /logs opt/cardano/logs
 
@@ -165,9 +150,7 @@ in
       mkdir -p usr/local/bin
       cp -v ${runNetwork}/bin/* usr/local/bin
       cp -v ${context}/bin/* usr/local/bin
-      ln -sv ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
-      ln -sv ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
-      ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
+      ln -sv ${cardano-tracer}/bin/cardano-tracer usr/local/bin/cardano-tracer
       ln -sv ${jq}/bin/jq usr/local/bin/jq
 
       # Create iohk-nix network configs, organized by network directory.

@@ -5,27 +5,29 @@
 
 with lib; with builtins;
 let
+  inherit (types) attrs attrsOf bool either enum functionTo int listOf package nullOr str;
+
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
-  runtimeDir = i : if cfg.runtimeDir i == null then cfg.stateDir i else "${cfg.runDirBase}${lib.removePrefix cfg.runDirBase (cfg.runtimeDir i)}";
+  runtimeDir = i : if cfg.runtimeDir i == null then cfg.stateDir i else "${cfg.runDirBase}${removePrefix cfg.runDirBase (cfg.runtimeDir i)}";
   suffixDir = base: i: "${base}${optionalString (i != 0) "-${toString i}"}";
-  nullOrStr = types.nullOr types.str;
-  funcToOr = t: types.either t (types.functionTo t);
+  nullOrStr = nullOr str;
+  funcToOr = t: either t (functionTo t);
 
   newTopology = i: {
     localRoots = map (g: {
-      accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
+      accessPoints = map (e: removeAttrs e ["valency"]) g.accessPoints;
       advertise = g.advertise or false;
       valency = g.valency or (length g.accessPoints);
       trustable = g.trustable or false;
     }) (cfg.producers ++ (cfg.instanceProducers i));
     publicRoots = map (g: {
-      accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
+      accessPoints = map (e: removeAttrs e ["valency"]) g.accessPoints;
       advertise = g.advertise or false;
     }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
     bootstrapPeers = cfg.bootstrapPeers;
-  } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
-    useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
+  } // optionalAttrs (cfg.useLedgerAfterSlot != null) {
+    useLedgerAfterSlot = cfg.useLedgerAfterSlot;
   } // optionalAttrs (cfg.peerSnapshotFile i != null) {
     peerSnapshotFile = cfg.peerSnapshotFile i;
   };
@@ -56,11 +58,11 @@ let
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.yaml" (toJSON (if (cfg.useNewTopology) then assertNewTopology i else oldTopology i));
+    else toFile "topology.json" (toJSON (if (cfg.useNewTopology != false) then assertNewTopology i else oldTopology i));
 
   topology = i:
     if cfg.useSystemdReload
-    then "/etc/cardano-node/topology-${toString i}.yaml"
+    then "/etc/cardano-node/topology-${toString i}.json"
     else selectTopology i;
 
   mkScript = cfg:
@@ -70,10 +72,17 @@ let
               // (mapAttrs' (era: epoch:
                 nameValuePair "Test${era}HardForkAtEpoch" epoch
               ) cfg.forceHardForks)
-              // (optionalAttrs cfg.useNewTopology (
+              // (optionalAttrs (cfg.useNewTopology != false) (
                 {
-                  EnableP2P = true;
                   MaxConcurrencyBulkSync = 2;
+                } // optionalAttrs (cfg.useNewTopology == true) {
+                  # Starting with node 10.6.0, p2p is the only network
+                  # operating mode and EnableP2P becomes a no-op and is not
+                  # declared by default.
+                  #
+                  # Older node versions which still require an explicit
+                  # declaration can set useNewTopology true.
+                  EnableP2P = true;
                 } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
                   TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
                 } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
@@ -120,54 +129,58 @@ let
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
     consensusParams = {
       RealPBFT = [
-        "${lib.optionalString (cfg.signingKey != null)
+        "${optionalString (cfg.signingKey != null)
           "--signing-key ${cfg.signingKey}"}"
-        "${lib.optionalString (cfg.delegationCertificate != null)
+        "${optionalString (cfg.delegationCertificate != null)
           "--delegation-certificate ${cfg.delegationCertificate}"}"
       ];
       TPraos = [
-        "${lib.optionalString (cfg.vrfKey != null)
+        "${optionalString (cfg.vrfKey != null)
           "--shelley-vrf-key ${cfg.vrfKey}"}"
-        "${lib.optionalString (cfg.kesKey != null)
+        "${optionalString (cfg.kesKey != null)
           "--shelley-kes-key ${cfg.kesKey}"}"
-        "${lib.optionalString (cfg.operationalCertificate != null)
+        "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
       ];
       Cardano = [
-        "${lib.optionalString (cfg.signingKey != null)
+        "${optionalString (cfg.signingKey != null)
           "--signing-key ${cfg.signingKey}"}"
-        "${lib.optionalString (cfg.delegationCertificate != null)
+        "${optionalString (cfg.delegationCertificate != null)
           "--delegation-certificate ${cfg.delegationCertificate}"}"
-        "${lib.optionalString (cfg.vrfKey != null)
+        "${optionalString (cfg.vrfKey != null)
           "--shelley-vrf-key ${cfg.vrfKey}"}"
-        "${lib.optionalString (cfg.kesKey != null)
+        "${optionalString (cfg.kesKey != null)
           "--shelley-kes-key ${cfg.kesKey}"}"
-        "${lib.optionalString (cfg.operationalCertificate != null)
+        "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
       ];
     };
     instanceDbPath = cfg.databasePath i;
-    cmd = builtins.filter (x: x != "") [
+    cmd = filter (x: x != "") [
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
       "--database-path ${instanceDbPath}"
       "--topology ${topology i}"
-    ] ++ lib.optionals (!cfg.systemdSocketActivation) ([
+    ] ++ optionals (!cfg.systemdSocketActivation) ([
       "--host-addr ${cfg.hostAddr}"
       "--port ${if (cfg.shareIpv4port || cfg.shareIpv6port) then toString cfg.port else toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath i}"
-    ] ++ lib.optionals (cfg.ipv6HostAddr i != null) [
+    ] ++ optionals (cfg.ipv6HostAddr i != null) [
       "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
-    ]) ++ lib.optionals (cfg.tracerSocketPathAccept i != null) [
+    ]) ++ optionals (cfg.tracerSocketPathAccept i != null) [
       "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
-    ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
+    ] ++ optionals (cfg.tracerSocketPathConnect i != null) [
       "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
+    ] ++ optionals (cfg.tracerSocketNetworkAccept i != null) [
+      "--tracer-socket-network-accept ${cfg.tracerSocketNetworkAccept i}"
+    ] ++ optionals (cfg.tracerSocketNetworkConnect i != null) [
+      "--tracer-socket-network-connect ${cfg.tracerSocketNetworkConnect i}"
     ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
       echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
       echo "..or, once again, in a single line:"
       echo "${toString cmd}"
-      ${lib.optionalString (i > 0) ''
+      ${optionalString (i > 0) ''
       # If exist copy state from existing instance instead of syncing from scratch:
       if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath 0} ]; then
         echo "Copying existing immutable db from ${cfg.databasePath 0}"
@@ -176,42 +189,67 @@ let
       ''}
       ${toString cmd}'';
 in {
+  imports = [
+    # Update the option name for consistency with the cardano-node topology file key.
+    (mkRenamedOptionModule
+      [ "services" "cardano-node" "usePeersFromLedgerAfterSlot" ] [ "services" "cardano-node" "useLedgerAfterSlot" ])
+  ];
+
   options = {
     services.cardano-node = {
       enable = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
-          Enable cardano-node, a node implementing ouroboros protocols
-          (the blockchain protocols running cardano).
+          Enable cardano-node, a node implementing ouroboros protocols;
+          the blockchain protocols running cardano.
         '';
       };
 
       instances = mkOption {
-        type = types.int;
+        type = int;
         default = 1;
         description = ''
-          Number of instance of the service to run.
+          Number of instances of the service to run.
         '';
       };
 
       script = mkOption {
-        type = types.str;
+        type = str;
         default = mkScript cfg 0;
       };
 
       profiling = mkOption {
-        type = types.enum ["none" "time" "time-detail" "space" "space-cost" "space-module" "space-closure" "space-type" "space-retainer" "space-bio" "space-heap"];
+        type = enum [
+          "none"
+          "space"
+          "space-bio"
+          "space-closure"
+          "space-cost"
+          "space-heap"
+          "space-module"
+          "space-retainer"
+          "space-type"
+          "time"
+          "time-detail"
+        ];
         default = "none";
+        description = ''
+          Haskell profiling types which are available and will be applied to
+          the cardano-node binary if declared.
+        '';
       };
 
       eventlog = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
+        description = ''
+          Whether to enable eventlog profiling.
+        '';
       };
 
       asserts = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           Whether to use an executable with asserts enabled.
@@ -219,152 +257,152 @@ in {
       };
 
       cardanoNodePackages = mkOption {
-        type = types.attrs;
+        type = attrs;
         default = pkgs.cardanoNodePackages or (import ../. { inherit (pkgs) system; }).cardanoNodePackages;
         defaultText = "cardano-node packages";
         description = ''
-          The cardano-node packages and library that should be used.
-          Main usage is sharing optimization:
-          reduce eval time when service is instantiated multiple times.
+          The cardano-node packages and library that should be used. The main
+          use case is for a sharing optimization which reduces eval time when
+          cardano node packages are instantiated multiple times.
         '';
       };
 
       package = mkOption {
-        type = types.package;
+        type = package;
         default = if (cfg.profiling != "none")
           then cfg.cardanoNodePackages.cardano-node.passthru.profiled
           else if cfg.asserts then cfg.cardanoNodePackages.cardano-node.passthru.asserted
           else cfg.cardanoNodePackages.cardano-node;
         defaultText = "cardano-node";
         description = ''
-          The cardano-node package that should be used
+          The cardano-node package that should be used.
         '';
       };
 
       executable = mkOption {
-        type = types.str;
+        type = str;
         default = "exec ${cfg.package}/bin/cardano-node";
         defaultText = "cardano-node";
         description = ''
-          The cardano-node executable invocation to use
-        '';
-      };
-
-      environments = mkOption {
-        type = types.attrs;
-        default = cfg.cardanoNodePackages.cardanoLib.environments;
-        description = ''
-          environment node will connect to
+          The cardano-node executable invocation to use.
         '';
       };
 
       environment = mkOption {
-        type = types.enum (builtins.attrNames cfg.environments);
-        default = "testnet";
+        type = enum (attrNames cfg.environments);
+        default = "preview";
         description = ''
-          environment node will connect to
+          The environment cardano-node will connect to.
+        '';
+      };
+
+      environments = mkOption {
+        type = attrs;
+        default = cfg.cardanoNodePackages.cardanoLib.environments;
+        description = ''
+          The environments cardano-node will possibly utilize.
         '';
       };
 
       isProducer = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           Whether this node is intended to be a producer.
-          Internal option for inter-module communication.
+          An internal option for inter-module communication.
         '';
       };
 
       # Byron signing/delegation
 
       signingKey = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
-          Signing key
+          The signing key.
         '';
       };
 
       delegationCertificate = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
-          Delegation certificate
+          The delegation certificate.
         '';
       };
 
       # Shelley kes/vrf keys and operation cert
 
       kesKey = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
-          Signing key
+          The KES or key evolving signature key.
         '';
       };
       vrfKey = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
-          Signing key
+          The VRF or verifable random function key.
         '';
       };
 
       operationalCertificate = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
-          Operational certificate
+          The operational certificate.
         '';
       };
 
       hostAddr = mkOption {
-        type = types.str;
+        type = str;
         default = "127.0.0.1";
         description = ''
-          The host address to bind to
+          The host address to bind to.
         '';
       };
 
       ipv6HostAddr = mkOption {
         type = funcToOr nullOrStr;
         default = _: null;
-        apply = ip: if (lib.isFunction ip) then ip else _: ip;
+        apply = ip: if lib.isFunction ip then ip else _: ip;
         description = ''
           The ipv6 host address to bind to. Set to null to disable.
         '';
       };
 
       additionalListenStream = mkOption {
-        type = types.functionTo (types.listOf types.str);
+        type = functionTo (listOf str);
         default = _: [];
         description = ''
-          List of additional sockets to listen to. Only available with `systemdSocketActivation`.
+          A List of additional sockets to listen to. Only available with `systemdSocketActivation`.
         '';
       };
 
       stateDirBase = mkOption {
-        type = types.str;
+        type = str;
         default = "/var/lib/";
         description = ''
-          Base directory to store blockchain data, for each instance.
+          The base directory to store blockchain data.
         '';
       };
 
       stateDir = mkOption {
-        type = funcToOr types.str;
+        type = funcToOr str;
         default = "${cfg.stateDirBase}cardano-node";
-        apply = x : if (lib.isFunction x) then x else i: x;
+        apply = x : if lib.isFunction x then x else i: x;
         description = ''
-          Directory to store blockchain data, for each instance.
+          The directory to store blockchain data, for each instance.
         '';
       };
 
       runDirBase = mkOption {
-        type = types.str;
+        type = str;
         default = "/run/";
         description = ''
-          Base runtime directory, for each instance.
+          The base runtime directory.
         '';
       };
 
@@ -373,15 +411,15 @@ in {
         default = i: ''${cfg.runDirBase}${suffixDir "cardano-node" i}'';
         apply = x : if lib.isFunction x then x else if x == null then _: null else "${cfg.runDirBase}${suffixDir "cardano-node" x}";
         description = ''
-          Runtime directory relative to ${cfg.runDirBase}, for each instance
+          The runtime directory relative to ${cfg.runDirBase}, for each instance.
         '';
       };
 
       databasePath = mkOption {
-        type = funcToOr types.str;
+        type = funcToOr str;
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if lib.isFunction x then x else _ : x;
-        description = ''Node database path, for each instance.'';
+        description = ''The node database path, for each instance.'';
       };
 
       lmdbDatabasePath = mkOption {
@@ -389,16 +427,16 @@ in {
         default = null;
         apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
         description = ''
-          Node UTxO-HD LMDB path for performant disk I/O, for each instance.
+          A node UTxO-HD LMDB path for performant disk I/O, for each instance.
           This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
         '';
       };
 
       socketPath = mkOption {
-        type = funcToOr types.str;
+        type = funcToOr str;
         default = i : "${runtimeDir i}/node.socket";
         apply = x : if lib.isFunction x then x else _ : x;
-        description = ''Local communication socket path, for each instance.'';
+        description = ''A local communication socket path, for each instance.'';
       };
 
       tracerSocketPathAccept = mkOption {
@@ -406,7 +444,7 @@ in {
         default = null;
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''
-          Listen for incoming cardano-tracer connection on a local socket,
+          Listen for an incoming cardano-tracer connection on a local socket,
           for each instance.
         '';
       };
@@ -416,97 +454,117 @@ in {
         default = null;
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''
-          Connect to cardano-tracer listening on a local socket,
+          Connect to a cardano-tracer listening on a local socket,
+          for each instance.
+        '';
+      };
+
+      tracerSocketNetworkAccept = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          Listen for an incoming cardano-tracer connection at HOST:PORT,
+          for each instance.
+        '';
+      };
+
+      tracerSocketNetworkConnect = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          Connect to a cardano-tracer listening at HOST:PORT,
           for each instance.
         '';
       };
 
       socketGroup = mkOption {
-        type = types.str;
+        type = str;
         default = "cardano-node";
         description = ''
-          systemd socket group owner.
-          Note: only applies to sockets created by systemd
+          The systemd socket group owner.
+          Note: this only applies to sockets created by systemd
           (ie. when `systemdSocketActivation` is turned on).
         '';
       };
 
       systemdSocketActivation = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''Use systemd socket activation'';
       };
 
       extraServiceConfig = mkOption {
-        type = types.functionTo types.attrs
+        type = functionTo attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
         default = i: {};
         description = ''
-          Extra systemd service config (apply to all instances).
+          Extra systemd service config which applies to all instances.
         '';
       };
 
       extraSocketConfig = mkOption {
-        type = types.functionTo types.attrs
+        type = functionTo attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
         default = i: {};
         description = ''
-          Extra systemd socket config (apply to all instances).
+          Extra systemd socket config which applies to all instances.
         '';
       };
 
       dbPrefix = mkOption {
-        type = types.either types.str (types.functionTo types.str);
+        type = either str (functionTo str);
         default = suffixDir "db-${cfg.environment}";
         apply = x : if lib.isFunction x then x else suffixDir x;
         description = ''
-          Prefix of database directories inside `stateDir`.
-          (eg. for "db", there will be db-0, etc.).
+          The prefix of database directories inside `stateDir`.
+          (eg. for "db", there will be db-0, etc.), for each instance.
         '';
       };
 
       port = mkOption {
-        type = types.either types.int types.str;
+        type = either int str;
         default = 3001;
         description = ''
-          The port number
+          The port number to listen on.
         '';
       };
 
       shareIpv4port = mkOption {
-        type = types.bool;
+        type = bool;
         default = cfg.systemdSocketActivation;
         description = ''
-          Should instances on same machine share ipv4 port.
-          Default: true if systemd activated socket. Otherwise false.
-          If false use port increments starting from `port`.
+          Whether instances on the same machine should share an ipv4 port.
+          Default: true if the socket is systemd activated, otherwise false.
+          If false, use port increments starting from `port`.
         '';
       };
 
       shareIpv6port = mkOption {
-        type = types.bool;
+        type = bool;
         default = cfg.systemdSocketActivation;
         description = ''
-          Should instances on same machine share ipv6 port.
-          Default: true if systemd activated socket. Otherwise false.
-          If false use port increments starting from `port`.
+          Whether instances on the same machine should share an ipv6 port.
+          Default: true if the socket is systemd activated, otherwise false.
+          If false, use port increments starting from `port`.
         '';
       };
 
       nodeId = mkOption {
-        type = types.int;
+        type = int;
         default = 0;
         description = ''
-          The ID for this node
+          The ID for this node.
         '';
       };
 
       publicProducers = mkOption {
-        type = types.listOf types.attrs;
+        type = listOf attrs;
         default = [];
         example = [{
           accessPoints = [{
@@ -515,17 +573,30 @@ in {
           }];
           advertise = false;
         }];
-        description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot'';
+        description = ''
+          Routes to public peers. Only used if slot is less than
+          useLedgerAfterSlot.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
+        '';
       };
 
       instancePublicProducers = mkOption {
-        type = types.functionTo (types.listOf types.attrs);
+        type = functionTo (listOf attrs);
         default = _: [];
-        description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot and specific to a given instance (when multiple instances are used).'';
+        description = ''
+          Routes to public peers. Only used if slot is less than
+          useLedgerAfterSlot and specific to a given instance when
+          multiple instances are used.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
+        '';
       };
 
       producers = mkOption {
-        type = types.listOf types.attrs;
+        type = listOf attrs;
         default = [];
         example = [{
           accessPoints = [{
@@ -535,71 +606,106 @@ in {
           advertise = false;
           valency = 1;
         }];
-        description = ''Static routes to local peers.'';
+        description = ''
+          Static routes to local peers.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
+        '';
       };
 
       instanceProducers = mkOption {
-        type = types.functionTo (types.listOf types.attrs);
+        type = functionTo (listOf attrs);
         default = _: [];
         description = ''
-          Static routes to local peers, specific to a given instance (when multiple instances are used).
+          Static routes to local peers, specific to a given instance when
+          multiple instances are used.
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
       useNewTopology = mkOption {
-        type = types.bool;
-        default = cfg.nodeConfig.EnableP2P or false;
+        type = nullOr bool;
+        default = cfg.nodeConfig.EnableP2P or null;
         description = ''
-          Use new, p2p/ledger peers compatible topology.
+          Use new, p2p and ledger peers compatible topology.
+
+          The useNewTopology option is deprecated and will be removed in the
+          future. As of cardano-node 10.6.0, this option should remain null.
+          For older node versions, a bool value can be set, but this will only
+          be supported until the Dijkstra hard fork at which point all
+          cardano-node versions will be compelled to upgrade and the
+          useNewTopology option will be removed.
+
+          For node version < 10.6.0, useNewTopology will need to be explicitly
+          declared true or false to behave accordingly.  If left null while
+          also using the auto-generated p2p topology, node will fail to start.
+
+          For node version >= 10.6.0, useNewTopology should be left as null
+          until the option is removed after the Dijkstra hard fork.  If
+          explicitly declared true, node will continue to work, but if declared
+          false while using the auto-generated legacy topology, node will fail to
+          start.
         '';
       };
 
       useLegacyTracing = mkOption {
-        type = types.bool;
-        default = true;
+        type = bool;
+        default = false;
         description = ''
           Use the legacy tracing, based on iohk-monitoring-framework.
         '';
       };
 
-      usePeersFromLedgerAfterSlot = mkOption {
-        type = types.nullOr types.int;
+      useLedgerAfterSlot = mkOption {
+        type = nullOr int;
         default = if cfg.kesKey != null then null
-          else envConfig.usePeersFromLedgerAfterSlot or null;
+          else envConfig.useLedgerAfterSlot or null;
         description = ''
           If set, bootstraps from public roots until it reaches given slot,
-          then it switches to using the ledger as a source of peers. It maintains a connection to its local roots.
-          Default to null for block producers.
+          then it switches to using the ledger as a source of peers. It
+          maintains a connection to its local roots. Defaults to null for block
+          producers.
         '';
       };
 
       bootstrapPeers = mkOption {
-        type = types.nullOr (types.listOf types.attrs);
-        default = map (e: {address = e.addr; inherit (e) port;}) envConfig.edgeNodes;
+        type = nullOr (listOf attrs);
+        default =
+          map (e:
+            {address = e.addr;}
+              // optionalAttrs (e ? port && e.port != null) {inherit (e) port;})
+          envConfig.edgeNodes;
         description = ''
-          If set, it will enable bootstrap peers.
-          To disable, set this to null.
-          To enable, set this to a list of attributes of address and port, example: [{ address = "addr"; port = 3001; }]
+          If set, it will enable bootstrap peers. To disable, set this to null.
+          To enable, set this to a list of attributes of address and port,
+          example: [{ address = "addr"; port = 3001; }]
+
+          If an address is provided without a port or a port set to null within
+          the attrs, the address will be interpreted as an SRV record.
         '';
       };
 
       topology = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
-          Cluster topology. If not set `producers` array is used to generated topology file.
+          The cluster topology. If not set the `producers` array is used to
+          generate a topology file.
         '';
       };
 
       useSystemdReload = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           If set, systemd will reload cardano-node service units instead of restarting them
           if only the topology file has changed and p2p is in use.
 
           Cardano-node topology files will be stored in /etc as:
-            /etc/cardano-node/topology-''${toString i}.yaml
+            /etc/cardano-node/topology-''${toString i}.json
 
           For peerSharing enabled networks, peer sharing files will be stored in /etc as:
             /etc/cardano-node/peer-sharing-''${toString i}.json
@@ -610,15 +716,15 @@ in {
       };
 
       nodeConfig = mkOption {
-        type = types.attrs // {
+        type = attrs // {
           merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
         };
         default = envConfig.nodeConfig;
-        description = ''Internal representation of the config.'';
+        description = ''The internal representation of the config.'';
       };
 
       targetNumberOfRootPeers = mkOption {
-        type = types.nullOr types.int;
+        type = nullOr int;
         default = null;
         description = ''
           Limits the maximum number of root peers the node will know about.
@@ -627,7 +733,7 @@ in {
       };
 
       targetNumberOfKnownPeers = mkOption {
-        type = types.nullOr types.int;
+        type = nullOr int;
         default = null;
         description = ''
           Target number for known peers (root peers + peers known through gossip).
@@ -636,7 +742,7 @@ in {
       };
 
       targetNumberOfEstablishedPeers = mkOption {
-        type = types.nullOr types.int;
+        type = nullOr int;
         default = null;
         description = ''
           Number of peers the node will be connected to, but not necessarily following their chain.
@@ -645,7 +751,7 @@ in {
       };
 
       targetNumberOfActivePeers = mkOption {
-        type = types.nullOr types.int;
+        type = nullOr int;
         default = null;
         description = ''
           Number of peers your node is actively downloading headers and blocks from.
@@ -654,7 +760,7 @@ in {
       };
 
       extraNodeConfig = mkOption {
-        type = types.attrs // {
+        type = attrs // {
           merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
         };
         default = {};
@@ -662,7 +768,7 @@ in {
       };
 
       extraNodeInstanceConfig = mkOption {
-        type = types.functionTo types.attrs
+        type = functionTo attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -673,54 +779,54 @@ in {
       nodeConfigFile = mkOption {
         type = nullOrStr;
         default = null;
-        description = ''Actual configuration file (shell expression).'';
+        description = ''The actual configuration file.'';
       };
 
       forceHardForks = mkOption {
-        type = types.attrsOf types.int;
+        type = attrsOf int;
         default = {};
         description = ''
-          A developer-oriented dictionary option to force hard forks for given eras at given epochs.  Maps capitalised era names (Shelley, Allegra, Mary, etc.) to hard fork epoch number.
-          '';
-      };
-
-      withCardanoTracer = mkOption {
-        type = types.bool;
-        default = false;
+          A developer-oriented dictionary option to force hard forks for given
+          eras at given epochs.  Maps capitalised era names (Shelley, Allegra,
+          Mary, etc) to hard fork epoch number.
+        '';
       };
 
       withUtxoHdLmdb = mkOption {
-        type = funcToOr types.bool;
+        type = funcToOr bool;
         default = false;
         apply = x: if lib.isFunction x then x else _: x;
-        description = ''On an UTxO-HD enabled node, the in-memory backend is the default. This activates the on-disk backend (LMDB) instead.'';
+        description = ''
+          On a UTxO-HD enabled node, the in-memory backend is the default.
+          This activates the on-disk backend (LMDB) instead.
+        '';
       };
 
       extraArgs = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = [];
-        description = ''Extra CLI args for 'cardano-node'.'';
+        description = ''Extra CLI args for cardano-node.'';
       };
 
       rts_flags_override = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = [];
         description = ''RTS flags override from profile content.'';
       };
 
       rtsArgs = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = [ "-N2" "-I0" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
         apply = args: if (args != [] || cfg.profilingArgs != [] || cfg.rts_flags_override != []) then
           ["+RTS"] ++ cfg.profilingArgs ++ args ++ cfg.rts_flags_override ++ ["-RTS"]
           else [];
-        description = ''Extra CLI args for 'cardano-node', to be surrounded by "+RTS"/"-RTS"'';
+        description = ''Extra CLI args for cardano-node, to be surrounded by "+RTS"/"-RTS"'';
       };
 
       profilingArgs = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
-          ++ lib.optional (cfg.eventlog) "-l";
+          ++ optional (cfg.eventlog) "-l";
           in if cfg.profiling == "time" then ["-p"] ++ commonProfilingArgs
             else if cfg.profiling == "time-detail" then ["-P"] ++ commonProfilingArgs
             else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
@@ -738,8 +844,12 @@ in {
       peerSnapshotFile = mkOption {
         type = funcToOr nullOrStr;
         default = i:
-          # Node config in 10.5 will default to genesis mode for preview and preprod.
-          if cfg.useNewTopology && elem cfg.environment ["preview" "preprod"]
+          # As of node `10.5.0` preview and preprod will default to a
+          # `ConsensusMode` of `GenesisMode` and utilize a peer snapshot.
+          #
+          # Mainnet does not yet require it, but declaring it will also
+          # facilitate testing.
+          if (cfg.useNewTopology != false)
           then
             if cfg.useSystemdReload
             then "peer-snapshot-${toString i}.json"
@@ -748,24 +858,30 @@ in {
         example = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";
         apply = x: if lib.isFunction x then x else _: x;
         description = ''
-          If set, cardano-node will load a peer snapshot file from the declared path which can
-          be absolute or relative.  If a relative path is given, it will be interpreted relative
-          to the location of the topology file which it is declared in.
+          If set, the topology file will include a peer snapshot file from the
+          declared path which can be absolute or relative.  If a relative path
+          is given, it will be interpreted relative to the location of the
+          topology file which it is declared in.
 
-          The peer snapshot file contains a snapshot of big ledger peers taken at some arbitrary slot.
-          These are the largest pools that cumulatively hold 90% of total stake.
+          The peer snapshot file contains a snapshot of big ledger peers taken
+          at some arbitrary slot. These are the largest pools that cumulatively
+          hold 90% of total stake.
 
-          A peer snapshot file can be generated with a `cardano-cli query ledger-peer-snapshot` command.
+          When cardano-node `ConsensusMode` configuration is set to
+          `GenesisMode` the peer snapshot file will be loaded and used.
+
+          A peer snapshot file can be generated with a command:
+            `cardano-cli query ledger-peer-snapshot`
         '';
       };
     };
   };
 
   config = mkIf cfg.enable ( let
-    lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (builtins.genList lib.trivial.id cfg.instances));
+    lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (genList trivial.id cfg.instances));
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
-      else [ (nameValuePair "cardano-node" (f "cardano-node" 0)) ]); in lib.mkMerge [
+      else [ (nameValuePair "cardano-node" (f "cardano-node" 0)) ]); in mkMerge [
     {
       users.groups.cardano-node.gid = 10016;
       users.users.cardano-node = {
@@ -778,12 +894,16 @@ in {
       environment.etc = mkMerge [
         (mkIf cfg.useSystemdReload
           (foldl'
-            (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.yaml".source = selectTopology i;}) {}
+            (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.json".source = selectTopology i;}) {}
           (range 0 (cfg.instances - 1)))
         )
-        (mkIf (cfg.useNewTopology && cfg.useSystemdReload)
+        (mkIf ((cfg.useNewTopology != false) && cfg.useSystemdReload)
           (foldl'
-            (acc: i: recursiveUpdate acc {"cardano-node/peer-snapshot-${toString i}.json".source = toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot));}) {}
+            (acc: i: recursiveUpdate acc (
+              optionalAttrs (cfg.peerSnapshotFile i != null) {
+                "cardano-node/peer-snapshot-${toString i}.json".source = toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot));
+              }
+            )) {}
           (range 0 (cfg.instances - 1)))
         )
       ];
@@ -801,26 +921,26 @@ in {
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
         partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
-        reloadTriggers = mkIf (cfg.useSystemdReload && cfg.useNewTopology) [ (selectTopology i) ];
+        reloadTriggers = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) [ (selectTopology i) ];
         script = mkScript cfg i;
         serviceConfig = {
           User = "cardano-node";
           Group = "cardano-node";
-          ExecReload = mkIf (cfg.useSystemdReload && cfg.useNewTopology) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+          ExecReload = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           Restart = "always";
-          RuntimeDirectory = lib.mkIf (!cfg.systemdSocketActivation)
-            (lib.removePrefix cfg.runDirBase (runtimeDir i));
+          RuntimeDirectory = mkIf (!cfg.systemdSocketActivation)
+            (removePrefix cfg.runDirBase (runtimeDir i));
           WorkingDirectory = cfg.stateDir i;
           # This assumes cfg.stateDirBase is a prefix of cfg.stateDir.
           # This is checked as an assertion below.
-          StateDirectory =  lib.removePrefix cfg.stateDirBase (cfg.stateDir i);
-          NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
-          # time to sleep before restarting a service
+          StateDirectory =  removePrefix cfg.stateDirBase (cfg.stateDir i);
+          NonBlocking = mkIf cfg.systemdSocketActivation true;
+          # Time to sleep before restarting a service
           RestartSec = 1;
         };
       } (cfg.extraServiceConfig i));
 
-      systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation (recursiveUpdate {
+      systemd.sockets = genInstanceConf (n: i: mkIf cfg.systemdSocketActivation (recursiveUpdate {
         description = "Socket of the ${n} service.";
         wantedBy = [ "sockets.target" ];
         partOf = [ "${n}.service" ];
@@ -829,7 +949,7 @@ in {
             ++ optional (cfg.ipv6HostAddr i != null) "[${cfg.ipv6HostAddr i}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
             ++ (cfg.additionalListenStream i)
             ++ [(cfg.socketPath i)];
-          RuntimeDirectory = lib.removePrefix cfg.runDirBase (cfg.runtimeDir i);
+          RuntimeDirectory = removePrefix cfg.runDirBase (cfg.runtimeDir i);
           NoDelay = "yes";
           ReusePort = "yes";
           SocketMode = "0660";
@@ -840,8 +960,8 @@ in {
       } (cfg.extraSocketConfig i)));
     }
     {
-      # oneshot service start allows to easily control all instances at once.
-      systemd.services.cardano-node = lib.mkIf (cfg.instances > 1) {
+      # Oneshot service start allows to easily control all instances at once.
+      systemd.services.cardano-node = mkIf (cfg.instances > 1) {
         description = "Control all ${toString cfg.instances} at once.";
         enable  = true;
         wants = genList (i: "cardano-node-${toString i}.service") cfg.instances;
@@ -852,15 +972,15 @@ in {
           Group = "cardano-node";
           ExecStart = "${pkgs.coreutils}/bin/echo Starting ${toString cfg.instances} cardano-node instances";
           WorkingDirectory = cfg.stateDir i;
-          StateDirectory =  lib.removePrefix cfg.stateDirBase (cfg.stateDir i);
+          StateDirectory =  removePrefix cfg.stateDirBase (cfg.stateDir i);
         };
       };
     }
     {
       assertions = [
         {
-          assertion = builtins.all (i : lib.hasPrefix cfg.stateDirBase (cfg.stateDir i))
-                                   (builtins.genList lib.trivial.id cfg.instances);
+          assertion = all (i: hasPrefix cfg.stateDirBase (cfg.stateDir i))
+                                   (genList trivial.id cfg.instances);
           message = "The option services.cardano-node.stateDir should have ${cfg.stateDirBase}
                      as a prefix, for each instance!";
         }
@@ -869,14 +989,30 @@ in {
           message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
         }
         {
-          assertion = !(cfg.systemdSocketActivation && cfg.useNewTopology);
+          assertion = !(cfg.systemdSocketActivation && (cfg.useNewTopology != false));
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
         }
         {
-          assertion = (length lmdbPaths) == (length (lib.lists.unique lmdbPaths));
+          assertion = (length lmdbPaths) == (length (lists.unique lmdbPaths));
           message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
         }
+        {
+          assertion = count (o: o != null) (with cfg; [
+            (tracerSocketPathAccept i)
+            (tracerSocketPathConnect i)
+            (tracerSocketNetworkAccept i)
+            (tracerSocketNetworkConnect i)
+          ]) <= 1;
+          message   = "Only one option of services.cardano-node.tracerSocket(PathAccept|PathConnect|NetworkAccept|NetworkConnect) can be declared.";
+        }
       ];
+
+      warnings = optional (cfg.useNewTopology != null) ''
+        The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
+        For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
+        cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.  See the services.cardano-node.useNewTopology
+        option description for further details.
+      '';
     }
   ]);
 }
