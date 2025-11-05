@@ -8,6 +8,7 @@ import           Cardano.Timeseries.Store
 import           Cardano.Timeseries.Util
 
 import           Data.List (foldl')
+import           Data.Set (fromList)
 
 data Point a = Point {
   name :: MetricIdentifier,
@@ -43,4 +44,6 @@ instance Store (Flat a) a where
 
 
   new = []
+
+  metrics store = fromList (map name store)
 

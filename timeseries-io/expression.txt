@@ -1,1 +1,0 @@
-percentile(add($my_metric1, $my_metric2), 50, millis(10), millis(5))

@@ -1,8 +1,0 @@
-— Bench suite for microbenchmarks (criterion)
-— Store implementations (e.g. HashMap)
-— Figure out memory consumption per store
-— trace-resources package for heap stats
-— Feature coverage?
-
-Together:
-— See what's already in cardano-tracer in terms of realtime monitoring

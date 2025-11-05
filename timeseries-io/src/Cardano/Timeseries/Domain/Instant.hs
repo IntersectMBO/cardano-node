@@ -4,16 +4,18 @@ import           Cardano.Timeseries.Domain.Types (SeriesIdentifier, Timestamp)
 
 import           Data.Vector
 
+-- | One datapoint in a series.
 data Instant a = Instant {
-  labels :: SeriesIdentifier,
-  timestamp :: Timestamp,
-  value :: a
+  labels :: !SeriesIdentifier,
+  timestamp :: !Timestamp,
+  value :: !a
 } deriving (Show, Eq, Functor, Foldable, Traversable)
 
 -- | Do the instant vectors share a series?
 share :: Instant a -> Instant b -> Bool
 share a b = labels a == labels b
 
+-- | Datapoints from different series. The vector must not contain datapoints sharing a series.
 type InstantVector a = [Instant a]
 
 mostRecent :: Instant a -> Instant a -> Instant a

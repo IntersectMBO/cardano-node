@@ -52,7 +52,7 @@ extra-doc-files:    CHANGELOG.md
 
 common warnings
     ghc-options: -Wall
-                 
+
                  -- to ease development only
                  -Wno-unused-matches
                  -Wno-unused-top-binds
@@ -69,11 +69,13 @@ executable timeseries-io
                    Cardano.Timeseries.Domain.Interval,
                    Cardano.Timeseries.Domain.Timeseries,
                    Cardano.Timeseries.Domain.Types,
+                   Cardano.Timeseries.Domain.Identifier,
                    Cardano.Timeseries.Import.PlainCBOR,
                    Cardano.Timeseries.Query,
                    Cardano.Timeseries.Query.Expr,
                    Cardano.Timeseries.Query.Parser,
                    Cardano.Timeseries.Query.Value,
+                   Cardano.Timeseries.Query.BinaryRelation,
                    Cardano.Timeseries.Store,
                    Cardano.Timeseries.Store.Flat,
                    Cardano.Timeseries.Store.Parser,
@@ -96,7 +98,8 @@ executable timeseries-io
                       serialise,
                       statistics,
                       time,
-                      containers
+                      containers,
+                      mtl
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

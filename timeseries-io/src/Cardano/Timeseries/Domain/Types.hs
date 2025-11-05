@@ -9,6 +9,8 @@ import           Data.Word (Word64)
 type MetricIdentifier = String
 
 type Label = String
+
+-- | Key-value pair of a label and its value.
 type Labelled a = (Label, a)
 
 -- | Series is identified by a set of labels. Hence the name.

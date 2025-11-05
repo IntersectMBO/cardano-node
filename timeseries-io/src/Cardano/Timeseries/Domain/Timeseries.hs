@@ -13,9 +13,10 @@ import qualified Data.Set as Set
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 
+-- | A collection of datapoints sharing a series.
 data Timeseries a = Timeseries {
-  labels :: SeriesIdentifier,
-  dat :: [(Timestamp, a)]
+  labels :: !SeriesIdentifier,
+  dat :: ![(Timestamp, a)]
 } deriving (Show, Functor, Foldable, Traversable)
 
 oldest :: Timeseries a -> Maybe (Instant a)

@@ -6,6 +6,7 @@ import           Cardano.Timeseries.Domain.Instant
 import           Cardano.Timeseries.Domain.Types
 
 import           Data.Word (Word64)
+import Data.Set (Set)
 
 stalenessConstant :: Word64
 stalenessConstant = 5 * 60 * 1000
@@ -19,4 +20,6 @@ class Store s a | s -> a where
   evaluate :: s -> MetricIdentifier -> Timestamp -> InstantVector a
 
   new :: s
+
+  metrics :: s -> Set MetricIdentifier
 
