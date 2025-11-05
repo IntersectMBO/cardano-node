@@ -53,7 +53,7 @@
     incl.url = "github:divnix/incl";
 
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix/jl/10.6.0-pre-updates";
+      url = "github:input-output-hk/iohk-nix/f63aa2a49720526900fb5943db4123b5b8dcc534";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
