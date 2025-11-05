@@ -1,4 +1,6 @@
 
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -44,6 +46,7 @@ defaultExecConfig = ExecConfig
 
 
 mkExecConfig :: ()
+  => HasCallStack
   => MonadIO m
   => FilePath
   -> IO.Sprocket
@@ -65,7 +68,8 @@ mkExecConfig tempBaseAbsPath sprocket networkId = do
 
 
 execCli'
-  :: MonadIO m
+  :: HasCallStack
+  => MonadIO m
   => ExecConfig
   -> [String]
   -> m String
@@ -94,7 +98,8 @@ execCli = GHC.withFrozenCallStack $ execFlex "cardano-cli" "CARDANO_CLI"
 -- When running outside a nix environment, the `pkgBin` describes the name of the binary
 -- to launch via cabal exec.
 execFlex
-  :: String
+  :: HasCallStack
+  => String
   -> String
   -> [String]
   -> RIO env String
@@ -102,6 +107,7 @@ execFlex = execFlex' defaultExecConfig
 
 execFlex'
   :: MonadIO m
+  => HasCallStack
   => ExecConfig
   -> String
   -> String
@@ -215,8 +221,7 @@ exeSuffix = if OS.isWin32 then ".exe" else ""
 -- executable has been built.
 -- Throws an exception on failure.
 binDist
-  :: HasCallStack
-  => MonadIO m
+  :: (HasCallStack, MonadIO m)
   => String
   -- ^ Package name
   -> String
@@ -233,20 +238,25 @@ binDist pkg binaryEnv = do
               <> "\" if you are working with sources. Otherwise define "
               <> binaryEnv
               <> " and have it point to the executable you want."
-  contents <- liftIOAnnotated $ LBS.readFile planJsonFile
 
-  case eitherDecode contents of
-    Right plan -> case L.filter matching (plan & installPlan) of
-      (component:_) -> case component & binFile of
-        Just bin -> return $ addExeSuffix (T.unpack bin)
-        Nothing -> error $ "missing \"bin-file\" key in plan component: " <> show component <> " in the plan in: " <> planJsonFile
-      [] -> error $ "Cannot find \"component-name\" key with the value \"exe:" <> pkg <> "\" in the plan in: " <> planJsonFile
-    Left message -> error $ "Cannot decode plan in " <> planJsonFile <> ": " <> message
-  where matching :: Component -> Bool
-        matching component = case componentName component of
-          Just name -> name == "exe:" <> T.pack pkg
-          Nothing -> False
+  Plan{installPlan} <- eitherDecode <$> liftIOAnnotated (LBS.readFile planJsonFile)
+      >>= \case
+        Left message -> error $ "Cannot decode plan in " <> planJsonFile <> ": " <> message
+        Right plan -> pure plan
 
+  let componentName = "exe:" <> fromString pkg
+  case findComponent componentName installPlan of
+    Just Component{binFile=Just binFilePath} -> pure . addExeSuffix $ T.unpack binFilePath
+    Just component@Component{binFile=Nothing} ->
+      error $ "missing \"bin-file\" key in plan component: " <> show component <> " in the plan in: " <> planJsonFile
+    Nothing ->
+      error $ "Cannot find \"component-name\" key with the value \"exe:" <> pkg <> "\" in the plan in: " <> planJsonFile
+  where
+    findComponent :: Text -> [Component] -> Maybe Component
+    findComponent _ [] = Nothing
+    findComponent needle (c@Component{componentName, components}:topLevelComponents)
+      | componentName == Just needle = Just c
+      | otherwise = findComponent needle topLevelComponents <|> findComponent needle components
 
 
 procNode
@@ -278,7 +288,7 @@ procFlex
   -- ^ Captured stdout
 procFlex = procFlex' defaultExecConfig
 
-
+-- This will also catch async exceptions as well.
 liftIOAnnotated :: (HasCallStack, MonadIO m) => IO a -> m a 
 liftIOAnnotated action = GHC.withFrozenCallStack $
-  liftIO $ action `catch` (\(e :: SomeException) -> throwM $ exceptionWithCallStack e)
+  liftIOAnnotated $ action `catch` (\(e :: SomeException) -> throwM $ exceptionWithCallStack e)

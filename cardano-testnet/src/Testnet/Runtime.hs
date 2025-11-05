@@ -156,7 +156,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
     isClosed <- liftIOAnnotated $ Ping.waitForPortClosed 30 0.1 port
     unless isClosed $ 
-      throwString $ "Port  is still in use after 30 seconds before starting node: " <> show port 
+      throwString $ "Port is still in use after 30 seconds before starting node: " <> show port 
 
     (Just stdIn, _, _, hProcess, _)
       <- firstExceptT ProcessRelatedFailure $ initiateProcess
@@ -278,7 +278,6 @@ createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ d
 -- Idempotent.
 startLedgerNewEpochStateLogging
   :: HasCallStack
-  => MonadCatch m
   => MonadResource m
   => TestnetRuntime
   -> FilePath -- ^ tmp workspace directory
@@ -294,23 +293,24 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
     False -> do
       throwString $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
 
-  liftIOAnnotated $ IO.doesFileExist logFile >>= \case
+  liftIOAnnotated (IO.doesFileExist logFile) >>= \case
     True -> return () 
-    False -> liftIO $ appendFile logFile ""
+    False -> do 
+      liftIOAnnotated $ appendFile logFile ""
 
-  let socketPath = case uncons (testnetSprockets testnetRuntime) of
-        Just (sprocket, _) -> H.sprocketSystemName sprocket
-        Nothing            -> throwString "No testnet sprocket available"
-
-  let act = runExceptT $
-              foldEpochState
-                (configurationFile testnetRuntime)
-                (Api.File socketPath)
-                Api.QuickValidation
-                (EpochNo maxBound)
-                Nothing
-                (handler logFile diffFile)
-  void $ asyncRegister_ act
+      let socketPath = case uncons (testnetSprockets testnetRuntime) of
+            Just (sprocket, _) -> H.sprocketSystemName sprocket
+            Nothing            -> throwString "No testnet sprocket available"
+    
+      void $ asyncRegister_ . runExceptT $
+                  foldEpochState
+                    (configurationFile testnetRuntime)
+                    (Api.File socketPath)
+                    Api.QuickValidation
+                    (EpochNo maxBound)
+                    Nothing
+                    (handler logFile diffFile)
+                    
   where
     handler :: FilePath -- ^ log file
             -> FilePath -- ^ diff file
