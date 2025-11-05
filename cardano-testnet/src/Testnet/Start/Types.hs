@@ -41,7 +41,6 @@ module Testnet.Start.Types
   , NodeConfigurationYaml
   , mkConf
   , mkConfigAbs
-  , mkConfig
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
@@ -52,6 +51,7 @@ import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Prelude
 
 import           Control.Exception (throw)
+import           Control.Monad (unless)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
@@ -276,7 +276,8 @@ data Conf = Conf
   , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- Logs the argument in the test.
+-- |  Same as mkConfig except that it renders the path 
+-- when failing in a property test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
   H.note_ tempAbsPath'
@@ -292,17 +293,16 @@ mkConfig tempAbsPath' =
     , updateTimestamps = DontUpdateTimestamps
     }
 
+-- | Create a 'Conf' from an absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
 mkConfigAbs :: FilePath -> IO Conf
 mkConfigAbs userOutputDir = do 
   absUserOutputDir <-  makeAbsolute userOutputDir
   dirExists <- doesDirectoryExist absUserOutputDir
   let conf = mkConfig absUserOutputDir 
-  if dirExists then
-    -- Happens when the environment has previously been created by the user
-    return conf
-  else do
+  unless dirExists $
     createDirectory absUserOutputDir
-    return conf
+  pure conf
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@
 anyEraToString :: AnyCardanoEra -> String
