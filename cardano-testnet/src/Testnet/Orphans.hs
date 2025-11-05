@@ -2,7 +2,7 @@
 
 module Testnet.Orphans () where
 
-import           RIO (RIO(..), liftIO)
+import           RIO (RIO(..), throwString)
 
 instance MonadFail (RIO env) where 
-  fail = liftIO . fail
+  fail = throwString
