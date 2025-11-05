@@ -176,7 +176,7 @@ launchForwarders iomgr magic
                  ekgStore sink dpStore tracerSocketMode maxReconnectDelay =
   -- If 'tracerSocketMode' is not specified, it's impossible to establish
   -- network connection with acceptor application (for example, 'cardano-tracer').
-  -- In this case, we should not lauch forwarders.
+  -- In this case, we should not launch forwarders.
   case tracerSocketMode of
     Nothing -> return ()
     Just (socketPath, mode) ->

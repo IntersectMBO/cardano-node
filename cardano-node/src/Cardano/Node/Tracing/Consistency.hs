@@ -128,7 +128,7 @@ checkNodeTraceConfiguration' trConfig =
     getAllNamespaces
 
 
--- | Returns a list of all namepsaces from all tracers
+-- | Returns a list of all namespaces from all tracers
 getAllNamespaces :: [([T.Text],[T.Text])]
 getAllNamespaces =
     -- NodeInfo tracer

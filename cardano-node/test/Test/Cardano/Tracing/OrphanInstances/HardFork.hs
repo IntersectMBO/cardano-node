@@ -3,7 +3,7 @@
 -- The golden files are stored in the path given by 'addPrefix'.
 --
 -- If a new test is added and no golden file exists for it it will be created.
--- This new file needs to be commited.
+-- This new file needs to be committed.
 --
 -- For now we added a couple of representative examples, however the tests are
 -- not exhaustive.
