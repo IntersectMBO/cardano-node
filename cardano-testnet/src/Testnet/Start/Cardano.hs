@@ -77,6 +77,7 @@ import Testnet.Orphans ()
 import RIO.Orphans (ResourceMap)
 import UnliftIO.Async
 
+
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
 testMinimumConfigurationRequirements :: ()
@@ -87,7 +88,7 @@ testMinimumConfigurationRequirements options = withFrozenCallStack $ do
   when (cardanoNumPools options < 1) $ do
     throwString "Need at least one SPO node to produce blocks, but got none."
 
-liftToIntegration :: RIO ResourceMap a -> H.Integration a 
+liftToIntegration :: HasCallStack => RIO ResourceMap a -> H.Integration a 
 liftToIntegration  r = do 
    rMap <- lift $ lift getInternalState 
    liftIOAnnotated $ runRIO rMap r
