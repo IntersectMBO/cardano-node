@@ -456,11 +456,11 @@ retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTime
       | timeout <= 0 = withFrozenCallStack $ do
         act
       | otherwise = withFrozenCallStack $ do
-        !time <- liftIO DTC.getCurrentTime
+        !time <- liftIOAnnotated DTC.getCurrentTime
         catchError act $ \case
           NodeAddressAlreadyInUseError _ -> do
-            liftIO $ threadDelay (round $ interval * 1_000_000)
-            !time' <- liftIO DTC.getCurrentTime
+            liftIOAnnotated $ threadDelay (round $ interval * 1_000_000)
+            !time' <- liftIOAnnotated DTC.getCurrentTime
             let elapsedTime = time' `diffUTCTime` time
                 newTimeout = timeout - elapsedTime
             go newTimeout interval

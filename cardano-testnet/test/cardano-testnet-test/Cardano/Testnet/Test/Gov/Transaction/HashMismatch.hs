@@ -26,6 +26,7 @@ import           Test.Cardano.CLI.Hash (serveFilesWhile, tamperBase16Hash)
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', execCliAny, mkExecConfig)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -75,7 +76,7 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
-  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  proposalAnchorFile <- H.noteM $ liftIOAnnotated $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
 
   infoActionFp <- H.note $ work </> gov </> "info.action"
 

@@ -60,6 +60,7 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+  , hedgehog-extras
 
 if impl (ghc >= 9.12)
   allow-newer:
