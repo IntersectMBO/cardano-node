@@ -65,7 +65,7 @@ in with final;
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    index-state = "2024-12-24T12:56:48Z";
+    index-state = "2025-11-04T00:00:00Z";
   };
 
   profiteur = haskell-nix.tool compiler-nix-name "profiteur" {
