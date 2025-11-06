@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -96,7 +97,7 @@ withReplayedBlock tr = do
             -> (LoggingContext, Either TraceControl (ChainDB.TraceEvent blk))
             -> IO (Maybe (LoggingContext, Either TraceControl ReplayBlockStats))
     process var (ctx, Right msg) = modifyMVar var $ \st -> do
-      let (st', mbStats) = mbProduceBlockStats msg st
+      let !(!st', mbStats) = mbProduceBlockStats msg st
       pure (st', fmap ((ctx,) . Right) mbStats)
     process _ (ctx, Left control) = pure (Just (ctx, Left control))
 
