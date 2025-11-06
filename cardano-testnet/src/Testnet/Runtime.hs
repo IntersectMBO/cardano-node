@@ -123,8 +123,8 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
 
-  liftIO $ createDirectoryIfMissingNew_ $ logDir </> node
-  void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node)
+  liftIOAnnotated $ createDirectoryIfMissingNew_ $ logDir </> node
+  void . liftIOAnnotated $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node)
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
@@ -154,7 +154,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
 
-    isClosed <- liftIOAnnotated $ Ping.waitForPortClosed 30 0.1 port
+    isClosed <- liftIOAnnotated $ Ping.waitForPortClosed 45 0.1 port
     unless isClosed $ 
       throwString $ "Port is still in use after 30 seconds before starting node: " <> show port 
 
@@ -169,7 +169,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- We force the evaluation of initiateProcess so we can be sure that
     -- the process has started. This allows us to read stderr in order
     -- to fail early on errors generated from the cardano-node binary.
-    pid <- liftIO (IO.getPid hProcess)
+    pid <- liftIOAnnotated (IO.getPid hProcess)
       >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
 
     -- We then log the pid in the temp dir structure.
@@ -216,7 +216,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a
     closeHandlesOnError handles action =
       catchE action $ \e -> do
-        liftIO $ mapM_ IO.hClose handles
+        liftIOAnnotated $ mapM_ IO.hClose handles
         throwE e
 
     -- Sometimes even when we close the files manually, the operating system still holds the lock for some
@@ -239,7 +239,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
               path' = if n > 0
                          then path <> "-" <> show n <> extension
                          else fullPath
-          r <- fmap (first FileRelatedFailure) . try . liftIO $ IO.openFile path' mode
+          r <- fmap (first FileRelatedFailure) . try . liftIOAnnotated $ IO.openFile path' mode
           case r of
             Right h -> pure h
             Left e
@@ -321,7 +321,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
     handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes _) _ (BlockNo blockNo) = handleException $ do
       let prettyNes = shelleyBasedEraConstraints sbe (encodePretty nes)
           blockLabel = "#### BLOCK " <> show blockNo <> " ####"
-      liftIO . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
+      liftIOAnnotated . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
 
       -- store epoch state for logging of differences
       mPrevEpochState <- get
@@ -329,14 +329,14 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       forM_ mPrevEpochState $ \(AnyNewEpochState sbe' pnes _) -> do
         let prettyPnes = shelleyBasedEraConstraints sbe' (encodePretty pnes)
             difference = calculateEpochStateDiff prettyPnes prettyNes
-        liftIO . appendFile diffFp $ unlines [blockLabel, difference, ""]
+        liftIOAnnotated . appendFile diffFp $ unlines [blockLabel, difference, ""]
 
       pure ConditionNotMet
       where
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+          liftIOAnnotated $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
             <> displayException e <> "\n"
           pure ConditionMet
 
