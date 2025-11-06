@@ -1,0 +1,328 @@
+A : Type
+----------------------
+InstantVector A : Type
+
+
+A : Type
+--------------------
+RangeVector A : Type
+
+
+Scalar : Type
+
+
+Bool : Type
+
+
+A : Type
+B : Type
+-------------
+(A, B) : Type
+
+
+Timestamp : Type
+
+
+Duration : Type
+
+
+t : A
+(x := t : A) |- e : B
+--------------------- ✔
+let x = t in e : B
+
+
+(x : A) |- t : B
+------------------ ✔
+\x -> t : A -> B
+
+
+t : (a, b)
+------------ ✔
+fst t : a
+
+
+t : (a, b)
+---------- ✔
+snd t : b
+
+
+a : A
+b : B
+--------------- ✔
+(a, b) : (A, B)
+
+
+a : Scalar
+b : Scalar
+-------------------- ✔
+eq_scalar a b : Bool
+
+
+a : Scalar
+b : Scalar
+------------------------ ✔
+not_eq_scalar a b : Bool
+
+
+a : Scalar
+b : Scalar
+-------------------- ✔
+lt_scalar a b : Bool
+
+
+a : Scalar
+b : Scalar
+--------------------- ✔
+lte_scalar a b : Bool
+
+
+a : Scalar
+b : Scalar
+-------------------- ✔
+gt_scalar a b : Bool
+
+
+a : Scalar
+b : Scalar
+--------------------- ✔
+gte_scalar a b : Bool
+
+
+a : Scalar
+b : Scalar
+----------------------- ✔
+add_scalar a b : Scalar
+
+
+a : Scalar
+b : Scalar
+----------------------- ✔
+sub_scalar a b : Scalar
+
+
+a : Scalar
+b : Scalar
+----------------------- ✔
+mul_scalar a b : Scalar
+
+
+a : Scalar
+b : Scalar
+----------------------- ✔
+div_scalar a b : Scalar
+
+
+a : Bool
+------------ ✔
+not a : Bool
+
+
+a : Bool
+b : Bool
+------------- ✔
+and a b : Bool
+
+
+a : Bool
+b : Bool
+------------- ✔
+or a b : Bool
+
+
+n integer // integer literal
+-----------------------------------  ✔
+milliseconds n : Duration
+
+
+n integer // integer literal
+-----------------------------------  ✔
+seconds n : Duration
+
+
+n integer // integer literal
+-----------------------------------  ✔
+minutes n : Duration
+
+
+n integer // integer literal
+          // Syntax hugar: <int>h ✗
+-----------------------------------  ✔
+hours n : Duration
+
+
+epoch : Timestamp ✔
+
+
+now : Timestamp ✔
+
+
+t : Timestamp
+d : Duration
+---------------------- ✔
+rewind t d : Timestamp
+
+
+t : Timestamp
+d : Duration
+---------------------------- ✔
+fast_forward t d : Timestamp
+
+
+t : Timestamp
+------------------------------ ✔
+timestamp_to_scalar t : Scalar
+
+
+t : Bool
+------------------------- ✔
+bool_to_scalar t : Scalar
+
+
+// Given a continuous timeseries vector and an interval computes a discrete timeseries vector (range vector)
+s : Timestamp -> InstantVector a
+a : Timestamp
+b : Timestamp
+-------------------------------- ✔
+range a b : RangeVector a
+
+
+// More general version with a sampling rate
+s : Timestamp -> InstantVector a
+a : Timestamp
+b : Timestamp
+d : Duration
+-------------------------------- ✔
+range a b d : RangeVector a
+
+
+∅ labels
+
+
+s string
+s' string
+l̅s̅ labels
+-----------------
+(s, s') l̅s̅ labels
+
+
+// Takes a subset of the instant vector by keeping only those instants whose labels are in the provided set.
+v : InstantVector a
+l̅s̅ labels
+-------------------------------------- ✔
+filter_by_label v l̅s̅ : InstantVector a
+
+
+v : InstantVector Scalar
+------------------------ ✔
+max v : Scalar
+
+
+v : InstantVector Scalar
+------------------------ ✔
+avg : Scalar
+
+
+f : A -> Bool
+v : InstantVector A
+---------------------------- ✔
+filter f v : InstantVector A
+
+
+u : InstantVector A
+v : InstantVector B
+------------------------------- // 1-to-1 match is a assumed ✔
+join u v : InstantVector (A, B)
+
+
+f : A -> B
+v : InstantVector A
+------------------------- ✔
+map f u : InstantVector B
+
+
+t : Scalar
+-------------- ✔
+abs t : Scalar
+
+
+r : RangeVector Scalar
+--------------------------------- ✔
+increase r : InstantVector Scalar
+
+
+r : RangeVector Scalar
+----------------------------------- ✔
+rate r : InstantVector Scalar
+
+
+r : RangeVector Scalar
+-------------------------------------- ✔
+avg_over_time r : InstantVector Scalar
+
+
+r : RangeVector Scalar
+------------------------------------- ✔
+sum_over_time r : InstantVector Scalar
+
+
+q : Scalar // must be in range of [0; 1]
+r : RangeVector
+--------------------------------------------- ✔
+quantile_over_time q r : InstantVector Scalar
+
+
+u : InstantVector a
+v : InstantVector b
+---------------------------- ✗
+unless u v : InstantVector a
+
+
+// meta-level abbreviation
+a : InstantVector Scalar
+s : Scalar
+-------------------------------- ✔
+lte_instant_vector_scalar a s : InstantVector Scalar
+lte_instant_vector_scalar a s ≡ filter (\v -> v <= s) a
+
+
+// meta-level abbreviation
+v : InstantVector Scalar
+s : Scalar
+-------------------------------- ✗
+v <= bool s : InstantVector Bool
+v <= bool s ≡ (\x -> x <= s) v
+
+
+// meta-level definition (define via map)
+v : InstantVector Scalar
+s : Scalar
+---------------------------- ✗
+v / s : InstantVector Scalar
+
+
+// meta-level definition (define via map)
+v : InstantVector Scalar
+s : Scalar
+---------------------------- ✗
+v * s : InstantVector Scalar
+
+
+// meta-level definition (define via map)
+s : Scalar
+v : InstantVector Scalar
+----------------------------- ✗
+s - v : InstantVector Scalar
+
+
+// meta-level definition (define via map)
+v : InstantVector Bool
+--------------------------------- ✗
+toScalar v : InstantVector Scalar
+
+
+ls : Set Label
+q : Scalar
+v : InstantVector Scalar
+----------------------------------------- ✗
+quantile-by ls q v : InstantVector Scalar
