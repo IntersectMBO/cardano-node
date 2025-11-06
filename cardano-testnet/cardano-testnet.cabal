@@ -102,11 +102,8 @@ library
                       , time
                       , transformers
                       , transformers-except
-<<<<<<< HEAD
-=======
                       , unliftio
                       , vector
->>>>>>> d1006cc87 (Propagate liftToIntegration and liftIOAnnotated)
                       , yaml
 
   hs-source-dirs:       src

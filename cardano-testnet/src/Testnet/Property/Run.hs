@@ -16,7 +16,6 @@ import           Prelude
 import qualified Control.Concurrent as IO
 import qualified Control.Concurrent.STM as STM
 import           Control.Monad
-import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Data.Bool (bool)
 import           Data.String (IsString (..))
@@ -44,6 +43,7 @@ import           Test.Tasty.ExpectedFailure (wrapTest)
 import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
+import         Testnet.Process.RunIO 
 
 runTestnet :: UserProvidedEnv -> (Conf -> H.Integration TestnetRuntime) -> IO ()
 runTestnet env tn = do
@@ -107,14 +107,14 @@ testnetProperty env runTn =
             -- Happens when the environment has previously been created by the user
             H.note_ $ "Reusing " <> absUserOutputDir
           else do
-            liftIO $ createDirectory absUserOutputDir
+            liftIOAnnotated $ createDirectory absUserOutputDir
             H.note_ $ "Created " <> absUserOutputDir
           conf <- mkConf absUserOutputDir
           forkAndRunTestnet conf
   where
     forkAndRunTestnet conf = do
       -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
-      void $ H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
+      void $ H.evalM . liftResourceT . resourceForkIO . forever . liftIOAnnotated $ IO.threadDelay 10000000
       void $ runTn conf
       H.failure -- Intentional failure to force failure report
 
