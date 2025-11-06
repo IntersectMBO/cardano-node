@@ -76,6 +76,7 @@ import           GHC.Stack
 import           Lens.Micro (Lens', to, (^.))
 
 import           Testnet.Property.Assert
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Types
 
 import           Hedgehog
@@ -260,7 +261,7 @@ getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   epochStateView <- H.evalIO $ newIORef Nothing
   void . asyncRegister_ . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
     $ \epochState slotNumber blockNumber -> do
-        liftIO . writeIORef epochStateView $ Just (epochState, slotNumber, blockNumber)
+        liftIOAnnotated . writeIORef epochStateView $ Just (epochState, slotNumber, blockNumber)
         pure ConditionNotMet
   pure $ EpochStateView nodeConfigFile socketPath epochStateView
 

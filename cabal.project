@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-06-24T21:06:59Z
+  , hackage.haskell.org 2025-06-27T07:48:39Z
   , cardano-haskell-packages 2025-09-18T12:21:32Z
 
 packages:
@@ -60,6 +60,7 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+  , hedgehog-extras
 
 if impl (ghc >= 9.12)
   allow-newer:

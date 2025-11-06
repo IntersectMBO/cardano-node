@@ -42,6 +42,7 @@ import qualified Network.Mux.Types as Mux
 import           Network.Socket (AddrInfo (..), PortNumber, StructLinger (..))
 import qualified Network.Socket as Socket
 import           Prettyprinter
+import           Testnet.Process.RunIO (liftIOAnnotated)
 
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
@@ -65,7 +66,7 @@ pingNode :: MonadIO m
          => TestnetMagic -- ^ testnet magic
          -> IO.Sprocket  -- ^ node sprocket
          -> m (Either PingClientError ()) -- ^ '()' means success
-pingNode networkMagic sprocket = liftIO $ bracket
+pingNode networkMagic sprocket = liftIOAnnotated $ bracket
   (Socket.socket (Socket.addrFamily peer) Socket.Stream Socket.defaultProtocol)
   Socket.close
   (\sd -> handle (pure . Left . PceException) $ withTimeoutSerial $ \timeoutfn -> do
@@ -143,7 +144,7 @@ waitForSprocket :: MonadIO m
                 -> MT.DiffTime -- ^ interval
                 -> IO.Sprocket
                 -> m (Either IOException ())
-waitForSprocket timeout interval sprocket = liftIO $ do
+waitForSprocket timeout interval sprocket = liftIOAnnotated $ do
   lastResult <- newIORef (Right ())
   _ <- MT.timeout timeout $ loop lastResult
   readIORef lastResult
@@ -158,7 +159,7 @@ waitForSprocket timeout interval sprocket = liftIO $ do
 
 -- | Check if the sprocket can be connected to. Returns an exception thrown during the connection attempt.
 checkSprocket :: MonadIO m => IO.Sprocket -> m (Either IOException ())
-checkSprocket sprocket = liftIO $ do
+checkSprocket sprocket = liftIOAnnotated $ do
   let AddrInfo{addrFamily, addrSocketType, addrProtocol, addrAddress} = sprocketToAddrInfo sprocket
   bracket (Socket.socket addrFamily addrSocketType addrProtocol) Socket.close $ \sock -> do
     -- Capture only synchronous exceptions from the connection attempt.
@@ -179,10 +180,10 @@ waitForPortClosed
   -> MT.DiffTime -- ^ check interval
   -> PortNumber
   -> m Bool -- ^ 'True' if port is closed, 'False' if timeout was reached before that
-waitForPortClosed timeout interval portNumber = liftIO $ do
+waitForPortClosed timeout interval portNumber = liftIOAnnotated $ do
   let retryPolicy = R.constantDelay (round @Double $ realToFrac interval) <> R.limitRetries (ceiling $ toRational timeout / toRational interval)
   fmap not . R.retrying retryPolicy (const pure) $ \_ ->
-    liftIO (IO.isPortOpen (fromIntegral portNumber))
+    liftIOAnnotated (IO.isPortOpen (fromIntegral portNumber))
 
 data PingClientError
   = PceDecodingError
