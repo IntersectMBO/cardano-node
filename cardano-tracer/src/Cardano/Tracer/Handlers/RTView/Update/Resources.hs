@@ -2,6 +2,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE MultiWayIf #-}
 
 module Cardano.Tracer.Handlers.RTView.Update.Resources
   ( updateResourcesHistory
@@ -15,6 +16,7 @@ import           Cardano.Tracer.Types
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import qualified Data.Map.Strict as M
+import           Data.Text (isInfixOf)
 import           Data.Text.Read (decimal)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word (Word64)
@@ -28,16 +30,16 @@ updateResourcesHistory
   -> UTCTime
   -> IO ()
 updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName metricValue now =
-  case metricName of
-    "Stat.cputicks"    -> updateCPUUsage
-    "Mem.resident"     -> updateRSSMemory
-    "RTS.gcLiveBytes"  -> updateGCLiveMemory
-    "RTS.gcMajorNum"   -> updateGCMajorNum
-    "RTS.gcMinorNum"   -> updateGCMinorNum
-    "RTS.gcticks"      -> updateCPUTimeGC
-    "RTS.mutticks"     -> updateCPUTimeApp
-    "Stat.threads"     -> updateThreadsNum
-    _ -> return ()
+  if
+    | "Stat.cputicks" `isInfixOf` metricName   -> updateCPUUsage
+    | "Mem.resident" `isInfixOf` metricName    -> updateRSSMemory
+    | "RTS.gcLiveBytes" `isInfixOf` metricName -> updateGCLiveMemory
+    | "RTS.gcMajorNum" `isInfixOf` metricName  -> updateGCMajorNum
+    | "RTS.gcMinorNum" `isInfixOf` metricName  -> updateGCMinorNum
+    | "RTS.gcticks" `isInfixOf` metricName     -> updateCPUTimeGC
+    | "RTS.mutticks" `isInfixOf` metricName    -> updateCPUTimeApp
+    | "RTS.threads" `isInfixOf` metricName     -> updateThreadsNum
+    | otherwise -> return ()
  where
   updateCPUUsage =
     case decimal metricValue of
