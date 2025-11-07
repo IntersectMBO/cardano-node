@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Testnet.Process.RunIO 
+module Testnet.Process.RunIO
   ( execCli'
   , execCli_
   , mkExecConfig
@@ -14,27 +14,29 @@ module Testnet.Process.RunIO
   ) where
 
 import           Prelude
-import           Data.Aeson (eitherDecode)
-import           Data.Monoid (Last (..))
-import           Hedgehog.Extras.Internal.Plan (Component (..), Plan (..))
-import           RIO
-import           System.FilePath (takeDirectory)
-import           System.FilePath.Posix ((</>))
-import           System.Process (CreateProcess (..))
 
 import           Control.Exception.Annotated (exceptionWithCallStack)
+import           Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
+import           Data.Monoid (Last (..))
 import qualified Data.Text as T
 import qualified GHC.Stack as GHC
-import qualified Hedgehog.Extras.Stock.OS as OS
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import           Hedgehog.Extras.Test.Process (ExecConfig(..))
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.Exit as IO
+import           System.FilePath (takeDirectory)
+import           System.FilePath.Posix ((</>))
 import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
+import           System.Process (CreateProcess (..))
+
+import           Hedgehog.Extras.Internal.Plan (Component (..), Plan (..))
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import qualified Hedgehog.Extras.Stock.OS as OS
+import           Hedgehog.Extras.Test.Process (ExecConfig (..))
+
+import           RIO
 
 
 
@@ -116,8 +118,8 @@ execFlex'
 execFlex' execConfig pkgBin envBin arguments = GHC.withFrozenCallStack $ do
   (exitResult, stdout', _stderr) <- execFlexAny' execConfig pkgBin envBin arguments
   case exitResult of
-    IO.ExitFailure exitCode -> throwString $ 
-         unlines $ 
+    IO.ExitFailure exitCode -> throwString $
+         unlines $
                 [ "Process exited with non-zero exit-code: " ++ show @Int exitCode ]
               ++ (if L.null stdout' then [] else ["━━━━ stdout ━━━━" , stdout'])
               ++ (if L.null _stderr then [] else ["━━━━ stderr ━━━━" , _stderr])
@@ -289,6 +291,6 @@ procFlex
 procFlex = procFlex' defaultExecConfig
 
 -- This will also catch async exceptions as well.
-liftIOAnnotated :: (HasCallStack, MonadIO m) => IO a -> m a 
+liftIOAnnotated :: (HasCallStack, MonadIO m) => IO a -> m a
 liftIOAnnotated action = GHC.withFrozenCallStack $
-  liftIOAnnotated $ action `catch` (\(e :: SomeException) -> throwM $ exceptionWithCallStack e)
+  liftIO $ action `catch` (\(e :: SomeException) -> throwM $ exceptionWithCallStack e)
