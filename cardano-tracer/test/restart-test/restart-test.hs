@@ -46,6 +46,8 @@ main = do
           terminateProcess tracer1H
           void (waitForProcess tracer1H)
 
+          sleepSeconds 2
+
           -- Start second tracer
           tracer2H <- startProc "cardano-tracer" ["--config", cfg]
 
@@ -62,8 +64,7 @@ main = do
               when (count /= 2) $ do
                 hPutStrLn stderr $
                   "Two log files are expected to be present, found: " ++ show count
-                exitFailure
-              pure ())
+                exitFailure)
             (safeTerminate tracer2H))
         (safeTerminate tracer1H))
     (do
