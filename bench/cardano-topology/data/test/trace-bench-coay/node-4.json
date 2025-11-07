@@ -1,14 +1,30 @@
 {
-  "Producers": [
+  "localRoots": [
     {
-      "addr": "127.0.0.1",
-      "port": 30005,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30005,
+          "valency": 1
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30003,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30003,
+          "valency": 1
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     }
-  ]
+  ],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
 }
