@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -32,6 +33,8 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
+import           Cardano.Node.Configuration.Topology (RemoteAddress (..))
+import qualified Cardano.Node.Configuration.Topology as Direct
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Prelude (canonicalEncodePretty)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
@@ -39,8 +42,9 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Prelude hiding (lines)
 
 import           Control.Concurrent (threadDelay)
-import           Control.Monad 
+import           Control.Monad
 import           Control.Monad.Catch
+import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as LBS
@@ -61,6 +65,7 @@ import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
 import           Testnet.Handlers (interruptNodesOnSigINT)
+import           Testnet.Orphans ()
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
 import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
@@ -69,13 +74,12 @@ import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
+import           Hedgehog.Internal.Property (failException)
 
-
-import RIO (RIO(..),runRIO, throwString, MonadUnliftIO)
-import Control.Monad.Trans.Resource (getInternalState, MonadResource)
-import Testnet.Orphans ()
-import RIO.Orphans (ResourceMap)
-import UnliftIO.Async
+import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString)
+import           RIO.Orphans (ResourceMap)
+import           UnliftIO.Async
+import           UnliftIO.Exception (stringException)
 
 
 -- | There are certain conditions that need to be met in order to run
@@ -88,10 +92,10 @@ testMinimumConfigurationRequirements options = withFrozenCallStack $ do
   when (cardanoNumPools options < 1) $ do
     throwString "Need at least one SPO node to produce blocks, but got none."
 
-liftToIntegration :: HasCallStack => RIO ResourceMap a -> H.Integration a 
-liftToIntegration  r = do 
-   rMap <- lift $ lift getInternalState 
-   liftIOAnnotated $ runRIO rMap r
+liftToIntegration :: HasCallStack => RIO ResourceMap a -> H.Integration a
+liftToIntegration r =  do
+   rMap <- lift $ lift getInternalState
+   catch @_ @SomeException (runRIO rMap r) (withFrozenCallStack $ failException . toException . stringException . displayException)
 
 createTestnetEnv :: ()
   => HasCallStack
@@ -218,7 +222,7 @@ createTestnetEnv
 -- > ├── configuration.json
 -- > ├── current-stake-pools.json
 -- > └── module
-cardanoTestnet 
+cardanoTestnet
   :: HasCallStack
   => MonadUnliftIO m
   => MonadResource m
@@ -244,8 +248,8 @@ cardanoTestnet
       shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
 
   sBytes <- liftIOAnnotated (LBS.readFile shelleyGenesisFile)
-  shelleyGenesis@ShelleyGenesis{sgNetworkMagic} 
-    <- case eitherDecode sBytes of 
+  shelleyGenesis@ShelleyGenesis{sgNetworkMagic}
+    <- case eitherDecode sBytes of
           Right sg -> return sg
           Left err -> throwString $ "Could not decode shelley genesis file: " <> shelleyGenesisFile <> " Error: " <> err
   let testnetMagic :: Int = fromIntegral sgNetworkMagic
@@ -333,8 +337,8 @@ cardanoTestnet
 
     -- Update start time in Byron genesis file
     eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
-    (byronGenesis', _byronHash) <- 
-      case eByron of 
+    (byronGenesis', _byronHash) <-
+      case eByron of
         Right bg -> return bg
         Left err -> throwString $ "Could not read byron genesis data from file: " <> byronGenesisFile <> " Error: " <> show err
     let byronGenesis = byronGenesis'{gdStartTime = startTime}
