@@ -33,11 +33,12 @@ import           Cardano.Network.PeerSelection.Bootstrap
 import           Cardano.Network.PeerSelection.PeerTrustable
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Node.Protocol.Byron
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
-import           Control.Exception.Safe (MonadCatch)
+import           Control.Exception
 import           Control.Monad
 import           Control.Monad.Extra
 import           Data.Aeson
@@ -45,7 +46,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import           Data.Aeson.Key hiding (fromString)
 import           Data.Aeson.KeyMap hiding (map)
-import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
@@ -57,25 +57,25 @@ import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import qualified Network.HTTP.Simple as HTTP
+import           RIO ( MonadThrow, throwM)
 import qualified System.Directory as System
 import           System.FilePath.Posix (takeDirectory, (</>))
+
 
 import           Testnet.Blockfrost (blockfrostToGenesis)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
-import           Testnet.Process.Run (execCli_)
+import           Testnet.Process.RunIO (execCli_, liftIOAnnotated)
 import           Testnet.Start.Types
 
-import           Hedgehog
-import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.Time as DTC
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
 
 -- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
 createConfigJson :: ()
-  => (MonadTest m, MonadIO m, HasCallStack)
+  => HasCallStack
+  => MonadIO m
+  => MonadThrow m
   => TmpAbsolutePath
   -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
   -> m (KeyMap Aeson.Value)
@@ -93,7 +93,7 @@ createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ d
     , Defaults.defaultYamlHardforkViaConfig sbe
     ]
    where
-    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
+    getHash ::  MonadIO m => CardanoEra a -> Text.Text -> m (KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> Defaults.defaultGenesisFilepath e)
 
 createConfigJsonNoHash :: ()
@@ -104,22 +104,25 @@ createConfigJsonNoHash = Defaults.defaultYamlHardforkViaConfig
 -- Generate hashes for genesis.json files
 
 getByronGenesisHash
-  :: (H.MonadTest m, MonadIO m)
+  :: MonadIO m
+  => MonadThrow m
   => FilePath
   -> m (KeyMap Aeson.Value)
 getByronGenesisHash path = do
   e <- runExceptT $ readGenesisData path
-  (_, genesisHash) <- H.leftFail e
-  let genesisHash' = unGenesisHash genesisHash
-  pure . singleton "ByronGenesisHash" $ toJSON genesisHash'
+  case e of 
+    Left err -> throwM $ GenesisReadError path err
+    Right (_, genesisHash) -> do
+      let genesisHash' = unGenesisHash genesisHash
+      pure . singleton "ByronGenesisHash" $ toJSON genesisHash'
 
 getShelleyGenesisHash
-  :: (H.MonadTest m, MonadIO m)
+  :: MonadIO m
   => FilePath
   -> Text
   -> m (KeyMap Aeson.Value)
 getShelleyGenesisHash path key = do
-  content <- H.evalIO  $ BS.readFile path
+  content <- liftIOAnnotated $ BS.readFile path
   let genesisHash = Crypto.hashWith id content :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString
   pure . singleton (fromText key) $ toJSON genesisHash
 
@@ -130,32 +133,35 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 -- | A start time and 'ShelleyGenesis' value that are fit to pass to 'cardanoTestnet'
 getDefaultShelleyGenesis :: ()
-  => HasCallStack
   => MonadIO m
-  => MonadTest m
   => AnyShelleyBasedEra
   -> Word64 -- ^ The max supply
   -> GenesisOptions
   -> m ShelleyGenesis
 getDefaultShelleyGenesis asbe maxSupply opts = do
-  currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+  currentTime <- liftIOAnnotated DTC.getCurrentTime
+  let startTime = DTC.addUTCTime startTimeOffsetSeconds currentTime
   return $ Defaults.defaultShelleyGenesis asbe startTime maxSupply opts
 
 -- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
 getDefaultAlonzoGenesis :: ()
   => HasCallStack
-  => MonadTest m
+  => MonadThrow m
   => ShelleyBasedEra era
   -> m AlonzoGenesis
 getDefaultAlonzoGenesis sbe =
-  H.evalEither $ first prettyError (Defaults.defaultAlonzoGenesis sbe)
+  case Defaults.defaultAlonzoGenesis sbe of 
+    Right genesis -> return genesis
+    Left err -> throwM err
+
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
 
 createSPOGenesisAndFiles
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  :: MonadIO m
+  => HasCallStack
+  => MonadThrow m
   => CardanoTestnetOptions -- ^ The options to use
   -> GenesisOptions
   -> TestnetOnChainParams
@@ -164,11 +170,12 @@ createSPOGenesisAndFiles
 createSPOGenesisAndFiles
   testnetOptions genesisOptions@GenesisOptions{genesisTestnetMagic}
   onChainParams
-  (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
+  (TmpAbsolutePath tempAbsPath) =  do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
 
   let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
-  genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
+
+  genesisShelleyDir <- liftIOAnnotated $ System.createDirectoryIfMissing True genesisShelleyDirAbs >> pure genesisShelleyDirAbs
   let -- At least there should be a delegator per DRep
       -- otherwise some won't be representing anybody
       numStakeDelegators = max 3 (fromIntegral cardanoNumDReps) :: Int
@@ -184,23 +191,20 @@ createSPOGenesisAndFiles
   alonzoGenesis' <- getDefaultAlonzoGenesis sbe
   let conwayGenesis' = Defaults.defaultConwayGenesis
 
-  (alonzoGenesis, conwayGenesis, shelleyGenesis) <- resolveOnChainParams onChainParams
-    (alonzoGenesis', conwayGenesis', shelleyGenesis')
+  (alonzoGenesis, conwayGenesis, shelleyGenesis)   
+     <- resolveOnChainParams onChainParams
+     (alonzoGenesis', conwayGenesis', shelleyGenesis')
 
   -- Write Genesis files to disk, so they can be picked up by create-testnet-data
-  H.evalIO $ do
+  liftIOAnnotated $ do
     LBS.writeFile inputGenesisAlonzoFp $ A.encodePretty alonzoGenesis
     LBS.writeFile inputGenesisConwayFp $ A.encodePretty conwayGenesis
     LBS.writeFile inputGenesisShelleyFp $ A.encodePretty shelleyGenesis
 
-  H.note_ $ "Number of pools: " <> show nPoolNodes
-  H.note_ $ "Number of stake delegators: " <> show numStakeDelegators
-  H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
-
   let era = toCardanoEra sbe
 
-  currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+  currentTime <- liftIOAnnotated DTC.getCurrentTime
+  let startTime = DTC.addUTCTime startTimeOffsetSeconds currentTime
 
   execCli_ $
     [ eraToString sbe, "genesis", "create-testnet-data" ]
@@ -223,10 +227,7 @@ createSPOGenesisAndFiles
     [  inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp
      , tempAbsPath </> "byron.genesis.spec.json" -- Created by create-testnet-data
     ]
-    (\fp -> liftIO $ whenM (System.doesFileExist fp) (System.removeFile fp))
-
-  files <- H.listDirectory tempAbsPath
-  forM_ files H.note
+    (\fp -> liftIOAnnotated $ whenM (System.doesFileExist fp) (System.removeFile fp))
 
   return genesisShelleyDir
   where
@@ -287,23 +288,37 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
         DontUseBootstrapPeers
         Nothing
 
+
+data BlockfrostParamsError = BlockfrostParamsDecodeError FilePath String
+  deriving Show
+
+instance Exception BlockfrostParamsError where 
+  displayException (BlockfrostParamsDecodeError fp err) =
+    "Failed to decode Blockfrost on-chain parameters from file "
+      <> fp
+      <> ": "
+      <> err
+
 -- | Resolves different kinds of user-provided on-chain parameters
 -- into a unified, consistent set of Genesis files
 resolveOnChainParams :: ()
- => (MonadTest m, MonadIO m)
  => HasCallStack
+ => MonadIO m
+ => MonadThrow m
  => TestnetOnChainParams
  -> (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
  -> m (AlonzoGenesis, ConwayGenesis, ShelleyGenesis)
 resolveOnChainParams onChainParams geneses = case onChainParams of
 
-  DefaultParams -> pure geneses
+  DefaultParams -> do 
+    pure geneses
 
   OnChainParamsFile file -> do
-    eParams <- H.readJsonFile file
-    params <- H.leftFail eParams
-    pure $ blockfrostToGenesis geneses params
+    eParams <- eitherDecode <$> liftIOAnnotated (LBS.readFile file)
+    case eParams of 
+      Right params -> pure $ blockfrostToGenesis geneses params
+      Left err -> throwM $ BlockfrostParamsDecodeError file err
 
   OnChainParamsMainnet -> do
-    mainnetParams <- H.evalIO $ HTTP.getResponseBody <$> HTTP.httpJSON mainnetParamsRequest
+    mainnetParams <- liftIOAnnotated $ HTTP.getResponseBody <$> HTTP.httpJSON mainnetParamsRequest
     pure $ blockfrostToGenesis geneses mainnetParams

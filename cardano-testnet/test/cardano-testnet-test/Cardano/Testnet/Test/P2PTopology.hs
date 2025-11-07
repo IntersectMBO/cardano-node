@@ -19,6 +19,7 @@ import           System.FilePath ((</>))
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..), NodeId,
                    UserProvidedEnv (..), TopologyType (..))
+import           Testnet.Start.Cardano (liftToIntegration)
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -36,13 +37,13 @@ hprop_p2p_topology = integrationRetryWorkspace 2 "p2p-topology" $ \tmpDir -> H.r
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  createTestnetEnv testnetOptions genesisOptions createEnvOptions conf
+  liftToIntegration $ createTestnetEnv testnetOptions genesisOptions createEnvOptions conf
 
   -- Check that the topology is indeed P2P
   eTopology <- H.readJsonFile someTopologyFile
   (_topology :: P2P.NetworkTopology NodeId) <- H.leftFail eTopology
 
   -- Run testnet with generated config
-  runtime <- cardanoTestnet testnetOptions conf
+  runtime <- liftToIntegration $ cardanoTestnet testnetOptions conf
 
   nodesProduceBlocks tmpDir runtime
