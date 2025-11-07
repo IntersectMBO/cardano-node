@@ -40,10 +40,8 @@ profilesNoEraPlutuscall =
         . compressedFor15Epochs
         . V.datasetSmall
         . V.fundsDefault
-        . P.p2pOff
         . P.traceForwardingOn . P.newTracing
         . P.analysisStandard
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . P.desc "Small dataset, honest 15 epochs duration"
 
       loop            = plutusCall & V.plutusTypeLoop    . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus

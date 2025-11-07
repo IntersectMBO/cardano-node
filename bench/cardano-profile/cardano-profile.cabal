@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-profile
-version:                8.8.0
+version:                10.6.0
 synopsis:               A Cardano benchmarking profile generator
 description:            A Cardano benchmarking profile generator.
 category:               Cardano,
@@ -70,6 +70,7 @@ library
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
+                      , Cardano.Benchmarking.Profile.Workload.CGroupMemory
                       , Cardano.Benchmarking.Profile.Workload.Latency
                       , Cardano.Benchmarking.Profile.Workload.Voting
   build-depends:        base >=4.12 && <5

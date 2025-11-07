@@ -19,10 +19,8 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , plutusBase, plutusLoop
 , plutusSaturation, plutusDoubleSaturation, plutusDoublePlusSaturation
 
-, plutusTypeLoop, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
+, plutusTypeLoop, plutusTypeLoopV3, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
 , plutusTypeBLST, plutusTypeRIPEMD
-
-, clusterDefault
 ) where
 
 --------------------------------------------------------------------------------
@@ -187,21 +185,24 @@ plutusDoublePlusSaturation =
 -- Plutus types ("type", "script" and "redeemer").
 --------------------------------------------------
 
--- Replaces jq's "plutus_loop_counter".
 plutusTypeLoop :: Types.Profile -> Types.Profile
 plutusTypeLoop =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop"
   . P.redeemerInt 1000000
   . P.txFee 1360000
 
--- Replaces jq's "plutus_loop2024_counter".
+plutusTypeLoopV3 :: Types.Profile -> Types.Profile
+plutusTypeLoopV3 =
+    P.plutusType "LimitSaturationLoop" . P.plutusScript "LoopV3"
+  . P.redeemerInt 1000000
+  . P.txFee 1412000
+
 plutusTypeLoop2024 :: Types.Profile -> Types.Profile
 plutusTypeLoop2024 =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop2024"
   . P.redeemerInt 1000000
   . P.txFee 1412000
 
--- Replaces jq's "plutus_loop_secp_ecdsa".
 plutusTypeECDSA :: Types.Profile -> Types.Profile
 plutusTypeECDSA =
     P.plutusType "LimitTxPerBlock_8" . P.plutusScript "EcdsaSecp256k1Loop"
@@ -213,7 +214,6 @@ plutusTypeECDSA =
     ]
   . P.txFee 1008000
 
--- Replaces jq's "plutus_loop_secp_schnorr".
 plutusTypeSchnorr :: Types.Profile -> Types.Profile
 plutusTypeSchnorr =
     P.plutusType "LimitTxPerBlock_8"   . P.plutusScript "SchnorrSecp256k1Loop"
@@ -225,7 +225,6 @@ plutusTypeSchnorr =
     ]
   . P.txFee 1004000
 
--- Replaces jq's "plutus_loop_blst".
 plutusTypeBLST :: Types.Profile -> Types.Profile
 plutusTypeBLST =
     P.plutusType "LimitTxPerBlock_8"   . P.plutusScript "HashOntoG2AndAdd"
@@ -250,37 +249,3 @@ plutusTypeRIPEMD =
     , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2f")]
     ]
   . P.txFee 940000
-
--- Definition vocabulary: cluster.
-----------------------------------
-
--- TODO: Should not exists, should be null instead!
-clusterDefault :: Types.Profile -> Types.Profile
-clusterDefault p =
-  p {Types.cluster =
-    Types.Cluster {
-      Types.nomad = Types.ClusterNomad {
-        Types.namespace = "default"
-      , Types.nomad_class = ""
-      , Types.resources = Types.ByNodeType {
-          Types.producer = Types.Resources 2 15000 16000
-        , Types.explorer = Just $ Types.Resources 2 15000 16000
-        }
-      , Types.host_volumes = Nothing
-      , Types.fetch_logs_ssh = False
-      }
-    , Types.aws = Types.ClusterAWS {
-        Types.instance_type = Types.ByNodeType {
-          Types.producer = "c5.2xlarge"
-        , Types.explorer = Just "m5.4xlarge"
-        }
-      , Types.use_public_routing = False
-      }
-    , Types.minimun_storage = Just $ Types.ByNodeType {
-        Types.producer = 12582912
-      , Types.explorer = Just 14155776
-      }
-    , Types.ssd_directory = Nothing
-    , Types.keep_running = False
-    }
-  }

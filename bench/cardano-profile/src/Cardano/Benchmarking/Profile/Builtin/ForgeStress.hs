@@ -26,10 +26,9 @@ base =
     P.fixedLoaded
   . P.uniCircle . P.loopback
   . V.fundsDefault
-  . P.p2pOff . P.newTracing
+  . P.newTracing
   . P.initCooldown 5
   . P.analysisStandard
-  . V.clusterDefault -- TODO: "cluster" should be "null" here.
 
 -- Helpers by timescale:
 
@@ -71,7 +70,6 @@ profilesNoEraForgeStress =
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-notracer"         . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
-  , fs & P.name "forge-stress-p2p" . P.p2pOn    . V.plutusLoop . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   , fs & P.name "forge-stress-plutus"           . V.plutusLoop . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   -- -large: voltaire variant, double nodes and double runtime. This needs >64GB RAM.
   , fs & P.name "forge-stress-large"            . V.valueLocal . v6 . V.datasetCurrent . durationXL . P.traceForwardingOn

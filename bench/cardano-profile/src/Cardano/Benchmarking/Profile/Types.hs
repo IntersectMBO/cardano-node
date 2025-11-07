@@ -93,7 +93,7 @@ data Profile = Profile
   , workloads :: [Workload]
 
   , tracer :: Tracer
-  , cluster :: Cluster
+  , cluster :: Maybe Cluster
   , analysis :: Analysis
   , derived :: Derived
   , cli_args :: CliArgs
@@ -392,8 +392,8 @@ instance Aeson.FromJSON Chunks where
 data Node = Node
   { 
     utxo_lmdb :: Bool
+  , ssd_directory :: Maybe String
 
-  -- TODO: Move up "EnableP2P". A new level only for this?
   , verbatim :: NodeVerbatim
 
   -- TODO: "tracing_backend" is null or has a backend name!
@@ -414,6 +414,7 @@ instance Aeson.ToJSON Node where
   toJSON n =
     Aeson.object
       [ "utxo_lmdb"                Aeson..= utxo_lmdb n
+      , "ssd_directory"            Aeson..= ssd_directory n
       , "verbatim"                 Aeson..= verbatim n
       -- TODO: Rename in workbench/bash to "trace_forwarding".
       , "tracer"                   Aeson..= trace_forwarding n
@@ -428,15 +429,16 @@ instance Aeson.FromJSON Node where
   parseJSON =
     Aeson.withObject "Node" $ \o -> do
       Node
-        <$> o Aeson..: "utxo_lmdb"
-        <*> o Aeson..: "verbatim"
+        <$> o Aeson..:  "utxo_lmdb"
+        <*> o Aeson..:? "ssd_directory"
+        <*> o Aeson..:  "verbatim"
         -- TODO: Rename in workbench/bash to "trace_forwarding".
-        <*> o Aeson..: "tracer"
-        <*> o Aeson..: "tracing_backend"
-        <*> o Aeson..: "rts_flags_override"
-        <*> o Aeson..: "heap_limit"
-        <*> o Aeson..: "shutdown_on_slot_synced"
-        <*> o Aeson..: "shutdown_on_block_synced"
+        <*> o Aeson..:  "tracer"
+        <*> o Aeson..:  "tracing_backend"
+        <*> o Aeson..:  "rts_flags_override"
+        <*> o Aeson..:  "heap_limit"
+        <*> o Aeson..:  "shutdown_on_slot_synced"
+        <*> o Aeson..:  "shutdown_on_block_synced"
 
 -- Properties passed directly to the node(s) "config.json" file.
 newtype NodeVerbatim = NodeVerbatim
@@ -446,20 +448,18 @@ newtype NodeVerbatim = NodeVerbatim
 
 -- `Nothing` properties are not in the final "config.json", not even "null".
 instance Aeson.ToJSON NodeVerbatim where
-  -- If the "EnableP2P" JSON property is present in a Cardano node version that
-  -- does not support P2P, the profile can fail to properly initiate a cluster.
-  toJSON   (NodeVerbatim Nothing) = Aeson.object []
-  toJSON p@(NodeVerbatim _) =
-    Aeson.object
-      [ "EnableP2P"   Aeson..= enableP2P p
-      ]
+  -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
+  -- Therefore, any attempt to set this to false for a profile must be a critical error.
+  -- For backwards compatibility with Node < 10.6, we explicitly set EnableP2P = true in the config.
+  toJSON (NodeVerbatim (Just True)) = Aeson.object [ "EnableP2P" Aeson..= True ]
+  toJSON (NodeVerbatim _)           = error "NodeVerbatim: EnableP2P must be true; non-p2p topologies are no longer supported since Node 10.6"
 
--- TODO: Switch to lower-case in workbench/bash
 instance Aeson.FromJSON NodeVerbatim where
+  -- As it is the implicit default on Node 10.6, assumption for the default value changes
   parseJSON =
     Aeson.withObject "NodeVerbatim" $ \o -> do
       NodeVerbatim
-        <$> o Aeson..:? "EnableP2P"
+        <$> o Aeson..:? "EnableP2P" Aeson..!= Just True
 
 --------------------------------------------------------------------------------
 
@@ -554,6 +554,7 @@ data Workload = Workload
   { workloadName :: String
   , parameters :: Aeson.Object
   , entrypoints :: Entrypoints
+  , before_nodes :: Bool
   , wait_pools :: Bool
   }
   deriving (Eq, Show, Generic)
@@ -567,10 +568,11 @@ data Entrypoints = Entrypoints
 instance Aeson.ToJSON Workload where
   toJSON p =
     Aeson.object
-      [ "name"        Aeson..= workloadName p
-      , "parameters"  Aeson..= parameters   p
-      , "entrypoints" Aeson..= entrypoints  p
-      , "wait_pools"  Aeson..= wait_pools   p
+      [ "name"         Aeson..= workloadName p
+      , "parameters"   Aeson..= parameters   p
+      , "entrypoints"  Aeson..= entrypoints  p
+      , "before_nodes" Aeson..= before_nodes p
+      , "wait_pools"   Aeson..= wait_pools   p
       ]
 
 instance Aeson.FromJSON Workload where
@@ -580,6 +582,7 @@ instance Aeson.FromJSON Workload where
         <$> o Aeson..: "name"
         <*> o Aeson..: "parameters"
         <*> o Aeson..: "entrypoints"
+        <*> o Aeson..: "before_nodes"
         <*> o Aeson..: "wait_pools"
 
 instance Aeson.ToJSON Entrypoints
@@ -610,7 +613,6 @@ data Cluster = Cluster
   { nomad :: ClusterNomad
   , aws :: ClusterAWS
   , minimun_storage :: Maybe (ByNodeType Int)
-  , ssd_directory :: Maybe String
   , keep_running :: Bool
   }
   deriving (Eq, Show, Generic)
@@ -625,7 +627,7 @@ data ClusterNomad = ClusterNomad
   { namespace :: String
   , nomad_class :: String
   , resources :: ByNodeType Resources
-  , host_volumes :: Maybe [HostVolume]
+  , host_volumes :: Maybe (ByNodeType [HostVolume])
   , fetch_logs_ssh :: Bool
   }
   deriving (Eq, Show, Generic)
@@ -650,19 +652,6 @@ instance Aeson.FromJSON ClusterNomad where
         <*> o Aeson..: "host_volumes"
         <*> o Aeson..: "fetch_logs_ssh"
 
-data HostVolume = HostVolume
-  { destination :: String
-  , read_only :: Bool
-  , source :: String
-  }
-  deriving (Eq, Show, Generic)
-
-instance Aeson.ToJSON HostVolume
-
-instance Aeson.FromJSON HostVolume where
-  parseJSON = Aeson.genericParseJSON
-    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
-
 data ClusterAWS = ClusterAWS
   { instance_type :: ByNodeType String
   , use_public_routing :: Bool
@@ -681,10 +670,17 @@ data ByNodeType a = ByNodeType
   }
   deriving (Eq, Show, Generic)
 
+instance Semigroup a => Semigroup (ByNodeType a) where
+  (ByNodeType p me) <> (ByNodeType p' me') = ByNodeType (p <> p') (me <> me')
+
+instance Monoid a => Monoid (ByNodeType a) where
+  mempty = ByNodeType mempty Nothing
+
 instance Aeson.ToJSON a => Aeson.ToJSON (ByNodeType a)
 
 instance Aeson.FromJSON a => Aeson.FromJSON (ByNodeType a)
 
+-- These matches Nomad "resources" inside each Job Task.
 data Resources = Resources
   { cores :: Integer
   , memory :: Integer
@@ -695,6 +691,27 @@ data Resources = Resources
 instance Aeson.ToJSON Resources
 
 instance Aeson.FromJSON Resources where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
+
+-- The is used in the Nomad Job to define "volume" at the Group level and
+-- "volume_mount" at the Task level.
+data HostVolume = HostVolume
+  { -- Used at the Task level to create the "volume_mount" property.
+    -- The destination is where it'll appear inside the Task's isolated chroot.
+    destination :: String
+    -- How it should be mounted inside the Task's isolated chroot.
+    -- Independent of how it's defined in the Nomad Client config.
+  , read_only :: Bool
+  -- Used at the Group level to create the "volume" property.
+  -- This name matches the Nomad Client config (client.host_volume.NAME).
+  , source :: String
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON HostVolume
+
+instance Aeson.FromJSON HostVolume where
   parseJSON = Aeson.genericParseJSON
     (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
