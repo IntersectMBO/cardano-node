@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Testnet.Start.Cardano
   ( CardanoTestnetCliOptions(..)
@@ -44,7 +45,7 @@ import           Prelude hiding (lines)
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.Catch
-import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
+import           Control.Monad.Trans.Resource (MonadResource (..), getInternalState, runInternalState)
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.Aeson.KeyMap as A
@@ -75,10 +76,9 @@ import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
-import           Hedgehog.Internal.Property (failException)
+import           Hedgehog.Internal.Property (failException, MonadTest)
 
-import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString)
-import           RIO.Orphans (ResourceMap)
+import           RIO (MonadUnliftIO, throwString)
 import           UnliftIO.Async
 import           UnliftIO.Exception (stringException)
 
@@ -93,10 +93,12 @@ testMinimumConfigurationRequirements options = withFrozenCallStack $ do
   when (cardanoNumPools options < 1) $ do
     throwString "Need at least one SPO node to produce blocks, but got none."
 
-liftToIntegration :: HasCallStack => RIO ResourceMap a -> H.Integration a
-liftToIntegration r =  do
-   rMap <- lift $ lift getInternalState
-   catch @_ @SomeException (runRIO rMap r) (withFrozenCallStack $ failException . toException . stringException . displayException)
+liftToIntegration :: (HasCallStack, MonadCatch m, MonadResource m, MonadTest m)
+                  => (forall n. (MonadCatch n, MonadResource n, MonadUnliftIO n, MonadFail n) => n a)
+                  -> m a
+liftToIntegration act =  do
+   internalState <- liftResourceT getInternalState
+   catch @_ @SomeException (liftIO $ runInternalState act internalState) (withFrozenCallStack $ failException . toException . stringException . displayException)
 
 createTestnetEnv :: ()
   => HasCallStack
