@@ -360,7 +360,7 @@
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
               };
             windows = let
-              windowsProject = project.projectCross.mingwW64;
+              windowsProject = project.projectCross.ucrt64;
               projectExes = collectExes windowsProject;
             in
               projectExes
