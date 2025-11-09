@@ -47,8 +47,7 @@ writeTraceObjectsToJournal logFormat nodeName =
          , (time,      encodeUtf8 $ formatAsIso8601 toTimestamp)
          ]
 
-  mkName [] = "noname"
-  mkName names = T.intercalate "." names
+  mkName ns = if T.null ns then "noname" else ns
 
   namespace = mkJournalField "namespace"
   thread    = mkJournalField "thread"
