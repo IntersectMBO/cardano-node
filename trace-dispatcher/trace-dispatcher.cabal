@@ -61,6 +61,7 @@ library
                       Cardano.Logging.Tracer.Forward
                       Cardano.Logging.Tracer.Composed
                       Cardano.Logging.Types
+                      Cardano.Logging.Types.TraceMessage
                       Cardano.Logging.Types.NodeInfo
                       Cardano.Logging.Types.NodePeers
                       Cardano.Logging.Types.NodeStartupInfo
@@ -73,6 +74,8 @@ library
                       , aeson-pretty
                       , async
                       , bytestring
+                      , cborg
+                      , cborg-json
                       , containers
                       , contra-tracer
                       , deepseq

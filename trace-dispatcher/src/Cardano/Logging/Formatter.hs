@@ -13,48 +13,40 @@ module Cardano.Logging.Formatter (
   , forwardFormatter'
   , machineFormatter
   , machineFormatter'
+  , cborFormatter
+  , cborFormatter'
   , humanFormatter
   , humanFormatter'
 ) where
 
 import           Cardano.Logging.Trace (contramapM)
 import           Cardano.Logging.Types
+import           Cardano.Logging.Types.TraceMessage
 
+import           Codec.Serialise (serialise)
 import           Control.Concurrent (myThreadId)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
+import qualified Data.ByteString.Lazy as BL (toStrict)
 import           Data.Functor.Contravariant
 import           Data.Maybe (fromMaybe)
 import           Data.Text as T (Text, intercalate, null, pack)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
 import           Data.Text.Lazy.Encoding (decodeUtf8)
-import           Data.Time (UTCTime, defaultTimeLocale, formatTime, getCurrentTime)
+import           Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import           Network.HostName
 import           System.IO.Unsafe (unsafePerformIO)
 
-
-encodingToText :: AE.Encoding -> Text
-{-# INLINE encodingToText #-}
-encodingToText = toStrict . decodeUtf8 . AE.encodingToLazyByteString
-
-timeFormatted :: UTCTime -> Text
-{-# INLINE timeFormatted #-}
-timeFormatted = pack . formatTime defaultTimeLocale "%F %H:%M:%S%4QZ"
 
 -- If the hostname in the logs should be anything different from the system reported hostname,
 -- a new field would need to be added to PreFormatted to carry a new hostname argument to preFormatted.
 hostname :: Text
 {-# NOINLINE hostname #-}
 hostname = unsafePerformIO $ T.pack <$> getHostName
-
--- This allows data sharing of an Encoding value, avoiding reconstruction of the underlying Builder
-instance AE.ToJSON AE.Encoding where
-  toJSON     = error "ToJSON(Aeson.Encoding): must never be called"
-  toEncoding = id
 
 
 -- | Format this trace as metrics
@@ -86,22 +78,19 @@ preFormatted withForHuman =
       (lc, Right msg) -> do
         time     <- liftIO getCurrentTime
         threadId <- liftIO myThreadId
-        let ns' = lcNSPrefix lc ++ lcNSInner lc
-            threadTextShortened = T.pack $ drop 9 $ show threadId       -- drop "ThreadId " prefix
-            details = fromMaybe DNormal (lcDetails lc)
-            condForHuman = let txt = forHuman msg in if T.null txt then Nothing else Just txt
-            machineFormatted = AE.toEncoding $ forMachine details msg
+        let
+            pf = PreFormatted
+              { pfTime              = time
+              , pfNamespace         = intercalate "." (lcNSPrefix lc ++ lcNSInner lc)
+              , pfThreadId          = T.pack $ drop 9 $ show threadId                           -- drop "ThreadId " prefix
+              , pfForHuman          = if withForHuman then (let txt = forHuman msg in if T.null txt then Nothing else Just txt) else Nothing
+              , pfForMachineObject  = forMachine (fromMaybe DNormal (lcDetails lc)) msg
+              }
+        pure (lc, Right pf)
 
-        pure (lc, Right (PreFormatted
-                          { pfForHuman = if withForHuman then condForHuman else Nothing
-                          , pfForMachine = machineFormatted
-                          , pfTimestamp = timeFormatted time
-                          , pfTime = time
-                          , pfNamespace = ns'
-                          , pfThreadId = threadTextShortened
-                          }))
       (lc, Left ctrl) ->
-        pure (lc, Left ctrl))
+        pure (lc, Left ctrl)
+    )
 
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter'
@@ -113,28 +102,31 @@ forwardFormatter' (Trace tr) = Trace $
   contramap
     (\ case
       (lc, Right v) ->
-            let machineObj = AE.pairs $
-                      "at"       .= pfTime v
-                    <> "ns"      .= intercalate "." (pfNamespace v)
-                    <> "data"    .= pfForMachine v
-                    <> "sev"     .= fromMaybe Info (lcSeverity lc)
-                    <> "thread"  .= pfThreadId v
-                    <> "host"    .= hostname
-                to = TraceObject {
-                    toHuman     = pfForHuman v
-                  , toMachine   = encodingToText machineObj
-                  , toNamespace = pfNamespace v
-                  , toSeverity  = fromMaybe Info (lcSeverity lc)
-                  , toDetails   = fromMaybe DNormal (lcDetails lc)
-                  , toTimestamp = pfTime v
-                  , toHostname  = hostname
-                  , toThreadId  = pfThreadId v
+            let
+              jsonObj = TraceMessage
+                { tmsgAt      = pfTime v
+                , tmsgNS      = pfNamespace v
+                , tmsgData    = pfForMachineObject v
+                , tmsgSev     = fromMaybe Info $ lcSeverity lc
+                , tmsgThread  = pfThreadId v
+                , tmsgHost    = hostname
+                }
+              to = TraceObject
+                { toHuman     = pfForHuman v
+                , toMachine   = (toStrict . decodeUtf8 . AE.encode) jsonObj
+                -- backwards compatible to not break ForwardingV_1 protocol' type: value used to be segmented (["name", "space"])
+                , toNamespace = [pfNamespace v]
+                , toSeverity  = fromMaybe Info (lcSeverity lc)
+                , toDetails   = fromMaybe DNormal (lcDetails lc)
+                , toTimestamp = pfTime v
+                , toHostname  = hostname
+                , toThreadId  = pfThreadId v
                 }
             in (lc, Right (FormattedForwarder to))
       (lc, Left ctrl) -> (lc, Left ctrl))
       tr
 
--- | Format this trace as TraceObject for the trace forwarder
+-- | Format this trace as TraceObject for machine-readable text output (JSON)
 machineFormatter'
   :: forall m .
      MonadIO m
@@ -144,18 +136,43 @@ machineFormatter' (Trace tr) = Trace $
   contramap
     (\ case
       (lc, Right v) ->
-        let machineObj = AE.pairs $
-                   "at"      .= pfTime v
-                <> "ns"      .= intercalate "." (pfNamespace v)
-                <> "data"    .= pfForMachine v
-                <> "sev"     .= fromMaybe Info (lcSeverity lc)
-                <> "thread"  .= pfThreadId v
-                <> "host"    .= hostname
-        in (lc, Right (FormattedMachine (encodingToText machineObj)))
+        let
+          msg = TraceMessage
+            { tmsgAt      = pfTime v
+            , tmsgNS      = pfNamespace v
+            , tmsgData    = pfForMachineObject v
+            , tmsgSev     = fromMaybe Info $ lcSeverity lc
+            , tmsgThread  = pfThreadId v
+            , tmsgHost    = hostname
+            }
+        in (lc, Right (FormattedMachine (toStrict . decodeUtf8 $ AE.encode msg)))
       (lc, Left ctrl) -> (lc, Left ctrl))
       tr
 
--- | Format this trace in human readable style
+-- | Format this trace in binary serialisation (CBOR)
+cborFormatter'
+  :: forall m .
+     MonadIO m
+  => Trace m FormattedMessage
+  -> Trace m PreFormatted
+cborFormatter' (Trace tr) = Trace $
+  contramap
+    (\ case
+      (lc, Right v) ->
+        let
+          cborObj = TraceMessage
+            { tmsgAt      = pfTime v
+            , tmsgNS      = pfNamespace v
+            , tmsgData    = pfForMachineObject v
+            , tmsgSev     = fromMaybe Info $ lcSeverity lc
+            , tmsgThread  = pfThreadId v
+            , tmsgHost    = hostname
+            }
+        in (lc, Right (FormattedCBOR $ BL.toStrict $ serialise cborObj))
+      (lc, Left ctrl) -> (lc, Left ctrl))
+      tr
+
+-- | Format this trace in human readable text output
 humanFormatter'
   :: forall m .
      MonadIO m
@@ -170,15 +187,18 @@ humanFormatter' withColor (Trace tr) =
               let sev      = fromMaybe Info (lcSeverity lc)
                   ns       = fromText hostname
                                 <> singleton ':'
-                                <> fromText (intercalate "." (pfNamespace v))
-                  prePart  = squareBrackets (fromText (pfTimestamp v))
+                                <> fromText (pfNamespace v)
+                  showTime = formatTime defaultTimeLocale "%F %H:%M:%S%4QZ"
+                  prePart  = squareBrackets (fromString $ showTime $ pfTime v)
                                 <> squareBrackets ns
                                 <> roundBrackets
                                     (fromString (show sev)
                                     <> singleton ','
                                     <> fromText (pfThreadId v))
                   dataPart = fromMaybe
-                                (encodingToText (AE.pairs ("data" .= pfForMachine v)))
+                                (toStrict . decodeUtf8 . AE.encodingToLazyByteString $ 
+                                  AE.pairs ("data" .= pfForMachineObject v)
+                                )
                                 (pfForHuman v)
                   forHuman'' = toStrict
                                 $ toLazyText
@@ -236,6 +256,15 @@ machineFormatter
   -> m (Trace m a)
 machineFormatter =
   preFormatted False . machineFormatter'
+
+cborFormatter
+  :: forall a m .
+     (MonadIO m
+  ,  LogFormatting a)
+  => Trace m FormattedMessage
+  -> m (Trace m a)
+cborFormatter =
+  preFormatted False . cborFormatter'
 
 forwardFormatter
   :: forall a m .
