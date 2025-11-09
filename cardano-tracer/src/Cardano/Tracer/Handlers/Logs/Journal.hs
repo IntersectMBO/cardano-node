@@ -2,6 +2,7 @@
 #ifdef SYSTEMD
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 #endif
 
 module Cardano.Tracer.Handlers.Logs.Journal
@@ -13,6 +14,7 @@ import qualified Cardano.Logging as L
 #endif
 import           Cardano.Logging (TraceObject (..))
 import           Cardano.Tracer.Configuration (LogFormat (..))
+import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.Types (NodeName)
 
 #ifdef SYSTEMD
@@ -47,8 +49,7 @@ writeTraceObjectsToJournal logFormat nodeName =
          , (time,      encodeUtf8 $ formatAsIso8601 toTimestamp)
          ]
 
-  mkName [] = "noname"
-  mkName names = T.intercalate "." names
+  mkName (normalizeNamespace -> ns) = if T.null ns then "noname" else ns
 
   namespace = mkJournalField "namespace"
   thread    = mkJournalField "thread"

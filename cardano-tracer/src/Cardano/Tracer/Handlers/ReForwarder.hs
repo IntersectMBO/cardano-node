@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | This  module initializes a reforwarding service for use by
 --   cardano-tracer.  It could [re-] serve the three miniprotocols on
@@ -20,12 +21,12 @@ import           Cardano.Logging.Tracer.DataPoint
 import qualified Cardano.Logging.Types as Log
 import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.MetaTrace
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Control.Monad (when)
-import           Data.List (isPrefixOf)
 import qualified Data.Text as Text
 
 import           Trace.Forward.Forwarding
@@ -49,7 +50,7 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
       Just x  -> case x of
         (ConnectTo{}, _, _) ->
           error "initReForwarder:  unsupported mode of operation:  ConnectTo.  Use AcceptAt."
-        (AcceptAt (LocalPipe socket), mFwdNames, forwConf) -> do
+        (AcceptAt (LocalPipe socket), flattenNS -> mFwdNames, forwConf) -> do
           (fwdsink, dpStore :: DataPointStore) <- withIOManager \iomgr -> do
             traceWith teTracer TracerStartedReforwarder
             initForwarding iomgr forwConf
@@ -61,7 +62,7 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
                           fwdsink
                       , dataPointTracer @IO dpStore
                       )
-        (AcceptAt (RemoteSocket host port), mFwdNames, forwConf) -> do
+        (AcceptAt (RemoteSocket host port), flattenNS -> mFwdNames, forwConf) -> do
           (fwdsink, dpStore :: DataPointStore) <- withIOManager \iomgr -> do
             traceWith teTracer TracerStartedReforwarder
             initForwarding iomgr forwConf
@@ -86,13 +87,15 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
             const $ return ()
 
   return (writesToSink', traceDP)
+  where
+    flattenNS = fmap (map (Text.intercalate "."))
 
 
-traceObjectHasPrefixIn :: Maybe [[Text.Text]] -> Log.TraceObject -> Bool
-traceObjectHasPrefixIn mFwdNames logObj =
+traceObjectHasPrefixIn :: Maybe [Text.Text] -> Log.TraceObject -> Bool
+traceObjectHasPrefixIn mFwdNames (normalizeNamespace . Log.toNamespace -> ns) =
   case mFwdNames of
     Nothing       -> True -- forward everything in this case
-    Just fwdNames -> any (`isPrefixOf` Log.toNamespace logObj) fwdNames
+    Just fwdNames -> any (`Text.isPrefixOf` ns) fwdNames
 
 
 filteredWriteToSink :: (Log.TraceObject -> Bool)
