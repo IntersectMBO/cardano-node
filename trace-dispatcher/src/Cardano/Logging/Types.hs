@@ -63,8 +63,8 @@ module Cardano.Logging.Types (
 import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
-import qualified Data.Aeson.Encoding as AE
 import           Data.Bool (bool)
+import           Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Kind (Type)
@@ -342,16 +342,16 @@ data FormattedMessage =
     | FormattedMachine Text
     | FormattedMetrics [Metric]
     | FormattedForwarder TraceObject
+    | FormattedCBOR ByteString
   deriving stock (Eq, Show)
 
 
 data PreFormatted = PreFormatted {
-    pfForHuman   :: !(Maybe Text)
-  , pfForMachine :: !AE.Encoding
-  , pfNamespace  :: ![Text]
-  , pfTimestamp  :: !Text
-  , pfTime       :: !UTCTime
-  , pfThreadId   :: !Text
+    pfTime              :: !UTCTime
+  , pfNamespace         :: !Text
+  , pfThreadId          :: !Text
+  , pfForHuman          :: !(Maybe Text)
+  , pfForMachineObject  :: AE.Object
 }
 
 -- | Used as interface object for ForwarderTracer
