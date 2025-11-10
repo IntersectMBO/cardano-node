@@ -11,10 +11,11 @@ import           Cardano.Logging.Utils (threadLabelMe)
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception (BlockedIndefinitelyOnMVar (..), handle)
 import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class
 import qualified Control.Tracer as T
-import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import           Data.IORef
 import           Data.Maybe (isNothing)
 import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
@@ -28,8 +29,8 @@ newtype StandardTracerState =  StandardTracerState {
 emptyStandardTracerState :: StandardTracerState
 emptyStandardTracerState = StandardTracerState Nothing
 
--- | It is mandatory to construct only one standard tracer in any application!
--- Throwing away a standard tracer and using a new one will result in an exception
+-- | The standardTracer handles stdout logging in a thread-safe manner.
+--   It is strongly advised to construct only one standardTracer for any application.
 standardTracer :: forall m. (MonadIO m)
   => m (Trace m FormattedMessage)
 standardTracer = do
@@ -41,17 +42,17 @@ standardTracer = do
       -> LoggingContext
       -> Either TraceControl FormattedMessage
       -> m ()
-    output stateRef LoggingContext {} (Right (FormattedHuman _c msg)) = liftIO $ do
+    output stateRef LoggingContext{} (Right (FormattedHuman _c msg)) = liftIO $ do
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} (Right (FormattedMachine msg)) = liftIO $ do
+    output stateRef LoggingContext{} (Right (FormattedMachine msg)) = liftIO $ do
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} (Left TCReset) = liftIO $ do
+    output stateRef LoggingContext{} (Left TCReset) = liftIO $ do
       st <- readIORef stateRef
       case stRunning st of
         Nothing -> when (isNothing $ stRunning st) $
@@ -69,13 +70,14 @@ startStdoutThread stateRef = do
     (inChan, outChan) <- newChan 2048
     as <- async $ threadLabelMe "StdoutTrace" >> stdoutThread outChan
     link as
-    modifyIORef' stateRef (\ st ->
-      st {stRunning = Just (inChan, outChan, as)})
+    atomicWriteIORef stateRef $ StandardTracerState (Just (inChan, outChan, as))
 
 -- | The new thread, which does the actual write from the queue.
--- runs forever, and never returns
+--   Will safely terminate when all producers have gone out of scope.
 stdoutThread :: OutChan Text -> IO ()
-stdoutThread outChan = forever $ do
-    readChan outChan
-      >>= TIO.putStrLn
-    hFlush stdout
+stdoutThread outChan =
+  handle (\BlockedIndefinitelyOnMVar -> pure ()) $
+    forever $ do
+      readChan outChan
+        >>= TIO.putStrLn
+      hFlush stdout
