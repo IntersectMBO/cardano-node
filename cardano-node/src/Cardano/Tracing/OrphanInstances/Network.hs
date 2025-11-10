@@ -140,7 +140,8 @@ import           Network.Socket (SockAddr (..))
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
-                  (TxDecision (..), TxsToMempool (..), TxSubmissionCounters (..), TraceTxLogic (..), SharedTxState (..),
+                  (InFlightState (..), TxDecision (..), TxsToMempool (..),
+                   TxSubmissionCounters (..), TraceTxLogic (..), SharedTxState (..),
                    PeerTxState (..))
 
 {- HLINT ignore "Use record patterns" -}
@@ -1571,7 +1572,7 @@ instance ( ToJSON txid
     mconcat
       [ "kind" .= String "SharedTxState"
       , "peerTxStates" .= peerTxStates
-      , "inflightTxs" .= inflightTxs
+      , "inflightTxs" .= Map.map inFlightCount inflightTxs
       , "inflightTxsSize" .= getSizeInBytes inflightTxsSize
       , "bufferedTxs" .= fmap (toObject verb <$>) bufferedTxs
       , "referenceCounts" .= referenceCounts
