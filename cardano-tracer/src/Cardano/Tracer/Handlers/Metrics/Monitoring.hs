@@ -14,8 +14,6 @@ import           Cardano.Tracer.Types
 
 import           Prelude hiding (head)
 
-import           Control.Concurrent.Async (race_)
-import           Control.Concurrent.Chan.Unagi (OutChan, dupChan)
 import           Data.ByteString as ByteString (ByteString, isInfixOf)
 import           Data.ByteString.Builder (stringUtf8)
 import qualified Data.Text as T
@@ -41,7 +39,7 @@ runMonitoringServer
   -> Endpoint -- ^ (web page with list of connected nodes, EKG web page).
   -> IO RouteDictionary
   -> IO ()
-runMonitoringServer TracerEnv{teTracer, teInChan = inChan} endpoint computeRoutes_autoUpdate = do
+runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.2
   traceWith teTracer TracerStartedMonitoring
@@ -49,18 +47,11 @@ runMonitoringServer TracerEnv{teTracer, teInChan = inChan} endpoint computeRoute
     , ttMonitoringType     = "list"
     }
   dummyStore <- EKG.newStore
-  outChan    <- dupChan inChan
+  runSettings (setEndpoint endpoint defaultSettings) do
+    renderEkg dummyStore computeRoutes_autoUpdate
 
-  let run :: IO ()
-      run = runSettings (setEndpoint endpoint defaultSettings) $
-              renderEkg dummyStore outChan computeRoutes_autoUpdate
-
-  race_ run (blockUntilShutdown outChan)
-
-renderEkg :: EKG.Store -> OutChan (CardanoTracerMessage ()) -> IO RouteDictionary -> Application
-renderEkg dummyStore outChan computeRoutes_autoUpdate request send = do
-  dieOnShutdown outChan
-
+renderEkg :: EKG.Store -> IO RouteDictionary -> Application
+renderEkg dummyStore computeRoutes_autoUpdate request send = do
   routeDictionary :: RouteDictionary <-
     computeRoutes_autoUpdate
 

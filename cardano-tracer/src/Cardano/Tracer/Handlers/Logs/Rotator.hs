@@ -6,7 +6,7 @@ module Cardano.Tracer.Handlers.Logs.Rotator
   ) where
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment (TracerEnv (..), forever'tilShutdown)
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Utils (createOrUpdateEmptyLog, getTimeStampFromLog,
                    isItLog)
 import           Cardano.Tracer.MetaTrace
@@ -14,9 +14,8 @@ import           Cardano.Tracer.Types (HandleRegistry, HandleRegistryKey, NodeNa
 import           Cardano.Tracer.Utils (showProblemIfAny, readRegistry)
 
 import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Concurrent.Chan.Unagi (dupChan)
 import           Control.Concurrent.Extra (Lock)
-import           Control.Monad (forM_, unless, when)
+import           Control.Monad (forM_, forever, unless, when)
 import           Control.Monad.Extra (whenJust, whenM)
 import           Data.Foldable (for_)
 import           Data.List (nub, sort)
@@ -34,39 +33,37 @@ import           System.Time.Extra (sleep)
 
 -- | Runs rotation mechanism for the log files.
 runLogsRotator :: TracerEnv -> IO ()
-runLogsRotator tracerEnv@TracerEnv { teConfig = TracerConfig{rotation}, teTracer } = do
-  whenJust rotation \rot -> do
+runLogsRotator TracerEnv
+  { teConfig = TracerConfig{rotation, verbosity, logging}
+  , teCurrentLogLock
+  , teTracer
+  , teRegistry
+  } = do
+  whenJust rotation \rotParams -> do
     traceWith teTracer TracerStartedLogRotator
-    launchRotator tracerEnv rot
-
-launchRotator
-  :: TracerEnv
-  -> RotationParams
-  -> IO ()
-launchRotator tracerEnv rot@RotationParams{rpFrequencySecs} = do
-  whenNonEmpty loggingParamsForFiles do
-    outChan <- dupChan teInChan
-    forever'tilShutdown outChan do
-      showProblemIfAny verbosity do
-        forM_ loggingParamsForFiles \loggingParam -> do
-          checkRootDir teCurrentLogLock teRegistry rot loggingParam
-      sleep (fromIntegral rpFrequencySecs)
-  where
-  whenNonEmpty :: Applicative f => [a] -> f () -> f ()
-  whenNonEmpty = unless . null
-
-  TracerEnv
-    { teConfig = TracerConfig{verbosity, logging}
-    , teCurrentLogLock
-    , teRegistry
-    , teInChan
-    } = tracerEnv
-
+    launchRotator loggingParamsForFiles rotParams verbosity teRegistry teCurrentLogLock
+ where
   loggingParamsForFiles :: [LoggingParams]
   loggingParamsForFiles = nub (NE.filter filesOnly logging)
 
   filesOnly :: LoggingParams -> Bool
   filesOnly LoggingParams{logMode} = logMode == FileMode
+
+launchRotator
+  :: [LoggingParams]
+  -> RotationParams
+  -> Maybe Verbosity
+  -> HandleRegistry
+  -> Lock
+  -> IO ()
+launchRotator [] _ _ _ _ = return ()
+launchRotator loggingParamsForFiles
+              rotParams@RotationParams{rpFrequencySecs} verb registry currentLogLock =
+  forever do
+    showProblemIfAny verb do
+      forM_ loggingParamsForFiles \loggingParam -> do
+        checkRootDir currentLogLock registry rotParams loggingParam
+    sleep $ fromIntegral rpFrequencySecs
 
 -- | All the logs with 'TraceObject's received from particular node
 --   will be stored in a separate subdirectory in the root directory.

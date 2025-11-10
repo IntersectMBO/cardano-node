@@ -1,10 +1,5 @@
 # ChangeLog
 
-## NEXT
-
-* Cardano-tracer library functionality, allows shutting down and sending signals to running
-  instances through channels.
-
 ## 0.3.4 (July, 2025)
 * Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.
 

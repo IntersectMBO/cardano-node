@@ -19,7 +19,6 @@ import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO)
 #endif
-import           Control.Concurrent.Chan.Unagi (newChan)
 import           Control.DeepSeq
 import qualified Data.List.NonEmpty as NE
 import           Data.Time.Clock (UTCTime, getCurrentTime)
@@ -64,8 +63,6 @@ main = do
 
   tracer <- mkTracerTracer $ SeverityF $ Just Warning
 
-  (inChan, _outChan) <- newChan
-
   let tracerEnv :: TracerConfig -> HandleRegistry -> TracerEnv
       tracerEnv config handleRegistry = TracerEnv
         { teConfig                = config
@@ -77,7 +74,6 @@ main = do
         , teDPRequestors          = dpRequestors
         , teProtocolsBrake        = protocolsBrake
         , teTracer                = tracer
-        , teInChan                = inChan
         , teReforwardTraceObjects = \_-> pure ()
         , teRegistry              = handleRegistry
         , teStateDir              = Nothing
