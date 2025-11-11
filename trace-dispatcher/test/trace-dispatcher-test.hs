@@ -48,6 +48,10 @@ unitTests = testGroup "trace-dispatcher-unit-tests"
         res <- test2
         bres <- testLoggingMessagesEq res test2Res
         assertBool "testTrivial2" bres
+--    , testCase "testBinaryFileCBOR" $ do
+--        _res <- test3
+--        -- bres <- testLoggingMessagesEq res test2Res
+--        assertBool "testBinaryFileCBOR" True
     , testCase "testAggregation" $ do
         res <- testAggregation
         bres <- testLoggingMessagesEq res testAggResult
