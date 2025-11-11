@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Cardano.Timeseries.Domain.Instant(Instant(..), InstantVector, mostRecent, share, toVector, prettyInstant, prettyInstantVector) where
 
 import           Cardano.Timeseries.Domain.Types (SeriesIdentifier, Timestamp)
@@ -10,9 +8,9 @@ import           Data.Vector
 
 -- | One datapoint in a series.
 data Instant a = Instant {
-  labels :: !SeriesIdentifier,
-  timestamp :: !Timestamp,
-  value :: !a
+  labels :: SeriesIdentifier,
+  timestamp :: Timestamp,
+  value :: a
 } deriving (Show, Eq, Functor, Foldable, Traversable)
 
 -- | Do the instant vectors share a series?

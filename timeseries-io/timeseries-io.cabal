@@ -18,6 +18,13 @@ common common
 
     default-language: GHC2021
 
+    default-extensions:
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+      StrictData
+      Strict
+
 library
     import: common
     hs-source-dirs: src

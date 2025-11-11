@@ -11,8 +11,8 @@ import           Data.List (foldl')
 import           Data.Set (fromList)
 
 data Point a = Point {
-  name :: !MetricIdentifier,
-  instant :: !(Instant a)
+  name :: MetricIdentifier,
+  instant :: Instant a
 } deriving (Show, Eq, Functor)
 
 type Flat a = [Point a]

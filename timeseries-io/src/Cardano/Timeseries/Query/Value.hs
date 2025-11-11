@@ -14,23 +14,23 @@ type FunctionValue = Value -> ExceptT Error (State Int) Value
 -- | A model of values that queries interpret into.
 data Value where
   -- | A scalar.
-  Scalar :: !Double -> Value
+  Scalar :: Double -> Value
   -- | A range vector.
-  RangeVector :: !(TimeseriesVector Value) -> Value
+  RangeVector :: TimeseriesVector Value -> Value
   -- | An instant vector.
-  InstantVector :: !(InstantVector Value) -> Value
+  InstantVector :: InstantVector Value -> Value
   -- | A pair.
-  Pair :: !Value -> !Value -> Value
+  Pair :: Value -> Value -> Value
   -- | Truth.
   Truth :: Value
   -- | Falsity.
   Falsity :: Value
   -- | Duration (milliseconds)
-  Duration :: !Word64 -> Value
+  Duration :: Word64 -> Value
   -- | Timestamp (milliseconds since epoch)
-  Timestamp :: !Word64 -> Value
+  Timestamp :: Word64 -> Value
   -- | Function
-  Function :: !FunctionValue -> Value
+  Function :: FunctionValue -> Value
 
 instance Show Value where
   show (Scalar x) = show x
@@ -41,7 +41,7 @@ instance Show Value where
   show Falsity = "False"
   show (Duration d) = show d <> "ms"
   show (Timestamp t) = show t
-  show (Function t) = show "<function>"
+  show (Function t) = "<function>"
 
 fromBool :: Bool -> Value
 fromBool Prelude.True = Truth

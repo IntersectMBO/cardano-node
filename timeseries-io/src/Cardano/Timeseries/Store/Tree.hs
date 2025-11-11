@@ -18,8 +18,8 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 data Point a = Point {
-  labels :: !SeriesIdentifier,
-  value :: !a
+  labels :: SeriesIdentifier,
+  value :: a
 } deriving (Show, Ord, Eq, Foldable, Functor)
 
 type Tree a = Map MetricIdentifier (Map Timestamp [Point a])
