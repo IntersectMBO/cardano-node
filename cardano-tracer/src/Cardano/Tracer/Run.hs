@@ -169,6 +169,15 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 #endif
     ]
 
+  ~(inChan, outChan) <- newChan
+
+  sequenceConcurrently_ runs
+
+  pure CardanoTracerHandle
+    { inChan
+    , outChan
+    }
+
 -- NB. this fails silently if there's any read or decode error when an external JSON file is provided
 loadMetricsHelp :: Maybe FileOrMap -> IO [(Text, Builder)]
 loadMetricsHelp Nothing        = pure []

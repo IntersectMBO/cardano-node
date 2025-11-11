@@ -74,8 +74,6 @@ instance Storable MachTaskBasicInfo where
 
 foreign import ccall unsafe c_get_process_memory_info2 :: Ptr MachTaskBasicInfo -> CInt -> IO CInt
 
-foreign import ccall unsafe c_get_process_cpu_time_microseconds :: CInt -> IO Word64
-
 
 getMemoryInfo :: ProcessID -> IO MachTaskBasicInfo
 getMemoryInfo pid =
@@ -86,12 +84,13 @@ getMemoryInfo pid =
 
 readResourceStatsInternal :: IO (Maybe ResourceStats)
 readResourceStatsInternal = getProcessID >>= \pid -> do
+  cpu <- getMemoryInfo pid
   rts <- GhcStats.getRTSStats
   mem <- getMemoryInfo pid
-  cpuTimeMicro <- c_get_process_cpu_time_microseconds (fromIntegral pid)
   pure . Just $
     Resources
-    { rCentiCpu   = usToCenti cpuTimeMicro
+    { rCentiCpu   = timeValToCenti (_user_time cpu)
+                  + timeValToCenti (_system_time cpu)
     , rCentiGC    = nsToCenti $ GhcStats.gc_cpu_ns rts
     , rCentiMut   = nsToCenti $ GhcStats.mutator_cpu_ns rts
     , rGcsMajor   = fromIntegral $ GhcStats.major_gcs rts
@@ -110,5 +109,8 @@ readResourceStatsInternal = getProcessID >>= \pid -> do
  where
    nsToCenti :: GhcStats.RtsTime -> Word64
    nsToCenti = fromIntegral . (`div` 10000000)
-   usToCenti :: Word64 -> Word64
-   usToCenti = (`div` 10000)
+   timeValToCenti :: TIME_VALUE_T -> Word64
+   timeValToCenti tv = usFromTimeValue tv `div` 10000
+
+usFromTimeValue :: TIME_VALUE_T -> Word64
+usFromTimeValue (TIME_VALUE_T s us) = s * 1000000 + us
