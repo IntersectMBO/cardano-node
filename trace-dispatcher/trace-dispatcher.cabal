@@ -55,6 +55,7 @@ library
                       Cardano.Logging.Prometheus.TCPServer
                       Cardano.Logging.Trace
                       Cardano.Logging.TraceDispatcherMessage
+                      Cardano.Logging.Tracer.BinaryFile
                       Cardano.Logging.Tracer.DataPoint
                       Cardano.Logging.Tracer.EKG
                       Cardano.Logging.Tracer.Standard
@@ -122,6 +123,9 @@ test-suite trace-dispatcher-test
                         Cardano.Logging.Test.Unit.FrequencyLimiting
                         Cardano.Logging.Test.Unit.Documentation
 
+  -- This enables us to test Cardano.Logging.Tracer.BinaryFile as long as it still contains its {-# WARNING #-} pragma
+  ghc-options:        -Wno-deprecations
+
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
@@ -131,6 +135,7 @@ test-suite trace-dispatcher-test
                       , generic-data
                       , hostname
                       , text
+                      , serialise
                       , stm
                       , tasty
                       , tasty-hunit
