@@ -4,16 +4,19 @@ module Cardano.Logging.Test.Unit.Trivial (
   , test1Res
   , test2
   , test2Res
+  , test3
 ) where
 
 
 import           Cardano.Logging
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Unit.TestObjects
+import           Cardano.Logging.Tracer.BinaryFile
+import           Cardano.Logging.Types.TraceMessage
 
+import           Codec.Serialise.IO (readFileDeserialise)
 import           Data.IORef
 import           Data.Text (Text)
-
 
 -- | Make sure the function append name is only called once
 --   for every path element
@@ -79,3 +82,31 @@ test2Res = [
            ,"{\"at\":\"2023-11-23T14:07:26.112107139Z\",\"ns\":\"Outer1.Inner2.Inner3\",\"data\":{\"kind\":\"TraceStartLeadershipCheck\",\"slot\":2002},\"sev\":\"Info\",\"thread\":\"460\",\"host\":\"deusXmachina\"}"
            ,"{\"at\":\"2023-11-23T14:07:26.112114044Z\",\"ns\":\"Outer1.Inner1.cont3.cont2.cont1\",\"data\":{\"kind\":\"TraceStartLeadershipCheck\",\"slot\":1001},\"sev\":\"Info\",\"thread\":\"460\",\"host\":\"deusXmachina\"}"
            ]
+
+test3 :: IO [Text]
+test3 = test3Write filePath
+  where
+    filePath = "/tmp/trace-dispatcher-test.cbor"
+
+test3Write :: FilePath -> IO [Text]
+test3Write filePath = do
+    (fileTracer, _closeFile) <- binaryFileTracer filePath
+    simpleTracer <- cborFormatter fileTracer
+    confState <- emptyConfigReflection
+    configureTracers confState emptyTraceConfig [simpleTracer]
+    let simpleTracer1  = filterTraceBySeverity
+                              (Just (SeverityF (Just Warning)))
+                              (withSeverity simpleTracer)
+    let simpleTracerC1 = appendInnerName "Outer1" simpleTracer1
+    let simpleTracerC2 = appendInnerName "Inner1" simpleTracerC1
+    let simpleTracerC3 = setPrivacy Confidential $ appendInnerName "Inner2" simpleTracerC1
+    traceWith simpleTracerC2 message1
+    traceWith (setSeverity Critical simpleTracerC3) message2
+    traceWith simpleTracerC2 message3
+    traceWith (appendInnerName "Inner3" simpleTracerC3) message4
+    traceWith (appendInnerName "cont1" $ appendInnerName "cont2" $ appendInnerName "cont3" simpleTracerC2) message1
+    _closeFile
+
+    msgs :: [TraceMessage] <- readFileDeserialise filePath
+    print msgs
+    pure []
