@@ -61,7 +61,7 @@ import Data.List.NonEmpty (NonEmpty)
  -     | filter
  -     | join
  -     | map
- - e{1} ::= f | $x | x | s | (e{≥0}) | c | (e{≥0}, e{≥0})
+ - e{1} ::= f | x | s | (e{≥0}) | c | (e{≥0}, e{≥0})
  - e{0} ::= e{≥1} e{≥1} e{≥1} ... e{≥1} | \x -> e{≥0} | let x = e{≥0} in e{≥0}
  -}
 

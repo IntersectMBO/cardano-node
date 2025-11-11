@@ -1,7 +1,11 @@
-module Cardano.Timeseries.Domain.Instant(Instant(..), InstantVector, mostRecent, share, toVector) where
+{-# LANGUAGE OverloadedStrings #-}
+
+module Cardano.Timeseries.Domain.Instant(Instant(..), InstantVector, mostRecent, share, toVector, prettyInstant, prettyInstantVector) where
 
 import           Cardano.Timeseries.Domain.Types (SeriesIdentifier, Timestamp)
 
+import qualified Data.Set as Set
+import           Data.Text (Text, intercalate, pack)
 import           Data.Vector
 
 -- | One datapoint in a series.
@@ -23,3 +27,10 @@ mostRecent u v = if timestamp u < timestamp v then v else u
 
 toVector :: InstantVector Double -> Vector Double
 toVector = fromList . fmap value
+
+prettyInstant :: Show a => Instant a -> Text
+prettyInstant (Instant ls t v) =
+  pack (show (Set.toList ls)) <> " " <> pack (show t) <> " " <> pack (show v)
+
+prettyInstantVector :: Show a => InstantVector a -> Text
+prettyInstantVector = intercalate "\n" . fmap prettyInstant

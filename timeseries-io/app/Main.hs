@@ -21,6 +21,11 @@ import           Data.Text (pack)
 import           GHC.List (foldl')
 import           System.Exit (die)
 import           System.IO (hFlush, stdout)
+import Cardano.Timeseries.Store.Tree (fromFlat)
+import Cardano.Logging.Resources (readResourceStats)
+import Cardano.Logging (forHuman)
+import Cardano.Logging.Resources (ResourceStats)
+import Cardano.Logging.Resources (Resources(..))
 
 snapshotsFile :: String
 snapshotsFile = "6nodes_4hours_1mininterval.cbor"
@@ -32,8 +37,20 @@ printQueryResult :: Either Error Value -> IO ()
 printQueryResult (Left err) = putStrLn ("Error: " <> err)
 printQueryResult (Right ok) = print ok
 
-interactive :: Flat Double -> IO ()
+printStats :: ResourceStats -> IO ()
+printStats stats =
+  putStrLn $ "Alloc: " <> show ((fromIntegral (rAlloc stats) :: Double) / 1024 / 1024) <> "MB\n"
+          <> "Live: " <> show ((fromIntegral (rLive stats) :: Double) / 1024 / 1024) <> "MB\n"
+          <> "Heap: " <> show ((fromIntegral (rHeap stats) :: Double) / 1024 / 1024) <> "MB\n"
+          <> "RSS: " <> show ((fromIntegral (rRSS stats) :: Double) / 1024 / 1024) <> "MB"
+
+interactive :: Store s Double => s -> IO ()
 interactive store = forever $ do
+ Just stats <- readResourceStats
+ putStrLn "----------"
+ printStats stats
+ putStrLn $ "Number of store entries: " <> show (count store)
+ putStrLn "----------"
  putStr "> "
  hFlush stdout
  queryString <- getLine
@@ -47,25 +64,4 @@ main :: IO ()
 main = do
   content <- readFileSnapshots snapshotsFile
   let store = snapshotsToFlatStore content
-  interactive store
-
-main1 :: IO ()
-main1 = do
-  putStrLn "This is a prototype!"
-  string <- readFile "dataset.txt"
-  let result = parseOnly (points decimal <* skipMany space) (pack string)
-  case result of
-    Left err -> die err
-    Right dataset -> do
-      print (dataset :: [Point Integer])
-      let store = foldl' (\s p -> insert s (name p) (instant p)) (new :: Flat Double) (fmap (fmap fromIntegral) dataset)
-      string <- readFile "expression.txt"
-      let result = parseOnly (expr <* skipMany space <* endOfInput) (pack string)
-      case result of
-        Left err -> die err
-        Right expr -> do
-          print expr
-
-          -- no instance Show Value
-          -- print $ interp store expr 15
-
+  interactive (fromFlat store)

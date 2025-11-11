@@ -1,10 +1,12 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Cardano.Timeseries.Util(isSubsetOf, isEqual, toMaybe, maybeToEither, safeToWord64, safeToDouble, head) where
+module Cardano.Timeseries.Util(isSubsetOf, isEqual, toMaybe, maybeToEither, safeToWord64, safeToDouble, head, range) where
 
 import           Prelude hiding (head)
 
 import           Data.List (nub)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
 
 isSubsetOf :: forall a. (Eq a) => [a] -> [a] -> Bool
@@ -39,3 +41,12 @@ safeToDouble x
 head :: [a] -> Maybe a
 head (x : _) = Just x
 head [] = Nothing
+
+-- | Return submap containing only keys in (lo, hi).
+-- | Complexity: O(log(n)).
+range :: Ord k => k -> k -> Map k v -> Map k v
+range lo hi m =
+    let (_, m1) = Map.split lo m  -- drop all < lo
+        (m2, _) = Map.split hi m1 -- drop all > hi
+    in m2
+

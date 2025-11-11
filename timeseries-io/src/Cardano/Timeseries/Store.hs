@@ -8,6 +8,7 @@ import           Cardano.Timeseries.Domain.Types
 import           Data.Word (Word64)
 import Data.Set (Set)
 
+-- | Milliseconds
 stalenessConstant :: Word64
 stalenessConstant = 5 * 60 * 1000
 
@@ -23,3 +24,5 @@ class Store s a | s -> a where
 
   metrics :: s -> Set MetricIdentifier
 
+  -- | Total number of (<metric>, <labels>, <timestamp>, <value>) tuples.
+  count :: s -> Int

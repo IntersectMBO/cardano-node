@@ -5,6 +5,7 @@ import           Cardano.Timeseries.Domain.Timeseries (TimeseriesVector)
 
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.State.Strict (State)
+import           Data.Text (unpack)
 import           Data.Word (Word64)
 
 type Error = String
@@ -34,7 +35,7 @@ data Value where
 instance Show Value where
   show (Scalar x) = show x
   show (RangeVector x) = show x
-  show (InstantVector x) = show x
+  show (InstantVector x) = unpack (prettyInstantVector x)
   show (Pair x y) = "(" <> show x <> ", " <> show y <> ")"
   show Truth = "True"
   show Falsity = "False"
