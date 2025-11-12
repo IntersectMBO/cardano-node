@@ -4,21 +4,25 @@
 module Cardano.Timeseries.Domain.Timeseries(Timeseries(..), TimeseriesVector,
   transpose, toVector, oldest, newest, eachOldest, eachNewest) where
 
-import           Cardano.Timeseries.Domain.Instant (InstantVector, Instant (Instant))
+import           Cardano.Timeseries.Domain.Instant (Instant (Instant), InstantVector)
 import qualified Cardano.Timeseries.Domain.Instant as Instant
 import           Cardano.Timeseries.Domain.Types
 
+import           Control.DeepSeq (NFData)
 import           Data.List (find, maximumBy, minimumBy)
 import           Data.Set
 import qualified Data.Set as Set
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
+import           GHC.Generics (Generic)
 
 -- | A collection of datapoints sharing a series.
 data Timeseries a = Timeseries {
   labels :: SeriesIdentifier,
   dat :: [(Timestamp, a)]
-} deriving (Show, Functor, Foldable, Traversable)
+} deriving (Show, Functor, Foldable, Traversable, Generic)
+
+instance NFData a => NFData (Timeseries a)
 
 oldest :: Timeseries a -> Maybe (Instant a)
 oldest Timeseries{..} | Prelude.null dat = Nothing

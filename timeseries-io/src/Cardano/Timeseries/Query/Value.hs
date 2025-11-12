@@ -7,6 +7,8 @@ import           Control.Monad.Except (ExceptT)
 import           Control.Monad.State.Strict (State)
 import           Data.Text (unpack)
 import           Data.Word (Word64)
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
 
 type Error = String
 type FunctionValue = Value -> ExceptT Error (State Int) Value
@@ -30,7 +32,9 @@ data Value where
   -- | Timestamp (milliseconds since epoch)
   Timestamp :: Word64 -> Value
   -- | Function
-  Function :: FunctionValue -> Value
+  Function :: FunctionValue -> Value deriving Generic
+
+instance NFData Value
 
 instance Show Value where
   show (Scalar x) = show x

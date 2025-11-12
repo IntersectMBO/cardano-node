@@ -22,7 +22,6 @@ common common
       LambdaCase
       NamedFieldPuns
       OverloadedStrings
-      StrictData
       Strict
 
 library
@@ -40,7 +39,8 @@ library
       containers,
       mtl,
       trace-resources,
-      trace-dispatcher
+      trace-dispatcher,
+      deepseq
 
     exposed-modules:
       Cardano.Timeseries.Domain.Instant,
@@ -99,4 +99,5 @@ benchmark timeseries-io-bench
       mtl,
       trace-resources,
       trace-dispatcher,
-      timeseries-io
+      timeseries-io,
+      criterion

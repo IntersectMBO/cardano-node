@@ -2,16 +2,20 @@ module Cardano.Timeseries.Domain.Instant(Instant(..), InstantVector, mostRecent,
 
 import           Cardano.Timeseries.Domain.Types (SeriesIdentifier, Timestamp)
 
+import           Control.DeepSeq (NFData)
 import qualified Data.Set as Set
 import           Data.Text (Text, intercalate, pack)
 import           Data.Vector
+import           GHC.Generics (Generic)
 
 -- | One datapoint in a series.
 data Instant a = Instant {
   labels :: SeriesIdentifier,
   timestamp :: Timestamp,
   value :: a
-} deriving (Show, Eq, Functor, Foldable, Traversable)
+} deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
+
+instance NFData a => NFData (Instant a)
 
 -- | Do the instant vectors share a series?
 share :: Instant a -> Instant b -> Bool
