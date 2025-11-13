@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 --------------------------------------------------------------------------------
@@ -14,11 +13,10 @@ module Trace.Forward.Utils.TraceObject
 
 --------------------------------------------------------------------------------
 
-import           Control.Concurrent.STM (STM, atomically, check)
+import           Control.Concurrent.STM (STM, atomically, retry)
 import           Control.Concurrent.STM.TBQueue
   ( TBQueue
   , newTBQueue
-  , isEmptyTBQueue
   , isFullTBQueue
   , lengthTBQueue
   , readTBQueue
@@ -72,7 +70,6 @@ writeToSinkSTM queueTVar traceObject = do
     queue <- readTVar queueTVar
     isFull <- isFullTBQueue queue
     !flushedTraceObjects <- if isFull
-                            -- Of the biggest requested size, will flush.
                             then flushTBQueue queue
                             else pure []
     writeTBQueue queue traceObject
@@ -86,39 +83,49 @@ readFromSink
   -> Forwarder.TraceObjectForwarder lo IO ()
 readFromSink ForwardSink{forwardQueue, wasUsed} =
   Forwarder.TraceObjectForwarder
-    { Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) ->
-        case blocking of
-          TokBlocking -> do
-            objs <- atomically $ do
-              queue <- readTVar forwardQueue
-              check . not =<< isEmptyTBQueue queue
-              res <- getNTraceObjectsNonBlocking n queue >>= \case
-                []     -> error "impossible"
-                (x:xs) -> return $ x NE.:| xs
-              modifyTVar' wasUsed . const $ True
-              pure res
-            return $ BlockingReply objs
-          TokNonBlocking -> do
-            objs <- atomically $ do
-              queue <- readTVar forwardQueue
-              res <- getNTraceObjectsNonBlocking n queue
-              unless (null res) $
-                modifyTVar' wasUsed . const $ True
-              pure res
-            return $ NonBlockingReply objs
+    { Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) -> do
+        res <- atomically $ readFromSinkSTM forwardQueue wasUsed blocking n
+        -- Handle response format outside of `atomically`.
+        pure $ case blocking of
+                 TokBlocking    -> BlockingReply $ case res of
+                                                     (x:xs) -> x NE.:| xs
+                                                     -- If `n == 0` ?????
+                                                     [] -> error "impossible"
+                 TokNonBlocking -> NonBlockingReply res
     , Forwarder.recvMsgDone = return ()
     }
 
-getNTraceObjectsNonBlocking
-  :: Word16
-  -> TBQueue lo
-  -> STM [lo]
-getNTraceObjectsNonBlocking 0 _ = return []
-getNTraceObjectsNonBlocking n q = do
-  len <- lengthTBQueue q
-  if len <= fromIntegral n
-    then flushTBQueue q
-    else replicateM (fromIntegral n) (readTBQueue q)
+readFromSinkSTM :: TVar (TBQueue lo)
+                -> TVar Bool
+                -- If queue is empty, block or not?
+                -> TokBlockingStyle blocking
+                -- Maximum number of requested trace objects.
+                -> Word16
+                -> STM [lo]
+readFromSinkSTM queueTVar wasUsedTVar blocking n = do
+  ---------- STM transaction: start ----------
+  queue <- readTVar queueTVar
+  -- Instead of using `isEmptyTBQueue`, that internally may read only one TVar,
+  -- we optimize for the critical path, the case in which the queue has objects
+  -- and directly use `lengthTBQueue` that always reads two TVars.
+  queueLength <- lengthTBQueue queue
+  res <- if queueLength > 0
+         then
+             -- Here we already know the queue is NOT empty.
+             -- We will either get the entire queue (flush) or do `n` reads.
+             if fromEnum n >= fromEnum queueLength
+             -- If the requested maximum number is more or equal length, return all.
+             then flushTBQueue queue -- Flush is non-blocking, can return empty.
+             -- If the requested maximum number is less than length, read `n` times.
+             else replicateM (fromIntegral n) (readTBQueue queue)
+         else
+           -- The queue is empty, return nothing or wait.
+           case blocking of
+             TokBlocking    -> retry
+             TokNonBlocking -> pure []
+  unless (null res) $ modifyTVar' wasUsedTVar . const $ True
+  pure res
+  ---------- STM transaction: end ----------
 
 --------------------------------------------------------------------------------
 
