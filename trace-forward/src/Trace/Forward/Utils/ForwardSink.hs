@@ -12,6 +12,5 @@ data ForwardSink lo = ForwardSink
   { forwardQueue     :: !(TVar (TBQueue lo))
   , disconnectedSize :: !Word
   , connectedSize    :: !Word
-  , wasUsed          :: !(TVar Bool)
   , overflowCallback :: !([lo] -> IO ())
   }
