@@ -5,11 +5,14 @@ module Parsers.Cardano
   , cmdCreateEnv
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra(..))
-import           Cardano.CLI.EraBased.Common.Option (bounded, command')
+import           Cardano.Api.Era (AnyShelleyBasedEra (..))
+import           Cardano.Api.Pretty
+
+import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
+
 import           Prelude
 
-import           Control.Applicative((<|>), optional)
+import           Control.Applicative (optional, (<|>))
 import           Data.Default.Class (def)
 import qualified Data.List as L
 import           Data.Maybe (fromMaybe)
@@ -50,10 +53,10 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
   <*> pure (AnyShelleyBasedEra defaultEra)
   <*> pMaxLovelaceSupply
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
-      (   OA.long "nodeLoggingFormat"
+      (   OA.long "node-logging-format"
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
-      <>  OA.showDefault
+      <>  OA.showDefaultWith prettyShow
       <>  OA.value (cardanoNodeLoggingFormat def)
       )
   <*> OA.option OA.auto
@@ -63,7 +66,7 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value 3
       )
-  <*> OA.flag False True
+  <*> OA.switch
       (   OA.long "enable-new-epoch-state-logging"
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
@@ -73,6 +76,11 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
       <>  OA.metavar "DIRECTORY"
       )))
+  <*> OA.switch
+      (   OA.long "enable-grpc"
+      <>  OA.help "[EXPERIMENTAL] Enable gRPC endpoint on all of testnet nodes. The listening socket file will be the same directory as node's N2C socket."
+      <>  OA.showDefault
+      )
 
 pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =

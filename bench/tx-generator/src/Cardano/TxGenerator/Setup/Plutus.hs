@@ -41,6 +41,7 @@ import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
 import           Control.Exception (SomeException (..), try)
 import           System.FilePath ((<.>), (</>))
+import           RIO (runRIO)
 
 import           Paths_tx_generator
 
