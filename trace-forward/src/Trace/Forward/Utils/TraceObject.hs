@@ -24,7 +24,7 @@ import           Control.Concurrent.STM.TBQueue
   , flushTBQueue
   )
 import           Control.Concurrent.STM.TVar
-import           Control.Monad (replicateM, unless)
+import           Control.Monad (replicateM)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
 
@@ -42,14 +42,12 @@ initForwardSink
 initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize} callback = do
   -- Initially we always create a big queue, because during node's start
   -- the number of tracing items may be very big.
-  (queue, used) <- atomically $
-    (,) <$> (newTVar =<< newTBQueue (fromIntegral disconnectedQueueSize))
-        <*> newTVar False
+  queueTVar <- atomically $
+    newTVar =<< newTBQueue (fromIntegral disconnectedQueueSize)
   return $ ForwardSink
-    { forwardQueue     = queue
+    { forwardQueue     = queueTVar
     , disconnectedSize = disconnectedQueueSize
     , connectedSize    = connectedQueueSize
-    , wasUsed          = used
     , overflowCallback = callback
     }
 
@@ -81,11 +79,11 @@ writeToSinkSTM queueTVar traceObject = do
 readFromSink
   :: ForwardSink lo -- ^ The sink contains the queue we read 'TraceObject's from.
   -> Forwarder.TraceObjectForwarder lo IO ()
-readFromSink ForwardSink{forwardQueue, wasUsed} =
+readFromSink ForwardSink{forwardQueue} =
   Forwarder.TraceObjectForwarder
     { Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) -> do
-        res <- atomically $ readFromSinkSTM forwardQueue wasUsed blocking n
         -- Handle response format outside of `atomically`.
+        res <- atomically $ readFromSinkSTM forwardQueue blocking n
         pure $ case blocking of
                  TokBlocking    -> BlockingReply $ case res of
                                                      (x:xs) -> x NE.:| xs
@@ -96,35 +94,32 @@ readFromSink ForwardSink{forwardQueue, wasUsed} =
     }
 
 readFromSinkSTM :: TVar (TBQueue lo)
-                -> TVar Bool
                 -- If queue is empty, block or not?
                 -> TokBlockingStyle blocking
                 -- Maximum number of requested trace objects.
                 -> Word16
                 -> STM [lo]
-readFromSinkSTM queueTVar wasUsedTVar blocking n = do
+readFromSinkSTM queueTVar blocking n = do
   ---------- STM transaction: start ----------
   queue <- readTVar queueTVar
   -- Instead of using `isEmptyTBQueue`, that internally may read only one TVar,
   -- we optimize for the critical path, the case in which the queue has objects
   -- and directly use `lengthTBQueue` that always reads two TVars.
   queueLength <- lengthTBQueue queue
-  res <- if queueLength > 0
-         then
-             -- Here we already know the queue is NOT empty.
-             -- We will either get the entire queue (flush) or do `n` reads.
-             if fromEnum n >= fromEnum queueLength
-             -- If the requested maximum number is more or equal length, return all.
-             then flushTBQueue queue -- Flush is non-blocking, can return empty.
-             -- If the requested maximum number is less than length, read `n` times.
-             else replicateM (fromIntegral n) (readTBQueue queue)
-         else
-           -- The queue is empty, return nothing or wait.
-           case blocking of
-             TokBlocking    -> retry
-             TokNonBlocking -> pure []
-  unless (null res) $ modifyTVar' wasUsedTVar . const $ True
-  pure res
+  if queueLength > 0
+  then
+     -- Here we already know the queue is NOT empty.
+     -- We will either get the entire queue (flush) or do `n` reads.
+     if fromEnum n >= fromEnum queueLength
+     -- If the requested maximum number is more or equal length, return all.
+     then flushTBQueue queue -- Flush is non-blocking, can return empty.
+     -- If the requested maximum number is less than length, read `n` times.
+     else replicateM (fromIntegral n) (readTBQueue queue)
+  else
+   -- The queue is empty, return nothing or wait.
+   case blocking of
+     TokBlocking    -> retry
+     TokNonBlocking -> pure []
   ---------- STM transaction: end ----------
 
 --------------------------------------------------------------------------------
