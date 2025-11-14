@@ -23,7 +23,6 @@ import           Control.Concurrent.STM.TBQueue
   , writeTBQueue
   , flushTBQueue
   )
-import           Control.Concurrent.STM.TVar
 import           Control.Monad (replicateM)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
@@ -42,10 +41,9 @@ initForwardSink
 initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize} callback = do
   -- Initially we always create a big queue, because during node's start
   -- the number of tracing items may be very big.
-  queueTVar <- atomically $
-    newTVar =<< newTBQueue (fromIntegral disconnectedQueueSize)
+  queue <- atomically $ newTBQueue (fromIntegral disconnectedQueueSize)
   return $ ForwardSink
-    { forwardQueue     = queueTVar
+    { forwardQueue     = queue
     , disconnectedSize = disconnectedQueueSize
     , connectedSize    = connectedQueueSize
     , overflowCallback = callback
@@ -62,10 +60,9 @@ writeToSink ForwardSink{forwardQueue,overflowCallback} traceObject = do
     -- Don't call the overflow function with an empty list.
     _ -> overflowCallback flushedTraceObjects
 
-writeToSinkSTM :: TVar (TBQueue lo) -> lo -> STM [lo]
-writeToSinkSTM queueTVar traceObject = do
+writeToSinkSTM :: TBQueue lo -> lo -> STM [lo]
+writeToSinkSTM queue traceObject = do
     ---------- STM transaction: start ----------
-    queue <- readTVar queueTVar
     isFull <- isFullTBQueue queue
     !flushedTraceObjects <- if isFull
                             then flushTBQueue queue
@@ -93,15 +90,14 @@ readFromSink ForwardSink{forwardQueue} =
     , Forwarder.recvMsgDone = return ()
     }
 
-readFromSinkSTM :: TVar (TBQueue lo)
+readFromSinkSTM :: TBQueue lo
                 -- If queue is empty, block or not?
                 -> TokBlockingStyle blocking
                 -- Maximum number of requested trace objects.
                 -> Word16
                 -> STM [lo]
-readFromSinkSTM queueTVar blocking n = do
+readFromSinkSTM queue blocking n = do
   ---------- STM transaction: start ----------
-  queue <- readTVar queueTVar
   -- Instead of using `isEmptyTBQueue`, that internally may read only one TVar,
   -- we optimize for the critical path, the case in which the queue has objects
   -- and directly use `lengthTBQueue` that always reads two TVars.
