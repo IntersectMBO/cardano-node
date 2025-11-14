@@ -102,7 +102,7 @@ instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
     mconcat $ ("credentials" .= toJSON creds) : [forMachine dtal a]
 
   forHuman (TraceLabelCreds creds a)         =
-    "With label " <> (Text.pack . show) creds <> ", " <> forHumanOrMachine a
+    "With label " <> (Text.pack . show) creds <> ", " <> forHuman a
   asMetrics (TraceLabelCreds _creds a)        =
     asMetrics a
 
@@ -131,7 +131,7 @@ instance (LogFormatting peer, Show peer, LogFormatting a)
   forMachine dtal (TraceLabelPeer peerid a) =
     mconcat [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
   forHuman (TraceLabelPeer peerid a) = "Peer is: (" <> showT peerid
-                                        <> "). " <> forHumanOrMachine a
+                                        <> "). " <> forHuman a
   asMetrics (TraceLabelPeer _peerid a) = asMetrics a
 
 instance MetaTrace a => MetaTrace (TraceLabelPeer label a) where
@@ -1006,8 +1006,6 @@ instance ( LogFormatting peer
     , "peers" .= toJSON (map (forMachine dtal) (toList peers))
     ]
 
-  forHuman = forHumanFromMachine
-
 instance MetaTrace (TraceGDDEvent peer blk) where
   namespaceFor _ = Namespace [] ["TraceGDDEvent"]
 
@@ -1031,8 +1029,6 @@ instance ( HasHeader blk
     , "latestSlot" .= toJSON (unSlotNo <$> withOriginToMaybe latestSlot)
     , "idling" .= toJSON idling
     ]
-
-  forHuman = forHumanFromMachine
 
 
 --------------------------------------------------------------------------------
@@ -2208,8 +2204,6 @@ instance ( LogFormatting peer, Show peer, ConvertRawHash blk
       csjReasonToJSON = \case
         BecauseCsjDisengage -> String "BecauseCsjDisengage"
         BecauseCsjDisconnect -> String "BecauseCsjDisconnect"
-
-  forHuman = forHumanFromMachine
 
 instance MetaTrace (Jumping.TraceEventCsj peer blk) where
   namespaceFor = \case

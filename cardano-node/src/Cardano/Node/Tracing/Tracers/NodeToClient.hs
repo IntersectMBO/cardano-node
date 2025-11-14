@@ -33,8 +33,8 @@ instance LogFormatting (Simple.AnyMessage ps)
   forMachine dtal (Simple.TraceRecvMsg m) = mconcat
     [ "kind" .= String "Recv" , "msg" .= forMachine dtal m ]
 
-  forHuman (Simple.TraceSendMsg m) = "Send: " <> forHumanOrMachine m
-  forHuman (Simple.TraceRecvMsg m) = "Receive: " <> forHumanOrMachine m
+  forHuman (Simple.TraceSendMsg m) = "Send: " <> forHuman m
+  forHuman (Simple.TraceRecvMsg m) = "Receive: " <> forHuman m
 
   asMetrics (Simple.TraceSendMsg m) = asMetrics m
   asMetrics (Simple.TraceRecvMsg m) = asMetrics m
@@ -46,8 +46,8 @@ instance LogFormatting (Stateful.AnyMessage ps f)
   forMachine dtal (Stateful.TraceRecvMsg m) = mconcat
     [ "kind" .= String "Recv" , "msg" .= forMachine dtal m ]
 
-  forHuman (Stateful.TraceSendMsg m) = "Send: " <> forHumanOrMachine m
-  forHuman (Stateful.TraceRecvMsg m) = "Receive: " <> forHumanOrMachine m
+  forHuman (Stateful.TraceSendMsg m) = "Send: " <> forHuman m
+  forHuman (Stateful.TraceRecvMsg m) = "Receive: " <> forHuman m
 
   asMetrics (Stateful.TraceSendMsg m) = asMetrics m
   asMetrics (Stateful.TraceRecvMsg m) = asMetrics m

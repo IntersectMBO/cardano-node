@@ -987,7 +987,6 @@ instance LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWit
             , "activeBootstrapPeers" .= snd (Cardano.viewActiveBootstrapPeers extraCounters)
             , "ActiveBootstrapPeersDemotions" .= snd (Cardano.viewActiveBootstrapPeersDemotions extraCounters)
             ]
-  forHuman = forHumanFromMachine
   asMetrics psc =
     case psc of
       PeerSelectionCountersHWC {..} ->
@@ -1577,7 +1576,9 @@ instance (Show peerAddr, ToJSON peerAddr)
         , "from"    .= toJSON (ConnectionManager.fromState tr)
         , "to"      .= toJSON (ConnectionManager.toState   tr)
         ]
+
     forHuman = pack . show
+
     asMetrics _ = []
 
 instance MetaTrace (ConnectionManager.AbstractTransitionTrace peerAddr) where

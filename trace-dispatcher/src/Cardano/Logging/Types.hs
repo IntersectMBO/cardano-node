@@ -73,8 +73,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text as T (Text, intercalate, null, pack, singleton, unpack, words)
-import           Data.Text.Lazy (toStrict)
-import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Text.Read as T (decimal)
 import           Data.Time (UTCTime)
 import           Data.Word (Word16)
@@ -148,39 +146,24 @@ nsToText (Namespace ns1 ns2) = intercalate "." (ns1 ++ ns2)
 
 -- | Every message needs this to define how to represent itself
 class LogFormatting a where
-  -- | Machine readable representation with the possibility to represent
-  -- with different details based on the detail level.
-  -- No machine readable representation as default
+  -- | Machine readable representation with the possibility to represent with varying serialisations based on the detail level.
+  -- This will result in JSON formatted log output.
+  -- A `forMachine` implementation is required for any instance definition.
   forMachine :: DetailLevel -> a -> AE.Object
 
-  -- | Human readable representation.
-  -- No human representation is represented by the empty text
-  -- The default implementation returns no human representation
+  -- | Human-readable representation.
+  -- The empty text indicates there's no specific human-readable formatting for that type - this is the default implementation.
+  -- If however human-readble output is explicitly requested, e.g. by logs, the system will fall back to a JSON object
+  -- conforming to the `forMachine` definition, and rendering it as a value in `{"data": <value>}`.
+  -- Leaving out `forHuman` in some instance definition will not lead to loss of log information that way.
   forHuman :: a -> Text
   forHuman _v = ""
 
   -- | Metrics representation.
-  -- No metrics by default
+  -- The default indicates that no metric is based on trace occurrences of that type.
   asMetrics :: a -> [Metric]
   asMetrics _v = []
 
-  -- | A quick drop-in for forHuman to re-use the existing JSON serialization on normal detail level
-  --   You can safely use `forHuman = forHumanFromMachine` in instance definitions.
-  forHumanFromMachine :: a -> Text
-  forHumanFromMachine =
-    toStrict . decodeUtf8 . AE.encodingToLazyByteString . AE.toEncoding . forMachine DNormal
-
-  -- | Yields the JSON serialization as Text if no human-readable representation is defined.
-  --   CAUTION: It is *NOT* safe to use it as a drop-in like forHumanFromMachine above - this leads to a stack overflow.
-  --   It's only meant to ease forHuman definitions using values of a distinct type such as:
-  --     `forHuman (ChainDB.PipeliningEvent ev') = forHumanFromMachine ev'`
-  --   In the future, the type should probably change to sth. akin to LogFormatting b => (a == b) ~ 'False => a -> b -> Text
-  --   to guard against that misuse.
-  forHumanOrMachine :: a -> Text
-  forHumanOrMachine v =
-    case forHuman v of
-      "" -> forHumanFromMachine v
-      s  -> s
 
 class MetaTrace a where
   namespaceFor  :: a -> Namespace a
