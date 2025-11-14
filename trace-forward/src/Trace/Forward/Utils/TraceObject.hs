@@ -82,10 +82,14 @@ readFromSink ForwardSink{forwardQueue} =
         -- Handle response format outside of `atomically`.
         res <- atomically $ readFromSinkSTM forwardQueue blocking n
         pure $ case blocking of
-                 TokBlocking    -> BlockingReply $ case res of
-                                                     (x:xs) -> x NE.:| xs
-                                                     -- If `n == 0` ?????
-                                                     [] -> error "impossible"
+                 TokBlocking    -> BlockingReply $
+                                     -- Convert to a non-empty list.
+                                     case res of
+                                       (x:xs) -> x NE.:| xs
+                                        -- Either GHC-impossible or impossible
+                                        -- to create a non-empty list with zero
+                                        -- items or less.
+                                       [] -> error $ "impossible: requested = " ++ show n
                  TokNonBlocking -> NonBlockingReply res
     , Forwarder.recvMsgDone = return ()
     }
