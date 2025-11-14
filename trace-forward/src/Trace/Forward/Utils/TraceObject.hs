@@ -83,10 +83,15 @@ readFromSink ForwardSink{forwardQueue} =
         res <- atomically $ readFromSinkSTM forwardQueue blocking n
         pure $ case blocking of
                  TokNonBlocking -> NonBlockingReply res
-                 TokBlocking    -> BlockingReply  $ case NE.nonEmpty res of
-                                                      -- If `n == 0` ?????
-                                                      Nothing -> error "impossible"
-                                                      (Just ne) -> ne
+                 TokBlocking    -> BlockingReply $
+                                     -- Convert to a non-empty list.
+                                     case NE.nonEmpty res of
+                                       (Just ne) -> ne
+                                       Nothing -> if n > 0
+                                                  then error "impossible"
+                                                  -- I can't help returning zero
+                                                  -- items in a non-empty list.
+                                                  else error "Good luck!"
     , Forwarder.recvMsgDone = return ()
     }
 
