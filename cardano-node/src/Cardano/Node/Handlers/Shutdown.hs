@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -52,7 +53,6 @@ import qualified System.IO as IO
 import qualified System.IO.Error as IO
 import           System.Posix.Types (Fd (Fd))
 import qualified Text.Read as Read
-
 
 import           Generic.Data.Orphans ()
 
@@ -156,12 +156,12 @@ maybeSpawnOnSlotSyncedShutdownHandler
   -> ResourceRegistry IO
   -> ChainDB.ChainDB IO blk
   -> IO ()
-maybeSpawnOnSlotSyncedShutdownHandler sc tr registry chaindb =
-  case scOnSyncLimit sc of
-    Nothing -> pure ()
-    Just lim -> do
+maybeSpawnOnSlotSyncedShutdownHandler ShutdownConfig{scOnSyncLimit} tr registry chaindb =
+  case scOnSyncLimit of
+    Just lim | lim /= NoShutdown -> do
       traceWith tr (ShutdownArmedAt lim)
       spawnLimitTerminator lim
+    _ -> pure ()
  where
   spawnLimitTerminator :: ShutdownOn -> IO ()
   spawnLimitTerminator limit =

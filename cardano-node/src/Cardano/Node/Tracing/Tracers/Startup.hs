@@ -85,14 +85,15 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
             in [getGenesisValues "Shelley" cfgShelley]
           Api.CardanoBlockType ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo
-                                    cfgBabbage cfgConway = Consensus.configLedger cfg
+                                    cfgBabbage cfgConway cfgDijkstra = Consensus.configLedger cfg
             in [ getGenesisValuesByron cfg cfgByron
-               , getGenesisValues "Shelley" cfgShelley
-               , getGenesisValues "Allegra" cfgAllegra
-               , getGenesisValues "Mary"    cfgMary
-               , getGenesisValues "Alonzo"  cfgAlonzo
-               , getGenesisValues "Babbage" cfgBabbage
-               , getGenesisValues "Conway"  cfgConway
+               , getGenesisValues "Shelley"  cfgShelley
+               , getGenesisValues "Allegra"  cfgAllegra
+               , getGenesisValues "Mary"     cfgMary
+               , getGenesisValues "Alonzo"   cfgAlonzo
+               , getGenesisValues "Babbage"  cfgBabbage
+               , getGenesisValues "Conway"   cfgConway
+               , getGenesisValues "Dijkstra" cfgDijkstra
                ]
   pure (basicInfoCommon : protocolDependentItems)
     where
@@ -222,8 +223,8 @@ instance ( Show (BlockNodeToNodeVersion blk)
       mconcat [ "kind" .= String "LedgerPeerSnapshot"
               , "message" .= String (
                   mconcat [
-                   "Topology file misconfiguration: loaded but ignoring ",
-                   "input recorded ", showT wOrigin, " but topology specifies ",
+                   "Topology file misconfiguration: peer snapshot recorded ",
+                   showT wOrigin, " but topology specifies ",
                    "to use ledger peers: ", showT useLedgerPeers,
                    ". Possible fix: update your big ledger peer snapshot ",
                    "or enable the use of ledger peers in the topology file."])]
@@ -266,8 +267,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
       mconcat [ "kind" .= String "BasicInfoNetwork"
                , "addresses" .= String (showT niAddresses)
                , "diffusionMode"  .= String (showT niDiffusionMode)
-               , "dnsProducers" .= String (showT niDnsProducers)
-               , "ipProducers" .= String (showT niIpProducers)
                ]
   forMachine _dtal (BIByron BasicInfoByron {..}) =
       mconcat [ "kind" .= String "BasicInfoByron"
@@ -374,6 +373,7 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
   severityFor (Namespace _ ["MovedTopLevelOption"]) _ = Just Warning
+  severityFor (Namespace _ ["LedgerPeerSnapshot"]) _ = Just Notice
   severityFor (Namespace _ ["LedgerPeerSnapshot", "Incompatible"]) _ = Just Warning
   severityFor _ _ = Just Info
 
@@ -487,10 +487,13 @@ nodeToClientVersionToInt = \case
   NodeToClientV_18 -> 18
   NodeToClientV_19 -> 19
   NodeToClientV_20 -> 20
+  NodeToClientV_21 -> 21
+  NodeToClientV_22 -> 22
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case
   NodeToNodeV_14 -> 14
+  NodeToNodeV_15 -> 15
 
 -- | Pretty print 'StartupInfoTrace'
 --
@@ -604,8 +607,6 @@ ppStartupInfoTrace (WarningDevelopmentNodeToClientVersions ntcVersions) =
 ppStartupInfoTrace (BINetwork BasicInfoNetwork {..}) =
   "Addresses " <> showT niAddresses
   <> ", DiffusionMode " <> showT niDiffusionMode
-  <> ", DnsProducers " <> showT niDnsProducers
-  <> ", IpProducers " <> showT niIpProducers
 
 ppStartupInfoTrace (BIByron BasicInfoByron {..}) =
   "Era Byron"

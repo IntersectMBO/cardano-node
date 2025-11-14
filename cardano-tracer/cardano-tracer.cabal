@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.3.4
+version:                0.3.5
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
@@ -178,7 +178,7 @@ library
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward >= 0.9
+                      , ekg-forward >= 1.0
                       , ekg-wai
                       , extra
                       , filepath
@@ -187,8 +187,8 @@ library
                       , network
                       , network-mux >= 0.8
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network ^>= 0.22.4
+                      , ouroboros-network-api ^>= 0.16
                       , ouroboros-network-framework
                       , signal
                       , slugify
@@ -421,7 +421,7 @@ test-suite cardano-tracer-test-ext
                       , network
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network ^>= 0.21.2
+                      , ouroboros-network ^>= 0.22.4
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , process

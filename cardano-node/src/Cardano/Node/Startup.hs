@@ -22,7 +22,7 @@ import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
 import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
 import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Network.Diffusion (CardanoLocalRootConfig)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
@@ -44,9 +44,7 @@ import           Ouroboros.Network.NodeToClient (NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig, WarmValency)
-import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
-import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 
 import           Prelude
 
@@ -119,7 +117,7 @@ data StartupTrace blk =
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint CardanoLocalRootConfig)]
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
                   (Maybe PeerSnapshotFile)
@@ -181,8 +179,6 @@ data BasicInfoByron = BasicInfoByron {
 data BasicInfoNetwork = BasicInfoNetwork {
     niAddresses     :: [SocketOrSocketInfo]
   , niDiffusionMode :: DiffusionMode
-  , niDnsProducers  :: [DnsSubscriptionTarget]
-  , niIpProducers   :: IPSubscriptionTarget
   }
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
@@ -214,7 +210,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
         let DegenLedgerConfig cfgShelley = configLedger cfg
         in getSystemStartShelley cfgShelley
       Api.CardanoBlockType ->
-        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway = configLedger cfg
+        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway cfgDijkstra = configLedger cfg
         in minimum [ getSystemStartByron
                    , getSystemStartShelley cfgShelley
                    , getSystemStartShelley cfgAllegra
@@ -222,6 +218,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
                    , getSystemStartShelley cfgAlonzo
                    , getSystemStartShelley cfgBabbage
                    , getSystemStartShelley cfgConway
+                   , getSystemStartShelley cfgDijkstra
                    ]
 
   getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg

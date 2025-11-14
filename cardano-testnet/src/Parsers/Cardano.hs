@@ -5,14 +5,16 @@ module Parsers.Cardano
   , cmdCreateEnv
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra(..))
-import           Cardano.CLI.EraBased.Common.Option (bounded, command')
+import           Cardano.Api (AnyShelleyBasedEra (..))
+
+import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
+
 import           Prelude
 
-import           Control.Applicative((<|>), optional)
+import           Control.Applicative (optional, (<|>))
 import           Data.Default.Class (def)
 import qualified Data.List as L
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe
 import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
@@ -21,7 +23,6 @@ import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
-
 
 optsTestnet :: Parser CardanoTestnetCliOptions
 optsTestnet = CardanoTestnetCliOptions
@@ -42,7 +43,6 @@ optsCreateTestnet = CardanoTestnetCreateEnvOptions
 pCreateEnvOptions :: Parser CreateEnvOptions
 pCreateEnvOptions = CreateEnvOptions
   <$> pOnChainParams
-  <*> pTopologyType
 
 pCardanoTestnetCliOptions :: Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions = CardanoTestnetOptions
@@ -110,13 +110,6 @@ pMainnetParams :: Parser TestnetOnChainParams
 pMainnetParams = OA.flag' OnChainParamsMainnet
   (  OA.long "params-mainnet"
   <> OA.help "Use mainnet on-chain parameters"
-  )
-
-pTopologyType :: Parser TopologyType
-pTopologyType = OA.flag DirectTopology P2PTopology
-  (  OA.long "p2p-topology"
-  <> OA.help "Use P2P topology files instead of \"direct\" topology files"
-  <> OA.showDefault
   )
 
 pUpdateTimestamps :: Parser UpdateTimestamps

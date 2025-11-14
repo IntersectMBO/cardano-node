@@ -215,14 +215,14 @@ The snapshot-converter utility is included in the cardano-node image at path
 state types as needed, without relying on host level tooling or full
 chain ledger replays.
 
-An example follows to convert preprod ledger state in a named docker volume in
-snapshot `295420` from `Legacy` to `Mem` when node is not already
-running:
+An example follows to convert preprod ledger state in a named docker volume
+from a memory based ledger snapshot to an LMDB snapshot when node is not
+already running:
 ```
 docker run -v preprod-data:/data --rm -it --entrypoint=bash ghcr.io/intersectmbo/cardano-node:dev -c '
   mv /data/db/ledger /data/db/ledger-old \
     && mkdir -p /data/db/ledger \
-    && snapshot-converter Legacy /data/db/ledger-old/295420 Mem /data/db/ledger/295420 cardano --config /opt/cardano/config/preprod/config.json
+    && snapshot-converter --mem-in /data/db/ledger-old/20807240 --lmdb-out /data/db/ledger/20807240 --config /opt/cardano/config/preprod/config.json
 '
 ```
 
@@ -240,7 +240,7 @@ above in "custom" mode whereby config is passed, and in this case, the config
 passed is the legacy style configuration.
 
 Legacy default configuration files are also available within the image at paths:
-`/opt/cardano/config/$NETWORK/config[-bp]-legacy.json`
+`/opt/cardano/config/$NETWORK/config-legacy.json`
 
 An example of legacy tracing system usage is:
 ```

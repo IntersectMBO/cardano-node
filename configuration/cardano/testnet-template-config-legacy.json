@@ -1,32 +1,31 @@
 {
-  "AlonzoGenesisFile": "mainnet-alonzo-genesis.json",
-  "AlonzoGenesisHash": "7e94a15f55d1e82d10f09203fa1d40f8eede58fd8066542cf6566008068ed874",
-  "ByronGenesisFile": "mainnet-byron-genesis.json",
-  "ByronGenesisHash": "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb",
-  "CheckpointsFile": "mainnet-checkpoints.json",
-  "CheckpointsFileHash": "3e6dee5bae7acc6d870187e72674b37c929be8c66e62a552cf6a876b1af31ade",
-  "ConsensusMode": "PraosMode",
-  "ConwayGenesisFile": "mainnet-conway-genesis.json",
-  "ConwayGenesisHash": "15a199f895e461ec0ffc6dd4e4028af28a492ab4e806d39cb674c88f7643ef62",
-  "EnableP2P": true,
+  "AlonzoGenesisFile": "alonzo-genesis.json",
+  "ApplicationName": "cardano-sl",
+  "ApplicationVersion": 0,
+  "ByronGenesisFile": "byron-genesis.json",
+  "ConwayGenesisFile": "conway-genesis.json",
+  "DijkstraGenesisFile": "dijkstra-genesis.json",
+  "ExperimentalHardForksEnabled": true,
+  "ExperimentalProtocolsEnabled": true,
   "LastKnownBlockVersion-Alt": 0,
   "LastKnownBlockVersion-Major": 3,
-  "LastKnownBlockVersion-Minor": 0,
+  "LastKnownBlockVersion-Minor": 1,
   "LedgerDB": {
     "Backend": "V2InMemory",
     "NumOfDiskSnapshots": 2,
     "QueryBatchSize": 100000,
-    "SnapshotInterval": 4320
+    "SnapshotInterval": 216
   },
+  "MaxConcurrencyDeadline": 4,
   "MaxKnownMajorProtocolVersion": 2,
-  "MinNodeVersion": "10.4.0",
-  "PeerSharing": false,
+  "PBftSignatureThreshold": 1.1,
   "Protocol": "Cardano",
-  "RequiresNetworkMagic": "RequiresNoMagic",
-  "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
-  "ShelleyGenesisHash": "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81",
-  "TargetNumberOfKnownPeers": 100,
-  "TargetNumberOfRootPeers": 100,
+  "RequiresNetworkMagic": "RequiresMagic",
+  "ShelleyGenesisFile": "shelley-genesis.json",
+  "TestAllegraHardForkAtEpoch": 0,
+  "TestAlonzoHardForkAtEpoch": 0,
+  "TestMaryHardForkAtEpoch": 0,
+  "TestShelleyHardForkAtEpoch": 0,
   "TraceAcceptPolicy": true,
   "TraceBlockFetchClient": false,
   "TraceBlockFetchDecisions": false,
@@ -44,14 +43,13 @@
   "TraceDiffusionInitialization": true,
   "TraceErrorPolicy": true,
   "TraceForge": true,
-  "TraceHandshake": true,
+  "TraceHandshake": false,
   "TraceInboundGovernor": true,
   "TraceIpSubscription": true,
   "TraceLedgerPeers": true,
   "TraceLocalChainSyncProtocol": false,
-  "TraceLocalConnectionManager": true,
   "TraceLocalErrorPolicy": true,
-  "TraceLocalHandshake": true,
+  "TraceLocalHandshake": false,
   "TraceLocalRootPeers": true,
   "TraceLocalTxSubmissionProtocol": false,
   "TraceLocalTxSubmissionServer": false,
@@ -74,7 +72,7 @@
   "defaultScribes": [
     [
       "StdoutSK",
-      "stdout"
+      "cardano"
     ]
   ],
   "hasEKG": 12788,
@@ -82,7 +80,7 @@
     "127.0.0.1",
     12798
   ],
-  "minSeverity": "Info",
+  "minSeverity": "Debug",
   "options": {
     "mapBackends": {
       "cardano.node.metrics": [
@@ -110,8 +108,7 @@
     {
       "scFormat": "ScText",
       "scKind": "StdoutSK",
-      "scName": "stdout",
-      "scRotation": null
+      "scName": "cardano"
     }
   ]
 }

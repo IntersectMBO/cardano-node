@@ -32,8 +32,7 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Network.NodeToNode.Version
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),
-                   RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -155,23 +154,23 @@ genNodeSetup =
     <*> Gen.list (Range.linear 0 6) genRootConfig
     <*> genUseLedgerPeers
 
-genDomainAddress :: Gen DomainAccessPoint
-genDomainAddress =
-  DomainAccessPoint
-    <$> Gen.element cooking
-    <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
-
+-- Generates only fully qualified domain names.
+--
 genRelayAddress :: Gen RelayAccessPoint
-genRelayAddress = do
-  isDomain <- Gen.bool
-  if isDomain
-    then RelayDomainAccessPoint <$> genDomainAddress
-    else RelayAccessAddress
-          <$> Gen.choice
-                [ IP.IPv4 . unNodeHostIPv4Address <$> genNodeHostIPv4Address
-                , IP.IPv6 . unNodeHostIPv6Address <$> genNodeHostIPv6Address
-                ]
-          <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+genRelayAddress =
+  Gen.choice
+    [ RelayAccessDomain
+        . (<> ".")
+        <$> Gen.element cooking
+        <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+    , RelayAccessSRVDomain . (<> ".") <$> Gen.element cooking
+    , RelayAccessAddress
+        <$> Gen.choice
+              [ IP.IPv4 . unNodeHostIPv4Address <$> genNodeHostIPv4Address
+              , IP.IPv6 . unNodeHostIPv6Address <$> genNodeHostIPv6Address
+              ]
+        <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+    ]
 
 genRootConfig :: Gen (RootConfig RelayAccessPoint)
 genRootConfig = do

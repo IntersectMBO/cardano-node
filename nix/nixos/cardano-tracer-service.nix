@@ -33,13 +33,13 @@ with builtins; let
         ;
 
       network =
-        optionalAttrs (!isNull cfg.acceptingSocket) {
+        optionalAttrs (!isNull cfg.acceptAt) {
           tag = "AcceptAt";
-          contents = cfg.acceptingSocket;
+          contents = cfg.acceptAt;
         }
-        // optionalAttrs (!isNull cfg.connectToSocket) {
+        // optionalAttrs (!isNull cfg.connectTo) {
           tag = "ConnectTo";
-          contents = cfg.connectToSocket;
+          contents = cfg.connectTo;
         };
 
       rotation =
@@ -115,6 +115,11 @@ with builtins; let
 
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "${cfg.runDirBase}${removePrefix cfg.runDirBase cfg.runtimeDir}";
 in {
+  imports = [
+    (mkRenamedOptionModule [ "services" "cardano-tracer" "acceptingSocket" ] [ "services" "cardano-tracer" "acceptAt" ])
+    (mkRenamedOptionModule [ "services" "cardano-tracer" "connectToSocket" ] [ "services" "cardano-tracer" "connectTo" ])
+  ];
+
   options = {
     services.cardano-tracer = {
       enable = mkOption {
@@ -132,21 +137,22 @@ in {
       #                                   #
       #####################################
 
-      acceptingSocket = mkOption {
+      acceptAt = mkOption {
         type = nullOr (either str path);
         default = "${runtimeDir}/tracer.socket";
         description = ''
           Declaring this option means that cardano-tracer will operate in an
           `AcceptAt` tag mode where cardano-tracer works as a server: it
           receives network connections from providers such as node via a single
-          local socket provided by cardano-tracer.
+          local socket provided by cardano-tracer or by a network listener at
+          HOST:PORT.
 
-          Except for special use cases, declaring this `acceptingSocket` option
-          instead of the `connectToSocket` option is recommended, as the
+          Except for special use cases, declaring this `acceptAt` option
+          instead of the `connectTo` option is recommended, as the
           `AcceptAt` tag mode supports dynamic provider addition or removal
           without requiring cardano-tracer reconfiguration and restart.
 
-          Either this option, or the connectToSocket option must be declared.
+          Either this option, or the connectTo option must be declared.
         '';
       };
 
@@ -194,21 +200,22 @@ in {
         '';
       };
 
-      connectToSocket = mkOption {
+      connectTo = mkOption {
         type = nullOr (listOf (either str path));
         default = null;
         description = ''
           Declaring this option means that cardano-tracer will operate in a
           `ConnectTo` tag mode where cardano-tracer works as a client: it
-          establishes network connections to local socket(s) provided by the
-          provider(s). In this case a socket is used for each provider.
+          establishes network connections to local socket(s) or HOST(s):PORT(s)
+          provided by the provider(s). In this case a socket or HOST:PORT is
+          used for each provider.
 
-          Except for special use cases, declaring `acceptingSocket` instead of
+          Except for special use cases, declaring `acceptAt` instead of
           this option is recommended, as the `AcceptAt` tag mode supports
           dynamic provider addition or removal without requiring cardano-tracer
           reconfiguration and restart.
 
-          Either this option, or the acceptingSocket option must be declared.
+          Either this option, or the acceptAt option must be declared.
         '';
       };
 
@@ -844,8 +851,8 @@ in {
 
     assertions = [
       {
-        assertion = (!isNull cfg.acceptingSocket) != (!isNull cfg.connectToSocket);
-        message = "In services.cardano-tracer, exactly one of acceptingSocket or connectToSocket must be declared";
+        assertion = (!isNull cfg.acceptAt) != (!isNull cfg.connectTo);
+        message = "In services.cardano-tracer, exactly one of acceptAt or connectTo must be declared";
       }
       {
         assertion = isNull cfg.configFilePath || hasPrefix "/etc/" cfg.configFilePath;

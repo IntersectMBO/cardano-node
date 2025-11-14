@@ -399,8 +399,8 @@ instance ( LogFormatting (Header blk)
          , InspectLedger blk
          , HasIssuer blk
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
-  forHuman (ChainDB.IgnoreBlockOlderThanK pt) =
-    "Ignoring block older than K: " <> renderRealPointAsPhrase pt
+  forHuman (ChainDB.IgnoreBlockOlderThanImmTip pt) =
+    "Ignoring block older than ImmTip: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
       "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.IgnoreInvalidBlock pt _reason) =
@@ -411,12 +411,10 @@ instance ( LogFormatting (Header blk)
           "About to add block to queue: " <> renderRealPointAsPhrase pt
         FallingEdgeWith sz ->
           "Block added to queue: " <> renderRealPointAsPhrase pt <> ", queue size " <> condenseT sz
-  forHuman (ChainDB.PoppedBlockFromQueue edgePt) =
-      case edgePt of
-        RisingEdge ->
-          "Popping block from queue"
-        FallingEdgeWith pt ->
-          "Popped block from queue: " <> renderRealPointAsPhrase pt
+  forHuman ChainDB.PoppingFromQueue =
+    "Popping block from queue"
+  forHuman (ChainDB.PoppedBlockFromQueue pt) =
+    "Popped block from queue: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.StoreButDontChange pt) =
       "Ignoring block: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.TryAddToCurrentChain pt) =
@@ -437,14 +435,18 @@ instance ( LogFormatting (Header blk)
         RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
         FallingEdge -> "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHumanOrMachine ev'
-  forHuman ChainDB.AddedReprocessLoEBlocksToQueue =
-      "Added request to queue to reprocess blocks postponed by LoE."
+  forHuman (ChainDB.AddedReprocessLoEBlocksToQueue edgeSz) =
+      case edgeSz of
+        RisingEdge ->
+          "About to add request to queue to reprocess blocks postponed by LoE."
+        FallingEdgeWith sz ->
+          "Added request to queue to reprocess blocks postponed by LoE" <> ", queue size " <> condenseT sz
   forHuman ChainDB.PoppedReprocessLoEBlocksFromQueue =
       "Poppped request from queue to reprocess blocks postponed by LoE."
   forHuman ChainDB.ChainSelectionLoEDebug{} =
       "ChainDB LoE debug event"
-  forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
-      mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
+  forMachine dtal (ChainDB.IgnoreBlockOlderThanImmTip pt) =
+      mconcat [ "kind" .= String "IgnoreBlockOlderThanImmTip"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
       mconcat [ "kind" .= String "IgnoreBlockAlreadyInVolatileDB"
@@ -459,11 +461,12 @@ instance ( LogFormatting (Header blk)
                , case edgeSz of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
-  forMachine dtal (ChainDB.PoppedBlockFromQueue edgePt) =
+  forMachine _dtal ChainDB.PoppingFromQueue =
+     mconcat [ "kind" .= String "PoppingFromQueue"
+             ]
+  forMachine dtal (ChainDB.PoppedBlockFromQueue pt) =
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of
-                   RisingEdge         -> "risingEdge" .= True
-                   FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
+              , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.StoreButDontChange pt) =
       mconcat [ "kind" .= String "StoreButDontChange"
                , "block" .= forMachine dtal pt ]
@@ -556,8 +559,11 @@ instance ( LogFormatting (Header blk)
                 <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
-  forMachine _dtal ChainDB.AddedReprocessLoEBlocksToQueue =
-      mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
+  forMachine _dtal (ChainDB.AddedReprocessLoEBlocksToQueue edgeSz) =
+      mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue"
+               , case edgeSz of
+                   RisingEdge         -> "risingEdge" .= True
+                   FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
   forMachine _dtal ChainDB.PoppedReprocessLoEBlocksFromQueue =
       mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
   forMachine dtal (ChainDB.ChainSelectionLoEDebug curChain loeFrag) =
@@ -619,14 +625,16 @@ instance ( LogFormatting (Header blk)
 
 
 instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
-  namespaceFor ChainDB.IgnoreBlockOlderThanK {} =
-    Namespace [] ["IgnoreBlockOlderThanK"]
+  namespaceFor ChainDB.IgnoreBlockOlderThanImmTip {} =
+    Namespace [] ["IgnoreBlockOlderThanImmTip"]
   namespaceFor ChainDB.IgnoreBlockAlreadyInVolatileDB {} =
     Namespace [] ["IgnoreBlockAlreadyInVolatileDB"]
   namespaceFor ChainDB.IgnoreInvalidBlock {} =
     Namespace [] ["IgnoreInvalidBlock"]
   namespaceFor ChainDB.AddedBlockToQueue {} =
     Namespace [] ["AddedBlockToQueue"]
+  namespaceFor ChainDB.PoppingFromQueue {} =
+    Namespace [] ["PoppingFromQueue"]
   namespaceFor ChainDB.PoppedBlockFromQueue {} =
     Namespace [] ["PoppedBlockFromQueue"]
   namespaceFor ChainDB.AddedBlockToVolatileDB {} =
@@ -647,7 +655,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     nsPrependInner "AddBlockValidation" (namespaceFor ev')
   namespaceFor (ChainDB.PipeliningEvent ev') =
     nsPrependInner "PipeliningEvent" (namespaceFor ev')
-  namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue =
+  namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue {} =
     Namespace [] ["AddedReprocessLoEBlocksToQueue"]
   namespaceFor ChainDB.PoppedReprocessLoEBlocksFromQueue =
     Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
@@ -659,6 +667,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   severityFor (Namespace _ ["IgnoreInvalidBlock"]) _ = Just Info
   severityFor (Namespace _ ["AddedBlockToQueue"]) _ = Just Debug
   severityFor (Namespace _ ["AddedBlockToVolatileDB"]) _ = Just Debug
+  severityFor (Namespace _ ["PoppingFromQueue"]) _ = Just Debug
   severityFor (Namespace _ ["PoppedBlockFromQueue"]) _ = Just Debug
   severityFor (Namespace _ ["TryAddToCurrentChain"]) _ = Just Debug
   severityFor (Namespace _ ["TrySwitchToAFork"]) _ = Just Info
@@ -778,6 +787,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     ]
   documentFor (Namespace _ ["AddedBlockToVolatileDB"]) = Just
     "A block was added to the Volatile DB"
+  documentFor (Namespace _ ["PoppingFromQueue"]) = Just ""
   documentFor (Namespace _ ["PoppedBlockFromQueue"]) = Just ""
   documentFor (Namespace _ ["TryAddToCurrentChain"]) = Just $ mconcat
     [ "The block fits onto the current chain, we'll try to use it to extend"
@@ -819,6 +829,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     , Namespace [] ["IgnoreInvalidBlock"]
     , Namespace [] ["AddedBlockToQueue"]
     , Namespace [] ["AddedBlockToVolatileDB"]
+    , Namespace [] ["PoppingFromQueue"]
     , Namespace [] ["PoppedBlockFromQueue"]
     , Namespace [] ["TryAddToCurrentChain"]
     , Namespace [] ["TrySwitchToAFork"]
@@ -1821,6 +1832,7 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forMachine _dtals LedgerDB.ForkerReadStatistics = mempty
   forMachine _dtals LedgerDB.ForkerPushStart = mempty
   forMachine _dtals LedgerDB.ForkerPushEnd = mempty
+  forMachine _dtals LedgerDB.DanglingForkerClosed = mempty
 
   forHuman LedgerDB.ForkerOpen = "Opened forker"
   forHuman LedgerDB.ForkerCloseUncommitted = "Forker closed without committing"
@@ -1832,6 +1844,7 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forHuman LedgerDB.ForkerReadStatistics = "Gathering statistics"
   forHuman LedgerDB.ForkerPushStart = "Started to push"
   forHuman LedgerDB.ForkerPushEnd = "Pushed"
+  forHuman LedgerDB.DanglingForkerClosed = "Closed dangling forker"
 
 instance MetaTrace LedgerDB.TraceForkerEventWithKey where
   namespaceFor (LedgerDB.TraceForkerEventWithKey _ ev) =
@@ -1854,6 +1867,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
   namespaceFor LedgerDB.ForkerReadStatistics = Namespace [] ["Statistics"]
   namespaceFor LedgerDB.ForkerPushStart = Namespace [] ["StartPush"]
   namespaceFor LedgerDB.ForkerPushEnd = Namespace [] ["FinishPush"]
+  namespaceFor LedgerDB.DanglingForkerClosed = Namespace [] ["DanglingForkerClosed"]
 
   severityFor _ _ = Just Debug
 
@@ -1871,6 +1885,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
   documentFor (Namespace _ ("Statistics" : _tl)) = Just "Statistics were gathered from the forker"
   documentFor (Namespace _ ("StartPush" : _tl)) = Just "A ledger state is going to be pushed to the forker"
   documentFor (Namespace _ ("FinishPush" : _tl)) = Just "A ledger state was pushed to the forker"
+  documentFor (Namespace _ ("DanglingForkerClosed" : _tl)) = Just "A dangling forker was closed"
   documentFor _ = Nothing
 
   allNamespaces = [
@@ -1884,6 +1899,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
     , Namespace [] ["Statistics"]
     , Namespace [] ["StartPush"]
     , Namespace [] ["FinishPush"]
+    , Namespace [] ["DanglingForkerClosed"]
     ]
 
 --------------------------------------------------------------------------------
@@ -2223,40 +2239,40 @@ instance MetaTrace V1.BackingStoreValueHandleTrace where
     ]
 
 instance LogFormatting V2.FlavorImplSpecificTrace where
-  forMachine _dtal V2.FlavorImplSpecificTraceInMemory =
-    mconcat [ "kind" .= String "InMemory" ]
-  forMachine _dtal V2.FlavorImplSpecificTraceOnDisk =
-    mconcat [ "kind" .= String "OnDisk" ]
+  forMachine _dtal V2.TraceLedgerTablesHandleCreate =
+    mconcat [ "kind" .= String "LedgerTablesHandleCreate" ]
+  forMachine _dtal V2.TraceLedgerTablesHandleClose =
+    mconcat [ "kind" .= String "LedgerTablesHandleClose" ]
 
-  forHuman V2.FlavorImplSpecificTraceInMemory =
-    "An in-memory backing store event was traced"
-  forHuman V2.FlavorImplSpecificTraceOnDisk =
-    "An on-disk backing store event was traced"
+  forHuman V2.TraceLedgerTablesHandleCreate =
+    "Created a new 'LedgerTablesHandle', potentially by duplicating an existing one"
+  forHuman V2.TraceLedgerTablesHandleClose =
+    "Closed a 'LedgerTablesHandle'"
 
 instance MetaTrace V2.FlavorImplSpecificTrace where
-  namespaceFor V2.FlavorImplSpecificTraceInMemory =
-    Namespace [] ["InMemory"]
-  namespaceFor V2.FlavorImplSpecificTraceOnDisk =
-    Namespace [] ["OnDisk"]
+  namespaceFor V2.TraceLedgerTablesHandleCreate =
+    Namespace [] ["LedgerTablesHandleCreate"]
+  namespaceFor V2.TraceLedgerTablesHandleClose =
+    Namespace [] ["LedgerTablesHandleClose"]
 
-  severityFor (Namespace _ ["InMemory"]) _ = Just Info
-  severityFor (Namespace _ ["OnDisk"])   _ = Just Info
+  severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Debug
   severityFor _                          _ = Nothing
 
   -- suspicious
-  privacyFor (Namespace _ ["InMemory"]) _ = Just Public
-  privacyFor (Namespace _ ["OnDisk"])   _ = Just Public
+  privacyFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Public
+  privacyFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Public
   privacyFor _                          _ = Just Public
 
-  documentFor (Namespace _ ["InMemory"]) =
+  documentFor (Namespace _ ["LedgerTablesHandleCreate"]) =
     Just "An in-memory backing store event"
-  documentFor (Namespace _ ["OnDisk"]) =
+  documentFor (Namespace _ ["LedgerTablesHandleClose"]) =
     Just "An on-disk backing store event"
   documentFor _ = Nothing
 
   allNamespaces =
-    [ Namespace [] ["InMemory"]
-    , Namespace [] ["OnDisk"]
+    [ Namespace [] ["LedgerTablesHandleCreate"]
+    , Namespace [] ["LedgerTablesHandleClose"]
     ]
 
 --------------------------------------------------------------------------------

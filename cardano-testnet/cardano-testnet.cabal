@@ -40,8 +40,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 10.18
-                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.12
+                      , cardano-api ^>= 10.19
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.13
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -53,9 +53,10 @@ library
                       , cardano-ledger-api
                       , cardano-ledger-conway
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
+                      , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.8
+                      , cardano-ping ^>= 0.9
                       , cardano-prelude
                       , contra-tracer
                       , containers
@@ -70,8 +71,9 @@ library
                       , extra
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.8
+                      , hedgehog-extras ^>= 0.10
                       , http-conduit
+                      , io-classes:{si-timers}
                       , lens-aeson
                       , microlens
                       , monad-control
@@ -80,7 +82,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.21
+                      , ouroboros-network ^>= 0.22.4
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -88,7 +90,6 @@ library
                       , retry
                       , safe-exceptions
                       , scientific
-                      , si-timers
                       , stm
                       , tasty ^>= 1.5
                       , tasty-expected-failure
@@ -98,7 +99,6 @@ library
                       , time
                       , transformers
                       , transformers-except
-                      , vector
                       , yaml
 
   hs-source-dirs:       src
@@ -226,7 +226,6 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.MainnetParams
-                        Cardano.Testnet.Test.P2PTopology
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.RunTestnet
                         Cardano.Testnet.Test.SubmitApi.Transaction
@@ -259,6 +258,7 @@ test-suite cardano-testnet-test
                       , hedgehog
                       , hedgehog-extras
                       , http-conduit
+                      , iproute
                       , lens
                       , lens-aeson
                       , microlens

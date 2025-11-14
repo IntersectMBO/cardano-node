@@ -21,6 +21,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
   ) where
 
 
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
 import           Cardano.Node.Queries (HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
@@ -55,6 +56,7 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
@@ -1293,21 +1295,15 @@ instance
       [ "kind" .= String "TraceMempoolAttemptingAdd"
       , "tx" .= forMachine dtal tx
       ]
-  forMachine dtal (TraceMempoolLedgerFound p) =
-    mconcat
-      [ "kind" .= String "TraceMempoolLedgerFound"
-      , "tip" .= forMachine dtal p
-      ]
-  forMachine dtal (TraceMempoolLedgerNotFound p) =
-    mconcat
-      [ "kind" .= String "TraceMempoolLedgerNotFound"
-      , "tip" .= forMachine dtal p
-      ]
 
   forMachine _dtal (TraceMempoolSynced et) =
     mconcat
       [ "kind" .= String "TraceMempoolSynced"
       , "enclosingTime" .= et
+      ]
+  forMachine _dtal TraceMempoolTipMovedBetweenSTMBlocks =
+    mconcat
+      [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
       ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
@@ -1334,8 +1330,8 @@ instance
 
   asMetrics TraceMempoolSyncNotNeeded {} = []
   asMetrics TraceMempoolAttemptingAdd {} = []
-  asMetrics TraceMempoolLedgerFound {} = []
-  asMetrics TraceMempoolLedgerNotFound {} = []
+
+  asMetrics TraceMempoolTipMovedBetweenSTMBlocks {} = []
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
@@ -1353,8 +1349,8 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolSynced {} = Namespace [] ["Synced"]
     namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["SyncNotNeeded"]
     namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["AttemptAdd"]
-    namespaceFor TraceMempoolLedgerFound {} = Namespace [] ["LedgerFound"]
-    namespaceFor TraceMempoolLedgerNotFound {} = Namespace [] ["LedgerNotFound"]
+    namespaceFor TraceMempoolTipMovedBetweenSTMBlocks {} = Namespace [] ["TipMovedBetweenSTMBlocks"]
+
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
@@ -1363,8 +1359,7 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Warning
     severityFor (Namespace _ ["SyncNotNeeded"]) _ = Just Debug
     severityFor (Namespace _ ["AttemptAdd"]) _ = Just Debug
-    severityFor (Namespace _ ["LedgerFound"]) _ = Just Debug
-    severityFor (Namespace _ ["LedgerNotFound"]) _ = Just Debug
+    severityFor (Namespace [] ["TipMovedBetweenSTMBlocks"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1408,12 +1403,8 @@ instance MetaTrace (TraceEventMempool blk) where
       "The mempool and the LedgerDB are syncing or in sync depending on the argument on the trace."
     documentFor (Namespace _ ["AttemptAdd"]) = Just
       "Mempool is about to try to validate and add a transaction."
-    documentFor (Namespace _ ["LedgerNotFound"]) = Just $ mconcat
-      [ "Ledger state requested by the mempool no longer in LedgerDB."
-      , " Will have to re-sync."
-      ]
-    documentFor (Namespace _ ["LedgerFound"]) = Just
-      "Ledger state requested by the mempool is in the LedgerDB."
+    documentFor (Namespace _ ["TipMovedBetweenSTMBlocks"]) = Just
+      "LedgerDB moved to an alternative fork between two reads during re-sync."
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1424,8 +1415,7 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["Synced"]
       , Namespace [] ["SyncNotNeeded"]
       , Namespace [] ["AttemptAdd"]
-      , Namespace [] ["LedgerNotFound"]
-      , Namespace [] ["LedgerFound"]
+      , Namespace [] ["TipMovedBetweenSTMBlocks"]
       ]
 
 --------------------------------------------------------------------------------
@@ -2072,6 +2062,14 @@ instance ( LogFormatting selection
          ) => LogFormatting (TraceGsmEvent selection) where
   forMachine dtal =
     \case
+      GsmEventInitializedInCaughtUp ->
+        mconcat
+          [ "kind" .= String "GsmEventInitializedInCaughtUp"
+          ]
+      GsmEventInitializedInPreSyncing ->
+        mconcat
+          [ "kind" .= String "GsmEventInitializedInPreSyncing"
+          ]
       GsmEventEnterCaughtUp i s ->
         mconcat
           [ "kind" .= String "GsmEventEnterCaughtUp"
@@ -2101,6 +2099,8 @@ instance ( LogFormatting selection
       GsmEventLeaveCaughtUp {}       -> [preSyncing]
       GsmEventPreSyncingToSyncing {} -> [syncing]
       GsmEventSyncingToPreSyncing {} -> [preSyncing]
+      GsmEventInitializedInCaughtUp {}   -> [caughtUp]
+      GsmEventInitializedInPreSyncing {} -> [preSyncing]
     where
       preSyncing = IntM "GSM.state" 0
       syncing    = IntM "GSM.state" 1
@@ -2109,6 +2109,8 @@ instance ( LogFormatting selection
 instance MetaTrace (TraceGsmEvent selection) where
   namespaceFor =
     \case
+      GsmEventInitializedInCaughtUp   -> Namespace [] ["InitializedInCaughtUp"]
+      GsmEventInitializedInPreSyncing -> Namespace [] ["InitializedInPreSyncing"]
       GsmEventEnterCaughtUp {}        -> Namespace [] ["EnterCaughtUp"]
       GsmEventLeaveCaughtUp {}        -> Namespace [] ["LeaveCaughtUp"]
       GsmEventPreSyncingToSyncing {}  -> Namespace [] ["PreSyncingToSyncing"]
@@ -2116,13 +2118,18 @@ instance MetaTrace (TraceGsmEvent selection) where
 
   severityFor ns _ =
     case ns of
-      Namespace _ ["EnterCaughtUp"]       -> Just Notice
-      Namespace _ ["LeaveCaughtUp"]       -> Just Warning
-      Namespace _ ["PreSyncingToSyncing"] -> Just Notice
-      Namespace _ ["SyncingToPreSyncing"] -> Just Notice
-      Namespace _ _                       -> Nothing
+      Namespace _ ["InitializedInCaughtUp"]       -> Just Notice
+      Namespace _ ["InitializedInPreSyncing"]     -> Just Notice
+      Namespace _ ["EnterCaughtUp"]               -> Just Notice
+      Namespace _ ["LeaveCaughtUp"]               -> Just Warning
+      Namespace _ ["PreSyncingToSyncing"]         -> Just Notice
+      Namespace _ ["SyncingToPreSyncing"]         -> Just Notice
+      Namespace _ _                               -> Nothing
 
   documentFor = \case
+    Namespace _ ["InitializedInCaughtUp"] -> Just "The GSM was initialized in the 'CaughtUp' state"
+    Namespace _ ["InitializedInPreSyncing"] -> Just "The GSM was initialized in the 'PreSyncing' state"
+
     Namespace _ ["EnterCaughtUp"] ->
       Just "Node is caught up"
     Namespace _ ["LeaveCaughtUp"] ->
@@ -2137,11 +2144,13 @@ instance MetaTrace (TraceGsmEvent selection) where
       Nothing
 
   metricsDocFor = \case
-    Namespace _ ["EnterCaughtUp"]       -> doc
-    Namespace _ ["LeaveCaughtUp"]       -> doc
-    Namespace _ ["PreSyncingToSyncing"] -> doc
-    Namespace _ ["SyncingToPreSyncing"] -> doc
-    Namespace _ _                       -> []
+    Namespace _ ["InitializedInCaughtUp"]   -> doc
+    Namespace _ ["InitializedInPreSyncing"] -> doc
+    Namespace _ ["EnterCaughtUp"]           -> doc
+    Namespace _ ["LeaveCaughtUp"]           -> doc
+    Namespace _ ["PreSyncingToSyncing"]     -> doc
+    Namespace _ ["SyncingToPreSyncing"]     -> doc
+    Namespace _ _                           -> []
     where
       doc =
         [ ("GSM.state"
@@ -2150,7 +2159,9 @@ instance MetaTrace (TraceGsmEvent selection) where
         ]
 
   allNamespaces =
-    [ Namespace [] ["EnterCaughtUp"]
+    [ Namespace [] ["InitializedInCaughtUp"]
+    , Namespace [] ["InitializedInPreSyncing"]
+    , Namespace [] ["EnterCaughtUp"]
     , Namespace [] ["LeaveCaughtUp"]
     , Namespace [] ["PreSyncingToSyncing"]
     , Namespace [] ["SyncingToPreSyncing"]
@@ -2291,3 +2302,140 @@ instance ( StandardHash blk
             ]
 
   forHuman = showT
+
+{-------------------------------------------------------------------------------
+ KES-agent
+-------------------------------------------------------------------------------}
+
+--------------------------------------------------------------------------------
+-- KES Agent tracer
+--------------------------------------------------------------------------------
+
+instance LogFormatting Agent.ServiceClientTrace where
+  forMachine _dtal = \case
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeTrace" ]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeFailed" ]
+    Agent.ServiceClientDriverTrace _sdt ->
+      mconcat [ "kind" .= String "ServiceClientDriverTrace" ]
+    Agent.ServiceClientSocketClosed ->
+      mconcat [ "kind" .= String "ServiceClientSocketClosed" ]
+    Agent.ServiceClientConnected _s ->
+      mconcat [ "kind" .= String "ServiceClientConnected" ]
+    Agent.ServiceClientAttemptReconnect{} ->
+      mconcat [ "kind" .= String "ServiceClientAttemptReconnect" ]
+    Agent.ServiceClientReceivedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientReceivedKey" ]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientDeclinedKey" ]
+    Agent.ServiceClientDroppedKey ->
+      mconcat [ "kind" .= String "ServiceClientDroppedKey" ]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      mconcat [ "kind" .= String "ServiceClientOpCertNumberCheck" ]
+    Agent.ServiceClientAbnormalTermination _s ->
+      mconcat [ "kind" .= String "ServiceClientAbnormalTermination" ]
+    Agent.ServiceClientStopped ->
+      mconcat [ "kind" .= String "ServiceClientStopped" ]
+
+  forHuman = showT
+
+instance MetaTrace Agent.ServiceClientTrace where
+  namespaceFor = \case
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      Namespace [] ["ServiceClientVersionHandshakeTrace"]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      Namespace [] ["ServiceClientVersionHandshakeFailed"]
+    Agent.ServiceClientDriverTrace _sdt ->
+      Namespace [] ["ServiceClientDriverTrace"]
+    Agent.ServiceClientSocketClosed ->
+      Namespace [] ["ServiceClientSocketClosed"]
+    Agent.ServiceClientConnected _s ->
+      Namespace [] ["ServiceClientConnected"]
+    Agent.ServiceClientAttemptReconnect{} ->
+      Namespace [] ["ServiceClientAttemptReconnect"]
+    Agent.ServiceClientReceivedKey _tbt ->
+      Namespace [] ["ServiceClientReceivedKey"]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      Namespace [] ["ServiceClientDeclinedKey"]
+    Agent.ServiceClientDroppedKey ->
+      Namespace [] ["ServiceClientDroppedKey"]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      Namespace [] ["ServiceClientOpCertNumberCheck"]
+    Agent.ServiceClientAbnormalTermination _s ->
+      Namespace [] ["ServiceClientAbnormalTermination"]
+    Agent.ServiceClientStopped ->
+      Namespace [] ["ServiceClientStopped"]
+
+  severityFor ns _ = case ns of
+    Namespace [] ["ServiceClientVersionHandshakeTrace"] ->
+      Just Debug
+    Namespace [] ["ServiceClientVersionHandshakeFailed"] ->
+      Just Error
+    Namespace [] ["ServiceClientDriverTrace"] ->
+      Just Debug
+    Namespace [] ["ServiceClientSocketClosed"] ->
+      Just Info
+    Namespace [] ["ServiceClientConnected"] ->
+      Just Info
+    Namespace [] ["ServiceClientAttemptReconnect"] ->
+      Just Info
+    Namespace [] ["ServiceClientReceivedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientDeclinedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientDroppedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientOpCertNumberCheck"] ->
+      Just Debug
+    Namespace [] ["ServiceClientAbnormalTermination"] ->
+      Just Error
+    Namespace [] ["ServiceClientStopped"] ->
+      Just Info
+    Namespace _ _ -> Nothing
+
+  documentFor _ = Nothing
+  allNamespaces =
+    [ Namespace [] ["ServiceClientVersionHandshakeTrace"]
+    , Namespace [] ["ServiceClientVersionHandshakeFailed"]
+    , Namespace [] ["ServiceClientDriverTrace"]
+    , Namespace [] ["ServiceClientSocketClosed"]
+    , Namespace [] ["ServiceClientConnected"]
+    , Namespace [] ["ServiceClientAttemptReconnect"]
+    , Namespace [] ["ServiceClientReceivedKey"]
+    , Namespace [] ["ServiceClientDeclinedKey"]
+    , Namespace [] ["ServiceClientDroppedKey"]
+    , Namespace [] ["ServiceClientOpCertNumberCheck"]
+    , Namespace [] ["ServiceClientAbnormalTermination"]
+    , Namespace [] ["ServiceClientStopped"]
+    ]
+
+instance LogFormatting KESAgentClientTrace where
+  forMachine dtal = \case
+    KESAgentClientException ex -> mconcat
+      [ "kind" .= String "KESAgentClientException"
+      , "exception" .= String (Text.pack $ show ex)
+      ]
+    KESAgentClientTrace t -> mconcat
+      [ "kind" .= String "KESAgentClientTrace"
+      , "trace" .= forMachine dtal t
+      ]
+
+  forHuman = showT
+
+
+instance MetaTrace KESAgentClientTrace where
+  namespaceFor = \case
+    KESAgentClientException _ ->
+      Namespace [] ["KESAgentClientException"]
+    KESAgentClientTrace t -> nsCast $ namespaceFor t
+
+  severityFor (Namespace [] ["KESAgentClientException"]) _ = Just Error
+  severityFor (Namespace [] ["KESAgentClientTrace"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor _ = Nothing
+
+  allNamespaces =
+    Namespace [] ["KESAgentClientException"] :
+    fmap nsCast (allNamespaces :: [Namespace Agent.ServiceClientTrace])

@@ -41,8 +41,6 @@ jobs:
           'mainnet-alonzo-genesis.json'
           'mainnet-byron-genesis.json'
           'mainnet-checkpoints.json'
-          'mainnet-config-bp.json'
-          'mainnet-config-bp-legacy.json'
           'mainnet-config.json'
           'mainnet-config-legacy.json'
           'mainnet-peer-snapshot.json'

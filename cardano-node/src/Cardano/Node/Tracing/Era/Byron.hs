@@ -17,6 +17,7 @@ import           Cardano.Api (textShow)
 
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
                    ChainValidationError (..), delegationCertificate)
+import           Ouroboros.Consensus.Protocol.PBFT (PBft, PBftTiebreakerView(..))
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)
@@ -29,7 +30,6 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
                    ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
-import           Ouroboros.Consensus.Protocol.PBFT (PBftSelectView (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
@@ -213,10 +213,9 @@ instance LogFormatting ByronOtherHeaderEnvelopeError where
       , "slot" .= slot
       ]
 
-instance LogFormatting PBftSelectView where
-  forMachine _dtal (PBftSelectView blkNo isEBB) =
+instance LogFormatting PBftTiebreakerView where
+  forMachine _dtal (PBftTiebreakerView isEBB) =
     mconcat
       [ "kind" .= String "PBftSelectView"
-      , "blockNo" .= blkNo
       , "isEBB" .= fromIsEBB isEBB
       ]

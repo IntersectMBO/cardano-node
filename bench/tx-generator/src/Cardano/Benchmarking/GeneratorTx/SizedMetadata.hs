@@ -40,18 +40,20 @@ assume_cbor_properties
 
 -- The cost of map entries in metadata follows a step function.
 -- This assumes the map indices are [0..n].
-prop_mapCostsShelley :: Bool
-prop_mapCostsAllegra :: Bool
-prop_mapCostsMary    :: Bool
-prop_mapCostsAlonzo  :: Bool
-prop_mapCostsBabbage :: Bool
-prop_mapCostsConway  :: Bool
-prop_mapCostsShelley = measureMapCosts AsShelleyEra   == assumeMapCosts AsShelleyEra
-prop_mapCostsAllegra = measureMapCosts AsAllegraEra   == assumeMapCosts AsAllegraEra
-prop_mapCostsMary    = measureMapCosts AsMaryEra      == assumeMapCosts AsMaryEra
-prop_mapCostsAlonzo  = measureMapCosts AsAlonzoEra    == assumeMapCosts AsAlonzoEra
-prop_mapCostsBabbage = measureMapCosts AsBabbageEra   == assumeMapCosts AsBabbageEra
-prop_mapCostsConway  = measureMapCosts AsConwayEra    == assumeMapCosts AsConwayEra
+prop_mapCostsShelley   :: Bool
+prop_mapCostsAllegra   :: Bool
+prop_mapCostsMary      :: Bool
+prop_mapCostsAlonzo    :: Bool
+prop_mapCostsBabbage   :: Bool
+prop_mapCostsConway    :: Bool
+prop_mapCostsDijkstra  :: Bool
+prop_mapCostsShelley   = measureMapCosts AsShelleyEra  == assumeMapCosts AsShelleyEra
+prop_mapCostsAllegra   = measureMapCosts AsAllegraEra  == assumeMapCosts AsAllegraEra
+prop_mapCostsMary      = measureMapCosts AsMaryEra     == assumeMapCosts AsMaryEra
+prop_mapCostsAlonzo    = measureMapCosts AsAlonzoEra   == assumeMapCosts AsAlonzoEra
+prop_mapCostsBabbage   = measureMapCosts AsBabbageEra  == assumeMapCosts AsBabbageEra
+prop_mapCostsConway    = measureMapCosts AsConwayEra   == assumeMapCosts AsConwayEra
+prop_mapCostsDijkstra  = measureMapCosts AsDijkstraEra == assumeMapCosts AsDijkstraEra 
 
 assumeMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
 assumeMapCosts _proxy = stepFunction [
@@ -63,27 +65,30 @@ assumeMapCosts _proxy = stepFunction [
     ]
   where
     firstEntry = case shelleyBasedEra @era of
-      ShelleyBasedEraShelley -> 37
-      ShelleyBasedEraAllegra -> 39
-      ShelleyBasedEraMary    -> 39
-      ShelleyBasedEraAlonzo  -> 42
-      ShelleyBasedEraBabbage -> 42
-      ShelleyBasedEraConway  -> 42
+      ShelleyBasedEraShelley  -> 37
+      ShelleyBasedEraAllegra  -> 39
+      ShelleyBasedEraMary     -> 39
+      ShelleyBasedEraAlonzo   -> 42
+      ShelleyBasedEraBabbage  -> 42
+      ShelleyBasedEraConway   -> 42
+      ShelleyBasedEraDijkstra -> 42
 
 -- Bytestring costs are not LINEAR !!
 -- Costs are piecewise linear for payload sizes [0..23] and [24..64].
 prop_bsCostsShelley  :: Bool
-prop_bsCostsAllegra :: Bool
-prop_bsCostsMary    :: Bool
-prop_bsCostsAlonzo  :: Bool
-prop_bsCostsBabbage :: Bool
-prop_bsCostsConway  :: Bool
-prop_bsCostsShelley = measureBSCosts AsShelleyEra == [37..60] ++ [62..102]
-prop_bsCostsAllegra = measureBSCosts AsAllegraEra == [39..62] ++ [64..104]
-prop_bsCostsMary    = measureBSCosts AsMaryEra    == [39..62] ++ [64..104]
-prop_bsCostsAlonzo  = measureBSCosts AsAlonzoEra  == [42..65] ++ [67..107]
-prop_bsCostsBabbage = measureBSCosts AsBabbageEra == [42..65] ++ [67..107]
-prop_bsCostsConway  = measureBSCosts AsConwayEra  == [42..65] ++ [67..107]
+prop_bsCostsAllegra  :: Bool
+prop_bsCostsMary     :: Bool
+prop_bsCostsAlonzo   :: Bool
+prop_bsCostsBabbage  :: Bool
+prop_bsCostsConway   :: Bool
+prop_bsCostsDijkstra :: Bool
+prop_bsCostsShelley   = measureBSCosts AsShelleyEra   == [37..60] ++ [62..102]
+prop_bsCostsAllegra   = measureBSCosts AsAllegraEra   == [39..62] ++ [64..104]
+prop_bsCostsMary      = measureBSCosts AsMaryEra      == [39..62] ++ [64..104]
+prop_bsCostsAlonzo    = measureBSCosts AsAlonzoEra    == [42..65] ++ [67..107]
+prop_bsCostsBabbage   = measureBSCosts AsBabbageEra   == [42..65] ++ [67..107]
+prop_bsCostsConway    = measureBSCosts AsConwayEra    == [42..65] ++ [67..107]
+prop_bsCostsDijkstra  = measureBSCosts AsDijkstraEra  == [42..65] ++ [67..107]
 
 stepFunction :: [(Int, Int)] -> [Int]
 stepFunction f = scanl1 (+) steps
@@ -109,7 +114,7 @@ metadataSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMeta
 metadataSize p m = dummyTxSize p m - dummyTxSize p Nothing
 
 dummyTxSizeInEra :: IsShelleyBasedEra era => TxMetadataInEra era -> Int
-dummyTxSizeInEra metadata = case createAndValidateTransactionBody shelleyBasedEra dummyTx of
+dummyTxSizeInEra metadata = case createTransactionBody shelleyBasedEra dummyTx of
   Right b -> BS.length $ serialiseToCBOR b
   Left err -> error $ "metaDataSize " ++ show err
  where
@@ -141,12 +146,13 @@ mkMetadata size
       else Right $ metadataInEra $ Just metadata
  where
   minSize = case shelleyBasedEra @era of
-    ShelleyBasedEraShelley -> 37
-    ShelleyBasedEraAllegra -> 39
-    ShelleyBasedEraMary    -> 39
-    ShelleyBasedEraAlonzo  -> 39 -- TODO: check minSize for Alonzo
-    ShelleyBasedEraBabbage -> 39 -- TODO: check minSize for Babbage
-    ShelleyBasedEraConway  -> 39 -- TODO: check minSize for Conway
+    ShelleyBasedEraShelley  -> 37
+    ShelleyBasedEraAllegra  -> 39
+    ShelleyBasedEraMary     -> 39
+    ShelleyBasedEraAlonzo   -> 39
+    ShelleyBasedEraBabbage  -> 39
+    ShelleyBasedEraConway   -> 39
+    ShelleyBasedEraDijkstra -> 39
   nettoSize = size - minSize
 
   -- At 24 the CBOR representation changes.

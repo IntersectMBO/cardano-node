@@ -106,7 +106,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- Testnet.getDefaultAlonzoGenesis sbe
+  gen <- Testnet.getDefaultAlonzoGenesis
   H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
@@ -127,6 +127,8 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
+  -- TODO: once 'cardano-cli latest genesis create' supports dijkstra, make this a copy instead of writing a default
+  H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode dijkstraGenesisDefaults
 
   shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
   alonzoGenesisHash  <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"

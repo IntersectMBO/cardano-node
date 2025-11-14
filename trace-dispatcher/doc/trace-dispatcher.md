@@ -306,15 +306,15 @@ The usual form to provide a configuration is via a configuration file, wich can 
 can be given based on a namespace are: `severity`, `detail`, `backends` and `limiter`.
 
 Backends can be a combination of `Forwarder`, `EKGBackend`, `PrometheusSimple [suffix|nosuffix] [bindhost] <port>` and
-one of `Stdout MachineFormat`, `Stdout HumanFormatColoured` and `Stdout HumanFormatUncoloured`.  
+one of `Stdout MachineFormat`, `Stdout HumanFormatColoured` and `Stdout HumanFormatUncoloured`.
 
 The connection for the `Forwarder` backend is provided on the application command line. It is a socket path over which applications like `cardano-node` connect with `cardano-tracer`. `--tracer-socket-path-connect /path/to/forward.sock` sets
 the backends's role to `Initiator`, whereas `--tracer-socket-path-accept /path/to/forward.sock` sets it to `Responder`. Except for debugging purposes, the former should be chosen: the application takes the `Initiator` role, and `cardano-tracer` is
-in the `Responder` role, which means setting its network `tag` to `AcceptAt` in its config (see there).  
+in the `Responder` role, which means setting its network `tag` to `AcceptAt` in its config (see there).
 
 The `PrometheusSimple` backend provides Prometheus metrics _directly from the process_, without forwarding. It always applies to all tracers globally, and should only be configured once.
 Providing an available port number in the connection string is mandatory; this will bind to localhost only by default. By specifying a bind host, the metrics can be queried remotely, e.g. over IPv4 by
-binding to `0.0.0.0`, or IPv6 by binding to `::`. Metrics will be available under the URL `/metrics`. 
+binding to `0.0.0.0`, or IPv6 by binding to `::`. Metrics will be available under the URL `/metrics`.
 The `nosuffix` modifier removes suffixes like `_int` from metrics names, making them more similar to those in the old system; `suffix` is the implicit default and can be omitted.
 
 *CAUTION*: Generally allowing remote queries of Prometheus metrics is risky and should only be done in an environment you control.
@@ -690,6 +690,11 @@ The consistency checks cover the following aspects:
 - Namespaces in the `severityFor`, `privacyFor`, `detailsFor`, `documentFor`, and `metricsDocFor` functions are consistent with the `allNamespaces` definition.
 
 - Any namespace in the configuration must be found by a hierarchical lookup in `all namespaces`.
+
+If the checker encounters any problems it emits a `TracerConsistencyWarnings` message through the
+`Cardano.Logging.TraceDispatcherMessage` type. The message is routed via the `Reflection` namespace
+and carries `Warning` severity so that misconfigured namespaces are surfaced prominently in both the
+logs and forwarded tracing output.
 
 ## Trace Backends Overview
 

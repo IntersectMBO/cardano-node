@@ -13,8 +13,6 @@
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
   , ResponderCoreAffinityPolicy (..)
-  , NetworkP2PMode (..)
-  , SomeNetworkP2PMode (..)
   , PartialNodeConfiguration(..)
   , TimeoutOverride (..)
   , defaultPartialNodeConfiguration
@@ -29,6 +27,7 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
+import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
@@ -37,11 +36,9 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
-import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
@@ -72,28 +69,6 @@ import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
-
-data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
-  deriving (Eq, Show, Generic)
-
-data SomeNetworkP2PMode where
-    SomeNetworkP2PMode :: forall p2p.
-                          Consensus.NetworkP2PMode p2p
-                       -> SomeNetworkP2PMode
-
-instance Eq SomeNetworkP2PMode where
-    (==) (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-         (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-       = True
-    (==) (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-         (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-       = True
-    (==) _ _
-       = False
-
-instance Show SomeNetworkP2PMode where
-    show (SomeNetworkP2PMode mode@Consensus.EnabledP2PMode)  = show mode
-    show (SomeNetworkP2PMode mode@Consensus.DisabledP2PMode) = show mode
 
 -- | Isomorphic to a `Maybe DiffTime`, but expresses what `Nothing` means, in
 -- this case that we want to /NOT/ override the default timeout.
@@ -192,9 +167,6 @@ data NodeConfiguration
          -- in Genesis mode
        , ncMinBigLedgerPeersForTrustedState :: NumberOfBigLedgerPeers
 
-         -- Enable experimental P2P mode
-       , ncEnableP2P :: SomeNetworkP2PMode
-
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
 
@@ -290,9 +262,6 @@ data PartialNodeConfiguration
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
 
-         -- Network P2P mode
-       , pncEnableP2P :: !(Last NetworkP2PMode)
-
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
 
@@ -352,14 +321,16 @@ instance FromJSON PartialNodeConfiguration where
       protocol <-  v .:? "Protocol" .!= CardanoProtocol
       pncProtocolConfig <-
         case protocol of
-          CardanoProtocol ->
+          CardanoProtocol -> do
+            hfp <- parseHardForkProtocol v
             fmap (Last . Just) $
               NodeProtocolConfigurationCardano
                 <$> parseByronProtocol v
                 <*> parseShelleyProtocol v
                 <*> parseAlonzoProtocol v
                 <*> parseConwayProtocol v
-                <*> parseHardForkProtocol v
+                <*> (if npcExperimentalHardForksEnabled hfp then Just <$> parseDijkstraProtocol v else pure Nothing)
+                <*> pure hfp
                 <*> parseCheckpoints v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
@@ -398,14 +369,6 @@ instance FromJSON PartialNodeConfiguration where
       pncConsensusMode <- Last <$> v .:? "ConsensusMode"
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
-
-      -- Enable P2P switch
-      p2pSwitch <- v .:? "EnableP2P" .!= Just False
-      let pncEnableP2P =
-            case p2pSwitch of
-              Nothing    -> mempty
-              Just False -> Last $ Just DisabledP2PMode
-              Just True  -> Last $ Just EnabledP2PMode
 
       -- Peer Sharing
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
@@ -459,7 +422,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncSyncTargetOfActiveBigLedgerPeers
            , pncMinBigLedgerPeersForTrustedState
            , pncConsensusMode
-           , pncEnableP2P
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
@@ -581,6 +543,14 @@ instance FromJSON PartialNodeConfiguration where
              , npcConwayGenesisFileHash
              }
 
+      parseDijkstraProtocol v = do
+        npcDijkstraGenesisFile     <- v .:  "DijkstraGenesisFile"
+        npcDijkstraGenesisFileHash <- v .:? "DijkstraGenesisHash"
+        pure NodeDijkstraProtocolConfiguration {
+               npcDijkstraGenesisFile
+             , npcDijkstraGenesisFileHash
+             }
+
       parseHardForkProtocol v = do
 
         npcExperimentalHardForksEnabled <- do
@@ -612,6 +582,10 @@ instance FromJSON PartialNodeConfiguration where
         npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
         npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
 
+        (npcTestDijkstraHardForkAtEpoch, npcTestDijkstraHardForkAtVersion) <- if npcExperimentalHardForksEnabled
+           then (,) <$>  v .:? "TestDijkstraHardForkAtEpoch" <*> v .:? "TestDijkstraHardForkAtVersion"
+           else pure (Nothing, Nothing)
+
         pure NodeHardForkProtocolConfiguration
           { npcExperimentalHardForksEnabled
 
@@ -632,6 +606,9 @@ instance FromJSON PartialNodeConfiguration where
 
           , npcTestConwayHardForkAtEpoch
           , npcTestConwayHardForkAtVersion
+
+          , npcTestDijkstraHardForkAtEpoch
+          , npcTestDijkstraHardForkAtVersion
           }
 
       parseCheckpoints v = do
@@ -682,13 +659,14 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
     , pncChainSyncIdleTimeout     = mempty
 
-    , pncDeadlineTargetOfRootPeers                 = Last (Just $ targetNumberOfRootPeers                 Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfKnownPeers                = Last (Just $ targetNumberOfKnownPeers                Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfEstablishedPeers          = Last (Just $ targetNumberOfEstablishedPeers          Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfActivePeers               = Last (Just $ targetNumberOfActivePeers               Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just $ targetNumberOfKnownBigLedgerPeers       Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Ouroboros.defaultDeadlineTargets)
-    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just $ targetNumberOfActiveBigLedgerPeers      Ouroboros.defaultDeadlineTargets)
+    -- these targets are set properly in makeNodeConfiguration below
+    , pncDeadlineTargetOfRootPeers                 = mempty
+    , pncDeadlineTargetOfKnownPeers                = mempty
+    , pncDeadlineTargetOfEstablishedPeers          = mempty
+    , pncDeadlineTargetOfActivePeers               = mempty
+    , pncDeadlineTargetOfKnownBigLedgerPeers       = mempty
+    , pncDeadlineTargetOfEstablishedBigLedgerPeers = mempty
+    , pncDeadlineTargetOfActiveBigLedgerPeers      = mempty
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultDeadlineTargets
 
     , pncSyncTargetOfRootPeers                     = Last (Just $ targetNumberOfRootPeers                 Cardano.defaultSyncTargets)
@@ -696,7 +674,7 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfEstablishedPeers              = Last (Just $ targetNumberOfEstablishedPeers          Cardano.defaultSyncTargets)
     , pncSyncTargetOfActivePeers                   = Last (Just $ targetNumberOfActivePeers               Cardano.defaultSyncTargets)
     , pncSyncTargetOfKnownBigLedgerPeers           = Last (Just $ targetNumberOfKnownBigLedgerPeers       Cardano.defaultSyncTargets)
-    , pncSyncTargetOfEstablishedBigLedgerPeers     = Last (Just $ targetNumberOfEstablishedBigLedgerPeers  Cardano.defaultSyncTargets)
+    , pncSyncTargetOfEstablishedBigLedgerPeers     = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Cardano.defaultSyncTargets)
     , pncSyncTargetOfActiveBigLedgerPeers          = Last (Just $ targetNumberOfActiveBigLedgerPeers      Cardano.defaultSyncTargets)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultSyncTargets
 
@@ -704,7 +682,6 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultNumberOfBigLedgerPeers
     , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
-    , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = mempty
       -- the default is defined in `makeNodeConfiguration`
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
@@ -731,27 +708,30 @@ makeNodeConfiguration pnc = do
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
 
-  ncDeadlineTargetOfRootPeers <-
-    lastToEither "Missing TargetNumberOfRootPeers"
-    $ pncDeadlineTargetOfRootPeers pnc
-  ncDeadlineTargetOfKnownPeers <-
-    lastToEither "Missing TargetNumberOfKnownPeers"
-    $ pncDeadlineTargetOfKnownPeers pnc
-  ncDeadlineTargetOfEstablishedPeers <-
-    lastToEither "Missing TargetNumberOfEstablishedPeers"
-    $ pncDeadlineTargetOfEstablishedPeers pnc
-  ncDeadlineTargetOfActivePeers <-
-    lastToEither "Missing TargetNumberOfActivePeers"
-    $ pncDeadlineTargetOfActivePeers pnc
-  ncDeadlineTargetOfKnownBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfKnownBigLedgerPeers"
-    $ pncDeadlineTargetOfKnownBigLedgerPeers pnc
-  ncDeadlineTargetOfEstablishedBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfEstablishedBigLedgerPeers"
-    $ pncDeadlineTargetOfEstablishedBigLedgerPeers pnc
-  ncDeadlineTargetOfActiveBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
-    $ pncDeadlineTargetOfActiveBigLedgerPeers pnc
+  let PeerSelectionTargets {
+        targetNumberOfRootPeers, targetNumberOfKnownPeers,
+        targetNumberOfEstablishedPeers, targetNumberOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers, targetNumberOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers
+        } = Ouroboros.defaultDeadlineTargets $ if hasProtocolFile protocolFiles
+              then BlockProducer else Relay
+      (<>!) defaults override = fromJust . getLast $ pure defaults <> override
+
+      ncDeadlineTargetOfRootPeers =
+        targetNumberOfRootPeers <>! pncDeadlineTargetOfRootPeers pnc
+      ncDeadlineTargetOfKnownPeers =
+        targetNumberOfKnownPeers <>! pncDeadlineTargetOfKnownPeers pnc
+      ncDeadlineTargetOfEstablishedPeers =
+        targetNumberOfEstablishedPeers <>! pncDeadlineTargetOfEstablishedPeers pnc
+      ncDeadlineTargetOfActivePeers =
+        targetNumberOfActivePeers <>! pncDeadlineTargetOfActivePeers pnc
+      ncDeadlineTargetOfKnownBigLedgerPeers =
+        targetNumberOfKnownBigLedgerPeers <>! pncDeadlineTargetOfKnownBigLedgerPeers pnc
+      ncDeadlineTargetOfEstablishedBigLedgerPeers =
+        targetNumberOfEstablishedBigLedgerPeers <>! pncDeadlineTargetOfEstablishedBigLedgerPeers pnc
+      ncDeadlineTargetOfActiveBigLedgerPeers =
+        targetNumberOfActiveBigLedgerPeers <>! pncDeadlineTargetOfActiveBigLedgerPeers pnc
+
   ncSyncTargetOfRootPeers <-
     lastToEither "Missing SyncTargetNumberOfRootPeers"
     $ pncSyncTargetOfRootPeers pnc
@@ -794,9 +774,6 @@ makeNodeConfiguration pnc = do
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
-  enableP2P <-
-    lastToEither "Missing EnableP2P"
-    $ pncEnableP2P pnc
   ncChainSyncIdleTimeout <-
     Right
     $ maybe NoTimeoutOverride TimeoutOverride
@@ -891,9 +868,6 @@ makeNodeConfiguration pnc = do
              , ncSyncTargetOfEstablishedBigLedgerPeers
              , ncSyncTargetOfActiveBigLedgerPeers
              , ncMinBigLedgerPeersForTrustedState
-             , ncEnableP2P = case enableP2P of
-                 EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
-                 DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
              , ncConsensusMode
              , ncGenesisConfig

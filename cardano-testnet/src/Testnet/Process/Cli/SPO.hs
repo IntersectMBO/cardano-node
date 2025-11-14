@@ -18,9 +18,8 @@ module Testnet.Process.Cli.SPO
 import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api.Ledger as L
 
-import qualified Cardano.Ledger.Api.State.Query as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
-import qualified Cardano.Ledger.UMap as L
+import qualified Cardano.Ledger.State as L
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
@@ -130,30 +129,52 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
                     ]
  where
   handler :: StakeAddress -> AnyNewEpochState -> SlotNo -> BlockNo -> StateT DelegationsAndRewards IO ConditionResult
-  handler (StakeAddress network sCred) (AnyNewEpochState sbe newEpochState _) _ _ =
-    let umap = shelleyBasedEraConstraints sbe $ newEpochState ^. L.nesEsL . L.epochStateUMapL
-        dag = L.filterStakePoolDelegsAndRewards umap $ Set.singleton sCred
-        allStakeCredentials = umap ^. L.umElemsL -- This does not include pointer addresses
-        delegsAndRewards = shelleyBasedEraConstraints sbe $ toDelegationsAndRewards network sbe dag
-    in case Map.lookup sCred allStakeCredentials of
-         Nothing -> return ConditionNotMet
-         Just _ -> StateT.put delegsAndRewards >> return ConditionMet
+  handler (StakeAddress network sCred) (AnyNewEpochState sbe newEpochState _) _ _ = shelleyBasedEraConstraints sbe $ do
+    let accountsMap = newEpochState
+                        ^. L.nesEsL
+                         . L.esLStateL
+                         . L.lsCertStateL
+                         . L.certDStateL
+                         . L.accountsL
+                         . L.accountsMapL
+
+    case Map.lookup sCred accountsMap of
+      Nothing -> pure ConditionNotMet
+      Just _ -> do
+        StateT.put $ toDelegationsAndRewards sbe network accountsMap
+        pure ConditionMet
 
   toDelegationsAndRewards
-    :: L.Network
-    -> ShelleyBasedEra era
-    -> (Map (L.Credential L.Staking) (L.KeyHash L.StakePool), Map (L.Credential 'L.Staking) L.Coin)
+    :: ShelleyBasedEra era
+    -> L.Network
+    -> Map (L.Credential L.Staking) (L.AccountState (ShelleyLedgerEra era))
     -> DelegationsAndRewards
-  toDelegationsAndRewards n _ (delegationMap, rewardsMap) =
-    let apiDelegationMap = Map.map toApiPoolId $ Map.mapKeys (toApiStakeAddress n) delegationMap
-        apiRewardsMap = Map.mapKeys (toApiStakeAddress n) rewardsMap
-    in DelegationsAndRewards (apiRewardsMap, apiDelegationMap)
+  toDelegationsAndRewards sbe n accountsMap = do
+    let accountsMap' = Map.mapKeys (toApiStakeAddress n) accountsMap
+    let apiDelegationMap = Map.mapMaybe (toApiPoolId sbe) accountsMap'
+        apiRewardsMap = Map.map (toBalance sbe) accountsMap'
+    DelegationsAndRewards (apiRewardsMap, apiDelegationMap)
+
+  toApiPoolId :: ShelleyBasedEra era
+              -> L.AccountState (ShelleyLedgerEra era)
+              -> Maybe PoolId
+  toApiPoolId sbe accountState =
+    fmap StakePoolKeyHash $
+      shelleyBasedEraConstraints sbe $
+        accountState ^. L.stakePoolDelegationAccountStateL
+
+
+  toBalance :: ShelleyBasedEra era
+            -> L.AccountState (ShelleyLedgerEra era)
+            -> L.Coin
+  toBalance sbe accountState =
+    shelleyBasedEraConstraints sbe $
+      accountState ^. L.balanceAccountStateL . to L.fromCompact
+
 
 toApiStakeAddress :: L.Network -> L.Credential 'L.Staking -> StakeAddress
 toApiStakeAddress = StakeAddress
 
-toApiPoolId ::  L.KeyHash L.StakePool -> PoolId
-toApiPoolId = StakePoolKeyHash
 
 createStakeDelegationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
@@ -397,7 +418,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
            ]
 
   -- Check the pledger/owner stake key was registered
-  delegsAndRewards <-
+  _ <-
       checkStakeKeyRegistered
         tap
         nodeConfigFile
@@ -407,10 +428,6 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
         poolownerstakeaddr
         ("spo-"<> show identifier <> "-requirements" </> "pledger.stake.info")
 
-  (pledgerSAddr, _rewards, _poolId) <- H.headM $ mergeDelegsAndRewards delegsAndRewards
-
-  -- Pledger and owner are and can be the same
-  Text.unpack (serialiseAddress pledgerSAddr) === poolownerstakeaddr
   let currentRegistedPoolsJson = workDir </> "current-registered.pools.json"
 
   poolId <- checkStakePoolRegistered

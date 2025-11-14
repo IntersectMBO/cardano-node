@@ -1,7 +1,7 @@
 cabal-version: 3.8
 
 name:                   cardano-node
-version:                10.5.0
+version:                10.6.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -65,7 +65,6 @@ library
                         Cardano.Node.Configuration.POM
                         Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
-                        Cardano.Node.Configuration.Topology
                         Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
                         Cardano.Node.Handlers.TopLevel
@@ -78,6 +77,7 @@ library
                         Cardano.Node.Protocol.Cardano
                         Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
+                        Cardano.Node.Protocol.Dijkstra
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
@@ -112,7 +112,6 @@ library
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
-                        Cardano.Node.Tracing.Tracers.NonP2P
                         Cardano.Node.Tracing.Tracers.P2P
                         Cardano.Node.Tracing.Tracers.Peer
                         Cardano.Node.Tracing.Tracers.Resources
@@ -142,7 +141,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.18
+                      , cardano-api ^>= 10.19
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -154,6 +153,7 @@ library
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-core
+                      , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
@@ -172,8 +172,9 @@ library
                       , generic-data
                       , hashable
                       , hostname
-                      , io-classes >= 1.5
+                      , io-classes:{io-classes,strict-stm,si-timers} >= 1.5
                       , iohk-monitoring ^>= 0.2
+                      , kes-agent ^>=0.2
                       , microlens
                       , mmap
                       , network-mux
@@ -187,14 +188,14 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.27
-                      , ouroboros-consensus-cardano ^>= 0.25
-                      , ouroboros-consensus-diffusion ^>= 0.23
+                      , ouroboros-consensus ^>= 0.28
+                      , ouroboros-consensus-cardano ^>= 0.26
+                      , ouroboros-consensus-diffusion ^>= 0.24
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.14
-                      , ouroboros-network ^>= 0.21.2
-                      , ouroboros-network-framework ^>= 0.18.0.1
-                      , ouroboros-network-protocols ^>= 0.14
+                      , ouroboros-network-api ^>= 0.16
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.4
+                      , ouroboros-network-framework ^>= 0.19.2
+                      , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -202,12 +203,10 @@ library
                       , resource-registry
                       , safe-exceptions
                       , scientific
-                      , si-timers
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
                       , strict-sop-core
-                      , strict-stm
                       , sop-core
                       , sop-extras
                       , text >= 2.0
@@ -218,8 +217,7 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 0.3
-                      , typed-protocols-stateful >= 0.3
+                      , typed-protocols:{typed-protocols, stateful} >= 1.0
                       , yaml
 
 executable cardano-node
@@ -265,13 +263,13 @@ test-suite cardano-node-test
                       , filepath
                       , hedgehog
                       , hedgehog-corpus
-                      , hedgehog-extras ^>= 0.8
+                      , hedgehog-extras ^>= 0.10
                       , iproute
                       , mtl
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
-                      , ouroboros-network
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion}
                       , ouroboros-network-api
                       , strict-sop-core
                       , text

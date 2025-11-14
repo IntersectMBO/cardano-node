@@ -53,7 +53,7 @@ let
        then go {} (__head eras) (__tail eras)
        else throw "configHardforksIntoEra:  unknown era '${era}'";
 
-  liveTablesPath = i: 
+  liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
     then "${profile.node.ssd_directory}/lmdb-node-${toString i}"
     else null;
@@ -100,6 +100,7 @@ let
                   "ShelleyGenesisHash"
                   "AlonzoGenesisHash"
                   "ConwayGenesisHash"
+                  "DijkstraGenesisHash"
                 ] //
                 {
                   ExperimentalHardForksEnabled = true;
@@ -120,6 +121,7 @@ let
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
+                  DijkstraGenesisFile          = "../genesis/genesis.dijkstra.json";
                 } // optionalAttrs (profile.node.utxo_lmdb && isProducer)
                 {
                   LedgerDB = {
@@ -194,6 +196,7 @@ let
       systemd.sockets = mkOption {};
       users = mkOption {};
       assertions = mkOption {};
+      warnings = mkOption {};
       environment = mkOption {};
     };
     eval = let

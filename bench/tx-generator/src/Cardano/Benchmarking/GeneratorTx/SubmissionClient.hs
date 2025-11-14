@@ -181,7 +181,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     where
       getTxSize :: Tx era -> Integer
       getTxSize (ShelleyTx sbe tx) =
-        shelleyBasedEraConstraints sbe $ tx ^. Ledger.sizeTxF
+        shelleyBasedEraConstraints sbe $ toInteger (tx ^. Ledger.sizeTxF)
 
   toGenTx :: Tx era -> GenTx CardanoBlock
   toGenTx tx = toConsensusGenTx $ TxInMode shelleyBasedEra tx

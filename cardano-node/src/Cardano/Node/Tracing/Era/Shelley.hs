@@ -59,7 +59,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosChainSelectView (..))
+import qualified Ouroboros.Consensus.Protocol.Praos.Common as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
@@ -185,6 +185,18 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       [ "kind" .= String "DelegateeDRepNotRegisteredDELEG"
       , "credential" .= String (textShow credential)
       , "error" .= String "Delegated rep is not registered for provided stake key"
+      ]
+    Conway.DepositIncorrectDELEG Mismatch {mismatchSupplied, mismatchExpected}  ->
+      [ "kind" .= String "DepositIncorrectDELEG"
+      , "givenRefund" .= mismatchSupplied
+      , "expectedRefund" .= mismatchExpected
+      , "error" .= String "Deposit mismatch"
+      ]
+    Conway.RefundIncorrectDELEG Mismatch {mismatchSupplied, mismatchExpected}  ->
+      [ "kind" .= String "RefundIncorrectDELEG"
+      , "givenRefund" .= mismatchSupplied
+      , "expectedRefund" .= mismatchExpected
+      , "error" .= String "Refund mismatch"
       ]
 
 instance
@@ -361,10 +373,6 @@ instance
              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
              ]
-  forMachine _ (MissingRequiredSigners missingKeyWitnesses) =
-    mconcat [ "kind" .= String "MissingRequiredSigners"
-             , "witnesses" .= Set.toList missingKeyWitnesses
-             ]
   forMachine _ (UnspendableUTxONoDatumHash txins) =
     mconcat [ "kind" .= String "MissingRequiredSigners"
              , "txins" .= Set.toList txins
@@ -384,6 +392,16 @@ instance
            ]
       )
       (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
+  forMachine _ (ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes) =
+      mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+              , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+              , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+              ]
+
+formatAsHex :: Maybe Crypto.ByteString -> String
+formatAsHex Nothing = ""
+formatAsHex (Just bs) = show bs
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -551,8 +569,6 @@ instance
              , "outputs" .= badOutputs
              , "error" .= String "The Byron address attributes are too big"
              ]
-  forMachine _dtal Allegra.TriesToForgeADA =
-    mconcat [ "kind" .= String "TriesToForgeADA" ]
   forMachine _dtal (Allegra.OutputTooBigUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
@@ -596,7 +612,7 @@ instance
              ]
   forMachine _dtal (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
     mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "incorrectWithdrawals" .= incorrectWithdrawals
+             , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals
              ]
   forMachine dtal (DelplFailure f) = forMachine dtal f
 
@@ -722,49 +738,15 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "poolId" .= String (textShow poolId)
              , "error" .= String "Wrong network ID in pool registration certificate"
              ]
+  forMachine _dtal (VRFKeyHashAlreadyRegistered poolId vrfKeyHash) =
+    mconcat [ "kind" .= String "VRFKeyHashAlreadyRegistered"
+            , "poolId" .= String (textShow poolId)
+            , "vrfKeyHash" .= String (textShow vrfKeyHash)
+            , "error" .= String "Pool with the same VRF Key Hash is already registered"
+            ]
 
-
-instance
-  ( LogFormatting (PredicateFailure (Ledger.EraRule "NEWEPOCH" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "RUPD" era))
-  ) => LogFormatting (ShelleyTickPredFailure era) where
-  forMachine dtal (NewEpochFailure f) = forMachine dtal f
-  forMachine dtal (RupdFailure f)     = forMachine dtal f
 
 instance LogFormatting TicknPredicateFailure where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance
-  ( LogFormatting (PredicateFailure (Ledger.EraRule "EPOCH" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "MIR" era))
-  ) => LogFormatting (ShelleyNewEpochPredFailure era) where
-  forMachine dtal (EpochFailure f) = forMachine dtal f
-  forMachine dtal (MirFailure f) = forMachine dtal f
-  forMachine _dtal (CorruptRewardUpdate update) =
-    mconcat [ "kind" .= String "CorruptRewardUpdate"
-             , "update" .= String (textShow update) ]
-
-
-instance
-  ( LogFormatting (PredicateFailure (Ledger.EraRule "POOLREAP" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "SNAP" era))
-  , LogFormatting (UpecPredFailure era)
-  ) => LogFormatting (ShelleyEpochPredFailure era) where
-  forMachine dtal (PoolReapFailure f) = forMachine dtal f
-  forMachine dtal (SnapFailure f)     = forMachine dtal f
-  forMachine dtal (UpecFailure f)     = forMachine dtal f
-
-
-instance LogFormatting (ShelleyPoolreapPredFailure era) where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance LogFormatting (ShelleySnapPredFailure era) where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance LogFormatting (ShelleyMirPredFailure era) where
-  forMachine _dtal x = case x of {} -- no constructors
-
-instance LogFormatting (ShelleyRupdPredFailure era) where
   forMachine _dtal x = case x of {} -- no constructors
 
 
@@ -948,8 +930,6 @@ instance
              , "outputs" .= txouts
              , "error" .= String "The Byron address attributes are too big"
              ]
-  forMachine _dtal Alonzo.TriesToForgeADA =
-    mconcat [ "kind" .= String "TriesToForgeADA" ]
   forMachine _dtal (Alonzo.OutputTooBigUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
@@ -1067,6 +1047,12 @@ instance
       Babbage.MalformedReferenceScripts s ->
         mconcat [ "kind" .= String "MalformedReferenceScripts"
                 , "scripts" .= s
+                ]
+      Babbage.ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes ->
+        mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+                , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+                , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+                , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
                 ]
 --------------------------------------------------------------------------------
 -- Conway related
@@ -1187,13 +1173,18 @@ instance
             , "invalidAccounts" .= accounts
             ]
 
+  forMachine _ (Conway.UnelectedCommitteeVoters voters) =
+    mconcat [ "kind" .= String "UnelectedCommitteeVoters"
+            , "unelectedCommitteeVoters" .= voters
+            ]
+
 instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
   forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
     mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "rewardAccounts" .= rs
+             , "rewardAccounts" .= unWithdrawals rs
             ]
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
@@ -1291,24 +1282,6 @@ instance LogFormatting Praos.PraosEnvelopeError where
                 , "maxBlockSize" .= ledgerViewMaxBlockSize
                 , "blockSize" .= blockSize
                 ]
-
-instance Ledger.Crypto c => LogFormatting (PraosChainSelectView c) where
-  forMachine _ PraosChainSelectView {
-      csvChainLength
-    , csvSlotNo
-    , csvIssuer
-    , csvIssueNo
-    , csvTieBreakVRF
-    } =
-      mconcat [ "kind" .= String "PraosChainSelectView"
-              , "chainLength" .= csvChainLength
-              , "slotNo" .= csvSlotNo
-              , "issuerHash" .= hashKey csvIssuer
-              , "issueNo" .= csvIssueNo
-              , "tieBreakVRF" .= renderVRF csvTieBreakVRF
-              ]
-    where
-      renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
 
 instance
   ( ToJSON (Alonzo.CollectError ledgerera)
@@ -1530,6 +1503,28 @@ instance
       mconcat [ "kind" .= String "MalformedReferenceScripts"
               , "scripts" .= scripts
               ]
+    Conway.ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes ->
+      mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+              , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+              , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+              ]
+
+instance LogFormatting (Praos.PraosTiebreakerView crypto) where
+  forMachine _dtal Praos.PraosTiebreakerView {
+      ptvSlotNo
+    , ptvIssuer
+    , ptvIssueNo
+    , ptvTieBreakVRF
+    } =
+      mconcat [ "kind" .= String "PraosTiebreakerView"
+              , "slotNo" .= ptvSlotNo
+              , "issuerHash" .= hashKey ptvIssuer
+              , "issueNo" .= ptvIssueNo
+              , "tieBreakVRF" .= renderVRF ptvTieBreakVRF
+              ]
+    where
+      renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
 
 --------------------------------------------------------------------------------
 -- Helper functions

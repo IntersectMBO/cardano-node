@@ -1,6 +1,7 @@
 # ChangeLog
 
-## Next
+## 0.3.5 (October, 2025)
+* Updated to `ekg-forward-1.0`, `ouroboros-network-0.22.3`, `ouroboros-network-api-0.16` and `ouroboros-network-0.22.3`.
 * Updated metric names
 
 ## 0.3.4 (July, 2025)

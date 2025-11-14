@@ -12,6 +12,8 @@ module Cardano.Tracing.OrphanInstances.Byron () where
 
 import           Cardano.Api (textShow)
 
+import           Ouroboros.Consensus.Protocol.PBFT (PBftTiebreakerView(..))
+import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
                    ChainValidationError (..), delegationCertificate)
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
@@ -21,14 +23,12 @@ import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.Render (renderTxId)
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..), ByronNodeToClientVersion (..),
                    ByronNodeToNodeVersion (..), ByronOtherHeaderEnvelopeError (..), TxId (..),
                    byronHeaderRaw)
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
                    ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
-import           Ouroboros.Consensus.Protocol.PBFT (PBftSelectView (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
@@ -221,10 +221,9 @@ instance ToJSON ByronNodeToNodeVersion where
   toJSON ByronNodeToNodeVersion1 = String "ByronNodeToNodeVersion1"
   toJSON ByronNodeToNodeVersion2 = String "ByronNodeToNodeVersion2"
 
-instance ToObject PBftSelectView where
-  toObject _verb (PBftSelectView blkNo isEBB) =
+instance ToObject PBftTiebreakerView where
+  toObject _verb (PBftTiebreakerView isEBB) =
     mconcat
-      [ "kind" .= String "PBftSelectView"
-      , "blockNo" .= blkNo
+      [ "kind" .= String "PBftTiebreakerView"
       , "isEBB" .= fromIsEBB isEBB
       ]

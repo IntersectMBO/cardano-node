@@ -62,7 +62,7 @@ instance LogFormatting TraceDispatcherMessage where
     <> Text.intercalate (Text.singleton ' ') noMetrics <> ". Here is a complete list of all tracers: "
     <> Text.intercalate (Text.singleton ' ') allTracers <> "."
   forHuman (MetricsInfo mmap) = "Number of metrics delivered, " <> textShow mmap
-  forHuman (TracerConsistencyWarnings errs) = "Consistency check found error:  " <> textShow errs
+  forHuman (TracerConsistencyWarnings errs) = "Consistency check found warnings:  " <> textShow errs
   forHuman (TracerInfoConfig tc) = "Effective Tracer config is:  " <> Text.decodeUtf8 (toStrict (encode tc))
 
 
@@ -134,7 +134,7 @@ instance MetaTrace TraceDispatcherMessage where
     severityFor (Namespace _ ["UnknownNamespace"]) _ = Just Error
     severityFor (Namespace _ ["TracerInfo"]) _       = Just Notice
     severityFor (Namespace _ ["MetricsInfo"]) _      = Just Debug
-    severityFor (Namespace _ ["TracerConsistencyWarnings"]) _  = Just Error
+    severityFor (Namespace _ ["TracerConsistencyWarnings"]) _  = Just Warning
     severityFor (Namespace _ ["TracerConfigInfo"]) _       = Just Notice
     severityFor _ _                                  = Nothing
 

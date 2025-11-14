@@ -14,7 +14,7 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Type.Output
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.Configuration.TopologyP2P
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
 
@@ -26,6 +26,7 @@ import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import           Data.Default.Class
 import           Data.Function
+import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
@@ -34,6 +35,7 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -221,10 +223,10 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  let valency = 1
-      topology = RealNodeTopology $
-        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
-            RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
+  let topology = defaultP2PTopology
+                   [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4) nodePort
+                     | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                   ]
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
   let testSpoVrfVKey = work </> "vrf.vkey"
