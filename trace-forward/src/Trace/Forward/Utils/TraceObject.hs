@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -25,8 +26,7 @@ import           Control.Concurrent.STM.TBQueue
   , flushTBQueue
   )
 import           Control.Concurrent.STM.TVar
-import           Control.Monad (forM_, replicateM, unless, when, (<$!>))
-import           Control.Monad.Extra (whenM)
+import           Control.Monad (replicateM, unless)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
 
@@ -55,71 +55,31 @@ initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize
     , overflowCallback = callback
     }
 
--- | There are 4 possible cases when we try to write tracing item:
---   1. The queue is __still__ empty (no tracing items were written in it).
---   2. The queue is __already__ empty (all previously written items were taken from it).
---   3. The queue is full. In this case flush all tracing items to stdout and continue.
---   4. The queue isn't empty and isn't full. Just continue writing.
-writeToSink ::
-     ForwardSink lo
-  -> lo
-  -> IO ()
-writeToSink ForwardSink{
-              forwardQueue,
-              disconnectedSize,
-              connectedSize,
-              wasUsed,
-              overflowCallback} traceObject = do
-  condToFlush <- atomically $ do
-    q <- readTVar forwardQueue
-    ((,) <$> isFullTBQueue q
-         <*> isEmptyTBQueue q) >>= \case
-      (True, _)    -> do
-                          res <- maybeFlushQueueToStdout q
-                          q' <- readTVar forwardQueue
-                          writeTBQueue q' traceObject
-                          pure res
-      (_,    True) -> do
-                          maybeShrinkQueue q
-                          q' <- readTVar forwardQueue
-                          writeTBQueue q' traceObject
-                          pure Nothing
-      (_,    _)    -> do
-                          writeTBQueue q traceObject
-                          pure Nothing
-  forM_ condToFlush overflowCallback
+--------------------------------------------------------------------------------
 
- where
-  -- The queue is full, but if it's a small queue, we can switch it
-  -- to a big one and give a chance not to flush items to stdout yet.
-  maybeFlushQueueToStdout q = do
-    qLen <- lengthTBQueue q
-    if fromIntegral qLen == connectedSize
-      then do
-        -- The small queue is full, so we have to switch to a big one and
-        -- then flush collected items from the small queue and store them in
-        -- a big one.
+writeToSink :: ForwardSink lo -> lo -> IO ()
+writeToSink ForwardSink{forwardQueue,overflowCallback} traceObject = do
+  flushedTraceObjects <- atomically $ writeToSinkSTM forwardQueue traceObject
+  -- The overflow callback last, outside of `atomically`.
+  case flushedTraceObjects of
+    [] -> pure ()
+    -- Don't call the overflow function with an empty list.
+    _ -> overflowCallback flushedTraceObjects
 
-        acceptedItems <- -- trace ("growQueue disconnected" ++ show disconnectedSize) $
-                          flushTBQueue q
-        switchQueue disconnectedSize
-        bigQ <- readTVar forwardQueue
-        mapM_ (writeTBQueue bigQ) acceptedItems
-        pure Nothing
-      else do
-        -- The big queue is full, we have to flush it to stdout.
-        Just <$!> flushTBQueue q
+writeToSinkSTM :: TVar (TBQueue lo) -> lo -> STM [lo]
+writeToSinkSTM queueTVar traceObject = do
+    ---------- STM transaction: start ----------
+    queue <- readTVar queueTVar
+    isFull <- isFullTBQueue queue
+    !flushedTraceObjects <- if isFull
+                            -- Of the biggest requested size, will flush.
+                            then flushTBQueue queue
+                            else pure []
+    writeTBQueue queue traceObject
+    pure flushedTraceObjects
+    ---------- STM transaction: end ----------
 
-  -- if the sink was used and it
-  maybeShrinkQueue q = do
-    whenM (readTVar wasUsed) $ do
-      qLen <- lengthTBQueue q
-      when (fromIntegral qLen == disconnectedSize) $ do
-        -- trace ("shrinkQueue connected " ++ show connectedSize) $
-        switchQueue connectedSize
-
-  switchQueue size =
-    newTBQueue (fromIntegral size) >>= modifyTVar' forwardQueue . const
+--------------------------------------------------------------------------------
 
 readFromSink
   :: ForwardSink lo -- ^ The sink contains the queue we read 'TraceObject's from.
