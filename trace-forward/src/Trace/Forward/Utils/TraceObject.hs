@@ -2,6 +2,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
+--------------------------------------------------------------------------------
+
 module Trace.Forward.Utils.TraceObject
   ( initForwardSink
   , writeToSink
@@ -9,8 +11,19 @@ module Trace.Forward.Utils.TraceObject
   , getTraceObjectsFromReply
   ) where
 
+--------------------------------------------------------------------------------
+
 import           Control.Concurrent.STM (STM, atomically, check)
 import           Control.Concurrent.STM.TBQueue
+  ( TBQueue
+  , newTBQueue
+  , isEmptyTBQueue
+  , isFullTBQueue
+  , lengthTBQueue
+  , readTBQueue
+  , writeTBQueue
+  , flushTBQueue
+  )
 import           Control.Concurrent.STM.TVar
 import           Control.Monad (forM_, replicateM, unless, when, (<$!>))
 import           Control.Monad.Extra (whenM)
@@ -22,6 +35,7 @@ import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import           Trace.Forward.Protocol.TraceObject.Type
 import           Trace.Forward.Utils.ForwardSink (ForwardSink (..))
 
+--------------------------------------------------------------------------------
 
 initForwardSink
   :: ForwarderConfiguration lo
@@ -30,9 +44,9 @@ initForwardSink
 initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize} callback = do
   -- Initially we always create a big queue, because during node's start
   -- the number of tracing items may be very big.
-  (queue, used) <-
-    atomically $ (,) <$> (newTVar =<< newTBQueue (fromIntegral disconnectedQueueSize))
-                     <*> newTVar False
+  (queue, used) <- atomically $
+    (,) <$> (newTVar =<< newTBQueue (fromIntegral disconnectedQueueSize))
+        <*> newTVar False
   return $ ForwardSink
     { forwardQueue     = queue
     , disconnectedSize = disconnectedQueueSize
@@ -145,6 +159,8 @@ getNTraceObjectsNonBlocking n q = do
   if len <= fromIntegral n
     then flushTBQueue q
     else replicateM (fromIntegral n) (readTBQueue q)
+
+--------------------------------------------------------------------------------
 
 getTraceObjectsFromReply
   :: BlockingReplyList blocking lo -- ^ The reply with list of 'TraceObject's.
