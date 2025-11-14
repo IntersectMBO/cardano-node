@@ -45,8 +45,8 @@ instance (LogFormatting peer, LogFormatting tr, Typeable tr) =>
       mconcat [ "kind"   .= (show . typeOf $ ev)
               , "bearer" .= forMachine dtal b
               , "event"  .= forMachine dtal ev ]
-    forHuman (Mux.WithBearer b ev) = "With mux bearer " <> forHumanOrMachine b
-                                      <> ". " <> forHumanOrMachine ev
+    forHuman (Mux.WithBearer b ev) = "With mux bearer " <> forHuman b
+                                      <> ". " <> forHuman ev
 
 instance MetaTrace tr => MetaTrace (Mux.WithBearer peer tr) where
     namespaceFor (Mux.WithBearer _peer obj) = (nsCast . namespaceFor) obj
