@@ -103,7 +103,7 @@ import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (
                    PeerSelectionView (..))
 import qualified Ouroboros.Network.PeerSelection.Governor as Governor
-import           Ouroboros.Network.Point (fromWithOrigin)
+import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.TxSubmission.Inbound
@@ -137,7 +137,6 @@ import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring.Wai as EKG
 
 
-
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9
 
@@ -167,6 +166,16 @@ indexGCType :: ChainDB.TraceGCEvent a -> Int
 indexGCType ChainDB.ScheduledGC{} = 1
 indexGCType ChainDB.PerformedGC{} = 2
 
+-- helper to classify meaningful progress changes (i.e. in the ten thousandths)
+replayProgress :: LedgerDB.TraceReplayProgressEvent a -> Integer
+replayProgress (LedgerDB.ReplayedBlock pt _ledgerEvents (LedgerDB.ReplayStart replayFrom) (LedgerDB.ReplayGoal replayTo)) =
+  let fromSlot = withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayFrom
+      atSlot   = unSlotNo $ realPointSlot pt
+      atDiff   = atSlot - fromSlot
+      toSlot   = withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayTo
+      toDiff   = toSlot - fromSlot
+  in if toDiff == 0 then 0 else round (10000 * fromIntegral atDiff / fromIntegral toDiff :: Float)
+
 instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity
   isEquivalent (WithSeverity s1 (ChainDB.TraceGCEvent ev1))
@@ -194,6 +203,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
                (WithSeverity _s2 (ChainDB.TraceLedgerDBEvent
                                   (LedgerDB.LedgerReplayEvent
                                    (LedgerDB.TraceReplayProgressEvent _)))) = True
+
   -- HACK: we never want any of the forker or flavor events to break the elision.
   --
   -- when a forker event arrives, it will be compared as @(ev `isEquivalent`)@, but once it is
@@ -203,6 +213,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   isEquivalent (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBFlavorImplEvent{})) _ = True
   isEquivalent _ (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBForkerEvent{})) = True
   isEquivalent _ (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBFlavorImplEvent{})) = True
+
   isEquivalent (WithSeverity _s1 (ChainDB.TraceInitChainSelEvent ev1))
                (WithSeverity _s2 (ChainDB.TraceInitChainSelEvent ev2)) =
     case (ev1, ev2) of
@@ -253,10 +264,13 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent
+  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent
                                   (LedgerDB.LedgerReplayEvent
-                                   (LedgerDB.TraceReplayProgressEvent _)))) (_old, count) = do
-      return (Just ev, count)
+                                   (LedgerDB.TraceReplayProgressEvent inner)))) (_old, previous) =
+      let current = replayProgress inner
+      in if current > previous
+        then traceWith (toLogObject' tverb tr) ev >> return (Just ev, current)
+        else return (Just ev, previous)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBForkerEvent{})) (_old, count) = do
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBFlavorImplEvent{})) (_old, count) = do
