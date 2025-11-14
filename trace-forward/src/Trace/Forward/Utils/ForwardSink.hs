@@ -6,10 +6,9 @@ module Trace.Forward.Utils.ForwardSink
   ) where
 
 import           Control.Concurrent.STM.TBQueue
-import           Control.Concurrent.STM.TVar
 
 data ForwardSink lo = ForwardSink
-  { forwardQueue     :: !(TVar (TBQueue lo))
+  { forwardQueue     :: !(TBQueue lo)
   , disconnectedSize :: !Word
   , connectedSize    :: !Word
   , overflowCallback :: !([lo] -> IO ())
