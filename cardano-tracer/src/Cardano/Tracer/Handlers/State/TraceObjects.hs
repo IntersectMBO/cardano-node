@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.State.TraceObjects
   ( LogsLiveViewCounters

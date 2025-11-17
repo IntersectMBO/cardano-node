@@ -82,6 +82,7 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , prometheusLabels = Nothing
     }
 
 propMultiInit :: TestSetup Identity -> LogFormat -> FilePath -> HowToConnect -> HowToConnect -> IO Property
@@ -121,6 +122,7 @@ propMultiInit ts@TestSetup{..} format rootDir howToConnect1 howToConnect2 = do
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , prometheusLabels = Nothing
     }
 
 -- | Tests
@@ -163,6 +165,7 @@ propMultiResp ts@TestSetup{..} format rootDir howToConnect = do
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , prometheusLabels = Nothing
     }
 
 checkPropLogsResults :: FilePath -> LogFormat -> IO Property
