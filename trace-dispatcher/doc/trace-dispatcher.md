@@ -302,7 +302,7 @@ The configurability of dispatchers provided by this library relies on:
 
 2. __Runtime Reconfigurability__: Triggered by invoking `configureTracers`, enabling changes during program execution.
 
-The usual form to provide a configuration is via a configuration file, wich can be in JSON or YAML format. The options that
+The usual form to provide a configuration is via a configuration file, which can be in JSON or YAML format. The options that
 can be given based on a namespace are: `severity`, `detail`, `backends` and `limiter`.
 
 Backends can be a combination of `Forwarder`, `EKGBackend`, `PrometheusSimple [suffix|nosuffix] [bindhost] <port>` and
@@ -677,7 +677,7 @@ checkNodeTraceConfiguration ::
   -> IO [Text]
 ```
 
-An example text is "Config namespace error: i.am.an.invalid.namepace" .
+An example text is "Config namespace error: i.am.an.invalid.namespace" .
 
 This check is performed within a `cardano-node` test case (`Test.Cardano.Tracing.NewTracing.Consistency.tests`), ensuring that it is automatically verified with each pull request.
 

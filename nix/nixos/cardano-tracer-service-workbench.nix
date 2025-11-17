@@ -48,7 +48,7 @@ let serviceConfigToJSON =
         } // (cfg.prometheus or {});
         # Just an example for metrics compatibility mapping.
         # An entry means the first entry has the second entry as alias.
-        # The Metrics is then avalable, both with the original and the mapped name.
+        # The Metrics is then available, both with the original and the mapped name.
         # Only one mapping per message is supported.
         # metricsComp = {
         #     "Mempool.TxsInMempool" = "Mempool.TxsInMempool.Mapped";
