@@ -87,16 +87,14 @@ buildResponse getCurrentExposition = \case
     | method == UNSUPPORTED -> pure $ responseError withBody errorBadMethod
     | accept == Unsupported -> pure $ responseError withBody errorBadContent
     | otherwise ->
-        let content = if accept == OpenMetrics then hdrContentTypeOpenMetrics else hdrContentTypeText
+        let content = if accept == OpenMetrics then hdrContentTypeOpenMetrics else hdrContentTypePrometheus
         in responseMessage withBody content <$> getCurrentExposition <*> epochTime
     where withBody = method == GET
 
-hdrContentType :: [ByteString] -> Builder
-hdrContentType = mconcat . ("Content-Type: " :) . intersperse (char8 ';') . map byteString
-
-hdrContentTypeText, hdrContentTypeOpenMetrics :: Builder
-hdrContentTypeText        = hdrContentType ["text/plain", "charset=utf-8"]
-hdrContentTypeOpenMetrics = hdrContentType ["application/openmetrics-text", "version=1.0.0", "charset=utf-8"]
+hdrContentTypeText, hdrContentTypePrometheus, hdrContentTypeOpenMetrics :: Builder
+hdrContentTypeText        = "Content-Type: text/plain;charset=utf-8"
+hdrContentTypePrometheus  = "Content-Type: text/plain;version=0.0.4;charset=utf-8"
+hdrContentTypeOpenMetrics = "Content-Type: application/openmetrics-text;version=1.0.0;charset=utf-8"
 
 hdrContentLength :: Int64 -> Builder
 hdrContentLength len = "Content-Length: " <> int64Dec len
