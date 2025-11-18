@@ -103,7 +103,7 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 10de817e61a1063cc69cc0a1f43282c8e735c582
+  tag: 803a5d4ecfc6369a3f74d878e0e00ffaabbbc1bc
   --sha256:
   subdir:
     ouroboros-consensus
@@ -116,7 +116,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 5292cccd4b8e2fb9db35e143fd74b3c27136be97
+  tag: e6f23bdb7a4983ede3274f956309c84fd2861dbc
   --sha256:
   subdir:
     network-mux
