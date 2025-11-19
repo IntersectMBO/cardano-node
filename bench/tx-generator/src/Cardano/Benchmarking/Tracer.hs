@@ -49,7 +49,7 @@ import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
 
-import           Trace.Forward.Forwarding (initForwardingDelayed)
+import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject
 
 pattern TracerNameBench     :: Text
@@ -120,9 +120,18 @@ initTxGenTracers mbForwarding = do
   prepareForwardingTracer :: IO (Maybe (Trace IO FormattedMessage))
   prepareForwardingTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
-        let forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
+        let
+          forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
+          initForwConf = InitForwardingWith
+            { initNetworkMagic          = toNetworkMagic networkId
+            , initEKGStore              = Nothing
+            , initHowToConnect          = Net.LocalPipe tracerSocket
+            , initForwarderMode         = Initiator
+            , initOnForwardInterruption = Nothing
+            , initOnQueueOverflow       = Nothing
+            }
         (forwardSink, dpStore, kickoffForwarder) <-
-            initForwardingDelayed iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (Net.LocalPipe tracerSocket, Initiator)
+            initForwardingDelayed iomgr forwardingConf initForwConf
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
         -- to the acceptor application (for example, 'cardano-tracer').

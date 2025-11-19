@@ -2,6 +2,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Tracing.API
@@ -46,7 +47,7 @@ import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (HostName)
 import           System.Metrics as EKG
 
-import           Trace.Forward.Forwarding (initForwardingDelayed)
+import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject (writeToSink)
 
 
@@ -126,13 +127,23 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
       if forwarderBackendEnabled
         then do
           -- TODO: check if this is the correct way to use withIOManager
-          (forwardSink, dpStore, kickoffForwarder) <- withIOManager $ \iomgr -> do
-            let tracerSocketMode :: Maybe (HowToConnect, ForwarderMode)
-                tracerSocketMode = ncTraceForwardSocket nc
+          (forwardSink, dpStore, kickoffForwarder) <- withIOManager $ \iomgr ->
+            let initForwConf :: InitForwardingConfig
+                initForwConf = case ncTraceForwardSocket nc of
+                  Nothing -> InitForwardingNone
+                  Just (initHowToConnect, initForwarderMode) ->
+                    InitForwardingWith
+                      { initNetworkMagic          = networkMagic
+                      , initEKGStore              = Just ekgStore
+                      , initOnForwardInterruption = Nothing         -- TODO:MKarg
+                      , initOnQueueOverflow       = Nothing
+                      , ..
+                      }
 
                 forwardingConf :: TraceOptionForwarder
                 forwardingConf = fromMaybe defaultForwarder (tcForwarder trConfig)
-            initForwardingDelayed iomgr forwardingConf networkMagic (Just ekgStore) tracerSocketMode
+            in initForwardingDelayed iomgr forwardingConf initForwConf
+
           pure (forwardTracer (writeToSink forwardSink), dataPointTracer dpStore, kickoffForwarder)
         else
           -- Since 'Forwarder' backend isn't enabled, there is no forwarding.
