@@ -149,8 +149,10 @@ library
                         Cardano.Tracer.Types
                         Cardano.Tracer.Utils
 
-  other-modules:        Cardano.Tracer.Handlers.Notifications.Timer
+  other-modules:        Cardano.Tracer.Handlers.Logs.Journal.NoSystemd
+                        Cardano.Tracer.Handlers.Notifications.Timer
                         Paths_cardano_tracer
+
   autogen-modules:      Paths_cardano_tracer
 
   if flag(rtview)
@@ -163,6 +165,7 @@ library
 
   if flag(systemd) && os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
+    other-modules:      Cardano.Tracer.Handlers.Logs.Journal.Systemd
 
   if (flag(systemd) && os(linux)) || flag(rtview)
     build-depends:      unordered-containers
