@@ -177,8 +177,9 @@ launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
   tfConfig =
     TOF.ForwarderConfiguration
       { TOF.forwarderTracer = nullTracer -- contramap show stdoutTracer
-      , TOF.disconnectedQueueSize = disconnSize
-      , TOF.connectedQueueSize = connSize
+      -- Having two queue sizes was removed from the "trace-foirward" package.
+      -- It will be removed from `TraceOptionForwarder` and user configuration.
+      , TOF.queueSize = max disconnSize connSize
       }
 
   dpfConfig :: DPF.ForwarderConfiguration
