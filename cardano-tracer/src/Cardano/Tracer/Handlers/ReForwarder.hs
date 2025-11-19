@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -19,7 +20,6 @@ module Cardano.Tracer.Handlers.ReForwarder
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Tracer.DataPoint
 import qualified Cardano.Logging.Types as Log
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.MetaTrace
@@ -47,34 +47,17 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
                 teTracer = do
   mForwarding <- case hasForwarding of
       Nothing -> pure Nothing
-      Just x  -> case x of
-        (ConnectTo{}, _, _) ->
+      Just (ConnectTo{}, _, _) ->
           error "initReForwarder:  unsupported mode of operation:  ConnectTo.  Use AcceptAt."
-        (AcceptAt (LocalPipe socket), flattenNS -> mFwdNames, forwConf) -> do
+      Just (AcceptAt howToConnect, flattenNS -> mFwdNames, forwConf) -> do
           (fwdsink, dpStore :: DataPointStore) <- withIOManager \iomgr -> do
             traceWith teTracer TracerStartedReforwarder
-            initForwarding iomgr forwConf
-                                 (NetworkMagic networkMagic)
-                                 Nothing
-                                 (Just (Net.LocalPipe socket, Log.Responder))
+            initForwarding iomgr forwConf $ initForwardingWith howToConnect
           pure $ Just ( filteredWriteToSink
                           (traceObjectHasPrefixIn mFwdNames)
                           fwdsink
                       , dataPointTracer @IO dpStore
                       )
-        (AcceptAt (RemoteSocket host port), flattenNS -> mFwdNames, forwConf) -> do
-          (fwdsink, dpStore :: DataPointStore) <- withIOManager \iomgr -> do
-            traceWith teTracer TracerStartedReforwarder
-            initForwarding iomgr forwConf
-                                 (NetworkMagic networkMagic)
-                                 Nothing
-                                 (Just (Net.RemoteSocket host port, Log.Responder))
-          pure $ Just ( filteredWriteToSink
-                          (traceObjectHasPrefixIn mFwdNames)
-                          fwdsink
-                      , dataPointTracer @IO dpStore
-                      )
-
   let traceDP = case mForwarding of
                   Just (_,tr) -> tr
                   Nothing     -> mempty
@@ -90,13 +73,21 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
   where
     flattenNS = fmap (map (Text.intercalate "."))
 
+    initForwardingWith initHowToConnect =
+      InitForwardingWith
+        { initNetworkMagic          = NetworkMagic networkMagic
+        , initEKGStore              = Nothing
+        , initForwarderMode         = Log.Responder
+        , initOnForwardInterruption = Nothing         -- TODO:MKarg
+        , initOnQueueOverflow       = Nothing
+        , ..
+        }
 
 traceObjectHasPrefixIn :: Maybe [Text.Text] -> Log.TraceObject -> Bool
 traceObjectHasPrefixIn mFwdNames (normalizeNamespace . Log.toNamespace -> ns) =
   case mFwdNames of
     Nothing       -> True -- forward everything in this case
     Just fwdNames -> any (`Text.isPrefixOf` ns) fwdNames
-
 
 filteredWriteToSink :: (Log.TraceObject -> Bool)
                     -> ForwardSink Log.TraceObject

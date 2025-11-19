@@ -30,7 +30,7 @@ import qualified System.Process as Sys
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
-import           Trace.Forward.Forwarding (initForwarding)
+import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwarding)
 import           Trace.Forward.Utils.TraceObject (writeToSink)
 
 main :: IO ()
@@ -137,7 +137,14 @@ getExternalTracerState TestSetup{..} ref = do
      (forwardSink, _dpStore) <- withIOManager \iomgr -> do
        -- For simplicity, we are always 'Initiator',
        -- so 'cardano-tracer' is always a 'Responder'.
-       let tracerSocketMode = Just (Net.LocalPipe (unI tsSockExternal), Initiator)
-           forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
-       initForwarding iomgr forwardingConf (unI tsNetworkMagic) Nothing tracerSocketMode
+       let forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
+       initForwarding iomgr forwardingConf $
+         InitForwardingWith
+           { initNetworkMagic          = unI tsNetworkMagic
+           , initEKGStore              = Nothing
+           , initHowToConnect          = Net.LocalPipe (unI tsSockExternal)
+           , initForwarderMode         = Initiator
+           , initOnForwardInterruption = Nothing
+           , initOnQueueOverflow       = Nothing
+           }
      pure (externalTracerHdl, forwardTracer (writeToSink forwardSink))
