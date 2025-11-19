@@ -38,14 +38,12 @@ initForwardSink
   :: ForwarderConfiguration lo
   -> ([lo] -> IO ())
   -> IO (ForwardSink lo)
-initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize} callback = do
+initForwardSink ForwarderConfiguration{queueSize} callback = do
   -- Initially we always create a big queue, because during node's start
   -- the number of tracing items may be very big.
-  queue <- atomically $ newTBQueue (fromIntegral disconnectedQueueSize)
+  queue <- atomically $ newTBQueue (fromIntegral queueSize)
   return $ ForwardSink
     { forwardQueue     = queue
-    , disconnectedSize = disconnectedQueueSize
-    , connectedSize    = connectedQueueSize
     , overflowCallback = callback
     }
 
