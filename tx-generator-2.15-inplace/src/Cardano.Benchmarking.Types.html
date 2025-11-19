@@ -1,0 +1,777 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralisedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">{-|
+Module      : Cardano.Benchmarking.Types
+Description : Types for running benchmarks.
+-}</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.Types</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Types.html"><span class="hs-identifier">Cardano.Benchmarking.Types</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="annot"><span class="hs-comment">-- | Transactions we decided to announce now.</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">newtype</span><span> </span><span id="ToAnnce"><span class="annot"><a href="Cardano.Benchmarking.Types.html#ToAnnce"><span class="hs-identifier hs-var">ToAnnce</span></a></span></span><span> </span><span id="local-6989586621679893596"><span class="annot"><a href="#local-6989586621679893596"><span class="hs-identifier hs-type">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ToAnnce"><span class="annot"><a href="Cardano.Benchmarking.Types.html#ToAnnce"><span class="hs-identifier hs-var">ToAnnce</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679893596"><span class="hs-identifier hs-type">tx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><span class="hs-comment">-- | Transactions announced, yet unacked by peer.</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">newtype</span><span> </span><span id="UnAcked"><span class="annot"><a href="Cardano.Benchmarking.Types.html#UnAcked"><span class="hs-identifier hs-var">UnAcked</span></a></span></span><span> </span><span id="local-6989586621679893599"><span class="annot"><a href="#local-6989586621679893599"><span class="hs-identifier hs-type">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnAcked"><span class="annot"><a href="Cardano.Benchmarking.Types.html#UnAcked"><span class="hs-identifier hs-var">UnAcked</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679893599"><span class="hs-identifier hs-type">tx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><span class="hs-comment">-- | Peer acknowledged this many txids of the outstanding window.</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">newtype</span><span> </span><span id="Ack"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Ack"><span class="hs-identifier hs-var">Ack</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Ack"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Ack"><span class="hs-identifier hs-var">Ack</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679893603"><span id="local-6989586621679893608"><span id="local-6989586621679893612"><span id="local-6989586621679893616"><span id="local-6989586621679893620"><span id="local-6989586621679893624"><span id="local-6989586621679893628"><span id="local-6989586621679893632"><span class="annot"><span class="annottext">Int -&gt; Ack
+Ack -&gt; Int
+Ack -&gt; [Ack]
+Ack -&gt; Ack
+Ack -&gt; Ack -&gt; [Ack]
+Ack -&gt; Ack -&gt; Ack -&gt; [Ack]
+(Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack)
+-&gt; (Int -&gt; Ack)
+-&gt; (Ack -&gt; Int)
+-&gt; (Ack -&gt; [Ack])
+-&gt; (Ack -&gt; Ack -&gt; [Ack])
+-&gt; (Ack -&gt; Ack -&gt; [Ack])
+-&gt; (Ack -&gt; Ack -&gt; Ack -&gt; [Ack])
+-&gt; Enum Ack
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Ack -&gt; Ack
+succ :: Ack -&gt; Ack
+$cpred :: Ack -&gt; Ack
+pred :: Ack -&gt; Ack
+$ctoEnum :: Int -&gt; Ack
+toEnum :: Int -&gt; Ack
+$cfromEnum :: Ack -&gt; Int
+fromEnum :: Ack -&gt; Int
+$cenumFrom :: Ack -&gt; [Ack]
+enumFrom :: Ack -&gt; [Ack]
+$cenumFromThen :: Ack -&gt; Ack -&gt; [Ack]
+enumFromThen :: Ack -&gt; Ack -&gt; [Ack]
+$cenumFromTo :: Ack -&gt; Ack -&gt; [Ack]
+enumFromTo :: Ack -&gt; Ack -&gt; [Ack]
+$cenumFromThenTo :: Ack -&gt; Ack -&gt; Ack -&gt; [Ack]
+enumFromThenTo :: Ack -&gt; Ack -&gt; Ack -&gt; [Ack]
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893638"><span id="local-6989586621679893643"><span class="annot"><span class="annottext">Ack -&gt; Ack -&gt; Bool
+(Ack -&gt; Ack -&gt; Bool) -&gt; (Ack -&gt; Ack -&gt; Bool) -&gt; Eq Ack
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Ack -&gt; Ack -&gt; Bool
+== :: Ack -&gt; Ack -&gt; Bool
+$c/= :: Ack -&gt; Ack -&gt; Bool
+/= :: Ack -&gt; Ack -&gt; Bool
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893654"><span id="local-6989586621679893659"><span id="local-6989586621679893663"><span id="local-6989586621679893667"><span id="local-6989586621679893671"><span id="local-6989586621679893675"><span id="local-6989586621679893679"><span class="annot"><span class="annottext">Enum Ack
+Real Ack
+(Real Ack, Enum Ack) =&gt;
+(Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack -&gt; (Ack, Ack))
+-&gt; (Ack -&gt; Ack -&gt; (Ack, Ack))
+-&gt; (Ack -&gt; Integer)
+-&gt; Integral Ack
+Ack -&gt; Integer
+Ack -&gt; Ack -&gt; (Ack, Ack)
+Ack -&gt; Ack -&gt; Ack
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: Ack -&gt; Ack -&gt; Ack
+quot :: Ack -&gt; Ack -&gt; Ack
+$crem :: Ack -&gt; Ack -&gt; Ack
+rem :: Ack -&gt; Ack -&gt; Ack
+$cdiv :: Ack -&gt; Ack -&gt; Ack
+div :: Ack -&gt; Ack -&gt; Ack
+$cmod :: Ack -&gt; Ack -&gt; Ack
+mod :: Ack -&gt; Ack -&gt; Ack
+$cquotRem :: Ack -&gt; Ack -&gt; (Ack, Ack)
+quotRem :: Ack -&gt; Ack -&gt; (Ack, Ack)
+$cdivMod :: Ack -&gt; Ack -&gt; (Ack, Ack)
+divMod :: Ack -&gt; Ack -&gt; (Ack, Ack)
+$ctoInteger :: Ack -&gt; Integer
+toInteger :: Ack -&gt; Integer
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893685"><span id="local-6989586621679893690"><span id="local-6989586621679893694"><span id="local-6989586621679893698"><span id="local-6989586621679893702"><span id="local-6989586621679893706"><span id="local-6989586621679893710"><span class="annot"><span class="annottext">Integer -&gt; Ack
+Ack -&gt; Ack
+Ack -&gt; Ack -&gt; Ack
+(Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack)
+-&gt; (Integer -&gt; Ack)
+-&gt; Num Ack
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: Ack -&gt; Ack -&gt; Ack
++ :: Ack -&gt; Ack -&gt; Ack
+$c- :: Ack -&gt; Ack -&gt; Ack
+- :: Ack -&gt; Ack -&gt; Ack
+$c* :: Ack -&gt; Ack -&gt; Ack
+* :: Ack -&gt; Ack -&gt; Ack
+$cnegate :: Ack -&gt; Ack
+negate :: Ack -&gt; Ack
+$cabs :: Ack -&gt; Ack
+abs :: Ack -&gt; Ack
+$csignum :: Ack -&gt; Ack
+signum :: Ack -&gt; Ack
+$cfromInteger :: Integer -&gt; Ack
+fromInteger :: Integer -&gt; Ack
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893718"><span id="local-6989586621679893723"><span id="local-6989586621679893727"><span id="local-6989586621679893731"><span id="local-6989586621679893735"><span id="local-6989586621679893739"><span id="local-6989586621679893743"><span class="annot"><span class="annottext">Eq Ack
+Eq Ack =&gt;
+(Ack -&gt; Ack -&gt; Ordering)
+-&gt; (Ack -&gt; Ack -&gt; Bool)
+-&gt; (Ack -&gt; Ack -&gt; Bool)
+-&gt; (Ack -&gt; Ack -&gt; Bool)
+-&gt; (Ack -&gt; Ack -&gt; Bool)
+-&gt; (Ack -&gt; Ack -&gt; Ack)
+-&gt; (Ack -&gt; Ack -&gt; Ack)
+-&gt; Ord Ack
+Ack -&gt; Ack -&gt; Bool
+Ack -&gt; Ack -&gt; Ordering
+Ack -&gt; Ack -&gt; Ack
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Ack -&gt; Ack -&gt; Ordering
+compare :: Ack -&gt; Ack -&gt; Ordering
+$c&lt; :: Ack -&gt; Ack -&gt; Bool
+&lt; :: Ack -&gt; Ack -&gt; Bool
+$c&lt;= :: Ack -&gt; Ack -&gt; Bool
+&lt;= :: Ack -&gt; Ack -&gt; Bool
+$c&gt; :: Ack -&gt; Ack -&gt; Bool
+&gt; :: Ack -&gt; Ack -&gt; Bool
+$c&gt;= :: Ack -&gt; Ack -&gt; Bool
+&gt;= :: Ack -&gt; Ack -&gt; Bool
+$cmax :: Ack -&gt; Ack -&gt; Ack
+max :: Ack -&gt; Ack -&gt; Ack
+$cmin :: Ack -&gt; Ack -&gt; Ack
+min :: Ack -&gt; Ack -&gt; Ack
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893753"><span class="annot"><span class="annottext">Num Ack
+Ord Ack
+(Num Ack, Ord Ack) =&gt; (Ack -&gt; Rational) -&gt; Real Ack
+Ack -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: Ack -&gt; Rational
+toRational :: Ack -&gt; Rational
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893759"><span id="local-6989586621679893764"><span id="local-6989586621679893768"><span class="annot"><span class="annottext">Int -&gt; Ack -&gt; ShowS
+[Ack] -&gt; ShowS
+Ack -&gt; String
+(Int -&gt; Ack -&gt; ShowS)
+-&gt; (Ack -&gt; String) -&gt; ([Ack] -&gt; ShowS) -&gt; Show Ack
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Ack -&gt; ShowS
+showsPrec :: Int -&gt; Ack -&gt; ShowS
+$cshow :: Ack -&gt; String
+show :: Ack -&gt; String
+$cshowList :: [Ack] -&gt; ShowS
+showList :: [Ack] -&gt; ShowS
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="annot"><span class="hs-comment">-- | Peer requested this many txids to add to the outstanding window.</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">newtype</span><span> </span><span id="Req"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Req"><span class="hs-identifier hs-var">Req</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Req"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Req"><span class="hs-identifier hs-var">Req</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679893775"><span id="local-6989586621679893779"><span id="local-6989586621679893783"><span id="local-6989586621679893787"><span id="local-6989586621679893791"><span id="local-6989586621679893795"><span id="local-6989586621679893799"><span id="local-6989586621679893803"><span class="annot"><span class="annottext">Int -&gt; Req
+Req -&gt; Int
+Req -&gt; [Req]
+Req -&gt; Req
+Req -&gt; Req -&gt; [Req]
+Req -&gt; Req -&gt; Req -&gt; [Req]
+(Req -&gt; Req)
+-&gt; (Req -&gt; Req)
+-&gt; (Int -&gt; Req)
+-&gt; (Req -&gt; Int)
+-&gt; (Req -&gt; [Req])
+-&gt; (Req -&gt; Req -&gt; [Req])
+-&gt; (Req -&gt; Req -&gt; [Req])
+-&gt; (Req -&gt; Req -&gt; Req -&gt; [Req])
+-&gt; Enum Req
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Req -&gt; Req
+succ :: Req -&gt; Req
+$cpred :: Req -&gt; Req
+pred :: Req -&gt; Req
+$ctoEnum :: Int -&gt; Req
+toEnum :: Int -&gt; Req
+$cfromEnum :: Req -&gt; Int
+fromEnum :: Req -&gt; Int
+$cenumFrom :: Req -&gt; [Req]
+enumFrom :: Req -&gt; [Req]
+$cenumFromThen :: Req -&gt; Req -&gt; [Req]
+enumFromThen :: Req -&gt; Req -&gt; [Req]
+$cenumFromTo :: Req -&gt; Req -&gt; [Req]
+enumFromTo :: Req -&gt; Req -&gt; [Req]
+$cenumFromThenTo :: Req -&gt; Req -&gt; Req -&gt; [Req]
+enumFromThenTo :: Req -&gt; Req -&gt; Req -&gt; [Req]
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893808"><span id="local-6989586621679893812"><span class="annot"><span class="annottext">Req -&gt; Req -&gt; Bool
+(Req -&gt; Req -&gt; Bool) -&gt; (Req -&gt; Req -&gt; Bool) -&gt; Eq Req
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Req -&gt; Req -&gt; Bool
+== :: Req -&gt; Req -&gt; Bool
+$c/= :: Req -&gt; Req -&gt; Bool
+/= :: Req -&gt; Req -&gt; Bool
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893822"><span id="local-6989586621679893826"><span id="local-6989586621679893830"><span id="local-6989586621679893834"><span id="local-6989586621679893838"><span id="local-6989586621679893842"><span id="local-6989586621679893846"><span class="annot"><span class="annottext">Enum Req
+Real Req
+(Real Req, Enum Req) =&gt;
+(Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req -&gt; (Req, Req))
+-&gt; (Req -&gt; Req -&gt; (Req, Req))
+-&gt; (Req -&gt; Integer)
+-&gt; Integral Req
+Req -&gt; Integer
+Req -&gt; Req -&gt; (Req, Req)
+Req -&gt; Req -&gt; Req
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: Req -&gt; Req -&gt; Req
+quot :: Req -&gt; Req -&gt; Req
+$crem :: Req -&gt; Req -&gt; Req
+rem :: Req -&gt; Req -&gt; Req
+$cdiv :: Req -&gt; Req -&gt; Req
+div :: Req -&gt; Req -&gt; Req
+$cmod :: Req -&gt; Req -&gt; Req
+mod :: Req -&gt; Req -&gt; Req
+$cquotRem :: Req -&gt; Req -&gt; (Req, Req)
+quotRem :: Req -&gt; Req -&gt; (Req, Req)
+$cdivMod :: Req -&gt; Req -&gt; (Req, Req)
+divMod :: Req -&gt; Req -&gt; (Req, Req)
+$ctoInteger :: Req -&gt; Integer
+toInteger :: Req -&gt; Integer
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893851"><span id="local-6989586621679893855"><span id="local-6989586621679893859"><span id="local-6989586621679893863"><span id="local-6989586621679893867"><span id="local-6989586621679893871"><span id="local-6989586621679893875"><span class="annot"><span class="annottext">Integer -&gt; Req
+Req -&gt; Req
+Req -&gt; Req -&gt; Req
+(Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req)
+-&gt; (Req -&gt; Req)
+-&gt; (Req -&gt; Req)
+-&gt; (Integer -&gt; Req)
+-&gt; Num Req
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: Req -&gt; Req -&gt; Req
++ :: Req -&gt; Req -&gt; Req
+$c- :: Req -&gt; Req -&gt; Req
+- :: Req -&gt; Req -&gt; Req
+$c* :: Req -&gt; Req -&gt; Req
+* :: Req -&gt; Req -&gt; Req
+$cnegate :: Req -&gt; Req
+negate :: Req -&gt; Req
+$cabs :: Req -&gt; Req
+abs :: Req -&gt; Req
+$csignum :: Req -&gt; Req
+signum :: Req -&gt; Req
+$cfromInteger :: Integer -&gt; Req
+fromInteger :: Integer -&gt; Req
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893882"><span id="local-6989586621679893886"><span id="local-6989586621679893890"><span id="local-6989586621679893894"><span id="local-6989586621679893898"><span id="local-6989586621679893902"><span id="local-6989586621679893906"><span class="annot"><span class="annottext">Eq Req
+Eq Req =&gt;
+(Req -&gt; Req -&gt; Ordering)
+-&gt; (Req -&gt; Req -&gt; Bool)
+-&gt; (Req -&gt; Req -&gt; Bool)
+-&gt; (Req -&gt; Req -&gt; Bool)
+-&gt; (Req -&gt; Req -&gt; Bool)
+-&gt; (Req -&gt; Req -&gt; Req)
+-&gt; (Req -&gt; Req -&gt; Req)
+-&gt; Ord Req
+Req -&gt; Req -&gt; Bool
+Req -&gt; Req -&gt; Ordering
+Req -&gt; Req -&gt; Req
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Req -&gt; Req -&gt; Ordering
+compare :: Req -&gt; Req -&gt; Ordering
+$c&lt; :: Req -&gt; Req -&gt; Bool
+&lt; :: Req -&gt; Req -&gt; Bool
+$c&lt;= :: Req -&gt; Req -&gt; Bool
+&lt;= :: Req -&gt; Req -&gt; Bool
+$c&gt; :: Req -&gt; Req -&gt; Bool
+&gt; :: Req -&gt; Req -&gt; Bool
+$c&gt;= :: Req -&gt; Req -&gt; Bool
+&gt;= :: Req -&gt; Req -&gt; Bool
+$cmax :: Req -&gt; Req -&gt; Req
+max :: Req -&gt; Req -&gt; Req
+$cmin :: Req -&gt; Req -&gt; Req
+min :: Req -&gt; Req -&gt; Req
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893915"><span class="annot"><span class="annottext">Num Req
+Ord Req
+(Num Req, Ord Req) =&gt; (Req -&gt; Rational) -&gt; Real Req
+Req -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: Req -&gt; Rational
+toRational :: Req -&gt; Rational
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893919"><span id="local-6989586621679893923"><span id="local-6989586621679893927"><span class="annot"><span class="annottext">Int -&gt; Req -&gt; ShowS
+[Req] -&gt; ShowS
+Req -&gt; String
+(Int -&gt; Req -&gt; ShowS)
+-&gt; (Req -&gt; String) -&gt; ([Req] -&gt; ShowS) -&gt; Show Req
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Req -&gt; ShowS
+showsPrec :: Int -&gt; Req -&gt; ShowS
+$cshow :: Req -&gt; String
+show :: Req -&gt; String
+$cshowList :: [Req] -&gt; ShowS
+showList :: [Req] -&gt; ShowS
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><span class="hs-comment">-- | This many Txs sent to peer.</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">newtype</span><span> </span><span id="Sent"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Sent"><span class="hs-identifier hs-var">Sent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Sent"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Sent"><span class="hs-identifier hs-var">Sent</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679893933"><span id="local-6989586621679893937"><span id="local-6989586621679893941"><span id="local-6989586621679893945"><span id="local-6989586621679893949"><span id="local-6989586621679893953"><span id="local-6989586621679893957"><span id="local-6989586621679893961"><span class="annot"><span class="annottext">Int -&gt; Sent
+Sent -&gt; Int
+Sent -&gt; [Sent]
+Sent -&gt; Sent
+Sent -&gt; Sent -&gt; [Sent]
+Sent -&gt; Sent -&gt; Sent -&gt; [Sent]
+(Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent)
+-&gt; (Int -&gt; Sent)
+-&gt; (Sent -&gt; Int)
+-&gt; (Sent -&gt; [Sent])
+-&gt; (Sent -&gt; Sent -&gt; [Sent])
+-&gt; (Sent -&gt; Sent -&gt; [Sent])
+-&gt; (Sent -&gt; Sent -&gt; Sent -&gt; [Sent])
+-&gt; Enum Sent
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Sent -&gt; Sent
+succ :: Sent -&gt; Sent
+$cpred :: Sent -&gt; Sent
+pred :: Sent -&gt; Sent
+$ctoEnum :: Int -&gt; Sent
+toEnum :: Int -&gt; Sent
+$cfromEnum :: Sent -&gt; Int
+fromEnum :: Sent -&gt; Int
+$cenumFrom :: Sent -&gt; [Sent]
+enumFrom :: Sent -&gt; [Sent]
+$cenumFromThen :: Sent -&gt; Sent -&gt; [Sent]
+enumFromThen :: Sent -&gt; Sent -&gt; [Sent]
+$cenumFromTo :: Sent -&gt; Sent -&gt; [Sent]
+enumFromTo :: Sent -&gt; Sent -&gt; [Sent]
+$cenumFromThenTo :: Sent -&gt; Sent -&gt; Sent -&gt; [Sent]
+enumFromThenTo :: Sent -&gt; Sent -&gt; Sent -&gt; [Sent]
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893966"><span id="local-6989586621679893970"><span class="annot"><span class="annottext">Sent -&gt; Sent -&gt; Bool
+(Sent -&gt; Sent -&gt; Bool) -&gt; (Sent -&gt; Sent -&gt; Bool) -&gt; Eq Sent
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Sent -&gt; Sent -&gt; Bool
+== :: Sent -&gt; Sent -&gt; Bool
+$c/= :: Sent -&gt; Sent -&gt; Bool
+/= :: Sent -&gt; Sent -&gt; Bool
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679893980"><span id="local-6989586621679893984"><span id="local-6989586621679893988"><span id="local-6989586621679893992"><span id="local-6989586621679893996"><span id="local-6989586621679894000"><span id="local-6989586621679894004"><span class="annot"><span class="annottext">Enum Sent
+Real Sent
+(Real Sent, Enum Sent) =&gt;
+(Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent -&gt; (Sent, Sent))
+-&gt; (Sent -&gt; Sent -&gt; (Sent, Sent))
+-&gt; (Sent -&gt; Integer)
+-&gt; Integral Sent
+Sent -&gt; Integer
+Sent -&gt; Sent -&gt; (Sent, Sent)
+Sent -&gt; Sent -&gt; Sent
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: Sent -&gt; Sent -&gt; Sent
+quot :: Sent -&gt; Sent -&gt; Sent
+$crem :: Sent -&gt; Sent -&gt; Sent
+rem :: Sent -&gt; Sent -&gt; Sent
+$cdiv :: Sent -&gt; Sent -&gt; Sent
+div :: Sent -&gt; Sent -&gt; Sent
+$cmod :: Sent -&gt; Sent -&gt; Sent
+mod :: Sent -&gt; Sent -&gt; Sent
+$cquotRem :: Sent -&gt; Sent -&gt; (Sent, Sent)
+quotRem :: Sent -&gt; Sent -&gt; (Sent, Sent)
+$cdivMod :: Sent -&gt; Sent -&gt; (Sent, Sent)
+divMod :: Sent -&gt; Sent -&gt; (Sent, Sent)
+$ctoInteger :: Sent -&gt; Integer
+toInteger :: Sent -&gt; Integer
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894009"><span id="local-6989586621679894013"><span id="local-6989586621679894017"><span id="local-6989586621679894021"><span id="local-6989586621679894025"><span id="local-6989586621679894029"><span id="local-6989586621679894033"><span class="annot"><span class="annottext">Integer -&gt; Sent
+Sent -&gt; Sent
+Sent -&gt; Sent -&gt; Sent
+(Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent)
+-&gt; (Integer -&gt; Sent)
+-&gt; Num Sent
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: Sent -&gt; Sent -&gt; Sent
++ :: Sent -&gt; Sent -&gt; Sent
+$c- :: Sent -&gt; Sent -&gt; Sent
+- :: Sent -&gt; Sent -&gt; Sent
+$c* :: Sent -&gt; Sent -&gt; Sent
+* :: Sent -&gt; Sent -&gt; Sent
+$cnegate :: Sent -&gt; Sent
+negate :: Sent -&gt; Sent
+$cabs :: Sent -&gt; Sent
+abs :: Sent -&gt; Sent
+$csignum :: Sent -&gt; Sent
+signum :: Sent -&gt; Sent
+$cfromInteger :: Integer -&gt; Sent
+fromInteger :: Integer -&gt; Sent
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894040"><span id="local-6989586621679894044"><span id="local-6989586621679894048"><span id="local-6989586621679894052"><span id="local-6989586621679894056"><span id="local-6989586621679894060"><span id="local-6989586621679894064"><span class="annot"><span class="annottext">Eq Sent
+Eq Sent =&gt;
+(Sent -&gt; Sent -&gt; Ordering)
+-&gt; (Sent -&gt; Sent -&gt; Bool)
+-&gt; (Sent -&gt; Sent -&gt; Bool)
+-&gt; (Sent -&gt; Sent -&gt; Bool)
+-&gt; (Sent -&gt; Sent -&gt; Bool)
+-&gt; (Sent -&gt; Sent -&gt; Sent)
+-&gt; (Sent -&gt; Sent -&gt; Sent)
+-&gt; Ord Sent
+Sent -&gt; Sent -&gt; Bool
+Sent -&gt; Sent -&gt; Ordering
+Sent -&gt; Sent -&gt; Sent
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Sent -&gt; Sent -&gt; Ordering
+compare :: Sent -&gt; Sent -&gt; Ordering
+$c&lt; :: Sent -&gt; Sent -&gt; Bool
+&lt; :: Sent -&gt; Sent -&gt; Bool
+$c&lt;= :: Sent -&gt; Sent -&gt; Bool
+&lt;= :: Sent -&gt; Sent -&gt; Bool
+$c&gt; :: Sent -&gt; Sent -&gt; Bool
+&gt; :: Sent -&gt; Sent -&gt; Bool
+$c&gt;= :: Sent -&gt; Sent -&gt; Bool
+&gt;= :: Sent -&gt; Sent -&gt; Bool
+$cmax :: Sent -&gt; Sent -&gt; Sent
+max :: Sent -&gt; Sent -&gt; Sent
+$cmin :: Sent -&gt; Sent -&gt; Sent
+min :: Sent -&gt; Sent -&gt; Sent
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894073"><span class="annot"><span class="annottext">Num Sent
+Ord Sent
+(Num Sent, Ord Sent) =&gt; (Sent -&gt; Rational) -&gt; Real Sent
+Sent -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: Sent -&gt; Rational
+toRational :: Sent -&gt; Rational
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894077"><span id="local-6989586621679894081"><span id="local-6989586621679894085"><span class="annot"><span class="annottext">Int -&gt; Sent -&gt; ShowS
+[Sent] -&gt; ShowS
+Sent -&gt; String
+(Int -&gt; Sent -&gt; ShowS)
+-&gt; (Sent -&gt; String) -&gt; ([Sent] -&gt; ShowS) -&gt; Show Sent
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Sent -&gt; ShowS
+showsPrec :: Int -&gt; Sent -&gt; ShowS
+$cshow :: Sent -&gt; String
+show :: Sent -&gt; String
+$cshowList :: [Sent] -&gt; ShowS
+showList :: [Sent] -&gt; ShowS
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span id="local-6989586621679894090"><span id="local-6989586621679894092"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Types.html#Sent"><span class="hs-identifier hs-type">Sent</span></a></span></span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | This many Txs requested by the peer, but not available for sending.</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">newtype</span><span> </span><span id="Unav"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Unav"><span class="hs-identifier hs-var">Unav</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Unav"><span class="annot"><a href="Cardano.Benchmarking.Types.html#Unav"><span class="hs-identifier hs-var">Unav</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679894097"><span id="local-6989586621679894101"><span id="local-6989586621679894105"><span id="local-6989586621679894109"><span id="local-6989586621679894113"><span id="local-6989586621679894117"><span id="local-6989586621679894121"><span id="local-6989586621679894125"><span class="annot"><span class="annottext">Int -&gt; Unav
+Unav -&gt; Int
+Unav -&gt; [Unav]
+Unav -&gt; Unav
+Unav -&gt; Unav -&gt; [Unav]
+Unav -&gt; Unav -&gt; Unav -&gt; [Unav]
+(Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav)
+-&gt; (Int -&gt; Unav)
+-&gt; (Unav -&gt; Int)
+-&gt; (Unav -&gt; [Unav])
+-&gt; (Unav -&gt; Unav -&gt; [Unav])
+-&gt; (Unav -&gt; Unav -&gt; [Unav])
+-&gt; (Unav -&gt; Unav -&gt; Unav -&gt; [Unav])
+-&gt; Enum Unav
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Unav -&gt; Unav
+succ :: Unav -&gt; Unav
+$cpred :: Unav -&gt; Unav
+pred :: Unav -&gt; Unav
+$ctoEnum :: Int -&gt; Unav
+toEnum :: Int -&gt; Unav
+$cfromEnum :: Unav -&gt; Int
+fromEnum :: Unav -&gt; Int
+$cenumFrom :: Unav -&gt; [Unav]
+enumFrom :: Unav -&gt; [Unav]
+$cenumFromThen :: Unav -&gt; Unav -&gt; [Unav]
+enumFromThen :: Unav -&gt; Unav -&gt; [Unav]
+$cenumFromTo :: Unav -&gt; Unav -&gt; [Unav]
+enumFromTo :: Unav -&gt; Unav -&gt; [Unav]
+$cenumFromThenTo :: Unav -&gt; Unav -&gt; Unav -&gt; [Unav]
+enumFromThenTo :: Unav -&gt; Unav -&gt; Unav -&gt; [Unav]
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894130"><span id="local-6989586621679894134"><span class="annot"><span class="annottext">Unav -&gt; Unav -&gt; Bool
+(Unav -&gt; Unav -&gt; Bool) -&gt; (Unav -&gt; Unav -&gt; Bool) -&gt; Eq Unav
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Unav -&gt; Unav -&gt; Bool
+== :: Unav -&gt; Unav -&gt; Bool
+$c/= :: Unav -&gt; Unav -&gt; Bool
+/= :: Unav -&gt; Unav -&gt; Bool
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894144"><span id="local-6989586621679894148"><span id="local-6989586621679894152"><span id="local-6989586621679894156"><span id="local-6989586621679894160"><span id="local-6989586621679894164"><span id="local-6989586621679894168"><span class="annot"><span class="annottext">Enum Unav
+Real Unav
+(Real Unav, Enum Unav) =&gt;
+(Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav -&gt; (Unav, Unav))
+-&gt; (Unav -&gt; Unav -&gt; (Unav, Unav))
+-&gt; (Unav -&gt; Integer)
+-&gt; Integral Unav
+Unav -&gt; Integer
+Unav -&gt; Unav -&gt; (Unav, Unav)
+Unav -&gt; Unav -&gt; Unav
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: Unav -&gt; Unav -&gt; Unav
+quot :: Unav -&gt; Unav -&gt; Unav
+$crem :: Unav -&gt; Unav -&gt; Unav
+rem :: Unav -&gt; Unav -&gt; Unav
+$cdiv :: Unav -&gt; Unav -&gt; Unav
+div :: Unav -&gt; Unav -&gt; Unav
+$cmod :: Unav -&gt; Unav -&gt; Unav
+mod :: Unav -&gt; Unav -&gt; Unav
+$cquotRem :: Unav -&gt; Unav -&gt; (Unav, Unav)
+quotRem :: Unav -&gt; Unav -&gt; (Unav, Unav)
+$cdivMod :: Unav -&gt; Unav -&gt; (Unav, Unav)
+divMod :: Unav -&gt; Unav -&gt; (Unav, Unav)
+$ctoInteger :: Unav -&gt; Integer
+toInteger :: Unav -&gt; Integer
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894173"><span id="local-6989586621679894177"><span id="local-6989586621679894181"><span id="local-6989586621679894185"><span id="local-6989586621679894189"><span id="local-6989586621679894193"><span id="local-6989586621679894197"><span class="annot"><span class="annottext">Integer -&gt; Unav
+Unav -&gt; Unav
+Unav -&gt; Unav -&gt; Unav
+(Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav)
+-&gt; (Integer -&gt; Unav)
+-&gt; Num Unav
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: Unav -&gt; Unav -&gt; Unav
++ :: Unav -&gt; Unav -&gt; Unav
+$c- :: Unav -&gt; Unav -&gt; Unav
+- :: Unav -&gt; Unav -&gt; Unav
+$c* :: Unav -&gt; Unav -&gt; Unav
+* :: Unav -&gt; Unav -&gt; Unav
+$cnegate :: Unav -&gt; Unav
+negate :: Unav -&gt; Unav
+$cabs :: Unav -&gt; Unav
+abs :: Unav -&gt; Unav
+$csignum :: Unav -&gt; Unav
+signum :: Unav -&gt; Unav
+$cfromInteger :: Integer -&gt; Unav
+fromInteger :: Integer -&gt; Unav
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894204"><span id="local-6989586621679894208"><span id="local-6989586621679894212"><span id="local-6989586621679894216"><span id="local-6989586621679894220"><span id="local-6989586621679894224"><span id="local-6989586621679894228"><span class="annot"><span class="annottext">Eq Unav
+Eq Unav =&gt;
+(Unav -&gt; Unav -&gt; Ordering)
+-&gt; (Unav -&gt; Unav -&gt; Bool)
+-&gt; (Unav -&gt; Unav -&gt; Bool)
+-&gt; (Unav -&gt; Unav -&gt; Bool)
+-&gt; (Unav -&gt; Unav -&gt; Bool)
+-&gt; (Unav -&gt; Unav -&gt; Unav)
+-&gt; (Unav -&gt; Unav -&gt; Unav)
+-&gt; Ord Unav
+Unav -&gt; Unav -&gt; Bool
+Unav -&gt; Unav -&gt; Ordering
+Unav -&gt; Unav -&gt; Unav
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Unav -&gt; Unav -&gt; Ordering
+compare :: Unav -&gt; Unav -&gt; Ordering
+$c&lt; :: Unav -&gt; Unav -&gt; Bool
+&lt; :: Unav -&gt; Unav -&gt; Bool
+$c&lt;= :: Unav -&gt; Unav -&gt; Bool
+&lt;= :: Unav -&gt; Unav -&gt; Bool
+$c&gt; :: Unav -&gt; Unav -&gt; Bool
+&gt; :: Unav -&gt; Unav -&gt; Bool
+$c&gt;= :: Unav -&gt; Unav -&gt; Bool
+&gt;= :: Unav -&gt; Unav -&gt; Bool
+$cmax :: Unav -&gt; Unav -&gt; Unav
+max :: Unav -&gt; Unav -&gt; Unav
+$cmin :: Unav -&gt; Unav -&gt; Unav
+min :: Unav -&gt; Unav -&gt; Unav
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894237"><span class="annot"><span class="annottext">Num Unav
+Ord Unav
+(Num Unav, Ord Unav) =&gt; (Unav -&gt; Rational) -&gt; Real Unav
+Unav -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: Unav -&gt; Rational
+toRational :: Unav -&gt; Rational
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894241"><span id="local-6989586621679894245"><span id="local-6989586621679894249"><span class="annot"><span class="annottext">Int -&gt; Unav -&gt; ShowS
+[Unav] -&gt; ShowS
+Unav -&gt; String
+(Int -&gt; Unav -&gt; ShowS)
+-&gt; (Unav -&gt; String) -&gt; ([Unav] -&gt; ShowS) -&gt; Show Unav
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Unav -&gt; ShowS
+showsPrec :: Int -&gt; Unav -&gt; ShowS
+$cshow :: Unav -&gt; String
+show :: Unav -&gt; String
+$cshowList :: [Unav] -&gt; ShowS
+showList :: [Unav] -&gt; ShowS
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="local-6989586621679894254"><span id="local-6989586621679894256"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Types.html#Unav"><span class="hs-identifier hs-type">Unav</span></a></span></span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><span class="hs-comment">-- | This controls how to react to errors during the benchmark.</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">data</span><span> </span><span id="SubmissionErrorPolicy"><span class="annot"><a href="Cardano.Benchmarking.Types.html#SubmissionErrorPolicy"><span class="hs-identifier hs-var">SubmissionErrorPolicy</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="FailOnError"><span class="annot"><a href="Cardano.Benchmarking.Types.html#FailOnError"><span class="hs-identifier hs-var">FailOnError</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="LogErrors"><span class="annot"><a href="Cardano.Benchmarking.Types.html#LogErrors"><span class="hs-identifier hs-var">LogErrors</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679894261"><span id="local-6989586621679894263"><span class="annot"><span class="annottext">SubmissionErrorPolicy -&gt; SubmissionErrorPolicy -&gt; Bool
+(SubmissionErrorPolicy -&gt; SubmissionErrorPolicy -&gt; Bool)
+-&gt; (SubmissionErrorPolicy -&gt; SubmissionErrorPolicy -&gt; Bool)
+-&gt; Eq SubmissionErrorPolicy
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SubmissionErrorPolicy -&gt; SubmissionErrorPolicy -&gt; Bool
+== :: SubmissionErrorPolicy -&gt; SubmissionErrorPolicy -&gt; Bool
+$c/= :: SubmissionErrorPolicy -&gt; SubmissionErrorPolicy -&gt; Bool
+/= :: SubmissionErrorPolicy -&gt; SubmissionErrorPolicy -&gt; Bool
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679894267"><span id="local-6989586621679894269"><span id="local-6989586621679894273"><span class="annot"><span class="annottext">Int -&gt; SubmissionErrorPolicy -&gt; ShowS
+[SubmissionErrorPolicy] -&gt; ShowS
+SubmissionErrorPolicy -&gt; String
+(Int -&gt; SubmissionErrorPolicy -&gt; ShowS)
+-&gt; (SubmissionErrorPolicy -&gt; String)
+-&gt; ([SubmissionErrorPolicy] -&gt; ShowS)
+-&gt; Show SubmissionErrorPolicy
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SubmissionErrorPolicy -&gt; ShowS
+showsPrec :: Int -&gt; SubmissionErrorPolicy -&gt; ShowS
+$cshow :: SubmissionErrorPolicy -&gt; String
+show :: SubmissionErrorPolicy -&gt; String
+$cshowList :: [SubmissionErrorPolicy] -&gt; ShowS
+showList :: [SubmissionErrorPolicy] -&gt; ShowS
+</span><a href="file:///nix/store/mk6l3sdyy9p9fidqj3vzy88k28r31xxm-ghc-9.6.6-doc/share/doc/ghc-9.6.6/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679894276"><span id="local-6989586621679894283"><span id="local-6989586621679894286"><span id="local-6989586621679894289"><span id="local-6989586621679894292"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Types.html#Sent"><span class="hs-identifier hs-type">Sent</span></a></span></span></span></span></span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679894344"><span id="local-6989586621679894351"><span id="local-6989586621679894354"><span id="local-6989586621679894357"><span id="local-6989586621679894360"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Types.html#Unav"><span class="hs-identifier hs-type">Unav</span></a></span></span></span></span></span></span><span>
+</span><span id="line-45"></span></pre></body></html>
