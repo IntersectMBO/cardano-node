@@ -23,6 +23,7 @@ import qualified Cardano.Ledger.Plutus as L
 import qualified Cardano.Rpc.Client as Rpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Query ()
+import           Cardano.Rpc.Server.Internal.UtxoRpc.Type (anyUtxoDataUtxoRpcToUtxo)
 import           Cardano.Testnet
 
 import           Prelude
@@ -126,10 +127,11 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     pparams ^. L.ppCollateralPercentageL === chainParams ^. #collateralPercentage . to fromIntegral
     pparams ^. L.ppMaxCollateralInputsL === chainParams ^. #maxCollateralInputs . to fromIntegral
     let pparamsCostModels = L.getCostModelParams <$> pparams ^. L.ppCostModelsL . to L.costModelsValid
-    M.lookup L.PlutusV1 pparamsCostModels === chainParams ^. #costModels . #plutusV1 . #values . to Just
-    M.lookup L.PlutusV2 pparamsCostModels === chainParams ^. #costModels . #plutusV2 . #values . to Just
-    M.lookup L.PlutusV3 pparamsCostModels === chainParams ^. #costModels . #plutusV3 . #values . to Just
-    M.lookup L.PlutusV4 pparamsCostModels === chainParams ^. #costModels . #plutusV4 . #values . to Just
+        wrapInMaybe v = if v == mempty then Nothing else Just v
+    M.lookup L.PlutusV1 pparamsCostModels === chainParams ^. #costModels . #plutusV1 . #values . to wrapInMaybe
+    M.lookup L.PlutusV2 pparamsCostModels === chainParams ^. #costModels . #plutusV2 . #values . to wrapInMaybe
+    M.lookup L.PlutusV3 pparamsCostModels === chainParams ^. #costModels . #plutusV3 . #values . to wrapInMaybe
+    M.lookup L.PlutusV4 pparamsCostModels === chainParams ^. #costModels . #plutusV4 . #values . to wrapInMaybe
     pparams ^. L.ppPricesL . to L.prSteps . to L.unboundRational === chainParams ^. #prices . #steps . to inject
     pparams ^. L.ppPricesL . to L.prMem . to L.unboundRational === chainParams ^. #prices . #memory . to inject
     pparams ^. L.ppMaxTxExUnitsL === chainParams ^. #maxExecutionUnitsPerTransaction . to inject
@@ -178,6 +180,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   -- Test readUtxos response
   --------------------------
 
-  _ <- H.noteShowPretty $ utxos
-  _ <- H.noteShowPretty $ utxosResponse
+  utxoFromUtxoRpc <- H.leftFail $ utxosResponse ^. #items . to (anyUtxoDataUtxoRpcToUtxo $ convert ceo)
+  utxos === utxoFromUtxoRpc
+
   H.failure
