@@ -172,7 +172,7 @@ initialTraceConfig = TraceConfig {
           , setMaxDetail TracerNameConnect
           , setMaxDetail TracerNameSubmit
           ]
-    , tcForwarder = Just defaultForwarder {tofConnQueueSize = 2048, tofDisconnQueueSize = 4096}
+    , tcForwarder = Just defaultForwarder {tofQueueSize = 4096}
     , tcNodeName = Nothing
     , tcPeerFrequency = Just 2000 -- Every 2 seconds
     , tcResourceFrequency = Just 1000 -- Every second

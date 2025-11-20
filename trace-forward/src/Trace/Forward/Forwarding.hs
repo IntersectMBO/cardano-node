@@ -111,10 +111,8 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       Nothing -> EKGF.LocalPipe ""
       Just (LocalPipe str, _mode) -> EKGF.LocalPipe str
       Just (RemoteSocket host port, _mode) -> EKGF.RemoteSocket host port
-  -- Having two queue sizes was removed from the "trace-foirward" package.
-  -- It will be removed from `TraceOptionForwarder` and the user configuration.
-  queueSize = max (tofConnQueueSize config) (tofDisconnQueueSize config)
-  verbosity = tofVerbosity config
+  queueSize         = tofQueueSize         config
+  verbosity         = tofVerbosity         config
   maxReconnectDelay = tofMaxReconnectDelay config
 
   ekgConfig :: EKGF.ForwarderConfiguration
