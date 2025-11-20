@@ -21,8 +21,8 @@ main = getArgs >>=
              , tsWorkDir      = Identity "."
              }
     in case mode of
-         "Initiator" -> launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 1000 2000
-         "Responder" -> launchForwardersSimple ts Responder (Net.LocalPipe localSock) 1000 2000
+         "Initiator" -> launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 2000
+         "Responder" -> launchForwardersSimple ts Responder (Net.LocalPipe localSock) 2000
          _ -> err
   _ -> err
  where err = error "Usage: ./demo-forwarder /path/to/local/sock Initiator|Responder"

@@ -35,8 +35,7 @@ config1 = TraceConfig {
           , (["node1"], [ConfSeverity (SeverityF (Just Warning)),  ConfBackend [Stdout MachineFormat]])
           ]
     , tcForwarder = Just TraceOptionForwarder {
-        tofConnQueueSize = 100
-      , tofDisconnQueueSize = 1000
+        tofQueueSize = 1000
       , tofVerbosity = Minimum
       , tofMaxReconnectDelay = 60
       }

@@ -111,9 +111,8 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       Nothing -> EKGF.LocalPipe ""
       Just (LocalPipe str, _mode) -> EKGF.LocalPipe str
       Just (RemoteSocket host port, _mode) -> EKGF.RemoteSocket host port
-  connSize = tofConnQueueSize config
-  disconnSize = tofDisconnQueueSize config
-  verbosity = tofVerbosity config
+  queueSize         = tofQueueSize         config
+  verbosity         = tofVerbosity         config
   maxReconnectDelay = tofMaxReconnectDelay config
 
   ekgConfig :: EKGF.ForwarderConfiguration
@@ -129,9 +128,8 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   tfConfig :: TF.ForwarderConfiguration TraceObject
   tfConfig =
     TF.ForwarderConfiguration
-      { TF.forwarderTracer       = mkTracer verbosity
-      , TF.disconnectedQueueSize = disconnSize
-      , TF.connectedQueueSize    = connSize
+      { TF.forwarderTracer = mkTracer verbosity
+      , TF.queueSize       = queueSize
       }
 
   dpfConfig :: DPF.ForwarderConfiguration
