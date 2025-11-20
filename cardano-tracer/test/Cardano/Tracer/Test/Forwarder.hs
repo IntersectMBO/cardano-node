@@ -91,10 +91,9 @@ launchForwardersSimple
   -> ForwardersMode
   -> HowToConnect
   -> Word
-  -> Word
   -> IO ()
-launchForwardersSimple ts mode howToConnect connSize disconnSize = withIOManager \iomgr ->
-  runInLoop (launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize) (Just Minimum) howToConnect 1
+launchForwardersSimple ts mode howToConnect queueSize = withIOManager \iomgr ->
+  runInLoop (launchForwardersSimple' ts iomgr mode howToConnect queueSize) (Just Minimum) howToConnect 1
 
 launchForwardersSimple'
   :: TestSetup Identity
@@ -102,9 +101,8 @@ launchForwardersSimple'
   -> ForwardersMode
   -> HowToConnect
   -> Word
-  -> Word
   -> IO ()
-launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
+launchForwardersSimple' ts iomgr mode howToConnect queueSize =
   case (howToConnect, mode) of
     (Net.RemoteSocket (Text.unpack -> host) (show -> port), Initiator) -> do
       result <- try @IOException do
@@ -177,9 +175,7 @@ launchForwardersSimple' ts iomgr mode howToConnect connSize disconnSize =
   tfConfig =
     TOF.ForwarderConfiguration
       { TOF.forwarderTracer = nullTracer -- contramap show stdoutTracer
-      -- Having two queue sizes was removed from the "trace-foirward" package.
-      -- It will be removed from `TraceOptionForwarder` and user configuration.
-      , TOF.queueSize = max disconnSize connSize
+      , TOF.queueSize = queueSize
       }
 
   dpfConfig :: DPF.ForwarderConfiguration

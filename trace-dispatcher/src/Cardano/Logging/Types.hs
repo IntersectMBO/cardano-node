@@ -487,50 +487,59 @@ instance AE.FromJSON Verbosity where
                                     <> "Unknown Verbosity: " <> show other
 
 data TraceOptionForwarder = TraceOptionForwarder {
-    tofConnQueueSize       :: Word
-  , tofDisconnQueueSize    :: Word
+    tofQueueSize           :: Word
   , tofVerbosity           :: Verbosity
   , tofMaxReconnectDelay   :: Word
 } deriving stock (Eq, Ord, Show, Generic)
 
--- A word regarding queue sizes:
--- In case of a missing forwarding service consumer, traces messages will be
--- buffered. This mitigates short forwarding interruptions, or delays at startup time.
+-- A word regarding queue size:
 --
--- The queue capacity should thus correlate to the expected log lines per second given
--- a particular tracing configuration - to avoid unnecessarily increasing memory footprint.
+-- In case of a missing forwarding service consumer, traces messages will be
+-- buffered. This mitigates short forwarding interruptions, or delays at startup
+-- time.
+--
+-- The queue capacity should thus correlate to the expected log lines per second
+-- given a particular tracing configuration - to avoid unnecessarily increasing
+-- memory footprint.
 --
 -- The default values here are chosen to accomodate verbose tracing output
--- (i.e., buffering 1min worth of trace data given ~32 messages per second). A config
--- that results in less than 5 msgs per second should also provide TraceOptionForwarder
--- queue size values considerably lower. The `disconnQueueSize` is the hard limit in that case.
+-- (i.e., buffering 1min worth of trace data given ~32 messages per second). A
+-- config that results in less than 5 msgs per second should also provide
+-- `TraceOptionForwarder` a queue size value considerably lower.
 --
--- The queue sizes tie in with the max number of trace objects cardano-tracer requests periodically,
--- the default for that being 100. Here, the basic queue can hold enough traces for 10 subsequent polls
--- by cardano-tracer.
+-- The queue size ties in with the max number of trace objects cardano-tracer
+-- requests periodically, the default for that being 100. Here, the queue can
+-- hold enough traces for 10 subsequent polls by cardano-tracer.
 instance AE.FromJSON TraceOptionForwarder where
-    parseJSON (AE.Object obj) =
-      TraceOptionForwarder
-        <$> obj AE..:? "connQueueSize"      AE..!= 1024
-        <*> obj AE..:? "disconnQueueSize"   AE..!= 2048
-        <*> obj AE..:? "verbosity"          AE..!= Minimum
-        <*> obj AE..:? "maxReconnectDelay"  AE..!= 60
+    parseJSON (AE.Object obj) = do
+      -- Field "queueSize" is the new field that replaces and unifies
+      -- both "connQueueSize" and "disconnQueueSize".
+      maybeQueueSize <- obj AE..:? "queueSize"
+      queueSize <- case maybeQueueSize of
+                     -- If the new field was provided we use it.
+                     (Just qs) -> return qs
+                     -- Else we look for the deprectaed fields.
+                     Nothing   -> do
+                       -- We keep the same default values.
+                       connQueueSize    <- obj AE..:? "connQueueSize"    AE..!= 1024
+                       disconnQueueSize <- obj AE..:? "disconnQueueSize" AE..!= 2048
+                       return $ max connQueueSize disconnQueueSize
+      verbosity         <- obj AE..:? "verbosity"         AE..!= Minimum
+      maxReconnectDelay <- obj AE..:? "maxReconnectDelay" AE..!= 60
+      return $ TraceOptionForwarder queueSize verbosity maxReconnectDelay
     parseJSON _ = mempty
-
 
 instance AE.ToJSON TraceOptionForwarder where
   toJSON TraceOptionForwarder{..} = AE.object
     [
-      "connQueueSize"     AE..= tofConnQueueSize,
-      "disconnQueueSize"  AE..= tofDisconnQueueSize,
+      "queueSize"         AE..= tofQueueSize,
       "verbosity"         AE..= tofVerbosity,
       "maxReconnectDelay" AE..= tofMaxReconnectDelay
     ]
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
-    tofConnQueueSize       = 1024
-  , tofDisconnQueueSize    = 2048
+    tofQueueSize           = 2048
   , tofVerbosity           = Minimum
   , tofMaxReconnectDelay   = 60
 }

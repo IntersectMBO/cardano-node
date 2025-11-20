@@ -51,7 +51,7 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
   withAsync (doRunCardanoTracer (acceptConfig rootDir) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \async1 -> do
     link async1
     sleep 1.0
-    withAsync (launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 1000 10000) \async2 -> do
+    withAsync (launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000) \async2 -> do
       link async2
       sleep 8.0 -- Wait till some rotation is done.
       applyBrake stopProtocols
@@ -92,10 +92,10 @@ propMultiInit ts@TestSetup{..} format rootDir howToConnect1 howToConnect2 = do
   withAsync (doRunCardanoTracer initConfig (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \async1 -> do
     link async1
     sleep 1.0
-    withAsync (launchForwardersSimple ts Responder howToConnect1 1000 10000) \async2 -> do
+    withAsync (launchForwardersSimple ts Responder howToConnect1 10000) \async2 -> do
       link async2
       sleep 1.0
-      withAsync (launchForwardersSimple ts Responder howToConnect2 1000 10000) \async3 -> do
+      withAsync (launchForwardersSimple ts Responder howToConnect2 10000) \async3 -> do
         link async3
         sleep 5.0 -- Wait till some work is done.
         applyBrake stopProtocols
@@ -132,12 +132,12 @@ propMultiResp ts@TestSetup{..} format rootDir howToConnect = do
   withAsync (doRunCardanoTracer respConfig (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \async1 -> do
     link async1
     sleep 1.0
-    -- withAsync (launchForwardersSimple ts Initiator howToConnect 1000 10000) \async2 -> do
-    withAsync (launchForwardersSimple ts Initiator howToConnect 1000 10000) \async2 -> do
+    -- withAsync (launchForwardersSimple ts Initiator howToConnect 10000) \async2 -> do
+    withAsync (launchForwardersSimple ts Initiator howToConnect 10000) \async2 -> do
       link async2
       sleep 1.0
-      -- withAsync (launchForwardersSimple ts Initiator howToConnect 1000 10000) \async3 -> do
-      withAsync (launchForwardersSimple ts Initiator howToConnect 1000 10000) \async3 -> do
+      -- withAsync (launchForwardersSimple ts Initiator howToConnect 10000) \async3 -> do
+      withAsync (launchForwardersSimple ts Initiator howToConnect 10000) \async3 -> do
         link async3
         sleep 5.0 -- Wait till some work is done.
         applyBrake stopProtocols
