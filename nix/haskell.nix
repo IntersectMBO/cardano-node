@@ -321,11 +321,18 @@ let
               lib.mkOption {
                 type = lib.types.submodule (
                   { config, lib, ... }:
-                  lib.mkIf config.package.isLocal
-                  {
-                    configureFlags = [ "--ghc-option=-Werror"]
-                      ++ lib.optional (args.config.compiler.version == "8.10.7") "--ghc-option=-Wwarn=unused-packages";
-                  }
+                  lib.mkMerge [
+                    (lib.mkIf config.package.isLocal
+                    {
+                      configureFlags = [ "--ghc-option=-Werror" "--ghc-option=-fno-spec-eval-dictfun" ]
+                        ++ lib.optional (args.config.compiler.version == "8.10.7") "--ghc-option=-Wwarn=unused-packages";
+                    })
+                    (lib.mkIf (!config.package.isLocal)
+                    {
+                      configureFlags = [ "--ghc-option=-fno-spec-eval-dictfun" ]
+                        ++ lib.optional (args.config.compiler.version == "8.10.7") "--ghc-option=-Wwarn=unused-packages";
+                    })
+                  ]
                 );
               });
           })
