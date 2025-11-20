@@ -49,7 +49,7 @@ packages:
 extra-packages: alex, dmq-node == 0.3.0.0
 
 program-options
-  ghc-options: -Werror
+  ghc-options: -Werror -fno-spec-eval-dictfun
 
 test-show-details: direct
 
