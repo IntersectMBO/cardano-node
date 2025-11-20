@@ -36,7 +36,7 @@ packages:
 extra-packages: alex
 
 program-options
-  ghc-options: -Werror
+  ghc-options: -Werror -fno-spec-eval-dictfun
 
 test-show-details: direct
 
