@@ -2,7 +2,7 @@
 
 This guide provides a clear and professional walkthrough on how to deploy and manage a Cardano node using **Demeter**, an infrastructure-as-a-service platform that simplifies Cardano development by providing ready-to-use environments.
 
----
+
 
 ## ## Prerequisites
 
