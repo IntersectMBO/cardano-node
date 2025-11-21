@@ -64,7 +64,7 @@ runAcceptorsServer
   -> IO ()
 runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig, dpfConfig) =
   withIOManager \iocp -> do
-  traceWith (teTracer tracerEnv) $ TracerSockListen (Net.howToConnectString howToConnect)
+  traceWith (teTracer tracerEnv) $ TracerSockListen (show howToConnect)
   case howToConnect of
     Net.LocalPipe p ->
       doListenToForwarderLocal

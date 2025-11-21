@@ -18,6 +18,7 @@ module Cardano.Tracer.Test.Forwarder
 import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
 import           Cardano.Logging.Types (HowToConnect)
 import qualified Cardano.Logging.Types as Net
+import           Cardano.Logging.Utils (runInLoop)
 import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -43,7 +44,8 @@ import           Control.Concurrent.Async hiding (async)
 import           Control.DeepSeq (NFData)
 import           Control.Exception (IOException, SomeException, catch, throwIO, try)
 import           Control.Monad (forever)
-import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTracer)
+import           "contra-tracer" Control.Tracer as Contra (contramap, nullTracer, stdoutTracer,
+                   traceWith)
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor (void)
@@ -93,7 +95,9 @@ launchForwardersSimple
   -> Word
   -> IO ()
 launchForwardersSimple ts mode howToConnect queueSize = withIOManager \iomgr ->
-  runInLoop (launchForwardersSimple' ts iomgr mode howToConnect queueSize) (Just Minimum) howToConnect 1
+  runInLoop (launchForwardersSimple' ts iomgr mode howToConnect queueSize) handleInterruption 1 60
+  where
+    handleInterruption = const $ pure ()
 
 launchForwardersSimple'
   :: TestSetup Identity
@@ -321,3 +325,6 @@ traceObjectsWriter sink = forever do
     , toHostname  = "nixos"
     , toThreadId  = "1"
     }
+
+logTrace :: String -> IO ()
+logTrace = Contra.traceWith Contra.stdoutTracer
