@@ -5,16 +5,17 @@ module Cardano.Tracer.Acceptors.Run
   ( runAcceptors
   ) where
 
+import           Cardano.Logging.Types (TraceObject)
+import qualified Cardano.Logging.Types as Net
+import           Cardano.Logging.Utils (runInLoop)
 import           Cardano.Tracer.Acceptors.Client
 import           Cardano.Tracer.Acceptors.Server
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Utils
-import           Cardano.Logging.Types (TraceObject)
-import qualified Cardano.Logging.Types as Net
 
 import           Control.Concurrent.Async (forConcurrently_)
+import           Control.Exception (SomeException (..))
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe)
@@ -40,14 +41,20 @@ runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
       -- Run one server that accepts connections from the nodes.
       runInLoop
         (runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect))
-        verbosity howToConnect initialPauseInSec
+        (handleOnInterruption howToConnect) initialPauseInSec 10
     ConnectTo localSocks ->
       -- Run N clients that initiate connections to the nodes.
       forConcurrently_ (NE.nub localSocks) \howToConnect ->
         runInLoop
           (runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (Net.howToConnectString howToConnect))
-          verbosity howToConnect initialPauseInSec
+          (handleOnInterruption howToConnect) initialPauseInSec 30
  where
+  handleOnInterruption howToConnect (SomeException e)
+    | verbosity == Just Minimum = pure ()
+    | otherwise =
+       let msg = "connection with " <> show howToConnect <> " failed: " <> show e
+       in traceWith teTracer $ TracerForwardingInterrupted msg
+
   TracerConfig{network, ekgRequestFreq, verbosity, ekgRequestFull} = teConfig tracerEnv
   ekgUseFullRequests = fromMaybe False ekgRequestFull
 
