@@ -3,6 +3,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Tracing.API
@@ -37,6 +38,7 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import           Prelude
 
 import           Control.DeepSeq (deepseq)
+import           Control.Exception (SomeException (..))
 import           Control.Monad (forM_)
 import           "contra-tracer" Control.Tracer (traceWith)
 import           "trace-dispatcher" Control.Tracer (nullTracer)
@@ -112,7 +114,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
           , IO (Maybe String)
           , Tracers RemoteAddress LocalAddress blk IO
           )
-  mkTracers trConfig = do
+  mkTracers trConfig = mdo
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer trConfig ekgStore
@@ -127,7 +129,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
       if forwarderBackendEnabled
         then do
           -- TODO: check if this is the correct way to use withIOManager
-          (forwardSink, dpStore, kickoffForwarder) <- withIOManager $ \iomgr ->
+          (forwardSink, dpStore, kickoffForwarder') <- withIOManager $ \iomgr ->
             let initForwConf :: InitForwardingConfig
                 initForwConf = case ncTraceForwardSocket nc of
                   Nothing -> InitForwardingNone
@@ -135,7 +137,8 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
                     InitForwardingWith
                       { initNetworkMagic          = networkMagic
                       , initEKGStore              = Just ekgStore
-                      , initOnForwardInterruption = Nothing         -- TODO:MKarg
+                      , initOnForwardInterruption = Just $ \(SomeException e) ->
+                          traceWith (nodeStateTracer tracers) (NodeTracingForwardingInterrupted initHowToConnect $ show e)
                       , initOnQueueOverflow       = Nothing
                       , ..
                       }
@@ -144,21 +147,21 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
                 forwardingConf = fromMaybe defaultForwarder (tcForwarder trConfig)
             in initForwardingDelayed iomgr forwardingConf initForwConf
 
-          pure (forwardTracer (writeToSink forwardSink), dataPointTracer dpStore, kickoffForwarder)
+          pure (forwardTracer (writeToSink forwardSink), dataPointTracer dpStore, kickoffForwarder')
         else
           -- Since 'Forwarder' backend isn't enabled, there is no forwarding.
           -- So we use nullTracers to ignore 'TraceObject's and 'DataPoint's.
           pure (Trace nullTracer, Trace nullTracer, pure ())
 
-    (,,) kickoffForwarder kickoffPrometheusSimple
-      <$> mkDispatchTracers
-        nodeKernel
-        stdoutTrace
-        fwdTracer
-        (Just ekgTrace)
-        dpTracer
-        trConfig
-        p
+    tracers <- mkDispatchTracers
+      nodeKernel
+      stdoutTrace
+      fwdTracer
+      (Just ekgTrace)
+      dpTracer
+      trConfig
+      p
+    pure (kickoffForwarder, kickoffPrometheusSimple, tracers)
 
    where
     -- This backend can only be used globally, i.e. will always apply to the namespace root.

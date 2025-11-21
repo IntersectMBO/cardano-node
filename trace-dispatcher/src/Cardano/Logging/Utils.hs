@@ -1,11 +1,14 @@
+{-# LANGUAGE NumericUnderscores #-}
+
 module Cardano.Logging.Utils
        ( module Cardano.Logging.Utils )
        where
 
-import           Cardano.Logging.Types (HowToConnect)
+
 import           Control.Concurrent (threadDelay)
-import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
-import           Control.Tracer (stdoutTracer, traceWith)
+import           Control.Concurrent.Async (concurrently_)
+import           Control.Exception (SomeAsyncException (..), SomeException, fromException, tryJust)
+import           Data.IORef
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL (toStrict)
 import qualified Data.Text.Lazy.Builder as T (toLazyText)
@@ -14,26 +17,40 @@ import qualified Data.Text.Lazy.Builder.RealFloat as T (realFloat)
 import           GHC.Conc (labelThread, myThreadId)
 
 
--- | Run monadic action in a loop. If there's an exception, it will re-run
---   the action again, after pause that grows.
-runInLoop :: IO () -> HowToConnect -> Word -> Word -> IO ()
-runInLoop action howToConnect prevDelayInSecs maxReconnectDelay =
-  tryJust excludeAsyncExceptions action >>= \case
-    Left e -> do
-      logTrace $ "connection with " <> show howToConnect <> " failed: " <> show e
-      threadDelay . fromIntegral $ currentDelayInSecs * 1000000
-      runInLoop action howToConnect currentDelayInSecs maxReconnectDelay
-    Right _ -> return ()
- where
-  excludeAsyncExceptions e =
-    case fromException e of
-      Just SomeAsyncException {} -> Nothing
-      _ -> Just e
+-- | Run an IO action which may throw an exception in a loop.
+--   On exception, the action will be re-run after a pause.
+--   That pause doubles which each exception, but is reset when the action runs long enough.
+runInLoop :: IO () -> (SomeException -> IO ()) -> Word -> Word -> IO ()
+runInLoop action handleInterruption initialDelay maxDelay
+  | initialDelay == 0         = runInLoop action handleInterruption 1 maxDelay
+  | maxDelay < initialDelay   = runInLoop action handleInterruption initialDelay initialDelay
+  | otherwise                 = newIORef (fromIntegral initialDelay) >>= go
+  where
+    go :: IORef Int -> IO ()
+    go currentDelay =
+      tryJust excludeAsyncExceptions (actionResettingDelay currentDelay) >>= \case
+        Left e -> do
+          handleInterruption e
+          waitForSecs <- atomicModifyIORef' currentDelay bumpDelay
+          threadDelay $ 1_000_000 * waitForSecs
+          go currentDelay
+        Right _ -> return ()
 
-  logTrace = traceWith stdoutTracer
+    -- if the action runs at least maxDelay seconds, the pause is reset
+    actionResettingDelay currentDelay = concurrently_ action $ do
+      threadDelay $ fromIntegral $ 1_000_000 * maxDelay
+      atomicWriteIORef currentDelay $ fromIntegral initialDelay
 
-  currentDelayInSecs =
-    min (prevDelayInSecs * 2) maxReconnectDelay
+    excludeAsyncExceptions e =
+      case fromException e of
+        Just SomeAsyncException{} -> Nothing
+        _ -> Just e
+
+    bumpDelay current =
+      ( min (current * 2) (fromIntegral maxDelay)
+      , current
+      )
+
 
 -- | Convenience function for a Show instance to be converted to text immediately
 {-# INLINE showT #-}
