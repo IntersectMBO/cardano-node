@@ -135,7 +135,7 @@ mkCoreNodes' UniCircle{..} = phase1 where
   phase1 = intraConnectRing False False phase0
 mkCoreNodes' Torus{..} = mkCoreNodesTorus tpSize tpLocations tpIdPools False
 -- The dense Torus, with each node having 4 intra-region connections, needs
--- a minimun of nodes.
+-- a minimum of nodes.
 mkCoreNodes' TorusDense{..} = mkCoreNodesTorus tpSize tpLocations tpIdPools True
 
 mkCoreNodesTorus ::Int -> [Types.Location] -> (Int -> Maybe Int) -> Bool -> [Spec]

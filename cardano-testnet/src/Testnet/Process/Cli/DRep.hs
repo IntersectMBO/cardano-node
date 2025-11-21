@@ -348,7 +348,7 @@ makeActivityChangeProposal
                     -- using the 'getEpochStateView' function.
   -> ConwayEraOnwards era -- ^ The 'ConwayEraOnwards' witness for current era.
   -> FilePath -- ^ Working directory where the files will be stored
-  -> Maybe (String, Word16) -- ^ The transaction id and the index of the previosu governance action if any.
+  -> Maybe (String, Word16) -- ^ The transaction id and the index of the previous governance action if any.
   -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
   -> KeyPair StakeKey -- ^ registered staking keys
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
