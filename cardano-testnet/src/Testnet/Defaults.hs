@@ -417,7 +417,7 @@ defaultShelleyGenesis asbe startTime maxSupply options = do
       -- f
       activeSlotsCoeff = round (genesisActiveSlotsCoeff * 100) % 100
       -- make security param k satisfy: epochLength = 10 * k / f
-      -- TODO: find out why this actually degrates network stability - turned off for now
+      -- TODO: find out why this actually degrades network stability - turned off for now
       -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
       pVer = eraToProtocolVersion asbe
       protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults

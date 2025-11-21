@@ -260,7 +260,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   length (filter ((== L.Abstain) . snd) votes) === 2
   length votes === fromIntegral numVotes
 
-  -- We check that constitution was succcessfully ratified
+  -- We check that constitution was successfully ratified
   void . H.leftFailM . H.evalIO . runExceptT $
     foldEpochState
       configurationFile
@@ -361,7 +361,7 @@ filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochStat
       let rState = Ledger.extractDRepPulsingState $ newEpochState ^. L.newEpochStateGovStateL . L.drepPulsingStateGovStateL
           constitution = rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL
           constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor constitution
-          L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: consitution does not have a guardrail script")
+          L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: constitution does not have a guardrail script")
                                                 $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionScriptL
       Text.pack c == renderSafeHashAsHex constitutionAnchorHash && L.hashToTextAsHex constitutionScriptHash == Text.pack guardRailScriptHash
 

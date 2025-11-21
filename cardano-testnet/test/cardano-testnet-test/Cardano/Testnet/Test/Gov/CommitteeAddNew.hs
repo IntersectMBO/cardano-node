@@ -276,7 +276,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   H.nothingFailM $ watchEpochStateUpdate epochStateView (L.EpochInterval 1) (return . committeeIsPresent)
 
-  -- show proposed committe meembers
+  -- show proposed committee meembers
   H.noteShow_ ccCredentials
 
   newCommitteeMembers :: Set (L.Credential L.ColdCommitteeRole)

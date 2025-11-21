@@ -242,7 +242,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , "--tx-file", voteTxFp
     ]
 
-  -- We check that info action was succcessfully ratified
+  -- We check that info action was successfully ratified
   !meInfoRatified
     <- H.timeout 120_000_000 $ runExceptT $ foldBlocks
                       configurationFile
