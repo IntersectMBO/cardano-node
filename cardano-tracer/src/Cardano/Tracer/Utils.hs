@@ -2,7 +2,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 #if !defined(mingw32_HOST_OS)
@@ -21,11 +20,9 @@ module Cardano.Tracer.Utils
   , initConnectedNodesNames
   , initDataPointRequestors
   , initProtocolsBrake
-  , logTrace
   , forMM
   , forMM_
   , nl
-  , runInLoop
   , showProblemIfAny
   , memberRegistry
   , showRegistry
@@ -40,11 +37,11 @@ module Cardano.Tracer.Utils
   ) where
 
 import           Cardano.Logging.Types.NodeInfo (NodeInfo(..))
+import           Cardano.Logging.Utils (showT)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Utils
-import qualified Cardano.Logging as Tracer (traceWith)
-import           Cardano.Tracer.MetaTrace hiding (traceWith)
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
@@ -54,11 +51,9 @@ import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar_)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', stateTVar, readTVarIO, newTVarIO)
-import           Control.Exception (SomeAsyncException (..), SomeException, finally,
-                   fromException, try, tryJust, throwTo)
+import           Control.Exception (SomeException, finally, throwTo, try)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
-import           "contra-tracer" Control.Tracer (stdoutTracer, traceWith)
 import           Data.Word (Word32)
 import qualified Data.Bimap as BM
 import           Data.Bimap (Bimap)
@@ -72,7 +67,6 @@ import           System.Exit (ExitCode (ExitSuccess))
 import           System.IO (hClose, hFlush, stdout)
 import           System.Mem.Weak (deRefWeak)
 import qualified System.Signal as Signal
-import           System.Time.Extra (sleep)
 
 #if defined(mingw32_HOST_OS)
 import           System.Win32.Process (getCurrentProcessId)
@@ -81,51 +75,19 @@ import           System.Posix.Process (getProcessID)
 import           System.Posix.Types (CPid (..))
 #endif
 
--- | Run monadic action in a loop. If there's an exception,
---   it will re-run the action again, after pause that grows.
-runInLoop
-  :: IO ()           -- ^ An IO-action that can throw an exception.
-  -> Maybe Verbosity -- ^ Tracer's verbosity.
-  -> HowToConnect    -- ^ Means of connecting, by local or remote socket.
-  -> Word            -- ^ Current delay, in seconds.
-  -> IO ()
-runInLoop action verbosity howToConnect prevDelay =
-  tryJust excludeAsyncExceptions action >>= \case
-    Left err -> do
-      case verbosity of
-        Just Minimum -> return ()
-        _ -> logTrace $ "cardano-tracer, connection with " <> show howToConnect <> " failed: " <> show @SomeException err
-      sleep $ fromIntegral currentDelay
-      runInLoop action verbosity howToConnect currentDelay
-    Right {} ->
-      pure ()
- where
-  excludeAsyncExceptions :: SomeException -> Maybe SomeException
-  excludeAsyncExceptions e =
-    case fromException e of
-      Just SomeAsyncException {} -> Nothing
-      _ -> Just e
-
-  currentDelay :: Word
-  !currentDelay =
-    if prevDelay < 60
-      then prevDelay * 2
-      else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
 
 showProblemIfAny
-  :: Maybe Verbosity -- ^ Tracer's verbosity.
-  -> IO ()           -- ^ An IO-action that can throw an exception.
+  :: Maybe Verbosity                 -- ^ Tracer's verbosity.
+  -> Trace IO TracerTrace            -- ^ Trace an error with that tracer iff not at minimum verbosity
+  -> IO ()                           -- ^ An IO action that can throw an exception.
   -> IO ()
-showProblemIfAny verb action =
+showProblemIfAny verb tracer action =
   try action >>= \case
     Left (e :: SomeException) ->
       case verb of
         Just Minimum -> return ()
-        _ -> logTrace $ "cardano-tracer, the problem: " <> show e
+        _ -> traceWith tracer $ TracerError $ showT e
     Right _ -> return ()
-
-logTrace :: String -> IO ()
-logTrace = traceWith stdoutTracer
 
 connIdToNodeId :: Show addr => ConnectionId addr -> NodeId
 connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
@@ -207,7 +169,7 @@ askNodeNameRaw tracer connectedNodesNames dpRequestors currentDPLock nodeId@(Nod
           in (maybePair, newBimap)
 
       for_ @Maybe maybePair \pair ->
-        Tracer.traceWith tracer TracerAddNewNodeIdMapping
+        traceWith tracer TracerAddNewNodeIdMapping
           { ttBimapping = pair
           }
 
