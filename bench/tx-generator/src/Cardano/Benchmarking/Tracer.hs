@@ -11,6 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -37,6 +38,7 @@ import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
 
+import           Control.Exception (SomeException (..))
 import           Control.Monad (forM, guard)
 import           Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
@@ -85,9 +87,9 @@ initNullTracers = BenchTracers
 -- if the first argument isJust, we assume we have a socket path
 -- and want to use trace-dispatcher, so we'll create a forwarding tracer
 initTxGenTracers :: Maybe (IOManager, NetworkId, FilePath) -> IO BenchTracers
-initTxGenTracers mbForwarding = do
+initTxGenTracers mbForwarding = mdo
   mbStdoutTracer <- fmap Just standardTracer
-  mbForwardingTracer <- prepareForwardingTracer
+  mbForwardingTracer <- prepareForwardingTracer tracers
   confState       <- emptyConfigReflection
 
   let
@@ -108,17 +110,19 @@ initTxGenTracers mbForwarding = do
   connectTracer   <- mkTracer TracerNameConnect   mbStdoutTracer mbForwardingTracer
   submitTracer    <- mkTracer TracerNameSubmit    mbStdoutTracer mbForwardingTracer
 
-  traceWith benchTracer (TraceTxGeneratorVersion Version.txGeneratorVersion)
+  let
+    tracers = BenchTracers
+      { btTxSubmit_    = benchTracer
+      , btConnect_     = connectTracer
+      , btSubmission2_ = submitTracer
+      , btN2N_         = n2nSubmitTracer
+      }
 
-  return $ BenchTracers
-    { btTxSubmit_    = benchTracer
-    , btConnect_     = connectTracer
-    , btSubmission2_ = submitTracer
-    , btN2N_         = n2nSubmitTracer
-    }
+  traceWith (btTxSubmit_ tracers) (TraceTxGeneratorVersion Version.txGeneratorVersion)
+  return tracers
  where
-  prepareForwardingTracer :: IO (Maybe (Trace IO FormattedMessage))
-  prepareForwardingTracer = forM mbForwarding $
+  prepareForwardingTracer :: BenchTracers -> IO (Maybe (Trace IO FormattedMessage))
+  prepareForwardingTracer benchTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
         let
           forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
@@ -127,7 +131,9 @@ initTxGenTracers mbForwarding = do
             , initEKGStore              = Nothing
             , initHowToConnect          = Net.LocalPipe tracerSocket
             , initForwarderMode         = Initiator
-            , initOnForwardInterruption = Nothing
+            , initOnForwardInterruption = Just $ \(SomeException e) ->
+                let errMsg = "trace-forward connection with " <> show (initHowToConnect initForwConf) <> " failed: " <> show e
+                in traceWith (btTxSubmit_ benchTracer) (TraceBenchForwardingInterrupted errMsg)
             , initOnQueueOverflow       = Nothing
             }
         (forwardSink, dpStore, kickoffForwarder) <-
@@ -285,6 +291,10 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
       mconcat [ "kind"    .= A.String "TraceBenchPlutusBudgetSummary"
               , "summary" .= toJSON summary
               ]
+    TraceBenchForwardingInterrupted msg ->
+      mconcat [ "kind"    .= A.String "TraceBenchForwardingInterrupted"
+              , "msg"     .= msg
+              ]
 
 instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceTxGeneratorVersion {} = Namespace [] ["TxGeneratorVersion"]
@@ -304,6 +314,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceBenchTxSubDebug {} = Namespace [] ["BenchTxSubDebug"]
     namespaceFor TraceBenchTxSubError {} = Namespace [] ["BenchTxSubError"]
     namespaceFor TraceBenchPlutusBudgetSummary {} = Namespace [] ["BenchPlutusBudgetSummary"]
+    namespaceFor TraceBenchForwardingInterrupted {} = Namespace [] ["ForwardingInterrupted"]
 
     severityFor _ _ = Just Info
 
@@ -327,6 +338,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
         , Namespace [] ["BenchTxSubDebug"]
         , Namespace [] ["BenchTxSubError"]
         , Namespace [] ["BenchPlutusBudgetSummary"]
+        , Namespace [] ["ForwardingInterrupted"]
         ]
 
 instance LogFormatting NodeToNodeSubmissionTrace where
