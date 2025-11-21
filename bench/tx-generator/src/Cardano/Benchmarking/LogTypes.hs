@@ -123,6 +123,7 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubError Text
   | TraceBenchPlutusBudgetSummary PlutusBudgetSummary
   -- ^ PlutusBudgetSummary.
+  | TraceBenchForwardingInterrupted HowToConnect String
   deriving stock (Show, Generic)
 
 data SubmissionSummary

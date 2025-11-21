@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -56,13 +57,14 @@ module Cardano.Logging.Types (
   , TraceObject(..)
   , PreFormatted(..)
   , HowToConnect(..)
-  , howToConnectString
 ) where
 
-
 import           Codec.Serialise (Serialise (..))
+import           Control.Applicative ((<|>))
+import           Control.DeepSeq (NFData)
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.Types as AE (Parser)
 import           Data.Bool (bool)
 import           Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HM
@@ -72,7 +74,8 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text as T (Text, intercalate, null, pack, singleton, unpack, words)
+import           Data.Text as T (Text, breakOnEnd, intercalate, null, pack, singleton, unpack,
+                   unsnoc, words)
 import           Data.Text.Read as T (decimal)
 import           Data.Time (UTCTime)
 import           Data.Word (Word16)
@@ -617,9 +620,42 @@ type HowToConnect :: Type
 data HowToConnect
   = LocalPipe    !FilePath    -- ^ Local pipe (UNIX or Windows).
   | RemoteSocket !Host !Port  -- ^ Remote socket (host and port).
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Generic)
+  deriving anyclass (NFData)
 
-howToConnectString :: HowToConnect -> String
-howToConnectString = \case
-  LocalPipe pipe -> pipe
-  RemoteSocket host port -> T.unpack host ++ ":" ++ show port
+instance Show HowToConnect where
+  show = \case
+    LocalPipe pipe         -> pipe
+    RemoteSocket host port -> T.unpack host ++ ":" ++ show port
+
+instance AE.ToJSON HowToConnect where
+  toJSON     = AE.toJSON . show
+  toEncoding = AE.toEncoding . show
+
+-- first try to host:port, and if that fails revert to parsing any
+-- string literal and assume it is a localpipe.
+instance AE.FromJSON HowToConnect where
+  parseJSON = AE.withText "HowToConnect" $ \t ->
+        (uncurry RemoteSocket <$> parseHostPort t)
+    <|> (        LocalPipe    <$> parseLocalPipe t)
+
+parseLocalPipe :: Text -> AE.Parser FilePath
+parseLocalPipe t
+  | T.null t = fail "parseLocalPipe: empty Text"
+  | otherwise   = pure $ T.unpack t
+
+parseHostPort :: Text -> AE.Parser (Text, Word16)
+parseHostPort t
+  | T.null t
+  = fail "parseHostPort: empty Text"
+  | otherwise
+  = let
+    (host_, portText) = T.breakOnEnd ":" t
+    host              = maybe "" fst (T.unsnoc host_)
+  in if
+    | T.null host      -> fail "parseHostPort: Empty host or no colon found."
+    | T.null portText  -> fail "parseHostPort: Empty port."
+    | Right (port, remainder) <- T.decimal portText
+    , T.null remainder
+    , 0 <= port, port <= 65535 -> pure (host, port)
+    | otherwise -> fail "parseHostPort: Non-numeric port or value out of range."

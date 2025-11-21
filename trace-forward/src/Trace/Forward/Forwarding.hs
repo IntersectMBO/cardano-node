@@ -1,5 +1,4 @@
 {-# LANGUAGE BlockArguments #-}
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PackageImports #-}
@@ -45,6 +44,7 @@ import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, 
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor
 import           Data.List.NonEmpty (NonEmpty ((:|)))
+import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
@@ -208,7 +208,7 @@ launchForwarders iomgr forwarding
              sink
              initEKGStore
              dpStore)
-          initHowToConnect
+          (fromMaybe (const $ pure ()) initOnForwardInterruption)
           1
           maxReconnectDelay
 
