@@ -47,7 +47,7 @@ jobs:
     needs: [wait-for-hydra]
     strategy:
       matrix:
-        arch: [linux, macos, win64]
+        arch: [linux, macos, win64, arm]
     name: "Download Asset from the Cache"
     runs-on: ubuntu-latest
     steps:
@@ -68,6 +68,10 @@ jobs:
           case ${{ matrix.arch }} in
             linux)
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.musl.cardano-node-linux
+              cp result/cardano-node-*-*.tar.gz .
+              ;;
+            arm)
+              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.aarch64-linux.musl.cardano-node-linux
               cp result/cardano-node-*-*.tar.gz .
               ;;
             macos)
@@ -110,4 +114,5 @@ jobs:
             cardano-node-*-win64.zip
             cardano-node-*-macos.tar.gz
             cardano-node-*-linux.tar.gz
+            cardano-node-*-arm.tar.gz
             cardano-node-*-sha256sums.txt
