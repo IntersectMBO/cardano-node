@@ -27,20 +27,20 @@ module Cardano.Tracing.OrphanInstances.Network
   , FetchDecisionToJSON (..)
   ) where
 
+import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Network.Types (LedgerStateJudgement (..))
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
                    HasTxs (..), TxId, txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
-import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers(..))
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable(..))
-import           Cardano.Network.Types (LedgerStateJudgement(..))
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block
@@ -51,15 +51,14 @@ import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecl
 import qualified Ouroboros.Network.BlockFetch.Decision.Trace as BlockFetch
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
 import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..), LocalAddr (..))
+import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
 import           Ouroboros.Network.ConnectionManager.State (ConnStateId (..))
 import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
-                   ConnectionManagerCounters (..),
-                   OperationResult (..))
+                   ConnectionManagerCounters (..), OperationResult (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
-import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
@@ -73,10 +72,10 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..), DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
-                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
-                   peerSelectionStateToCounters)
+import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..),
+                   DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
+                   PeerSelectionState (..), PeerSelectionTargets (..), PeerSelectionView (..),
+                   TracePeerSelection (..), peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -89,7 +88,7 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
 import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo (..))
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   LocalRootPeers, WarmValency (..), LocalRootConfig (..))
+                   LocalRootConfig (..), LocalRootPeers, WarmValency (..))
 import qualified Ouroboros.Network.PeerSelection.State.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
@@ -108,6 +107,8 @@ import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount 
                    PeerSharingResult (..))
 import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PeerSharing
 import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (PerasCertDiffusion)
+import qualified Ouroboros.Network.Protocol.ObjectDiffusion.Type as ObjectDiffusion
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -713,6 +714,10 @@ instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TxSubmission2 (GenTxId blk) (GenTx blk)))) where
   trTransformer = trStructured
 
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (PerasCertDiffusion blk))) where
+  trTransformer = trStructured
+
 instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))) where
   trTransformer = trStructured
@@ -1147,6 +1152,34 @@ instance ToJSON peerAddr => ToObject (AnyMessage (PeerSharing.PeerSharing peerAd
       [ "kind" .= String "MsgDone"
       , "agency" .= String (pack $ show stok)
       ]
+
+instance ToObject (AnyMessage (ObjectDiffusion.ObjectDiffusion objectId object)) where
+  toObject _verb (AnyMessageAndAgency _stok ObjectDiffusion.MsgInit) =
+    mconcat [ "kind" .= String "MsgInit" ]
+  toObject _verb (AnyMessageAndAgency _stok (ObjectDiffusion.MsgRequestObjectIds _ _ack _req)) =
+    mconcat 
+      [ "kind" .= String "MsgRequestObjectIds"
+      ]
+  toObject _verb (AnyMessageAndAgency _stok (ObjectDiffusion.MsgReplyObjectIds objIds)) =
+    let count = case objIds of
+          ObjectDiffusion.BlockingReply xs -> length xs
+          ObjectDiffusion.NonBlockingReply xs -> length xs
+    in mconcat
+      [ "kind" .= String "MsgReplyObjectIds" 
+      , "count" .= (count :: Int)
+      ]
+  toObject _verb (AnyMessageAndAgency _stok (ObjectDiffusion.MsgRequestObjects objIds)) =
+    mconcat
+      [ "kind" .= String "MsgRequestObjects"
+      , "count" .= length objIds  
+      ]
+  toObject _verb (AnyMessageAndAgency _stok (ObjectDiffusion.MsgReplyObjects objects)) =
+    mconcat
+      [ "kind" .= String "MsgReplyObjects"
+      , "count" .= length objects
+      ]
+  toObject _verb (AnyMessageAndAgency _stok ObjectDiffusion.MsgDone) =
+    mconcat [ "kind" .= String "MsgDone" ]
 
 
 instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
@@ -2376,6 +2409,8 @@ instance Show vNumber => ToJSON (HandshakeException vNumber) where
 
 instance ToJSON NodeToNodeVersion where
   toJSON NodeToNodeV_14  = Number 14
+  toJSON NodeToNodeV_15  = Number 15
+  toJSON NodeToNodeV_16  = Number 16
 
 instance FromJSON NodeToNodeVersion where
   parseJSON (Number 14) = return NodeToNodeV_14

@@ -58,6 +58,7 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Peras.SelectView
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
@@ -70,6 +71,10 @@ import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart 
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
+import qualified Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert as PerasCert
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (TraceObjectDiffusionInbound(..), NumObjectsProcessed (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound (TraceObjectDiffusionOutbound(..))
+import           Ouroboros.Network.Protocol.ObjectDiffusion.Type (NumObjectIdsReq(..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -147,7 +152,7 @@ instance ConvertRawHash blk => ConvertRawHash (HeaderWithTime blk) where
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK {} -> Info
+    ChainDB.IgnoreBlockOlderThanImmTip {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
     ChainDB.AddedBlockToQueue {} -> Debug
@@ -166,7 +171,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.ValidCandidate {} -> Info
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.PipeliningEvent {} -> Debug
-    ChainDB.AddedReprocessLoEBlocksToQueue -> Debug
+    ChainDB.AddedReprocessLoEBlocksToQueue _ -> Debug
     ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
     ChainDB.ChainSelectionLoEDebug _ _ -> Debug
 
@@ -247,6 +252,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
 
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
+
+  getSeverityAnnotation ChainDB.TraceAddPerasCertEvent{} = Info
+  getSeverityAnnotation ChainDB.TracePerasCertDbEvent{} = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -517,7 +525,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk)))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -528,7 +536,7 @@ instance ( ConvertRawHash blk
     formatText tev _obj = case tev of
       ChainDB.TraceLastShutdownUnclean -> "ChainDB is not clean. Validating all immutable chunks"
       ChainDB.TraceAddBlockEvent ev -> case ev of
-        ChainDB.IgnoreBlockOlderThanK pt ->
+        ChainDB.IgnoreBlockOlderThanImmTip pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
           "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
@@ -540,18 +548,14 @@ instance ( ConvertRawHash blk
               "About to add block to queue: " <> renderRealPointAsPhrase pt
             FallingEdgeWith sz ->
               "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
-        ChainDB.AddedReprocessLoEBlocksToQueue ->
+        ChainDB.AddedReprocessLoEBlocksToQueue _ ->
           "Added request to queue to reprocess blocks postponed by LoE."
         ChainDB.PoppedReprocessLoEBlocksFromQueue ->
           "Poppped request from queue to reprocess blocks postponed by LoE."
         ChainDB.ChainSelectionLoEDebug {} ->
           "ChainDB LoE debug event"
 
-        ChainDB.PoppedBlockFromQueue edgePt ->
-          case edgePt of
-            RisingEdge ->
-              "Popping block from queue"
-            FallingEdgeWith pt ->
+        ChainDB.PoppedBlockFromQueue pt ->
               "Popped block from queue: " <> renderRealPointAsPhrase pt
         ChainDB.StoreButDontChange pt ->
           "Ignoring block: " <> renderRealPointAsPhrase pt
@@ -785,6 +789,8 @@ instance ( ConvertRawHash blk
       ChainDB.TraceChainSelStarvationEvent ev -> case ev of
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
+      ChainDB.TracePerasCertDbEvent ev -> showT ev
+      ChainDB.TraceAddPerasCertEvent ev -> showT ev
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -926,13 +932,13 @@ instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk)))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject _verb ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.IgnoreBlockOlderThanK pt ->
-      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
+    ChainDB.IgnoreBlockOlderThanImmTip pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanImmTip"
                , "block" .= toObject verb pt ]
     ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
@@ -947,11 +953,9 @@ instance ( ConvertRawHash blk
                , case edgeSz of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
-    ChainDB.PoppedBlockFromQueue edgePt ->
+    ChainDB.PoppedBlockFromQueue pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of
-                   RisingEdge         -> "risingEdge" .= True
-                   FallingEdgeWith pt -> "block" .= toObject verb pt ]
+               , "block" .= toObject verb pt ]
     ChainDB.StoreButDontChange pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.StoreButDontChange"
                , "block" .= toObject verb pt ]
@@ -969,10 +973,10 @@ instance ( ConvertRawHash blk
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint extended)
                , "chainLengthDelta" .= extended `chainLengthΔ` base
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
@@ -985,10 +989,10 @@ instance ( ConvertRawHash blk
                , "chainLengthDelta" .= new `chainLengthΔ` old
                -- Check that the SwitchedToAFork event was triggered by a proper fork.
                , "realFork" .= not (AF.withinFragmentBounds (AF.headPoint old) new)
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
@@ -1027,7 +1031,7 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
                  , "block" .= renderPointForVerbosity verb (blockPoint hdr)
                  ]
-    ChainDB.AddedReprocessLoEBlocksToQueue ->
+    ChainDB.AddedReprocessLoEBlocksToQueue _ ->
        mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
     ChainDB.PoppedReprocessLoEBlocksFromQueue ->
        mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
@@ -1283,6 +1287,14 @@ instance ( ConvertRawHash blk
                  RisingEdge -> "risingEdge" .= True
                  FallingEdgeWith pt -> "fallingEdge" .= toObject verb pt
              ]
+  toObject _verb (ChainDB.TracePerasCertDbEvent ev) =
+    mconcat [ "kind" .= String "TracePerasCertDbEvent"
+            , "event" .= show ev
+            ]
+  toObject _verb (ChainDB.TraceAddPerasCertEvent ev) =
+    mconcat [ "kind" .= String "TraceAddPerasCertEvent"
+            , "event" .= show ev
+            ]
 
 instance ConvertRawHash blk => ToObject (ImmDB.TraceChunkValidation blk ChunkNo) where
   toObject verb ev = case ev of
@@ -1856,3 +1868,92 @@ instance ConvertRawHash blk => ToObject (Tip blk) where
             , "tipHash" .= renderHeaderHash (Proxy @blk) hash
             , "tipBlockNo" .= toJSON bNo
             ]
+
+-- | Peras Certificate Diffusion Tracers
+-- These instances are needed to support the Peras certificate diffusion tracing
+
+-- Basic privacy and severity annotations for Peras cert diffusion events  
+instance HasPrivacyAnnotation (PerasCert.TracePerasCertDiffusionInbound blk)
+instance HasSeverityAnnotation (PerasCert.TracePerasCertDiffusionInbound blk) where
+  getSeverityAnnotation _ = Info
+
+instance HasPrivacyAnnotation (PerasCert.TracePerasCertDiffusionOutbound blk)  
+instance HasSeverityAnnotation (PerasCert.TracePerasCertDiffusionOutbound blk) where
+  getSeverityAnnotation _ = Info
+
+-- ToObject instances for basic JSON serialization
+instance ToObject (PerasCert.TracePerasCertDiffusionInbound blk) where
+  toObject _verb = \case
+    TraceObjectDiffusionCollected n ->
+      mconcat
+        [ "kind" .= String "Collected"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionProcessed (NumObjectsProcessed n) ->
+      mconcat
+        [ "kind" .= String "Processed"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionControlMessage msg ->
+      mconcat
+        [ "kind" .= String "ControlMessage"
+        , "message" .= String (Text.pack $ show msg)
+        ]
+    TraceObjectInboundCanRequestMoreObjects {} ->
+      mconcat
+        [ "kind" .= String "CanRequestMoreObjects"
+        ]
+    TraceObjectInboundCannotRequestMoreObjects {} ->
+      mconcat
+        [ "kind" .= String "CannotRequestMoreObjects"
+        ]
+
+instance ToObject (PerasCert.TracePerasCertDiffusionOutbound blk) where
+  toObject _verb = \case
+    TraceObjectDiffusionOutboundTerminated ->
+      mconcat
+        [ "kind" .= String "Terminated"
+        ]
+    TraceObjectDiffusionOutboundRecvMsgRequestObjectIds (NumObjectIdsReq n) ->
+      mconcat
+        [ "kind" .= String "RecvMsgRequestObjectIds"
+        , "count" .= n
+        ]
+    TraceObjectDiffusionOutboundSendMsgReplyObjectIds roundNos ->
+      mconcat
+        [ "kind" .= String "SendMsgReplyObjectIds"
+        , "count" .= length roundNos
+        ]
+    TraceObjectDiffusionOutboundRecvMsgRequestObjects objIds ->
+      mconcat
+        [ "kind" .= String "RecvMsgRequestObjects"
+        , "count" .= length objIds
+        ]
+    TraceObjectDiffusionOutboundSendMsgReplyObjects objs ->
+      mconcat
+        [ "kind" .= String "SendMsgReplyObjects"
+        , "count" .= length objs
+        ]
+
+-- Transformable instances for the basic event types
+instance Transformable Text IO (PerasCert.TracePerasCertDiffusionInbound blk) where
+  trTransformer = trStructured
+
+instance Transformable Text IO (PerasCert.TracePerasCertDiffusionOutbound blk) where
+  trTransformer = trStructured
+
+-- TraceLabelPeer wrapper instances  
+instance (ToObject peer, ToObject (PerasCert.TracePerasCertDiffusionInbound blk))
+    => Transformable Text IO (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionInbound blk)) where
+  trTransformer = trStructured
+
+instance (ToObject peer, ToObject (PerasCert.TracePerasCertDiffusionOutbound blk))
+    => Transformable Text IO (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionOutbound blk)) where
+  trTransformer = trStructured
+
+-- HasTextFormatter instances
+instance HasTextFormatter (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionInbound blk)) where
+  formatText _ = pack . show . toList
+
+instance HasTextFormatter (TraceLabelPeer peer (PerasCert.TracePerasCertDiffusionOutbound blk)) where
+  formatText _ = pack . show . toList
