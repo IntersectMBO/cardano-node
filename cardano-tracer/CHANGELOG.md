@@ -1,5 +1,9 @@
 # ChangeLog
 
+## NEXT
+* Cardano-tracer library functionality, allows shutting down and sending signals to running
+  instances through channels.
+
 ## 0.3.5 (October, 2025)
 * Updated to `ekg-forward-1.0`, `ouroboros-network-0.22.3`, `ouroboros-network-api-0.16` and `ouroboros-network-0.22.3`.
 * Updated metric names
