@@ -41,7 +41,7 @@ propNetworkForwarder ts rootDir localSock = do
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   propNetwork' ts rootDir
-    ( launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 1000 10000
+    ( launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000
     , doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer brake dpRequestors
     )
 
