@@ -40,6 +40,7 @@ in {
           port = 8101;
           network = environment;
           socketPath = config.services.cardano-node.socketPath 0;
+          config = pkgs.cardanoLib.environments.${environment}.submitApiConfig;
         };
 
         cardano-tracer = {
