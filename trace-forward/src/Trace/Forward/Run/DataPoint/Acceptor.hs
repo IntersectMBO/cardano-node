@@ -54,6 +54,7 @@ runPeerWithRequestor config mkDPRequestor peerErrorHandler =
       (acceptorTracer config)
       (Acceptor.codecDataPointForward CBOR.encode CBOR.decode
                                       CBOR.encode CBOR.decode)
+      (fromIntegral . LBS.length)
       channel
       (Acceptor.dataPointAcceptorPeer $ acceptorActions config dpRequestor [])
     `finally` peerErrorHandler ctx

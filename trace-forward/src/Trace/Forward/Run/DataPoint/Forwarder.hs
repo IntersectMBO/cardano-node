@@ -42,5 +42,6 @@ runPeerWithDPStore config dpStore =
       (forwarderTracer config)
       (Forwarder.codecDataPointForward CBOR.encode CBOR.decode
                                        CBOR.encode CBOR.decode)
+      (fromIntegral . LBS.length)
       channel
       (Forwarder.dataPointForwarderPeer $ readFromStore dpStore)

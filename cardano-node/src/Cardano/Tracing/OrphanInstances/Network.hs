@@ -1444,18 +1444,18 @@ instance (ToJSON peer, ConvertRawHash header)
 
 instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
-  toObject verb (TraceSendMsg m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (TraceRecvMsg m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+  toObject verb (TraceSendMsg tm m) = mconcat
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "tm" .= String (pack $ show tm)  ]
+  toObject verb (TraceRecvMsg mbTm m) = mconcat
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "tm" Aeson..?= fmap (String . pack . show) mbTm ]
 
 
 instance ToObject (Stateful.AnyMessage ps f)
       => ToObject (Stateful.TraceSendRecv ps f) where
-  toObject verb (Stateful.TraceSendMsg m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (Stateful.TraceRecvMsg m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+  toObject verb (Stateful.TraceSendMsg tm m) = mconcat
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "tm" .= String (pack $ show tm)  ]
+  toObject verb (Stateful.TraceRecvMsg mbTm m) = mconcat
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "tm" Aeson..?= fmap (String . pack . show) mbTm ]
 
 
 instance ToObject (TraceTxSubmissionInbound txid tx) where

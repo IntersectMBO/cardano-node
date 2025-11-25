@@ -48,5 +48,6 @@ runPeerWithSink config sink =
       (forwarderTracer config)
       (Forwarder.codecTraceObjectForward CBOR.encode CBOR.decode
                                          CBOR.encode CBOR.decode)
+      (fromIntegral . LBS.length)
       channel
       (Forwarder.traceObjectForwarderPeer $ readFromSink sink)
