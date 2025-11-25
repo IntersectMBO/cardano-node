@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-10-17T00:26:22Z
+  , hackage.haskell.org 2025-12-03T15:53:31Z
   , cardano-haskell-packages 2025-11-20T19:55:27Z
 
 packages:
@@ -67,23 +67,24 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: 86ccb5dae44af6f085b594a9f7b516f1e2345d28
-  --sha256: sha256-sCYz2MEQ51YERL99iXN+rf0TXXz3FD13Pv+AYT/2RSo=
+  tag: 9bed9ca66fb4d0d7854e748c681d842bac202051
+  --sha256: sha256-7q/g7RHjO1sSW8RDiq47TpQccVOHOciDohgavH/g9t8=
   subdir: cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: c03ca3c768e21ec2c6f5761af5007894116fd8ac
-  --sha256: sha256-8tcpe3UyqoEy+IUaBZ8UaWB4X5gvox+2/h3ccxxaNjs=
+  tag: 3d33855a5af6c6f2bb37b0c417f1ceb474ae079f
+  --sha256: sha256-zsEu8ZxF5/fLgokv/4kkII3j8/JbCvrnsHDueQyI6xI=
   subdir:
     cardano-api
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: d14d43e6582da900a75cb97c5c4d0292d232052f
-  --sha256: sha256-Zn9gnpR9JnWcs0X4xUAWgJVzmTHjTHdn7uLwKw7erwQ=
+  tag: baf4ebbd924433543f8c5142b370b1061ac2e7bb
+  --sha256: sha256-dCNFxrLF7MPqNRc9aIwl2AZpjHqw9dGerTudo7GQzao=
+
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -121,10 +122,10 @@ source-repository-package
 
 -- Backported version of https://github.com/IntersectMBO/ouroboros-network/pull/5161
 source-repository-package
-   type: git
-   location: https://github.com/IntersectMBO/ouroboros-network
-   tag: 1385b53cefb81e79553b6b0252537455833ea9c4
-   --sha256: sha256-zZ7WsMfRs1fG16bmvI5vIh4fhQ8RGyEvYGLSWlrxpg0=
-   subdir:
-     ouroboros-network-api
-     ouroboros-network
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: dfcb1f9c578ec8cd5114fea9696e7be6c9001323
+  --sha256: sha256-omXPdi/T/f3gq9rOH20zX+x3WvaxlB704g07RF/13Nk=
+  subdir:
+    ouroboros-network-api
+    ouroboros-network

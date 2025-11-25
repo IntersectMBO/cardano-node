@@ -40,7 +40,7 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 10.19
+                      , cardano-api ^>= 10.20
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.13
                       , cardano-crypto-class ^>=2.2.3.2
                       , cardano-crypto-wrapper
