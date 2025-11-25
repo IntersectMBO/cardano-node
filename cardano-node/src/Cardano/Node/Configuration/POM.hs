@@ -38,7 +38,7 @@ import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), nonImmutableDbPath)
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
@@ -759,9 +759,6 @@ makeNodeConfiguration pnc = do
   ncConsensusMode <-
     lastToEither "Missing ConsensusMode"
     $ pncConsensusMode pnc
-  ncLedgerDbConfig <-
-    lastToEither "Missing LedgerDb config"
-    $ pncLedgerDbConfig pnc
   ncProtocolIdleTimeout <-
     lastToEither "Missing ProtocolIdleTimeout"
     $ pncProtocolIdleTimeout pnc
@@ -797,6 +794,17 @@ makeNodeConfiguration pnc = do
   let ncGenesisConfig = mkGenesisConfig mGenesisConfigFlags
 
   ncResponderCoreAffinityPolicy <- lastToEither "Missing ResponderCoreAffinityPolicy" $ pncResponderCoreAffinityPolicy pnc
+
+  let
+    fixupConsensusDbPath (LedgerDbConfiguration ds si qbs (V1LMDB ff Nothing mg mi) dopt) =
+        LedgerDbConfiguration ds si qbs (V1LMDB ff (Just $ nonImmutableDbPath databaseFile </> "lmdb") mg mi) dopt
+    fixupConsensusDbPath (LedgerDbConfiguration ds si qbs (V2LSM Nothing) dopt) =
+        LedgerDbConfiguration ds si qbs (V2LSM (Just $ nonImmutableDbPath databaseFile </> "lsm")) dopt
+    fixupConsensusDbPath l = l
+
+  ncLedgerDbConfig <-
+    fixupConsensusDbPath
+    <$> lastToEither "Missing LedgerDb config" (pncLedgerDbConfig pnc)
 
   let deadlineTargets =
         PeerSelectionTargets {
