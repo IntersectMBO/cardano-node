@@ -67,23 +67,23 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli.git
-  tag: 6c8fd34e3faaf6c9b8f592a48941ec67fe5b2f65
-  --sha256: sha256-ZVwWBUed/Y+U1gzUfdl39r3V7kypbl3SRlCkEQQcaLA=
+  tag: 6691afc0a51e16b98236f85fda4e8d6b49174370
+  --sha256: sha256-TDHJeC+chGZJsIgRUpw2hZuLErktkxIfFbc+WHFHn0k=
   subdir: cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 23f57762c5cc6a4d965b9eac5caaab786d3d9f51
-  --sha256: sha256-7KmcH9JiK1+3h/hTP+4TMA41jqgUGwYQ7liBPB2iQA8=
+  tag: 58941c7b1e71be38a3ba63a1b815ac386574287e
+  --sha256: sha256-D/+yB+jclri/K5XPrM+ygBrN5bUizamX+zNeE5AqWpI=
   subdir:
     cardano-api
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: fd423c545f38ede5f5ffc1d7cc56c006818392fa
-  --sha256: sha256-iIDQBnR63QZas71KrgD9usf5SEh0AALTMdVJSl2YRvg=
+  tag: 41f32e52644aa168c4f4d4ef645ed6c3ec2ecfd6
+  --sha256: sha256-4ukkuRURJ24nXN+sfbFrDr0aYc1SPFvQO0XCVJuQris=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -132,8 +132,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/lsm-tree
-  tag: 96474ce9559573698095229d8d08bd1a95b7ae01
-  --sha256: sha256-5Tk4kVP6U0MuPHjRNal9XFFz6TgHBoFOhGCzEYrV3v4=
+  tag: 3c51ea5ac6400f32a7bdf17260325d4d0a360a98
+  --sha256: sha256-44SHqtAciPhoI6ysLt8RdNvlVvN91GWHMnr68vOU2gQ=
   subdir:
     lsm-tree
     blockio
