@@ -8,8 +8,9 @@ import           Cardano.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration(..))
 import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
-                   renderHelpDoc)
+                   renderHelpDoc, parseSnapshotsCmd)
 import           Cardano.Node.Run (runNode)
+import           Cardano.Snapshots.Run (canonicalizeSnapshots, NodeDatabasePaths)
 import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
                    parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
@@ -37,6 +38,7 @@ main = do
         warnIfSet args pncMaybeMempoolCapacityOverride "mempool-capacity-override" "MempoolCapacityBytesOverride"
         runNode args
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
+      CanonicalizeSnapshotsCmd cfg db -> canonicalizeSnapshots cfg db
       VersionCmd  -> runVersionCommand
 
     where
@@ -54,13 +56,15 @@ main = do
 
       opts :: Opt.ParserInfo Command
       opts =
-        Opt.info (fmap RunCmd nodeCLIParser
+        let pp = fmap RunCmd nodeCLIParser
                   <|> fmap TraceDocumentation parseTraceDocumentationCmd
                   <|> parseVersionCmd
-                  <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
+                  <|> fmap (uncurry CanonicalizeSnapshotsCmd) parseSnapshotsCmd
+        in Opt.info (pp
+                  <**> helperBrief "help" "Show this help text" (nodeCliHelpMain pp))
 
           ( Opt.fullDesc <>
-            Opt.progDesc "Start node of the Cardano blockchain."
+            Opt.progDesc "The Cardano blockchain node"
           )
 
       helperBrief :: String -> String -> String -> Parser (a -> a)
@@ -68,15 +72,16 @@ main = do
         [ Opt.long l
         , Opt.help d ]
 
-      nodeCliHelpMain :: String
-      nodeCliHelpMain = renderHelpDoc 80 $
-        parserHelpHeader "cardano-node" nodeCLIParser
+      nodeCliHelpMain :: Parser a -> String
+      nodeCliHelpMain pp = renderHelpDoc 80 $
+        parserHelpHeader "cardano-node" pp
         <$$> ""
         <$$> parserHelpOptions nodeCLIParser
 
 
 data Command = RunCmd PartialNodeConfiguration
              | TraceDocumentation TraceDocumentationCmd
+             | CanonicalizeSnapshotsCmd (Maybe FilePath) (Maybe NodeDatabasePaths)
              | VersionCmd
 
 -- Yes! A --version flag or version command. Either guess is right!

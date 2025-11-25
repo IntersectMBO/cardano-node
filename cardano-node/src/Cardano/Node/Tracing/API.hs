@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE PackageImports #-}
@@ -37,7 +38,8 @@ import           Prelude
 
 import           Control.DeepSeq (deepseq)
 import           Control.Monad (forM_)
-import           "contra-tracer" Control.Tracer (traceWith)
+import           "contra-tracer" Control.Tracer (traceWith, Tracer)
+import qualified "contra-tracer" Control.Tracer as CT
 import           "trace-dispatcher" Control.Tracer (nullTracer)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
@@ -48,7 +50,11 @@ import           System.Metrics as EKG
 
 import           Trace.Forward.Forwarding (initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject (writeToSink)
-
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import Ouroboros.Consensus.Util.Enclose
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.TraceEvent as LedgerDB
+import Cardano.Snapshots.Run
 
 initTraceDispatcher ::
   forall blk.
@@ -69,7 +75,16 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
                 (unConfigPath $ ncConfigFile nc)
                 defaultCardanoConfig
 
-  (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig
+  let onChainDbEvent = if isJust (ncCanonicalSnapshotOutputPath nc)
+        then CT.Tracer $ \case
+          (ChainDB.TraceLedgerDBEvent
+           (LedgerDB.LedgerDBSnapshotEvent
+            (LedgerDB.TookSnapshot _ _ (FallingEdgeWith _)))
+           ) -> spawnCanonicalizer
+          _ -> pure ()
+        else CT.nullTracer
+
+  (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig onChainDbEvent
 
   -- The NodeInfo DataPoint needs to be fully evaluated and stored
   -- before it is queried for the first time by cardano-tracer.
@@ -107,11 +122,12 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
 
   mkTracers
     :: TraceConfig
+    -> Tracer IO (ChainDB.TraceEvent blk)
     -> IO ( IO ()
           , IO (Maybe String)
           , Tracers RemoteAddress LocalAddress blk IO
           )
-  mkTracers trConfig = do
+  mkTracers trConfig onChainDbEvent = do
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer trConfig ekgStore
@@ -144,6 +160,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
         nodeKernel
         stdoutTrace
         fwdTracer
+        onChainDbEvent
         (Just ekgTrace)
         dpTracer
         trConfig

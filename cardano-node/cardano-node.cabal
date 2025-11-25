@@ -132,6 +132,7 @@ library
                         Cardano.Tracing.Shutdown
                         Cardano.Tracing.Startup
                         Cardano.Tracing.Tracers
+                        Cardano.Snapshots.Run
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
@@ -189,7 +190,7 @@ library
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus:{ouroboros-consensus, ouroboros-consensus-lmdb, ouroboros-consensus-lsm} ^>= 0.28
-                      , ouroboros-consensus-cardano ^>= 0.26
+                      , ouroboros-consensus-cardano:{ouroboros-consensus-cardano, snapshot-conversion} ^>= 0.26
                       , ouroboros-consensus-diffusion ^>= 0.24
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.16
@@ -198,6 +199,7 @@ library
                       , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
                       , prettyprinter-ansi-terminal
+                      , process
                       , psqueues
                       , random
                       , resource-registry
