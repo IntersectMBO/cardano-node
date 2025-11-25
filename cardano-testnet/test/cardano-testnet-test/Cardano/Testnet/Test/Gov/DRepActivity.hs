@@ -171,7 +171,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   H.kickWatchdog watchdog
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
-  -- because DReps won't expire if there is not enough activity (opportunites to participate).
+  -- because DReps won't expire if there is not enough activity (opportunities to participate).
   -- This is accounted for by the dormant epoch count
   let numOfFillerProposals = 4 :: Int
   sequence_

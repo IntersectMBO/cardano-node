@@ -474,7 +474,7 @@ allocate-run-nomadcloud() {
   # We are using always the same placement!
   # This means node-N always runs on the same Nomad Client/AWS EC2 machine
   # For this a file with all the available Nomad Clients is needed!
-  # This files is a list of Nomad Clients with a minimun of ".id", ".name"
+  # This files is a list of Nomad Clients with a minimum of ".id", ".name"
   # ".class", ".datacenter", ".attributes.platform.aws["instance-type"]",
   # ".attributes.platform.aws.placement["availability-zone"]",
   # ".attributes.unique.platform.aws["instance-id"]",
