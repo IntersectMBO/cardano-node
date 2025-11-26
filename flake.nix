@@ -323,7 +323,7 @@
           {
             cardano-deployment = pkgs.cardanoLib.mkConfigHtml {inherit (pkgs.cardanoLib.environments) mainnet preview preprod;};
           }
-          // optionalAttrs (system == "x86_64-linux") {
+          // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"]) {
             native =
               packages
               // {
@@ -378,7 +378,7 @@
                 variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
               });
           }
-          // optionalAttrs (system == "x86_64-darwin" || system == "aarch64-darwin") {
+          // optionalAttrs (elem system ["x86_64-darwin" "aarch64-darwin"]) {
             native =
               filterAttrs
               (n: _:
