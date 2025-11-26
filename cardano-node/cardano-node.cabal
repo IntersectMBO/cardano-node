@@ -142,7 +142,7 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 10.19
-                      , cardano-crypto-class
+                      , cardano-crypto-class ^>=2.2.3.2
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo

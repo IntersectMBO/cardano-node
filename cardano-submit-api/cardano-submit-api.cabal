@@ -42,7 +42,7 @@ library
                       , cardano-api ^>= 10.19
                       , cardano-binary
                       , cardano-cli ^>= 10.13
-                      , cardano-crypto-class ^>= 2.2
+                      , cardano-crypto-class ^>=2.2.3.2
                       , http-media
                       , iohk-monitoring
                       , mtl
@@ -97,4 +97,4 @@ test-suite unit
   main-is:              test.hs
   hs-source-dirs:       test
   build-depends:        base
-                      , cardano-crypto-class ^>= 2.2
+                      , cardano-crypto-class ^>=2.2.3.2
