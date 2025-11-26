@@ -1,8 +1,14 @@
 # Revision history for trace-dispatcher
 
-## NEXT -- Nov 2025
+## 2.11.0 -- Nov 2025
 
-* Replaced both `tofDisconnQueueSize` and `tofConnQueueSize` with `tofQueueSize` (See #6361 for details). 
+* `class LogFormatting`: remove redundant `forHumanFromMachine` and `forHumanOrMachine` (the system already does that inherently)
+* Introduce type `Cardano.Logging.Types.TraceMessage.TraceMessage` with explicit codecs for JSON and CBOR
+* Rework `PreFormatted` type and formatters to use `TraceMessage`; slightly optimize `humanFormatter'`
+* Add CBOR formatting via `FormattedMessage.FormattedCBOR` constructor and a `cborFormatter'` function
+* Replaced both `disconnectedQueueSize` and `connectedQueueSize` with `queueSize` in `TraceOptionForwarder` while keeping config parsing backwards compatible
+* Add retry delay reset in `runInLoop` when the action runs sufficiently long
+* Safely stop `standardTracer`'s stdout thread when there are no more producers
 
 ## 2.10.0 -- July, 2025
 * Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.

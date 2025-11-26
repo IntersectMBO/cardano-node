@@ -1,5 +1,14 @@
 # ChangeLog
 
+## 0.3.6 (November 2025)
+* Implement Prometheus HTTP service discovery (SD) under the URL `/targets`
+* Add optional config field `"prometheusLabels": { "<labelname>": "<labelvalue>", ... }` for custom labels to be attached with Prometheus SD
+* Use `TracerTrace.forMachine` directly instead of going via derived `TracerTrace.toJSON`; remove unused `TracerTrace` JSON instances
+* Use proper 'camelCase' for machine-readable `TracerTrace`
+* Proper tracing (vs. dumping to stdout) for `showProblemIfAny` and for forwarding connection interruptions
+* Remove redundant `runInLoop` in favour of `trace-dispatcher`'s implementation
+* Split up journal handler implementation into internal modules `Systemd` and `NoSystemd` (maintenance)
+
 ## 0.3.5 (October, 2025)
 * Updated to `ekg-forward-1.0`, `ouroboros-network-0.22.3`, `ouroboros-network-api-0.16` and `ouroboros-network-0.22.3`.
 * Updated metric names

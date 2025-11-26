@@ -35,6 +35,7 @@
   "forgedSlotLast": "Slot number of the last forged block",
   "forging_enabled": "A node without forger credentials or started as non-producing has forging disabled.",
   "forks": "counter for forks",
+  "GSM.state": "The state of the Genesis State Machine. 0 = PreSyncing, 1 = Syncing, 2 = CaughtUp.",
   "haskell_compiler_major": "Cardano compiler version information",
   "haskell_compiler_minor": "Cardano compiler version information",
   "haskell_compiler_patch": "Cardano compiler version information",

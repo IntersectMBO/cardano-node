@@ -1,8 +1,10 @@
 # ChangeLog
 
-## NEXT - Nov 2025
+## 2.4.0 - Nov 2025
 
-* Replaced both `disconnectedQueueSize` and `connectedQueueSize` with `queueSize` (See #6361 for details).
+* Refactor `writeToSink` and `readFromSink` to simplify STM usage
+* Drop incongruous logic of switching queue capacity from `ForwardSink`, along with related fields and code
+* Provide `InitForwardingConfig` config record type for `initForwarding` and `initForwardingDelayed`
 
 ## 2.3.1 - Oct 2025
 
