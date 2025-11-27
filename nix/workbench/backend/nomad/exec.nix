@@ -1,8 +1,9 @@
 { pkgs
 , lib
 , stateDir
-, basePort # Ignored here and just returned to be used by `runner.nix`!
-## `useCabalRun` not used here unlike `supervisor.nix`.
+, basePort     # ignored, just passed to the runner (unlike `supervisor.nix`).
+## `useCabalRun` overridden parameter (unlike `supervisor.nix`).
+## `profiling`   overridden parameter (unlike `supervisor.nix`).
 , ...
 }:
 let
@@ -14,6 +15,9 @@ let
 
   # Unlike the supervisor backend `useCabalRun` is always false here.
   useCabalRun = false;
+
+  # Unlike the supervisor backend `profiling` is always `"none"` here.
+  profiling = "none";
 
   extraShellPkgs =
     [
@@ -56,7 +60,11 @@ in
   inherit extraShellPkgs;
   inherit materialise-profile;
   inherit service-modules;
-  inherit stateDir basePort;
+  inherit stateDir;
 
-  inherit useCabalRun;
+  # Returns something only to be compatible with what `runner.nix` expects.
+  inherit basePort;
+
+  # Ignores the parameters and always returns `false` and `"none"`.
+  inherit useCabalRun profiling;
 }
