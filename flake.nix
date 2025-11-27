@@ -343,7 +343,10 @@
                 variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
               };
             musl = let
-              muslProject = project.projectCross.musl64;
+              muslProject =
+                if system == "aarch64-linux"
+                  then project.projectCross.aarch64-multiplatform-musl
+                  else project.projectCross.musl64;
               projectExes = collectExes muslProject;
             in
               projectExes
