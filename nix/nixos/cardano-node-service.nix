@@ -222,16 +222,17 @@ in {
       profiling = mkOption {
         type = enum [
           "none"
+          "time"
+          "time-detail"
           "space"
           "space-bio"
           "space-closure"
           "space-cost"
           "space-heap"
+          "space-info"
           "space-module"
           "space-retainer"
           "space-type"
-          "time"
-          "time-detail"
         ];
         default = "none";
         description = ''
@@ -825,19 +826,27 @@ in {
 
       profilingArgs = mkOption {
         type = listOf str;
-        default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
-          ++ optional (cfg.eventlog) "-l";
-          in if cfg.profiling == "time" then ["-p"] ++ commonProfilingArgs
-            else if cfg.profiling == "time-detail" then ["-P"] ++ commonProfilingArgs
-            else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-cost" then ["-hc"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-closure" then ["-hd"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-type" then ["-hy"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-retainer" then ["-hr"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-bio" then ["-hb"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-heap" then ["-hT"] ++ commonProfilingArgs
-            else [];
+        default =
+             [ "--machine-readable"
+               "-tcardano-node.stats"
+               "-pocardano-node"
+             ]
+          ++ optional (cfg.eventlog) "-l"
+          ++ (
+                    if cfg.profiling == "time"           then ["-p"]
+               else if cfg.profiling == "time-detail"    then ["-P"]
+               else if cfg.profiling == "space"          then ["-h"]
+               else if cfg.profiling == "space-bio"      then ["-hb"]
+               else if cfg.profiling == "space-closure"  then ["-hd"]
+               else if cfg.profiling == "space-cost"     then ["-hc"]
+               else if cfg.profiling == "space-heap"     then ["-hT"]
+               else if cfg.profiling == "space-info"     then ["-hi"]
+               else if cfg.profiling == "space-module"   then ["-hm"]
+               else if cfg.profiling == "space-retainer" then ["-hr"]
+               else if cfg.profiling == "space-type"     then ["-hy"]
+               else []
+             )
+        ;
         description = ''RTS profiling options'';
       };
 
