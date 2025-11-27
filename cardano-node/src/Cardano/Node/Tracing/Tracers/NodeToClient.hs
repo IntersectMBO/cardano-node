@@ -19,6 +19,7 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 
+import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (Value (String), (.=), (.?=))
 import           Data.Text (Text, pack)
 import qualified Network.TypedProtocol.Codec as Simple
@@ -26,12 +27,15 @@ import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 
 {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
+jsonTime :: Time -> Double
+jsonTime (Time x) = realToFrac x
+
 instance LogFormatting (Simple.AnyMessage ps)
       => LogFormatting (Simple.TraceSendRecv ps) where
   forMachine dtal (Simple.TraceSendMsg tm m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= forMachine dtal m, "tm" .= String (pack $ show tm)  ]
+    [ "kind" .= String "Send" , "msg" .= forMachine dtal m, "mux_at" .= jsonTime tm  ]
   forMachine dtal (Simple.TraceRecvMsg mbTm m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= forMachine dtal m, "tm" .?= fmap (String . pack . show) mbTm ]
+    [ "kind" .= String "Recv" , "msg" .= forMachine dtal m, "mux_at" .?= fmap jsonTime mbTm ]
 
   forHuman (Simple.TraceSendMsg _tm m) = "Send: " <> forHumanOrMachine m
   forHuman (Simple.TraceRecvMsg _mbTm m) = "Receive: " <> forHumanOrMachine m
@@ -42,9 +46,9 @@ instance LogFormatting (Simple.AnyMessage ps)
 instance LogFormatting (Stateful.AnyMessage ps f)
       => LogFormatting (Stateful.TraceSendRecv ps f) where
   forMachine dtal (Stateful.TraceSendMsg tm m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= forMachine dtal m, "tm" .= String (pack $ show tm)  ]
+    [ "kind" .= String "Send" , "msg" .= forMachine dtal m, "mux_at" .= jsonTime tm ]
   forMachine dtal (Stateful.TraceRecvMsg mbTm m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= forMachine dtal m, "tm" .?= fmap (String . pack . show) mbTm ]
+    [ "kind" .= String "Recv" , "msg" .= forMachine dtal m, "mux_at" .?= fmap jsonTime mbTm ]
 
   forHuman (Stateful.TraceSendMsg _tm m) = "Send: " <> forHumanOrMachine m
   forHuman (Stateful.TraceRecvMsg _mbTm m) = "Receive: " <> forHumanOrMachine m

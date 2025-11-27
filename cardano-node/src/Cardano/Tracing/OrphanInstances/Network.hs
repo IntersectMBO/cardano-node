@@ -1445,18 +1445,20 @@ instance (ToJSON peer, ConvertRawHash header)
 instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
   toObject verb (TraceSendMsg tm m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m, "tm" .= String (pack $ show tm)  ]
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "mux_at" .= jsonTime tm  ]
   toObject verb (TraceRecvMsg mbTm m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "tm" Aeson..?= fmap (String . pack . show) mbTm ]
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "mux_at" Aeson..?= fmap jsonTime mbTm ]
 
 
 instance ToObject (Stateful.AnyMessage ps f)
       => ToObject (Stateful.TraceSendRecv ps f) where
   toObject verb (Stateful.TraceSendMsg tm m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m, "tm" .= String (pack $ show tm)  ]
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "mux_at" .= jsonTime tm  ]
   toObject verb (Stateful.TraceRecvMsg mbTm m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "tm" Aeson..?= fmap (String . pack . show) mbTm ]
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "mux_at" Aeson..?= fmap jsonTime mbTm ]
 
+jsonTime :: Time -> Double
+jsonTime (Time x) = realToFrac x
 
 instance ToObject (TraceTxSubmissionInbound txid tx) where
   toObject _verb (TraceTxSubmissionCollected count) =
