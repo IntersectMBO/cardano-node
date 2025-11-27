@@ -103,7 +103,8 @@ project.shellFor {
     weeder
     nix
     (pkgs.pkg-config or pkgconfig)
-    pkgs.profiteur
+    # profiteur package is in dire need of a maintenance release / package bumps for GHC9.12. Excluding it for now.
+    # pkgs.profiteur
     profiterole
     ghc-prof-flamegraph
     sqlite-interactive
