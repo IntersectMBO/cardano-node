@@ -146,6 +146,16 @@ project.shellFor {
        locli
        tx-generator.passthru.noGitRev
      ]
+  ## When profiling include useful helper programs.
+  ++ lib.optionals (   workbench-runner.profiling != null
+                    && workbench-runner.profiling != "none"
+                   )
+     [
+       # For the legacy prog.hp format.
+       # Which has been deprecated in favour of eventlog based profiling.
+       hp2pretty hp2html
+       eventlog2html
+     ]
   # Include the workbench as a derivation or use the sources directly ?
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
   ;
