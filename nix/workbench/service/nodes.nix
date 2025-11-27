@@ -32,6 +32,7 @@ let
     "alonzo"
     "babbage"
     "conway"
+    "dijkstra"
   ];
 
   configHardforksIntoEra = era:
@@ -41,13 +42,14 @@ let
              then ret
              else go ret (__head rest) (__tail rest);
         eraSetupHardforks = {
-          byron   = {};
-          shelley = { TestShelleyHardForkAtEpoch = 0; };
-          allegra = { TestAllegraHardForkAtEpoch = 0; };
-          mary    = { TestMaryHardForkAtEpoch    = 0; };
-          alonzo  = { TestAlonzoHardForkAtEpoch  = 0; };
-          babbage = { TestBabbageHardForkAtEpoch = 0; };
-          conway  = { TestConwayHardForkAtEpoch  = 0; };
+          byron    = {};
+          shelley  = { TestShelleyHardForkAtEpoch = 0; };
+          allegra  = { TestAllegraHardForkAtEpoch = 0; };
+          mary     = { TestMaryHardForkAtEpoch    = 0; };
+          alonzo   = { TestAlonzoHardForkAtEpoch  = 0; };
+          babbage  = { TestBabbageHardForkAtEpoch = 0; };
+          conway   = { TestConwayHardForkAtEpoch  = 0; };
+          dijkstra = { TestDijktraHardForkAtEpoch = 0; };
         };
     in if __hasAttr era eraSetupHardforks
        then go {} (__head eras) (__tail eras)
