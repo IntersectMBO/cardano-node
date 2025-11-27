@@ -26,6 +26,7 @@ import           Cardano.Tracer.MetaTrace
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
+import           Control.Exception (SomeException (..))
 import           Control.Monad (when)
 import qualified Data.Text as Text
 
@@ -78,7 +79,8 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
         { initNetworkMagic          = NetworkMagic networkMagic
         , initEKGStore              = Nothing
         , initForwarderMode         = Log.Responder
-        , initOnForwardInterruption = Nothing         -- TODO:MKarg
+        , initOnForwardInterruption = Just $ \(SomeException e) ->
+            traceWith teTracer (TracerForwardingInterrupted initHowToConnect $ show e)
         , initOnQueueOverflow       = Nothing
         , ..
         }
