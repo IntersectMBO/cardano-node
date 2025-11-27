@@ -2,12 +2,16 @@ progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* vi
 
 while test $# -gt 0
 do case "$1" in
-       --profiling-time )     export WB_PROFILING='time';           WB_RTSARGS=-p;;
-       --profiling-space )    export WB_PROFILING='space-cost';     WB_RTSARGS=-hc;;
-       --profiling-heap )     export WB_PROFILING='space-heap';     WB_RTSARGS=-hT;;
-       --profiling-module )   export WB_PROFILING='space-module';   WB_RTSARGS=-hm;;
-       --profiling-retainer ) export WB_PROFILING='space-retainer'; WB_RTSARGS=-hr;;
-       --profiling-type )     export WB_PROFILING='space-type';     WB_RTSARGS=-hy;;
+       --profiling-time )        export WB_PROFILING='time';           WB_RTSARGS=-p;;
+       --profiling-time-detail ) export WB_PROFILING='time';           WB_RTSARGS=-P;;
+       --profiling-bio )         export WB_PROFILING='space-bio';      WB_RTSARGS=-hb;;
+       --profiling-closure )     export WB_PROFILING='space-closure';  WB_RTSARGS=-hd;;
+       --profiling-space )       export WB_PROFILING='space-cost';     WB_RTSARGS=-hc;;
+       --profiling-heap )        export WB_PROFILING='space-heap';     WB_RTSARGS=-hT;;
+       --profiling-info )        export WB_PROFILING='space-info';     WB_RTSARGS=-hi;;
+       --profiling-module )      export WB_PROFILING='space-module';   WB_RTSARGS=-hm;;
+       --profiling-retainer )    export WB_PROFILING='space-retainer'; WB_RTSARGS=-hr;;
+       --profiling-type )        export WB_PROFILING='space-type';     WB_RTSARGS=-hy;;
        * ) break;; esac;
    progress "workbench" "enabling $(red profiling mode):  $(white $WB_PROFILING)"
    shift; done
