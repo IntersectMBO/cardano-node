@@ -345,8 +345,8 @@
             musl = let
               muslProject =
                 if system == "x86_64-linux"
-                then project.projectCross.musl64;
-                else project.projectCross.aarch64-multiplatform-musl
+                then project.projectCross.musl64
+                else project.projectCross.aarch64-multiplatform-musl;
               projectExes = collectExes muslProject;
             in
               projectExes
