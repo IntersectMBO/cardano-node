@@ -104,21 +104,18 @@ in pkgs.lib.fix (self: {
   inherit profile-names-json profile-names;
 
   # Return a profile attr with a `materialise-profile` function.
-  # profileName -> profiling -> profile
-  profile =
-    { profileName
-    , profiling
-    }:
+  # profileName -> profile
+  profile = profileName:
     (import ./profile/profile.nix
       { inherit pkgs lib;
         workbenchNix = self;
-        inherit profileName profiling;
+        inherit profileName;
       }
     )
   ;
 
   # Return a backend attr with a `materialise-profile` function.
-  # backendName -> stateDir -> basePort -> useCabalRun -> backend
+  # backendName -> stateDir -> basePort -> useCabalRun -> profiling -> backend
   backend =
     let backendRegistry = {
         nomadcloud      = params:
@@ -132,15 +129,19 @@ in pkgs.lib.fix (self: {
      , stateDir
      , basePort
      , useCabalRun
+     , profiling
      }:
-      # The `useCabalRun` flag is set in the backend to allow the backend to
-      # override its value. The runner uses the value of `useCabalRun` from
-      # the backend to prevent a runner using a different value.
       (backendRegistry."${backendName}")
-        { inherit pkgs lib stateDir basePort useCabalRun; }
+        { inherit pkgs lib stateDir basePort;
+          # The `useCabalRun` and `profiling` flags are set in the backend to
+          # allow the backend to override its values. The runner must use the
+          # value of these two flags from the backend to prevent having a runner
+          # that uses a different value than the ones the backend supports.
+          inherit useCabalRun profiling;
+        }
   ;
 
-  # A conveniently-parametrisable workbench preset.
+  # A conveniently-parametrizable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
   # 1. profileName -> profiling -> profile
@@ -148,23 +149,28 @@ in pkgs.lib.fix (self: {
   # 3. profile -> backend -> batchName -> runner
   runner =
     { profileName
-    , profiling
     , backendName
     , stateDir
     , basePort
     , useCabalRun
+    , profiling
     , batchName
     , workbenchStartArgs
     , cardano-node-rev
     }:
     let
         # Only a name needed to create a profile attrset.
-        profile = self.profile { inherit profileName profiling; };
-        # The `useCabalRun` flag is set in the backend to allow the backend to
-        # override its value. The runner uses the value of `useCabalRun` from
-        # the backend to prevent a runner using a different value.
+        profile = self.profile profileName;
         backend = self.backend
-                    { inherit backendName stateDir basePort useCabalRun; }
+                    { inherit backendName stateDir basePort;
+                      # The `useCabalRun` and `profiling` flags final decisions
+                      # belong to the backend. We allow the backend to override
+                      # its values.
+                      # The runner must use the values returned from the backend
+                      # to prevent having a runner that uses a different value
+                      # than the ones supported by the chosen backend.
+                      inherit useCabalRun profiling;
+                    }
         ;
     in import ./backend/runner.nix
       {

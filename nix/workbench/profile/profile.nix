@@ -1,6 +1,7 @@
 { pkgs, lib
+# The workbench development environment as it was parametrized.
 , workbenchNix
-, profileName, profiling
+, profileName
 }:
 
 let
@@ -58,7 +59,7 @@ let
         (pkgs.callPackage
           ../service/nodes.nix
           { inherit backend profile nodeSpecs;
-            inherit profiling;
+            inherit (backend) profiling;
             inherit profileJsonPath topologyJsonPath;
             inherit workbenchNix;
             ## This ports the (very minimal) config of the deprecated iohk-nix
@@ -203,7 +204,6 @@ let
 
 in {
   name = profileName;
-  inherit profiling;
   inherit profileJsonPath nodeSpecsJsonPath;
   inherit profileBundle materialise-profile;
 }

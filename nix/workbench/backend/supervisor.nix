@@ -3,6 +3,7 @@
 , stateDir
 , basePort
 , useCabalRun
+, profiling
 , ...
 }:
 with lib;
@@ -22,6 +23,7 @@ let
         supervisorConf = import ./supervisor-conf.nix
         { inherit pkgs lib stateDir;
           profile = profileBundle.profile.value;
+          inherit profiling;
           nodeSpecs = profileBundle.node-specs.value;
           withGenerator = true;
           withTracer = profileBundle.profile.value.node.tracer;
@@ -56,5 +58,5 @@ in
   inherit service-modules;
   inherit stateDir basePort;
 
-  inherit useCabalRun;
+  inherit useCabalRun profiling;
 }
