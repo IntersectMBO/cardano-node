@@ -344,9 +344,9 @@
               };
             musl = let
               muslProject =
-                if system == "aarch64-linux"
-                  then project.projectCross.aarch64-multiplatform-musl
-                  else project.projectCross.musl64;
+                if system == "x86_64-linux"
+                then project.projectCross.musl64;
+                else project.projectCross.aarch64-multiplatform-musl
               projectExes = collectExes muslProject;
             in
               projectExes
@@ -362,6 +362,10 @@
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
               };
+          }
+          # Compiling windows on aarch64-linux requires aarch64 wine64 for TH code.
+          # Currently github:NixOS/nixpkgs/nixpkgs-unstable#legacyPackages.aarch64-linux.wine64 does not build.
+          // optionalAttrs (elem system ["x86_64-linux"]) {
             windows = let
               windowsProject =
                 if system == "x86_64-linux"
