@@ -6,33 +6,39 @@ let
   inherit (final) pkgs;
   inherit (prev.pkgs) lib;
   inherit (prev) customConfig;
-
-  # A generic, fully parametric version of the workbench development environment.
+  # Workbench development environment entrypoint parametrized with current pkgs.
   workbench = import ./workbench
     {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
-
-  # Workbench runner instantiated by parameters from customConfig:
-  workbench-runner =
-    { profileName        ? customConfig.localCluster.profileName
-    , profiling          ? customConfig.profiling
-    , backendName        ? customConfig.localCluster.backendName
-    , stateDir           ? customConfig.localCluster.stateDir
-    , basePort           ? customConfig.localCluster.basePort
-    , useCabalRun        ? customConfig.localCluster.useCabalRun
-    , batchName          ? customConfig.localCluster.batchName
-    , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
-    , cardano-node-rev   ? null
-    }:
-    workbench.runner
-      { inherit profileName profiling backendName stateDir basePort useCabalRun;
-        inherit batchName workbenchStartArgs cardano-node-rev;
-      };
 
 in with final;
 {
   inherit (cardanoNodeProject.args) compiler-nix-name;
 
-  inherit workbench workbench-runner;
+  # To make it a flake output so it's available as input to external flakes.
+  inherit workbench;
+
+  # A workbench runner with default parameters from customConfig.
+  # Used in flake.nix for "workbench-ci-test" flake output package for CI.
+  workbench-runner =
+    { profileName        ? customConfig.localCluster.profileName
+    , backendName        ? customConfig.localCluster.backendName
+    , stateDir           ? customConfig.localCluster.stateDir
+    , basePort           ? customConfig.localCluster.basePort
+    , useCabalRun        ? customConfig.localCluster.useCabalRun
+    , profiling          ? customConfig.profiling
+    , batchName          ? customConfig.localCluster.batchName
+    , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
+    , cardano-node-rev   ? null
+    }:
+    workbench.runner
+      { # To construct profile attrset with its `materialise-profile` function.
+        inherit profileName;
+        # To construct backend attrset with its `materialise-profile` function.
+        inherit backendName stateDir basePort useCabalRun profiling;
+        # Parameters for the workbench shell `start-cluster` command.
+        inherit batchName workbenchStartArgs cardano-node-rev;
+      }
+  ;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
@@ -160,15 +166,13 @@ in with final;
         value =
           let
               # Default values only ("run/current", 30000, profiling "none").
-              profile = workbench.profile {
-                inherit profileName;
-                profiling = "none";
-              };
+              profile = workbench.profile profileName;
               backend = workbench.backend
                 { backendName = "nomadcloud";
                   stateDir    = customConfig.localCluster.stateDir;
                   basePort    = customConfig.localCluster.basePort;
                   useCabalRun = customConfig.localCluster.useCabalRun;
+                  profiling = "none";
                 }
               ;
               profileBundle = profile.profileBundle
