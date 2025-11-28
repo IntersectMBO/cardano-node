@@ -1,0 +1,581 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MagicHash #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE UnboxedTuples #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Module      :  GHC.Compact.Serialized</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Copyright   :  (c) The University of Glasgow 2001-2009</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--                (c) Giovanni Campagna &lt;gcampagn@cs.stanford.edu&gt; 2015</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- License     :  BSD-style (see the file LICENSE)</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Maintainer  :  libraries@haskell.org</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- Stability   :  unstable</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Portability :  non-portable (GHC Extensions)</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- This module contains support for serializing a Compact for network</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- transmission and on-disk storage.</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- /Since: 1.0.0/</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">GHC.Compact.Serialized</span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier">SerializedCompact</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="GHC.Compact.Serialized.html#withSerializedCompact"><span class="hs-identifier">withSerializedCompact</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="GHC.Compact.Serialized.html#importCompact"><span class="hs-identifier">importCompact</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="GHC.Compact.Serialized.html#importCompactByteStrings"><span class="hs-identifier">importCompactByteStrings</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#/GHC.Prim.html"><span class="hs-identifier">GHC.Prim</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#/GHC.Types.html"><span class="hs-identifier">GHC.Types</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#/GHC.Word.html"><span class="hs-identifier">GHC.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IO.html#/GHC.IO.html"><span class="hs-identifier">GHC.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Base.html#unIO/GHC.Base.html#unIO"><span class="hs-identifier">unIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#/GHC.Ptr.html"><span class="hs-identifier">GHC.Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier">Ptr</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#plusPtr/GHC.Ptr.html#plusPtr"><span class="hs-identifier">plusPtr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Control.Concurrent.html#/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ByteString</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.html#/Data.ByteString.Internal.html"><span class="hs-identifier">Data.ByteString.Internal</span></a></span><span class="hs-special">(</span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#toForeignPtr/Data.ByteString.Internal.Type.html#toForeignPtr"><span class="hs-identifier">toForeignPtr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Data.IORef.html#/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IORef.html#newIORef/GHC.IORef.html#newIORef"><span class="hs-identifier">newIORef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IORef.html#readIORef/GHC.IORef.html#readIORef"><span class="hs-identifier">readIORef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.IORef.html#writeIORef/GHC.IORef.html#writeIORef"><span class="hs-identifier">writeIORef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Foreign.ForeignPtr.html#/Foreign.ForeignPtr.html"><span class="hs-identifier">Foreign.ForeignPtr</span></a></span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.ForeignPtr.html#withForeignPtr/GHC.ForeignPtr.html#withForeignPtr"><span class="hs-identifier">withForeignPtr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/Foreign.Marshal.Utils.html#/Foreign.Marshal.Utils.html"><span class="hs-identifier">Foreign.Marshal.Utils</span></a></span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/Foreign.Marshal.Utils.html#copyBytes/Foreign.Marshal.Utils.html#copyBytes"><span class="hs-identifier">copyBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Compact.html"><span class="hs-identifier">GHC.Compact</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | A serialized version of the 'Compact' metadata (each block with</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- address and size and the address of the root). This structure is</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- meant to be sent alongside the actual 'Compact' data. It can be</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- sent out of band in advance if the data is to be sent over RDMA</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- (which requires both sender and receiver to have pinned buffers).</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">data</span><span> </span><span id="SerializedCompact"><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-var">SerializedCompact</span></a></span></span><span> </span><span id="local-6989586621679036982"><span class="annot"><a href="#local-6989586621679036982"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SerializedCompact"><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-var">SerializedCompact</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="serializedCompactBlockList"><span class="annot"><span class="annottext">forall a. SerializedCompact a -&gt; [(Ptr (), Word)]
+</span><a href="GHC.Compact.Serialized.html#serializedCompactBlockList"><span class="hs-identifier hs-var hs-var">serializedCompactBlockList</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="serializedCompactRoot"><span class="annot"><span class="annottext">forall a. SerializedCompact a -&gt; Ptr ()
+</span><a href="GHC.Compact.Serialized.html#serializedCompactRoot"><span class="hs-identifier hs-var hs-var">serializedCompactRoot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="GHC.Compact.Serialized.html#addrIsNull"><span class="hs-identifier hs-type">addrIsNull</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Addr%23/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Bool/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-56"></span><span id="addrIsNull"><span class="annot"><span class="annottext">addrIsNull :: Addr# -&gt; Bool
+</span><a href="GHC.Compact.Serialized.html#addrIsNull"><span class="hs-identifier hs-var hs-var">addrIsNull</span></a></span></span><span> </span><span id="local-6989586621679037065"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037065"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#isTrue%23/GHC.Types.html#isTrue%23"><span class="hs-identifier hs-var">isTrue#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr#
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#nullAddr%23/GHC.Prim.html#nullAddr%23"><span class="hs-identifier hs-var">nullAddr#</span></a></span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Addr# -&gt; Int#
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#eqAddr%23/GHC.Prim.html#eqAddr%23"><span class="hs-operator hs-var">`eqAddr#`</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037065"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span id="local-6989586621679036986"><span class="annot"><a href="GHC.Compact.Serialized.html#compactGetFirstBlock"><span class="hs-identifier hs-type">compactGetFirstBlock</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Compact%23/GHC.Prim.html#Compact%23"><span class="hs-identifier hs-type">Compact#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036986"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-59"></span><span id="compactGetFirstBlock"><span class="annot"><span class="annottext">compactGetFirstBlock :: forall a. Compact# -&gt; IO (Ptr a, Word)
+</span><a href="GHC.Compact.Serialized.html#compactGetFirstBlock"><span class="hs-identifier hs-var hs-var">compactGetFirstBlock</span></a></span></span><span> </span><span id="local-6989586621679037068"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037068"><span class="hs-identifier hs-var">buffer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, (Ptr a, Word) #))
+-&gt; IO (Ptr a, Word)
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679037069"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037069"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact#
+-&gt; State# RealWorld -&gt; (# State# RealWorld, Addr#, Word# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactGetFirstBlock%23/GHC.Prim.html#compactGetFirstBlock%23"><span class="hs-identifier hs-var">compactGetFirstBlock#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037068"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037069"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-61"></span><span>         </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037070"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037070"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037071"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037071"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037072"><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037072"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037070"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr# -&gt; Ptr a
+forall a. Addr# -&gt; Ptr a
+</span><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-var">Ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037071"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Word
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#W%23/GHC.Types.html#W%23"><span class="hs-identifier hs-var">W#</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037072"><span class="hs-identifier hs-var">size</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679036990"><span class="annot"><a href="GHC.Compact.Serialized.html#compactGetNextBlock"><span class="hs-identifier hs-type">compactGetNextBlock</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Compact%23/GHC.Prim.html#Compact%23"><span class="hs-identifier hs-type">Compact#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Addr%23/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036990"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-64"></span><span id="compactGetNextBlock"><span class="annot"><span class="annottext">compactGetNextBlock :: forall a. Compact# -&gt; Addr# -&gt; IO (Ptr a, Word)
+</span><a href="GHC.Compact.Serialized.html#compactGetNextBlock"><span class="hs-identifier hs-var hs-var">compactGetNextBlock</span></a></span></span><span> </span><span id="local-6989586621679037075"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037075"><span class="hs-identifier hs-var">buffer</span></a></span></span><span> </span><span id="local-6989586621679037076"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037076"><span class="hs-identifier hs-var">block</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, (Ptr a, Word) #))
+-&gt; IO (Ptr a, Word)
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679037077"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037077"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact#
+-&gt; Addr#
+-&gt; State# RealWorld
+-&gt; (# State# RealWorld, Addr#, Word# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactGetNextBlock%23/GHC.Prim.html#compactGetNextBlock%23"><span class="hs-identifier hs-var">compactGetNextBlock#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037075"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037076"><span class="hs-identifier hs-var">block</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037077"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-66"></span><span>         </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037078"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037078"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037079"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037079"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037080"><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037080"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037078"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr# -&gt; Ptr a
+forall a. Addr# -&gt; Ptr a
+</span><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-var">Ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037079"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Word
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#W%23/GHC.Types.html#W%23"><span class="hs-identifier hs-var">W#</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037080"><span class="hs-identifier hs-var">size</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span id="local-6989586621679036992"><span class="annot"><a href="GHC.Compact.Serialized.html#mkBlockList"><span class="hs-identifier hs-type">mkBlockList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Compact%23/GHC.Prim.html#Compact%23"><span class="hs-identifier hs-type">Compact#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036992"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-69"></span><span id="mkBlockList"><span class="annot"><span class="annottext">mkBlockList :: forall a. Compact# -&gt; IO [(Ptr a, Word)]
+</span><a href="GHC.Compact.Serialized.html#mkBlockList"><span class="hs-identifier hs-var hs-var">mkBlockList</span></a></span></span><span> </span><span id="local-6989586621679037084"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037084"><span class="hs-identifier hs-var">buffer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; IO (Ptr a, Word)
+forall a. Compact# -&gt; IO (Ptr a, Word)
+</span><a href="GHC.Compact.Serialized.html#compactGetFirstBlock"><span class="hs-identifier hs-var">compactGetFirstBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037084"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Ptr a, Word)
+-&gt; ((Ptr a, Word) -&gt; IO [(Ptr a, Word)]) -&gt; IO [(Ptr a, Word)]
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Ptr a, Word) -&gt; IO [(Ptr a, Word)]
+forall a. (Ptr a, Word) -&gt; IO [(Ptr a, Word)]
+</span><a href="#local-6989586621679037085"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679036997"><span class="annot"><a href="#local-6989586621679037085"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036997"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679036997"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679037085"><span class="annot"><span class="annottext">go :: forall a. (Ptr a, Word) -&gt; IO [(Ptr a, Word)]
+</span><a href="#local-6989586621679037085"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span id="local-6989586621679037090"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037090"><span class="hs-identifier hs-var">block</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Bool
+</span><a href="GHC.Compact.Serialized.html#addrIsNull"><span class="hs-identifier hs-var">addrIsNull</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037090"><span class="hs-identifier hs-var">block</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Ptr a, Word)] -&gt; IO [(Ptr a, Word)]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="#local-6989586621679037085"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679037091"><span class="annot"><span class="annottext">item :: (Ptr a, Word)
+</span><a href="#local-6989586621679037091"><span class="hs-identifier hs-var">item</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span id="local-6989586621679037092"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037092"><span class="hs-identifier hs-var">block</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>      </span><span id="local-6989586621679037093"><span class="annot"><span class="annottext">(Ptr a, Word)
+</span><a href="#local-6989586621679037093"><span class="hs-identifier hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; Addr# -&gt; IO (Ptr a, Word)
+forall a. Compact# -&gt; Addr# -&gt; IO (Ptr a, Word)
+</span><a href="GHC.Compact.Serialized.html#compactGetNextBlock"><span class="hs-identifier hs-var">compactGetNextBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037084"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037092"><span class="hs-identifier hs-var">block</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span id="local-6989586621679037094"><span class="annot"><span class="annottext">[(Ptr a, Word)]
+</span><a href="#local-6989586621679037094"><span class="hs-identifier hs-var">rest</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Ptr a, Word) -&gt; IO [(Ptr a, Word)]
+forall a. (Ptr a, Word) -&gt; IO [(Ptr a, Word)]
+</span><a href="#local-6989586621679037085"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">(Ptr a, Word)
+</span><a href="#local-6989586621679037093"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">[(Ptr a, Word)] -&gt; IO [(Ptr a, Word)]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">([(Ptr a, Word)] -&gt; IO [(Ptr a, Word)])
+-&gt; [(Ptr a, Word)] -&gt; IO [(Ptr a, Word)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Ptr a, Word)
+</span><a href="#local-6989586621679037091"><span class="hs-identifier hs-var">item</span></a></span><span> </span><span class="annot"><span class="annottext">(Ptr a, Word) -&gt; [(Ptr a, Word)] -&gt; [(Ptr a, Word)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[(Ptr a, Word)]
+</span><a href="#local-6989586621679037094"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- | Serialize the 'Compact', and call the provided function with</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- with the 'Compact' serialized representation.  It is not safe</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- to return the pointer from the action and use it after</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- the action completes: all uses must be inside this bracket,</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- since we cannot guarantee that the compact region will stay</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- live from the 'Ptr' object.  For example, it would be</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- unsound to use 'unsafeInterleaveIO' to lazily construct</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- a lazy bytestring from the 'Ptr'.</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--</span><span>
+</span><span id="line-87"></span><span id="local-6989586621679037004"><span id="local-6989586621679037006"><span class="annot"><a href="GHC.Compact.Serialized.html#withSerializedCompact"><span class="hs-identifier hs-type">withSerializedCompact</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037004"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-88"></span><span>                         </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-type">SerializedCompact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037004"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037006"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037006"><span class="hs-identifier hs-type">c</span></a></span></span></span><span>
+</span><span id="line-89"></span><span id="withSerializedCompact"><span class="annot"><span class="annottext">withSerializedCompact :: forall a c. Compact a -&gt; (SerializedCompact a -&gt; IO c) -&gt; IO c
+</span><a href="GHC.Compact.Serialized.html#withSerializedCompact"><span class="hs-identifier hs-var hs-var">withSerializedCompact</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span id="local-6989586621679037097"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037097"><span class="hs-identifier hs-var">buffer</span></a></span></span><span> </span><span id="local-6989586621679037098"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679037098"><span class="hs-identifier hs-var">root</span></a></span></span><span> </span><span id="local-6989586621679037099"><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679037099"><span class="hs-identifier hs-var">lock</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679037100"><span class="annot"><span class="annottext">SerializedCompact a -&gt; IO c
+</span><a href="#local-6989586621679037100"><span class="hs-identifier hs-var">func</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar () -&gt; (() -&gt; IO c) -&gt; IO c
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="../../base-4.18.2.1/src/Control.Concurrent.MVar.html#withMVar/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar ()
+</span><a href="#local-6989586621679037099"><span class="hs-identifier hs-var">lock</span></a></span><span> </span><span class="annot"><span class="annottext">((() -&gt; IO c) -&gt; IO c) -&gt; (() -&gt; IO c) -&gt; IO c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679037102"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621679037102"><span class="hs-identifier hs-var">rootPtr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Ptr () #)) -&gt; IO (Ptr ())
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679037103"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037103"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; State# RealWorld -&gt; (# State# RealWorld, Addr# #)
+forall a. a -&gt; State# RealWorld -&gt; (# State# RealWorld, Addr# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#anyToAddr%23/GHC.Prim.html#anyToAddr%23"><span class="hs-identifier hs-var">anyToAddr#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679037098"><span class="hs-identifier hs-var">root</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037103"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-91"></span><span>                    </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037104"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037104"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037105"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037105"><span class="hs-identifier hs-var">rootAddr</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037104"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Ptr ()
+forall a. Addr# -&gt; Ptr a
+</span><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-var">Ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037105"><span class="hs-identifier hs-var">rootAddr</span></a></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679037106"><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037106"><span class="hs-identifier hs-var">blockList</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Compact# -&gt; IO [(Ptr (), Word)]
+forall a. Compact# -&gt; IO [(Ptr a, Word)]
+</span><a href="GHC.Compact.Serialized.html#mkBlockList"><span class="hs-identifier hs-var">mkBlockList</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037097"><span class="hs-identifier hs-var">buffer</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679037107"><span class="annot"><span class="annottext">serialized :: SerializedCompact a
+</span><a href="#local-6989586621679037107"><span class="hs-identifier hs-var hs-var">serialized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Ptr (), Word)] -&gt; Ptr () -&gt; SerializedCompact a
+forall a. [(Ptr (), Word)] -&gt; Ptr () -&gt; SerializedCompact a
+</span><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-var">SerializedCompact</span></a></span><span> </span><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037106"><span class="hs-identifier hs-var">blockList</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621679037102"><span class="hs-identifier hs-var">rootPtr</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, c #)) -&gt; IO c
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="annot"><span class="annottext">((State# RealWorld -&gt; (# State# RealWorld, c #)) -&gt; IO c)
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, c #)) -&gt; IO c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679037108"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037108"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Compact#
+-&gt; State# RealWorld
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, c #))
+-&gt; (# State# RealWorld, c #)
+forall a b. a -&gt; State# RealWorld -&gt; (State# RealWorld -&gt; b) -&gt; b
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#keepAlive%23/GHC.Prim.html#keepAlive%23"><span class="hs-identifier hs-var">keepAlive#</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037097"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037108"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO c -&gt; State# RealWorld -&gt; (# State# RealWorld, c #)
+forall a. IO a -&gt; State# RealWorld -&gt; (# State# RealWorld, a #)
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#unIO/GHC.Base.html#unIO"><span class="hs-identifier hs-var">unIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO c -&gt; State# RealWorld -&gt; (# State# RealWorld, c #))
+-&gt; IO c -&gt; State# RealWorld -&gt; (# State# RealWorld, c #)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SerializedCompact a -&gt; IO c
+</span><a href="#local-6989586621679037100"><span class="hs-identifier hs-var">func</span></a></span><span> </span><span class="annot"><span class="annottext">SerializedCompact a
+forall {a}. SerializedCompact a
+</span><a href="#local-6989586621679037107"><span class="hs-identifier hs-var">serialized</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span id="local-6989586621679037017"><span class="annot"><a href="GHC.Compact.Serialized.html#fixupPointers"><span class="hs-identifier hs-type">fixupPointers</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Addr%23/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Addr%23/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>                 </span><span class="hs-special">(#</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037017"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">#)</span></span><span>
+</span><span id="line-98"></span><span id="fixupPointers"><span class="annot"><span class="annottext">fixupPointers :: forall a.
+Addr#
+-&gt; Addr#
+-&gt; State# RealWorld
+-&gt; (# State# RealWorld, Maybe (Compact a) #)
+</span><a href="GHC.Compact.Serialized.html#fixupPointers"><span class="hs-identifier hs-var hs-var">fixupPointers</span></a></span></span><span> </span><span id="local-6989586621679037110"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037110"><span class="hs-identifier hs-var">firstBlock</span></a></span></span><span> </span><span id="local-6989586621679037111"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037111"><span class="hs-identifier hs-var">rootAddr</span></a></span></span><span> </span><span id="local-6989586621679037112"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037112"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Addr#
+-&gt; Addr#
+-&gt; State# RealWorld
+-&gt; (# State# RealWorld, Compact#, Addr# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactFixupPointers%23/GHC.Prim.html#compactFixupPointers%23"><span class="hs-identifier hs-var">compactFixupPointers#</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037110"><span class="hs-identifier hs-var">firstBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037111"><span class="hs-identifier hs-var">rootAddr</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037112"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037113"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037113"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037114"><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037114"><span class="hs-identifier hs-var">buffer</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037115"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037115"><span class="hs-identifier hs-var">adjustedRoot</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Bool
+</span><a href="GHC.Compact.Serialized.html#addrIsNull"><span class="hs-identifier hs-var">addrIsNull</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037115"><span class="hs-identifier hs-var">adjustedRoot</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037113"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (Compact a)
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; (# a #)
+forall a. Addr# -&gt; (# a #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#addrToAny%23/GHC.Prim.html#addrToAny%23"><span class="hs-identifier hs-var">addrToAny#</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037115"><span class="hs-identifier hs-var">adjustedRoot</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-103"></span><span>        </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037116"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679037116"><span class="hs-identifier hs-var">root</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Compact#
+-&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, Compact a #)
+forall a.
+Compact#
+-&gt; a -&gt; State# RealWorld -&gt; (# State# RealWorld, Compact a #)
+</span><a href="GHC.Compact.html#mkCompact"><span class="hs-identifier hs-var">mkCompact</span></a></span><span> </span><span class="annot"><span class="annottext">Compact#
+</span><a href="#local-6989586621679037114"><span class="hs-identifier hs-var">buffer</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679037116"><span class="hs-identifier hs-var">root</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037113"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-104"></span><span>          </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037118"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037118"><span class="hs-identifier hs-var">s''</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037119"><span class="annot"><span class="annottext">Compact a
+</span><a href="#local-6989586621679037119"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037118"><span class="hs-identifier hs-var">s''</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Compact a -&gt; Maybe (Compact a)
+forall a. a -&gt; Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Just/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Compact a
+</span><a href="#local-6989586621679037119"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- | Deserialize a 'SerializedCompact' into a in-memory 'Compact'. The</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- provided function will be called with the address and size of each</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- newly allocated block in succession, and should fill the memory</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- from the external source (eg. by reading from a socket or from disk)</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- 'importCompact' can return Nothing if the 'Compact' was corrupt</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- or it had pointers that could not be adjusted.</span><span>
+</span><span id="line-112"></span><span id="local-6989586621679037020"><span id="local-6989586621679037021"><span class="annot"><a href="GHC.Compact.Serialized.html#importCompact"><span class="hs-identifier hs-type">importCompact</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-type">SerializedCompact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037020"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037021"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-113"></span><span>                 </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037020"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- what we would like is</span><span>
+</span><span id="line-116"></span><span class="hs-comment">{-
+ importCompactPtrs ((firstAddr, firstSize):rest) = do
+   (firstBlock, compact) &lt;- compactAllocateAt firstAddr firstSize
+ #nullAddr
+   fillBlock firstBlock firstAddr firstSize
+   let go prev [] = return ()
+       go prev ((addr, size):rest) = do
+         (block, _) &lt;- compactAllocateAt addr size prev
+         fillBlock block addr size
+         go block rest
+   go firstBlock rest
+   if isTrue# (compactFixupPointers compact) then
+     return $ Just compact
+     else
+     return Nothing
+
+But we can't do that because IO Addr# is not valid (kind mismatch)
+This check exists to prevent a polymorphic data constructor from using
+an unlifted type (which would break GC) - it would not a problem for IO
+because IO stores a function, not a value, but the kind check is there
+anyway.
+Note that by the reasoning, we cannot do IO (# Addr#, Word# #), nor
+we can do IO (Addr#, Word#) (that would break the GC for real!)
+
+And therefore we need to do everything with State# explicitly.
+-}</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- just do shut up GHC</span><span>
+</span><span id="line-144"></span><span id="importCompact"><span class="annot"><span class="annottext">importCompact :: forall a b.
+SerializedCompact a
+-&gt; (Ptr b -&gt; Word -&gt; IO ()) -&gt; IO (Maybe (Compact a))
+</span><a href="GHC.Compact.Serialized.html#importCompact"><span class="hs-identifier hs-var hs-var">importCompact</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-type">SerializedCompact</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Ptr b -&gt; Word -&gt; IO ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Compact a) -&gt; IO (Maybe (Compact a))
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Compact a)
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-145"></span><span class="annot"><a href="GHC.Compact.Serialized.html#importCompact"><span class="hs-identifier hs-var">importCompact</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-type">SerializedCompact</span></a></span><span> </span><span id="local-6989586621679037121"><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037121"><span class="hs-identifier hs-var">blocks</span></a></span></span><span> </span><span id="local-6989586621679037122"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621679037122"><span class="hs-identifier hs-var">root</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679037123"><span class="annot"><span class="annottext">Ptr b -&gt; Word -&gt; IO ()
+</span><a href="#local-6989586621679037123"><span class="hs-identifier hs-var">filler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-comment">-- I'm not sure why we need a bang pattern here, given that</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-comment">-- these are obviously strict lets, but ghc complains otherwise</span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#W%23/GHC.Types.html#W%23"><span class="hs-identifier hs-type">W#</span></a></span><span> </span><span id="local-6989586621679037124"><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037124"><span class="hs-identifier hs-var">firstSize</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679037125"><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037125"><span class="hs-identifier hs-var">otherBlocks</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037121"><span class="hs-identifier hs-var">blocks</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span id="local-6989586621679037126"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037126"><span class="hs-identifier hs-var">rootAddr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621679037122"><span class="hs-identifier hs-var">root</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, Maybe (Compact a) #))
+-&gt; IO (Maybe (Compact a))
+forall a. (State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-var">IO</span></a></span><span> </span><span class="annot"><span class="annottext">((State# RealWorld -&gt; (# State# RealWorld, Maybe (Compact a) #))
+ -&gt; IO (Maybe (Compact a)))
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, Maybe (Compact a) #))
+-&gt; IO (Maybe (Compact a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679037127"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037127"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Addr# -&gt; State# RealWorld -&gt; (# State# RealWorld, Addr# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactAllocateBlock%23/GHC.Prim.html#compactAllocateBlock%23"><span class="hs-identifier hs-var">compactAllocateBlock#</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037124"><span class="hs-identifier hs-var">firstSize</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#nullAddr%23/GHC.Prim.html#nullAddr%23"><span class="hs-identifier hs-var">nullAddr#</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037127"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-152"></span><span>      </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037128"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037128"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037129"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037129"><span class="hs-identifier hs-var">firstBlock</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Word# -&gt; State# RealWorld -&gt; State# RealWorld
+</span><a href="#local-6989586621679037130"><span class="hs-identifier hs-var">fillBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037129"><span class="hs-identifier hs-var">firstBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037124"><span class="hs-identifier hs-var">firstSize</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037128"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679037131"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037131"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; [(Ptr (), Word)] -&gt; State# RealWorld -&gt; State# RealWorld
+forall a.
+Addr# -&gt; [(Ptr a, Word)] -&gt; State# RealWorld -&gt; State# RealWorld
+</span><a href="#local-6989586621679037132"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037129"><span class="hs-identifier hs-var">firstBlock</span></a></span><span> </span><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037125"><span class="hs-identifier hs-var">otherBlocks</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037131"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679037133"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037133"><span class="hs-identifier hs-var">s3</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><span class="annottext">Addr#
+-&gt; Addr#
+-&gt; State# RealWorld
+-&gt; (# State# RealWorld, Maybe (Compact a) #)
+forall a.
+Addr#
+-&gt; Addr#
+-&gt; State# RealWorld
+-&gt; (# State# RealWorld, Maybe (Compact a) #)
+</span><a href="GHC.Compact.Serialized.html#fixupPointers"><span class="hs-identifier hs-var">fixupPointers</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037129"><span class="hs-identifier hs-var">firstBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037126"><span class="hs-identifier hs-var">rootAddr</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037133"><span class="hs-identifier hs-var">s3</span></a></span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-special">}</span><span class="hs-special">}</span><span class="hs-special">}</span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-comment">-- note that the case statements above are strict even though</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- they don't seem to inspect their argument because State#</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-comment">-- is an unlifted type</span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><a href="#local-6989586621679037130"><span class="hs-identifier hs-type">fillBlock</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Addr%23/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Word%23/GHC.Prim.html#Word%23"><span class="hs-identifier hs-type">Word#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span id="local-6989586621679037130"><span class="annot"><span class="annottext">fillBlock :: Addr# -&gt; Word# -&gt; State# RealWorld -&gt; State# RealWorld
+</span><a href="#local-6989586621679037130"><span class="hs-identifier hs-var hs-var">fillBlock</span></a></span></span><span> </span><span id="local-6989586621679037134"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037134"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span id="local-6989586621679037135"><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037135"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span id="local-6989586621679037136"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037136"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Ptr b -&gt; Word -&gt; IO ()
+</span><a href="#local-6989586621679037123"><span class="hs-identifier hs-var">filler</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr# -&gt; Ptr b
+forall a. Addr# -&gt; Ptr a
+</span><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-var">Ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037134"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word# -&gt; Word
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#W%23/GHC.Types.html#W%23"><span class="hs-identifier hs-var">W#</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037135"><span class="hs-identifier hs-var">size</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-163"></span><span>      </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span id="local-6989586621679037137"><span class="annot"><span class="annottext">State# RealWorld -&gt; (# State# RealWorld, () #)
+</span><a href="#local-6989586621679037137"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">State# RealWorld -&gt; (# State# RealWorld, () #)
+</span><a href="#local-6989586621679037137"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037136"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-164"></span><span>        </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037138"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037138"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037138"><span class="hs-identifier hs-var">s'</span></a></span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span>    </span><span id="local-6989586621679037024"><span class="annot"><a href="#local-6989586621679037132"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#Addr%23/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037024"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#State%23/GHC.Prim.html#State%23"><span class="hs-identifier hs-type">State#</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span></span><span>
+</span><span id="line-167"></span><span>    </span><span id="local-6989586621679037132"><span class="annot"><span class="annottext">go :: forall a.
+Addr# -&gt; [(Ptr a, Word)] -&gt; State# RealWorld -&gt; State# RealWorld
+</span><a href="#local-6989586621679037132"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679037139"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037139"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037139"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><a href="#local-6989586621679037132"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679037140"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037140"><span class="hs-identifier hs-var">previous</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#W%23/GHC.Types.html#W%23"><span class="hs-identifier hs-type">W#</span></a></span><span> </span><span id="local-6989586621679037141"><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037141"><span class="hs-identifier hs-var">size</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679037142"><span class="annot"><span class="annottext">[(Ptr a, Word)]
+</span><a href="#local-6989586621679037142"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679037143"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037143"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-169"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Addr# -&gt; State# RealWorld -&gt; (# State# RealWorld, Addr# #)
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Prim.html#compactAllocateBlock%23/GHC.Prim.html#compactAllocateBlock%23"><span class="hs-identifier hs-var">compactAllocateBlock#</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037141"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037140"><span class="hs-identifier hs-var">previous</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037143"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679037144"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037144"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037145"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037145"><span class="hs-identifier hs-var">block</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Word# -&gt; State# RealWorld -&gt; State# RealWorld
+</span><a href="#local-6989586621679037130"><span class="hs-identifier hs-var">fillBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037145"><span class="hs-identifier hs-var">block</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679037141"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037144"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-171"></span><span>          </span><span id="local-6989586621679037146"><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037146"><span class="hs-identifier hs-var">s''</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; [(Ptr a, Word)] -&gt; State# RealWorld -&gt; State# RealWorld
+forall a.
+Addr# -&gt; [(Ptr a, Word)] -&gt; State# RealWorld -&gt; State# RealWorld
+</span><a href="#local-6989586621679037132"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679037145"><span class="hs-identifier hs-var">block</span></a></span><span> </span><span class="annot"><span class="annottext">[(Ptr a, Word)]
+</span><a href="#local-6989586621679037142"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">State# RealWorld
+</span><a href="#local-6989586621679037146"><span class="hs-identifier hs-var">s''</span></a></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span id="local-6989586621679037026"><span class="annot"><a href="GHC.Compact.Serialized.html#sanityCheckByteStrings"><span class="hs-identifier hs-type">sanityCheckByteStrings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-type">SerializedCompact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037026"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString.ByteString</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Bool/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-174"></span><span id="sanityCheckByteStrings"><span class="annot"><span class="annottext">sanityCheckByteStrings :: forall a. SerializedCompact a -&gt; [ByteString] -&gt; Bool
+</span><a href="GHC.Compact.Serialized.html#sanityCheckByteStrings"><span class="hs-identifier hs-var hs-var">sanityCheckByteStrings</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-type">SerializedCompact</span></a></span><span> </span><span id="local-6989586621679037150"><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037150"><span class="hs-identifier hs-var">scl</span></a></span></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679037151"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037151"><span class="hs-identifier hs-var">bsl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Ptr (), Word)] -&gt; [ByteString] -&gt; Bool
+forall {a} {a}. Integral a =&gt; [(a, a)] -&gt; [ByteString] -&gt; Bool
+</span><a href="#local-6989586621679037152"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[(Ptr (), Word)]
+</span><a href="#local-6989586621679037150"><span class="hs-identifier hs-var">scl</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037151"><span class="hs-identifier hs-var">bsl</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-176"></span><span>    </span><span id="local-6989586621679037152"><span class="annot"><span class="annottext">go :: [(a, a)] -&gt; [ByteString] -&gt; Bool
+</span><a href="#local-6989586621679037152"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#True/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><a href="#local-6989586621679037152"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a, a)
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[(a, a)]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#False/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><a href="#local-6989586621679037152"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[ByteString]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#False/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><a href="#local-6989586621679037152"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037174"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679037174"><span class="hs-identifier hs-var">size</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679037175"><span class="annot"><span class="annottext">[(a, a)]
+</span><a href="#local-6989586621679037175"><span class="hs-identifier hs-var">scs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679037176"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679037176"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679037177"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037177"><span class="hs-identifier hs-var">bss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Real.html#fromIntegral/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679037174"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.html#length/Data.ByteString.html#length"><span class="hs-identifier hs-var">ByteString.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679037176"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Classes.html#%26%26/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[(a, a)] -&gt; [ByteString] -&gt; Bool
+</span><a href="#local-6989586621679037152"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[(a, a)]
+</span><a href="#local-6989586621679037175"><span class="hs-identifier hs-var">scs</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037177"><span class="hs-identifier hs-var">bss</span></a></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- | Convenience function for importing a compact region that is represented</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- by a list of strict 'ByteString's.</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--</span><span>
+</span><span id="line-185"></span><span id="local-6989586621679037037"><span class="annot"><a href="GHC.Compact.Serialized.html#importCompactByteStrings"><span class="hs-identifier hs-type">importCompactByteStrings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Compact.Serialized.html#SerializedCompact"><span class="hs-identifier hs-type">SerializedCompact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037037"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString.ByteString</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-186"></span><span>                            </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Compact.html#Compact"><span class="hs-identifier hs-type">Compact</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679037037"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-187"></span><span id="importCompactByteStrings"><span class="annot"><span class="annottext">importCompactByteStrings :: forall a.
+SerializedCompact a -&gt; [ByteString] -&gt; IO (Maybe (Compact a))
+</span><a href="GHC.Compact.Serialized.html#importCompactByteStrings"><span class="hs-identifier hs-var hs-var">importCompactByteStrings</span></a></span></span><span> </span><span id="local-6989586621679037188"><span class="annot"><span class="annottext">SerializedCompact a
+</span><a href="#local-6989586621679037188"><span class="hs-identifier hs-var">serialized</span></a></span></span><span> </span><span id="local-6989586621679037189"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037189"><span class="hs-identifier hs-var">stringList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-comment">-- sanity check stringList first - if we throw an exception later we leak</span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-comment">-- memory!</span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../../ghc-prim-0.10.0/src/GHC.Classes.html#not/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SerializedCompact a -&gt; [ByteString] -&gt; Bool
+forall a. SerializedCompact a -&gt; [ByteString] -&gt; Bool
+</span><a href="GHC.Compact.Serialized.html#sanityCheckByteStrings"><span class="hs-identifier hs-var">sanityCheckByteStrings</span></a></span><span> </span><span class="annot"><span class="annottext">SerializedCompact a
+</span><a href="#local-6989586621679037188"><span class="hs-identifier hs-var">serialized</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037189"><span class="hs-identifier hs-var">stringList</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Compact a) -&gt; IO (Maybe (Compact a))
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#return/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Compact a)
+forall a. Maybe a
+</span><a href="../../base-4.18.2.1/src/GHC.Maybe.html#Nothing/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-193"></span><span>    </span><span id="local-6989586621679037191"><span class="annot"><span class="annottext">IORef [ByteString]
+</span><a href="#local-6989586621679037191"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; IO (IORef [ByteString])
+forall a. a -&gt; IO (IORef a)
+</span><a href="../../base-4.18.2.1/src/GHC.IORef.html#newIORef/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037189"><span class="hs-identifier hs-var">stringList</span></a></span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679037192"><span class="hs-identifier hs-type">filler</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Ptr.html#Ptr/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="../../base-4.18.2.1/src/GHC.Word.html#Word8/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#Word/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#IO/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>        </span><span id="local-6989586621679037192"><span class="annot"><span class="annottext">filler :: Ptr Word8 -&gt; Word -&gt; IO ()
+</span><a href="#local-6989586621679037192"><span class="hs-identifier hs-var hs-var">filler</span></a></span></span><span> </span><span id="local-6989586621679037193"><span class="annot"><span class="annottext">Ptr Word8
+</span><a href="#local-6989586621679037193"><span class="hs-identifier hs-var">to</span></a></span></span><span> </span><span id="local-6989586621679037194"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679037194"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-196"></span><span>          </span><span class="hs-comment">-- this pattern match will never fail</span><span>
+</span><span id="line-197"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621679037195"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679037195"><span class="hs-identifier hs-var">next</span></a></span></span><span class="annot"><a href="../../ghc-prim-0.10.0/src/GHC.Types.html#%3A/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679037196"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037196"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef [ByteString] -&gt; IO [ByteString]
+forall a. IORef a -&gt; IO a
+</span><a href="../../base-4.18.2.1/src/GHC.IORef.html#readIORef/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef [ByteString]
+</span><a href="#local-6989586621679037191"><span class="hs-identifier hs-var">state</span></a></span><span>
+</span><span id="line-198"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679037197"><span class="annot"><span class="annottext">ForeignPtr Word8
+</span><a href="#local-6989586621679037197"><span class="hs-identifier hs-var">fp</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679037198"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679037198"><span class="hs-identifier hs-var">off</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; (ForeignPtr Word8, Int, Int)
+</span><a href="../../bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#toForeignPtr/Data.ByteString.Internal.Type.html#toForeignPtr"><span class="hs-identifier hs-var">toForeignPtr</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679037195"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-199"></span><span>          </span><span class="annot"><span class="annottext">ForeignPtr Word8 -&gt; (Ptr Word8 -&gt; IO ()) -&gt; IO ()
+forall a b. ForeignPtr a -&gt; (Ptr a -&gt; IO b) -&gt; IO b
+</span><a href="../../base-4.18.2.1/src/GHC.ForeignPtr.html#withForeignPtr/GHC.ForeignPtr.html#withForeignPtr"><span class="hs-identifier hs-var">withForeignPtr</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignPtr Word8
+</span><a href="#local-6989586621679037197"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">((Ptr Word8 -&gt; IO ()) -&gt; IO ()) -&gt; (Ptr Word8 -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Base.html#%24/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679037199"><span class="annot"><span class="annottext">Ptr Word8
+</span><a href="#local-6989586621679037199"><span class="hs-identifier hs-var">from</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-200"></span><span>            </span><span class="annot"><span class="annottext">Ptr Word8 -&gt; Ptr Word8 -&gt; Int -&gt; IO ()
+forall a. Ptr a -&gt; Ptr a -&gt; Int -&gt; IO ()
+</span><a href="../../base-4.18.2.1/src/Foreign.Marshal.Utils.html#copyBytes/Foreign.Marshal.Utils.html#copyBytes"><span class="hs-identifier hs-var">copyBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr Word8
+</span><a href="#local-6989586621679037193"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr Word8
+</span><a href="#local-6989586621679037199"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr Word8 -&gt; Int -&gt; Ptr Word8
+forall a b. Ptr a -&gt; Int -&gt; Ptr b
+</span><a href="../../base-4.18.2.1/src/GHC.Ptr.html#plusPtr/GHC.Ptr.html#plusPtr"><span class="hs-operator hs-var">`plusPtr`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679037198"><span class="hs-identifier hs-var">off</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../base-4.18.2.1/src/GHC.Real.html#fromIntegral/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679037194"><span class="hs-identifier hs-var">size</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>          </span><span class="annot"><span class="annottext">IORef [ByteString] -&gt; [ByteString] -&gt; IO ()
+forall a. IORef a -&gt; a -&gt; IO ()
+</span><a href="../../base-4.18.2.1/src/GHC.IORef.html#writeIORef/GHC.IORef.html#writeIORef"><span class="hs-identifier hs-var">writeIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef [ByteString]
+</span><a href="#local-6989586621679037191"><span class="hs-identifier hs-var">state</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679037196"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><span class="annottext">SerializedCompact a
+-&gt; (Ptr Word8 -&gt; Word -&gt; IO ()) -&gt; IO (Maybe (Compact a))
+forall a b.
+SerializedCompact a
+-&gt; (Ptr b -&gt; Word -&gt; IO ()) -&gt; IO (Maybe (Compact a))
+</span><a href="GHC.Compact.Serialized.html#importCompact"><span class="hs-identifier hs-var">importCompact</span></a></span><span> </span><span class="annot"><span class="annottext">SerializedCompact a
+</span><a href="#local-6989586621679037188"><span class="hs-identifier hs-var">serialized</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr Word8 -&gt; Word -&gt; IO ()
+</span><a href="#local-6989586621679037192"><span class="hs-identifier hs-var">filler</span></a></span><span>
+</span><span id="line-203"></span></pre></body></html>
