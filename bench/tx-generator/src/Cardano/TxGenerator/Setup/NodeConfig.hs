@@ -17,7 +17,7 @@ import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile,
                    NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
-                   ProtocolFilepaths (..))
+                   ProtocolFilepaths (..), KESSource(..))
 import           Cardano.TxGenerator.Types
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 
@@ -70,7 +70,7 @@ mkNodeConfig configFp_
                  ProtocolFilepaths
                  { byronCertFile = Just ""
                  , byronKeyFile = Just ""
-                 , shelleyKESFile = Just ""
+                 , shelleyKESSource = Just (KESKeyFilePath "")
                  , shelleyVRFFile = Just ""
                  , shelleyCertFile = Just ""
                  , shelleyBulkCredsFile = Just ""
