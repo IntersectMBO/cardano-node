@@ -172,11 +172,6 @@ defaultConwayGenesis = do
       , cgInitialDReps = mempty
       }
 
--- TODO REMOVE
-nCounter :: IORef Int
-nCounter = unsafePerformIO $ newIORef 0
-{-# NOINLINE nCounter #-}
-
 -- | The only era supported by cardano-testnet for the moment.
 -- It's important to keep the era parameterization everywhere, for ease of development
 -- when new eras roll out.
@@ -304,13 +299,12 @@ defaultYamlHardforkViaConfig sbe =
     ]
 
   traceOptions = do
-    let n = unsafePerformIO . atomicModifyIORef nCounter $ \n' -> (n'+1, n')
     Aeson.object
       [ "" .= Aeson.object
         [ "backends" .= Aeson.Array
           [ "EKGBackend"
           , "Forwarder"
-          , fromString $ "PrometheusSimple suffix 0.0.0.0 " <> show (12798 + n - 1)
+          , fromString $ "PrometheusSimple suffix 0.0.0.0 12798"
           , "Stdout HumanFormatColoured"
           ]
         ]
