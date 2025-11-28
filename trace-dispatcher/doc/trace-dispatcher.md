@@ -186,11 +186,11 @@ For the effective integration of trace messages into the tracing system, two ess
 
 The `LogFormatting` typeclass governs the presentation of trace messages, encompassing the mapping of traces to metrics and messages. It includes the following methods:
 
-- The `forMachine` method caters to a machine-readable representation, adaptable based on the detail level. Implementation is mandatory for the trace author.
+- The `forMachine` method caters to a machine-readable representation, adaptable based on the detail level. Implementation is mandatory for the trace author. The system will render this,
+along with trace metadata, as JSON of type `Cardano.Logging.Types.TraceMessage.TraceMessage`.
 
 - The `forHuman` method renders the message in a human-readable form. Its default implementation is an
-empty text, which will be replaced by forMachine in the rendering, if forHuman is empty. The forMachine
-will by default rendered with a DNormal detsil level, if no other information is provided.
+empty text. Whenever the system encounters the empty text, it will replace it with the machine-readable JSON, rendering it as a value in `{"data": <value>}`, preventing potential loss of log information
 
 - The `asMetrics` method portrays the message as 0 to n metrics. The default implementation assumes no metrics. Each metric can optionally specify a hierarchical identifier as a `[Text]`.
 
@@ -700,14 +700,14 @@ logs and forwarded tracing output.
 
 As mentioned earlier, trace backends serve as the final destinations for all traces once they have undergone trace interpretation, resulting in metrics and messages. The system defines three trace backends:
 
-1. __Standard Tracer:__ This is the fundamental standard output tracer. Notably, it can accept both regular and confidential traces. It's important to construct only one standard tracer in any application, as attempting to create a new one will result in an exception.
+1. __Standard Tracer:__ This is the fundamental standard output tracer. Notably, it can accept both regular and confidential traces.
 
     ```haskell
     standardTracer :: forall m. (MonadIO m)
       => m (Trace m FormattedMessage)
     ```
 
-2. __Trace-Forward Tracer:__ This is a network-only sink dedicated to forwarding messages using typed protocols over TCP or local sockets. It exclusively handles public traces and should be instantiated only once per application.
+2. __Trace-Forward Tracer:__ This is a network-only sink dedicated to forwarding messages using typed protocols over TCP or local sockets. It exclusively handles public traces.
 
     ```haskell
     forwardTracer :: forall m. (MonadIO m)
@@ -715,7 +715,7 @@ As mentioned earlier, trace backends serve as the final destinations for all tra
       -> Trace m FormattedMessage
     ```
 
-3. __EKG Tracer:__ This tracer submits metrics to a local EKG store, which then further forwards the messages.
+3. __EKG Tracer:__ This tracer submits metrics to a local EKG store (which then can be exposed directly via the `PrometheusSimple` backend and/or forwarded).
 
     ```haskell
     ekgTracer :: MonadIO m
@@ -723,7 +723,7 @@ As mentioned earlier, trace backends serve as the final destinations for all tra
       -> m (Trace m FormattedMessage)
     ```
 
-It's imperative to note that constructing more than one instance of each tracer in an application may lead to exceptions and should be avoided.
+It's imperative to note that constructing more than one instance of each tracer in an application should absolutely be avoided, as it may result in unexpected behaviour.
 
 ## Data Points Overview and Deprecation Notice
 

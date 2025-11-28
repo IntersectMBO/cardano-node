@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-dispatcher
-version:                2.10.0
+version:                2.11.0
 synopsis:               Tracers for Cardano
 description:            Package for development of simple and efficient tracers
                         based on the arrow based contra-tracer package
@@ -61,6 +61,7 @@ library
                       Cardano.Logging.Tracer.Forward
                       Cardano.Logging.Tracer.Composed
                       Cardano.Logging.Types
+                      Cardano.Logging.Types.TraceMessage
                       Cardano.Logging.Types.NodeInfo
                       Cardano.Logging.Types.NodePeers
                       Cardano.Logging.Types.NodeStartupInfo
@@ -73,6 +74,8 @@ library
                       , aeson-pretty
                       , async
                       , bytestring
+                      , cborg
+                      , cborg-json
                       , containers
                       , contra-tracer
                       , deepseq

@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.3.5
+version:                0.3.6
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
@@ -149,8 +149,10 @@ library
                         Cardano.Tracer.Types
                         Cardano.Tracer.Utils
 
-  other-modules:        Cardano.Tracer.Handlers.Notifications.Timer
+  other-modules:        Cardano.Tracer.Handlers.Logs.Journal.NoSystemd
+                        Cardano.Tracer.Handlers.Notifications.Timer
                         Paths_cardano_tracer
+
   autogen-modules:      Paths_cardano_tracer
 
   if flag(rtview)
@@ -163,6 +165,7 @@ library
 
   if flag(systemd) && os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
+    other-modules:      Cardano.Tracer.Handlers.Logs.Journal.Systemd
 
   if (flag(systemd) && os(linux)) || flag(rtview)
     build-depends:      unordered-containers
@@ -197,8 +200,8 @@ library
                       , string-qq
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.10.0
-                      , trace-forward ^>= 2.3.0
+                      , trace-dispatcher ^>= 2.11.0
+                      , trace-forward ^>= 2.4.0
                       , trace-resources ^>= 0.2.4
                       , wai ^>= 3.2
                       , warp ^>= 3.4

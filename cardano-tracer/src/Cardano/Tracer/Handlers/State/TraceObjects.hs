@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.State.TraceObjects
   ( LogsLiveViewCounters
@@ -15,6 +14,7 @@ module Cardano.Tracer.Handlers.State.TraceObjects
   ) where
 
 import           Cardano.Logging (SeverityS, TraceObject (..))
+import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.Types (NodeId)
 
 import           Control.Concurrent.STM (atomically)
@@ -24,7 +24,7 @@ import           Control.Monad (forM_, unless)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe (mapMaybe)
-import           Data.Text (Text, intercalate)
+import           Data.Text as T (Text, null)
 import           Data.Time.Clock (UTCTime)
 
 type Namespace       = Text
@@ -42,7 +42,7 @@ saveTraceObjects
   -> [TraceObject]
   -> IO ()
 saveTraceObjects savedTraceObjects nodeId traceObjects =
-  unless (null itemsToSave) $ atomically $ do
+  unless (Prelude.null itemsToSave) $ atomically $ do
     savedTO' <- readTVar savedTraceObjects
     case M.lookup nodeId savedTO' of
       Nothing -> do
@@ -61,13 +61,11 @@ saveTraceObjects savedTraceObjects nodeId traceObjects =
   itemsToSave = mapMaybe getTOValue traceObjects
 
   getTOValue :: TraceObject -> Maybe (Namespace, TraceObjectInfo)
-  getTOValue TraceObject{toNamespace, toHuman, toMachine, toSeverity, toTimestamp} =
-    case (toNamespace, toHuman, toMachine) of
-      ([], _,        _)        -> Nothing
-      (ns, _, msg)   -> Just (mkName ns, (msg, toSeverity, toTimestamp))
-
-  mkName :: [Text] -> Namespace
-  mkName = intercalate "."
+  getTOValue TraceObject{toNamespace, toMachine, toSeverity, toTimestamp} =
+    let ns = normalizeNamespace toNamespace
+    in if T.null ns
+      then Nothing
+      else Just (ns, (toMachine, toSeverity, toTimestamp))
 
   pushItemsToQueue = forM_ itemsToSave . writeTQueue
 

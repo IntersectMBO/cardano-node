@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -56,15 +57,16 @@ module Cardano.Logging.Types (
   , TraceObject(..)
   , PreFormatted(..)
   , HowToConnect(..)
-  , howToConnectString
 ) where
 
-
 import           Codec.Serialise (Serialise (..))
+import           Control.Applicative ((<|>))
+import           Control.DeepSeq (NFData)
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
-import qualified Data.Aeson.Encoding as AE
+import qualified Data.Aeson.Types as AE (Parser)
 import           Data.Bool (bool)
+import           Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Kind (Type)
@@ -72,9 +74,8 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text as T (Text, intercalate, null, pack, singleton, unpack, words)
-import           Data.Text.Lazy (toStrict)
-import           Data.Text.Lazy.Encoding (decodeUtf8)
+import           Data.Text as T (Text, breakOnEnd, intercalate, null, pack, singleton, unpack,
+                   unsnoc, words)
 import           Data.Text.Read as T (decimal)
 import           Data.Time (UTCTime)
 import           Data.Word (Word16)
@@ -148,39 +149,24 @@ nsToText (Namespace ns1 ns2) = intercalate "." (ns1 ++ ns2)
 
 -- | Every message needs this to define how to represent itself
 class LogFormatting a where
-  -- | Machine readable representation with the possibility to represent
-  -- with different details based on the detail level.
-  -- No machine readable representation as default
+  -- | Machine readable representation with the possibility to represent with varying serialisations based on the detail level.
+  -- This will result in JSON formatted log output.
+  -- A `forMachine` implementation is required for any instance definition.
   forMachine :: DetailLevel -> a -> AE.Object
 
-  -- | Human readable representation.
-  -- No human representation is represented by the empty text
-  -- The default implementation returns no human representation
+  -- | Human-readable representation.
+  -- The empty text indicates there's no specific human-readable formatting for that type - this is the default implementation.
+  -- If however human-readble output is explicitly requested, e.g. by logs, the system will fall back to a JSON object
+  -- conforming to the `forMachine` definition, and rendering it as a value in `{"data": <value>}`.
+  -- Leaving out `forHuman` in some instance definition will not lead to loss of log information that way.
   forHuman :: a -> Text
   forHuman _v = ""
 
   -- | Metrics representation.
-  -- No metrics by default
+  -- The default indicates that no metric is based on trace occurrences of that type.
   asMetrics :: a -> [Metric]
   asMetrics _v = []
 
-  -- | A quick drop-in for forHuman to re-use the existing JSON serialization on normal detail level
-  --   You can safely use `forHuman = forHumanFromMachine` in instance definitions.
-  forHumanFromMachine :: a -> Text
-  forHumanFromMachine =
-    toStrict . decodeUtf8 . AE.encodingToLazyByteString . AE.toEncoding . forMachine DNormal
-
-  -- | Yields the JSON serialization as Text if no human-readable representation is defined.
-  --   CAUTION: It is *NOT* safe to use it as a drop-in like forHumanFromMachine above - this leads to a stack overflow.
-  --   It's only meant to ease forHuman definitions using values of a distinct type such as:
-  --     `forHuman (ChainDB.PipeliningEvent ev') = forHumanFromMachine ev'`
-  --   In the future, the type should probably change to sth. akin to LogFormatting b => (a == b) ~ 'False => a -> b -> Text
-  --   to guard against that misuse.
-  forHumanOrMachine :: a -> Text
-  forHumanOrMachine v =
-    case forHuman v of
-      "" -> forHumanFromMachine v
-      s  -> s
 
 class MetaTrace a where
   namespaceFor  :: a -> Namespace a
@@ -359,16 +345,16 @@ data FormattedMessage =
     | FormattedMachine Text
     | FormattedMetrics [Metric]
     | FormattedForwarder TraceObject
+    | FormattedCBOR ByteString
   deriving stock (Eq, Show)
 
 
 data PreFormatted = PreFormatted {
-    pfForHuman   :: !(Maybe Text)
-  , pfForMachine :: !AE.Encoding
-  , pfNamespace  :: ![Text]
-  , pfTimestamp  :: !Text
-  , pfTime       :: !UTCTime
-  , pfThreadId   :: !Text
+    pfTime              :: !UTCTime
+  , pfNamespace         :: !Text
+  , pfThreadId          :: !Text
+  , pfForHuman          :: !(Maybe Text)
+  , pfForMachineObject  :: AE.Object
 }
 
 -- | Used as interface object for ForwarderTracer
@@ -634,9 +620,42 @@ type HowToConnect :: Type
 data HowToConnect
   = LocalPipe    !FilePath    -- ^ Local pipe (UNIX or Windows).
   | RemoteSocket !Host !Port  -- ^ Remote socket (host and port).
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Generic)
+  deriving anyclass (NFData)
 
-howToConnectString :: HowToConnect -> String
-howToConnectString = \case
-  LocalPipe pipe -> pipe
-  RemoteSocket host port -> T.unpack host ++ ":" ++ show port
+instance Show HowToConnect where
+  show = \case
+    LocalPipe pipe         -> pipe
+    RemoteSocket host port -> T.unpack host ++ ":" ++ show port
+
+instance AE.ToJSON HowToConnect where
+  toJSON     = AE.toJSON . show
+  toEncoding = AE.toEncoding . show
+
+-- first try to host:port, and if that fails revert to parsing any
+-- string literal and assume it is a localpipe.
+instance AE.FromJSON HowToConnect where
+  parseJSON = AE.withText "HowToConnect" $ \t ->
+        (uncurry RemoteSocket <$> parseHostPort t)
+    <|> (        LocalPipe    <$> parseLocalPipe t)
+
+parseLocalPipe :: Text -> AE.Parser FilePath
+parseLocalPipe t
+  | T.null t = fail "parseLocalPipe: empty Text"
+  | otherwise   = pure $ T.unpack t
+
+parseHostPort :: Text -> AE.Parser (Text, Word16)
+parseHostPort t
+  | T.null t
+  = fail "parseHostPort: empty Text"
+  | otherwise
+  = let
+    (host_, portText) = T.breakOnEnd ":" t
+    host              = maybe "" fst (T.unsnoc host_)
+  in if
+    | T.null host      -> fail "parseHostPort: Empty host or no colon found."
+    | T.null portText  -> fail "parseHostPort: Empty port."
+    | Right (port, remainder) <- T.decimal portText
+    , T.null remainder
+    , 0 <= port, port <= 65535 -> pure (host, port)
+    | otherwise -> fail "parseHostPort: Non-numeric port or value out of range."

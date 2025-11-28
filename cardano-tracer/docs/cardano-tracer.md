@@ -19,6 +19,7 @@
   - [Logging](#logging)
   - [Logs Rotation](#logs-rotation)
   - [Prometheus](#prometheus)
+    - [Prometheus HTTP service discovery](#prometheus-http-sd)
   - [EKG Monitoring](#ekg-monitoring)
   - [Verbosity](#verbosity)
   - [RTView](#rtview)
@@ -462,7 +463,28 @@ or
 }
 ```
 
+### Prometheus HTTP service discovery
 
+The `/targets` path can be used for Prometheus HTTP service discovery. This lets
+Prometheus dynamically discover all connected nodes, and scrape their metrics.
+Below is a minimal example of a corresponding job definition that goes into the
+`prometheus.yml` configuration:
+
+```yaml
+  - job_name: "cardano-tracer"
+    http_sd_configs:
+      - url: 'http://127.0.0.1:3200/targets'    # <-- Your cardano-tracer's real hostname:prometheus port
+```
+
+Each target will have a label `node_name` which corresponds to the `TraceOptionNodeName` setting in the respective node config.
+
+In `cardano-tracer`'s config, you can optionally provide additional labels to be attached to *all* targets
+(default is no additional labels):
+```json
+  "prometheusLabels": {
+      "<labelname>": "<labelvalue>", ...
+    }
+```
 
 ## EKG Monitoring
 

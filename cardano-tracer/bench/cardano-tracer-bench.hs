@@ -155,6 +155,7 @@ main = do
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , prometheusLabels = Nothing
     }
 
   generate :: Int -> IO [TraceObject]

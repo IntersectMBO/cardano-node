@@ -38,7 +38,7 @@ traceObjectsHandler _ _ _ [] = return ()
 traceObjectsHandler tracerEnv _tracerEnvRTView nodeId traceObjects = do
   nodeName <- askNodeName tracerEnv nodeId
   forConcurrently_ logging \loggingParams@LoggingParams{logMode, logFormat} -> do
-    showProblemIfAny verbosity do
+    showProblemIfAny verbosity teTracer do
       case logMode of
         FileMode ->
           writeTraceObjectsToFile teRegistry
@@ -56,6 +56,7 @@ traceObjectsHandler tracerEnv _tracerEnvRTView nodeId traceObjects = do
       , teCurrentLogLock
       , teReforwardTraceObjects
       , teRegistry
+      , teTracer
       } = tracerEnv
 
 deregisterNodeId :: TracerEnv -> NodeId -> IO ()

@@ -1,14 +1,17 @@
 {-# LANGUAGE BlockArguments #-}
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
+{-# OPTIONS_GHC -Wno-partial-fields #-}
+
 module Trace.Forward.Forwarding
-  ( initForwarding
+  ( InitForwardingConfig(..)
+  , initForwarding
   , initForwardingDelayed
   ) where
 
@@ -26,22 +29,22 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
-                   makeLocalBearer, LocalAddress, socketSnocket, makeSocketBearer, LocalSocket)
-import           Ouroboros.Network.Socket (ConnectToArgs (..),
-                   HandshakeCallbacks (..), SomeResponderApplication (..),
-                   connectToNode, nullNetworkConnectTracers)
 import qualified Ouroboros.Network.Server.Simple as Server
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, MakeBearer, Snocket,
+                   localAddressFromPath, localSnocket, makeLocalBearer, makeSocketBearer,
+                   socketSnocket)
+import           Ouroboros.Network.Socket (ConnectToArgs (..), HandshakeCallbacks (..),
+                   SomeResponderApplication (..), connectToNode, nullNetworkConnectTracers)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async, wait)
-import           Control.Exception (throwIO)
+import           Control.Exception (SomeException, throwIO)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor
 import           Data.List.NonEmpty (NonEmpty ((:|)))
-import           Data.Maybe (isNothing)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
@@ -61,15 +64,37 @@ import           Trace.Forward.Utils.ForwardSink (ForwardSink)
 import           Trace.Forward.Utils.TraceObject
 import           Trace.Forward.Utils.Version
 
+
+-- | Config record to initialise trace forwarding
+data InitForwardingConfig
+  = -- | Only construct relevant values, but do not actually run forwarding
+    InitForwardingNone
+  | -- | Run forwarding with the provided settings
+    InitForwardingWith
+    { initNetworkMagic          :: !NetworkMagic
+    -- ^ Forwarding is always tied to a singular networkId
+    , initEKGStore              :: !(Maybe EKG.Store)
+    -- ^ A metrics store to be forwarded (optional)
+    , initHowToConnect          :: !HowToConnect
+    -- ^ A LocalPipe or RemoteSocket
+    , initForwarderMode         :: !ForwarderMode
+    -- ^ Run as Initiator or Responder
+    , initOnForwardInterruption :: !(Maybe (SomeException -> IO ()))
+    -- ^ Optional handler when forwarding connection is interrupted (may be temporary or permanent)
+    --   default: no action
+    , initOnQueueOverflow       :: !(Maybe ([TraceObject] -> IO ()))
+    -- ^ Optional handler when forwarding queue overflows (argument are objects dropped from queue)
+    --   default: print one-liner to stderr, indicating object count and timestamps of first and last object
+    }
+
+
 initForwarding :: forall m. (MonadIO m)
   => IOManager
   -> TraceOptionForwarder
-  -> NetworkMagic
-  -> Maybe EKG.Store
-  -> Maybe (HowToConnect, ForwarderMode)
+  -> InitForwardingConfig
   -> m (ForwardSink TraceObject, DataPointStore)
-initForwarding iomgr config magic ekgStore tracerSocketMode = do
-  (a, b, kickoffForwarder) <- initForwardingDelayed iomgr config magic ekgStore tracerSocketMode
+initForwarding iomgr config forwarding = do
+  (a, b, kickoffForwarder) <- initForwardingDelayed iomgr config forwarding
   liftIO kickoffForwarder
   pure (a, b)
 
@@ -79,38 +104,34 @@ initForwardingDelayed :: forall m. ()
   => MonadIO m
   => IOManager
   -> TraceOptionForwarder
-  -> NetworkMagic
-  -> Maybe EKG.Store
-  -> Maybe (HowToConnect, ForwarderMode)
+  -> InitForwardingConfig
   -> m (ForwardSink TraceObject, DataPointStore, IO ())
-initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
-  let ignoreOverflow, onOverflow :: [TraceObject] -> IO ()
-      ignoreOverflow _ =
-        pure ()
-      onOverflow | isNothing tracerSocketMode = ignoreOverflow
-                 | otherwise                  = handleOverflow
+initForwardingDelayed iomgr config forwarding = liftIO $ do
+  let onOverflow :: [TraceObject] -> IO ()
+      onOverflow = case forwarding of
+        InitForwardingNone                                      -> const $ pure ()
+        InitForwardingWith{initOnQueueOverflow = Just handler}  -> handler
+        InitForwardingWith{initOnQueueOverflow = Nothing}       -> handleOverflow
   forwardSink <- initForwardSink tfConfig onOverflow
   dpStore <- initDataPointStore
   let
     kickoffForwarder = launchForwarders
       iomgr
-      magic
+      forwarding
       ekgConfig
       tfConfig
       dpfConfig
-      ekgStore
       forwardSink
       dpStore
-      tracerSocketMode
       maxReconnectDelay
   pure (forwardSink, dpStore, kickoffForwarder)
  where
   endpoint :: EKGF.HowToConnect
   endpoint =
-    case tracerSocketMode of
-      Nothing -> EKGF.LocalPipe ""
-      Just (LocalPipe str, _mode) -> EKGF.LocalPipe str
-      Just (RemoteSocket host port, _mode) -> EKGF.RemoteSocket host port
+    case forwarding of
+      InitForwardingNone                                            -> EKGF.LocalPipe ""
+      InitForwardingWith{initHowToConnect = LocalPipe str}          -> EKGF.LocalPipe str
+      InitForwardingWith{initHowToConnect = RemoteSocket host port} -> EKGF.RemoteSocket host port
   queueSize         = tofQueueSize         config
   verbosity         = tofVerbosity         config
   maxReconnectDelay = tofMaxReconnectDelay config
@@ -157,39 +178,37 @@ handleOverflow (msg : msgs) =
 
 launchForwarders
   :: IOManager
-  -> NetworkMagic
+  -> InitForwardingConfig
   -> EKGF.ForwarderConfiguration
   -> TF.ForwarderConfiguration TraceObject
   -> DPF.ForwarderConfiguration
-  -> Maybe EKG.Store
   -> ForwardSink TraceObject
   -> DataPointStore
-  -> Maybe (HowToConnect, ForwarderMode)
   -> Word
   -> IO ()
-launchForwarders iomgr magic
+launchForwarders iomgr forwarding
                  ekgConfig tfConfig dpfConfig
-                 ekgStore sink dpStore tracerSocketMode maxReconnectDelay =
-  -- If 'tracerSocketMode' is not specified, it's impossible to establish
-  -- network connection with acceptor application (for example, 'cardano-tracer').
+                 sink dpStore maxReconnectDelay =
+  -- If InitForwardingNone is specified, it's impossible to establish
+  -- a connection with an acceptor application (for example, 'cardano-tracer').
   -- In this case, we should not launch forwarders.
-  case tracerSocketMode of
-    Nothing -> return ()
-    Just (socketPath, mode) ->
+  case forwarding of
+    InitForwardingNone     -> return ()
+    InitForwardingWith{..} ->
       void . async $
         runInLoop
           (launchForwardersViaLocalSocket
              iomgr
-             magic
-             socketPath
-             mode
+             initNetworkMagic
+             initHowToConnect
+             initForwarderMode
              ekgConfig
              tfConfig
              dpfConfig
              sink
-             ekgStore
+             initEKGStore
              dpStore)
-          socketPath
+          (fromMaybe (const $ pure ()) initOnForwardInterruption)
           1
           maxReconnectDelay
 

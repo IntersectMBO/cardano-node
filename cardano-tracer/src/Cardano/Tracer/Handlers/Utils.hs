@@ -1,14 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.Utils
-  ( askDataPoint
-  , utc2ns
-  , utc2s
-  , s2utc
-  , readInt
-  , nullTime
-  ) where
+  ( module Cardano.Tracer.Handlers.Utils)
+  where
 
 import           Cardano.Tracer.Types
 
@@ -16,7 +12,7 @@ import           Control.Concurrent.Extra (Lock, withLock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Data.Aeson (FromJSON, decode')
 import qualified Data.Map.Strict as M
-import           Data.Text (Text)
+import           Data.Text as T (Text, empty, intercalate, null)
 import           Data.Text.Read (decimal)
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (UTCTime (..))
@@ -69,3 +65,10 @@ readInt t defInt =
 
 nullTime :: UTCTime
 nullTime = UTCTime (ModifiedJulianDay 0) 0
+
+-- this handles both namespace values that come ["as.a.single.text"] and ["as", "individual", "segments"]
+normalizeNamespace :: [Text] -> Text
+normalizeNamespace = \case
+  [ns]      | not (T.null ns) -> ns
+  ns@(_:_)                    -> T.intercalate "." ns
+  _                           -> T.empty

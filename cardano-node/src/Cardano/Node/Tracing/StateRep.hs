@@ -99,6 +99,7 @@ deriving instance (NFData StartupState)
 data NodeState
   = NodeTracingOnlineConfiguring
   | NodeTracingFailure String
+  | NodeTracingForwardingInterrupted HowToConnect String
   | NodeOpeningDbs OpeningDbs
   | NodeReplays Replays
   | NodeInitChainSelection InitChainSelection
@@ -130,16 +131,27 @@ instance LogFormatting NodeState where
       [ "kind" .= String "NodeShutdown",           "shutdown"  .= toJSON x]
     NodeTracingFailure x -> mconcat
       [ "kind" .= String "NodeTracingFailure",     "message"   .= toJSON x]
+    NodeTracingForwardingInterrupted howToConnect x -> mconcat
+      [ "kind" .= String "NodeTracingForwardingInterrupted"
+      , "conn" .= howToConnect
+      , "message" .= toJSON x
+      ]
 
-  forHuman (NodeTracingFailure errMsg) = T.pack errMsg
-  forHuman _ = ""
-
+  forHuman = \case
+    NodeTracingFailure errMsg ->
+      T.pack errMsg
+    NodeTracingForwardingInterrupted howToConnect errMsg ->
+      T.pack $ "trace forwarding connection with " <> show howToConnect <> " failed: " <> errMsg
+    _
+      -> ""
 
 instance MetaTrace NodeState where
   namespaceFor NodeTracingOnlineConfiguring {}  =
     Namespace [] ["NodeTracingOnlineConfiguring"]
-  namespaceFor NodeTracingFailure {}  =
+  namespaceFor NodeTracingFailure {} =
     Namespace [] ["NodeTracingFailure"]
+  namespaceFor NodeTracingForwardingInterrupted {} =
+    Namespace [] ["NodeTracingForwardingInterrupted"]
   namespaceFor NodeOpeningDbs {}  =
     Namespace [] ["OpeningDbs"]
   namespaceFor NodeReplays {}  =
@@ -159,6 +171,8 @@ instance MetaTrace NodeState where
     Just Info
   severityFor  (Namespace _ ["NodeTracingFailure"]) _ =
     Just Error
+  severityFor  (Namespace _ ["NodeTracingForwardingInterrupted"]) _ =
+    Just Warning
   severityFor  (Namespace _ ["OpeningDbs"]) _ =
     Just Info
   severityFor  (Namespace _ ["NodeReplays"]) _ =
@@ -180,6 +194,8 @@ instance MetaTrace NodeState where
     "Tracing system came online, system configuring now"
   documentFor  (Namespace _ ["NodeTracingFailure"]) = Just
     "Tracing system experienced a non-fatal failure during startup"
+  documentFor  (Namespace _ ["NodeTracingForwardingInterrupted"]) = Just
+    "Trace/metrics forwarding connection was interrupted"
   documentFor  (Namespace _ ["OpeningDbs"]) = Just
     "ChainDB components being opened"
   documentFor  (Namespace _ ["NodeReplays"]) = Just
@@ -199,6 +215,7 @@ instance MetaTrace NodeState where
   allNamespaces = [
           Namespace [] ["NodeTracingOnlineConfiguring"]
         , Namespace [] ["NodeTracingFailure"]
+        , Namespace [] ["NodeTracingForwardingInterrupted"]
         , Namespace [] ["OpeningDbs"]
         , Namespace [] ["NodeReplays"]
         , Namespace [] ["NodeInitChainSelection"]

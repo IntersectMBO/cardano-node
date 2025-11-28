@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -11,7 +10,7 @@
 {- HLINT ignore "Use any" -}
 
 module Cardano.Tracer.Configuration
-  ( Address -- (..)
+  ( Address
   , Net.HowToConnect (..)
   , Endpoint (..)
   , setEndpoint
@@ -24,14 +23,14 @@ module Cardano.Tracer.Configuration
   , TracerConfig (..)
   , Verbosity (..)
   , readTracerConfig
-  , parseHostPort
   ) where
 
+import           Cardano.Logging.Types (HowToConnect)
 import qualified Cardano.Logging.Types as Log
+import qualified Cardano.Logging.Types as Net
 
 import           Control.Applicative ((<|>))
-import           Data.Aeson (FromJSON (..), ToJSON (..), withText, withObject, (.:))
-import           Data.Aeson.Types (Parser, Value)
+import           Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:))
 import           Data.Fixed (Pico)
 import           Data.Function ((&))
 import           Data.Functor ((<&>))
@@ -45,51 +44,14 @@ import           Data.Maybe (catMaybes)
 import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Text.Read as Text
 import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 import           System.Exit (die)
 
-import           Cardano.Logging.Types (HowToConnect)
-import qualified Cardano.Logging.Types as Net
-
 type Address :: Type
 type Address = HowToConnect
-
--- first try to host:port, and if that fails revert to parsing any
--- string literal and assume it is a localpipe.
-instance FromJSON HowToConnect where
-  parseJSON :: Value -> Parser HowToConnect
-  parseJSON = withText "HowToConnect" $ \t ->
-        (uncurry Net.RemoteSocket <$> parseHostPort t)
-    <|> (        Net.LocalPipe    <$> parseLocalPipe t)
-
-instance ToJSON HowToConnect where
-  toJSON :: HowToConnect -> Value
-  toJSON = toJSON . Net.howToConnectString
-
-parseLocalPipe :: Text -> Parser FilePath
-parseLocalPipe t
-  | Text.null t = fail "parseLocalPipe: empty Text"
-  | otherwise   = pure $ Text.unpack t
-
-parseHostPort :: Text -> Parser (Text, Word16)
-parseHostPort t
-  | Text.null t
-  = fail "parseHostPort: empty Text"
-  | otherwise
-  = let
-    (host_, portText) = Text.breakOnEnd ":" t
-    host              = maybe "" fst (Text.unsnoc host_)
-  in if
-    | Text.null host      -> fail "parseHostPort: Empty host or no colon found."
-    | Text.null portText  -> fail "parseHostPort: Empty port."
-    | Right (port, remainder) <- Text.decimal portText
-    , Text.null remainder
-    , 0 <= port, port <= 65535 -> pure (host, port)
-    | otherwise -> fail "parseHostPort: Non-numeric port or value out of range."
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
@@ -196,13 +158,14 @@ data TracerConfig = TracerConfig
                               , Maybe [[Text]]
                               , Log.TraceOptionForwarder
                               ))
-  , logging         :: !(NonEmpty LoggingParams)    -- ^ Logging parameters.
-  , rotation        :: !(Maybe RotationParams)      -- ^ Rotation parameters.
-  , verbosity       :: !(Maybe Verbosity)           -- ^ Verbosity of the tracer itself.
-  , metricsNoSuffix :: !(Maybe Bool)                -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similiarity with old system names - if desired; default: False
-  , metricsHelp     :: !(Maybe FileOrMap)           -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
-  , resourceFreq    :: !(Maybe Int)                 -- ^ Frequency (1/millisecond) for gathering resource data.
-  , ekgRequestFull  :: !(Maybe Bool)                -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False
+  , logging           :: !(NonEmpty LoggingParams)  -- ^ Logging parameters.
+  , rotation          :: !(Maybe RotationParams)    -- ^ Rotation parameters.
+  , verbosity         :: !(Maybe Verbosity)         -- ^ Verbosity of the tracer itself.
+  , metricsNoSuffix   :: !(Maybe Bool)              -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similiarity with old system names - if desired; default: False
+  , metricsHelp       :: !(Maybe FileOrMap)         -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
+  , resourceFreq      :: !(Maybe Int)               -- ^ Frequency (1/millisecond) for gathering resource data.
+  , ekgRequestFull    :: !(Maybe Bool)              -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False
+  , prometheusLabels  :: !(Maybe (Map Text Text))   -- ^ A common label set for all Prometheus scrape targets (only used in Prometheus HTTP service discovery)
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
