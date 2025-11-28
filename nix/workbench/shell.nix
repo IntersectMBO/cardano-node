@@ -17,7 +17,7 @@ project.shellFor {
   name = "workbench-shell";
 
   shellHook =
-    let inherit (workbench-runner) useCabalRun profiling;
+    let inherit (workbench-runner) useCabalRun;
     in
     ''
     while test $# -gt 0
@@ -29,8 +29,9 @@ project.shellFor {
 
     progress "profile name"            $WB_SHELL_PROFILE
     progress "backend name"            $WB_BACKEND
+    progress "profiling"               $WB_PROFILING
+    progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
     progress "deployment name"         $WB_DEPLOYMENT_NAME
-    progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
     progress "WB_LOCLI_DB="            $WB_LOCLI_DB
@@ -54,7 +55,7 @@ project.shellFor {
     ''
     + optionalString useCabalRun
     ''
-    . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
+    . nix/workbench/lib-cabal.sh
     cabal update
     ''
     +
