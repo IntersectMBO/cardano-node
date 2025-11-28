@@ -1,27 +1,20 @@
-progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(yellow $*)"
+progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(red WB_PROFILING):$(white $WB_PROFILING)"
 
-while test $# -gt 0
-do case "$1" in
-       --profiling-time )        export WB_PROFILING='time';           WB_RTSARGS=-p;;
-       --profiling-time-detail ) export WB_PROFILING='time';           WB_RTSARGS=-P;;
-       --profiling-bio )         export WB_PROFILING='space-bio';      WB_RTSARGS=-hb;;
-       --profiling-closure )     export WB_PROFILING='space-closure';  WB_RTSARGS=-hd;;
-       --profiling-space )       export WB_PROFILING='space-cost';     WB_RTSARGS=-hc;;
-       --profiling-heap )        export WB_PROFILING='space-heap';     WB_RTSARGS=-hT;;
-       --profiling-info )        export WB_PROFILING='space-info';     WB_RTSARGS=-hi;;
-       --profiling-module )      export WB_PROFILING='space-module';   WB_RTSARGS=-hm;;
-       --profiling-retainer )    export WB_PROFILING='space-retainer'; WB_RTSARGS=-hr;;
-       --profiling-type )        export WB_PROFILING='space-type';     WB_RTSARGS=-hy;;
-       * ) break;; esac;
-   progress "workbench" "enabling $(red profiling mode):  $(white $WB_PROFILING)"
-   shift; done
+# If profiling envar not empty and not "none", we build with profiling.
+if test -z "${WB_PROFILING:-}" || test "${WB_PROFILING}" = 'none'
+then
+  export WB_FLAGS_CABAL=""
+else
+  export WB_FLAGS_CABAL='--enable-profiling --builddir dist-profiled'
+fi
 
-if test ! -v WB_PROFILING || test "$WB_PROFILING" = 'none'
-then export WB_PROFILING='none' WB_FLAGS_CABAL=
-else export WB_FLAGS_CABAL='--enable-profiling --builddir dist-profiled'; fi
-
-if test ! -v WB_RTSARGS;   then export WB_RTSARGS= ; fi
-export WB_FLAGS_RTS=${WB_RTSARGS:++RTS $WB_RTSARGS -RTS}
+# If RTS args envar not empty, append the extra RTS parameters to `cabal run`.
+if test -z "${WB_RTSARGS:-}"
+then
+  export WB_FLAGS_RTS=
+else
+  export WB_FLAGS_RTS="+RTS ${WB_RTSARGS} -RTS"
+fi
 
 WB_TIME=(
     time
@@ -29,7 +22,6 @@ WB_TIME=(
     -o kernel-resource-summary.json
 )
 export WB_NODE_EXECPREFIX="eval ${WB_TIME[*]@Q}"
-
 
 function workbench-prebuild-executables()
 {
