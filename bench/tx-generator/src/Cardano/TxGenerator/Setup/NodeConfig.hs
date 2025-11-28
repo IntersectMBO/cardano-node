@@ -70,7 +70,7 @@ mkNodeConfig configFp_
                  ProtocolFilepaths
                  { byronCertFile = Just ""
                  , byronKeyFile = Just ""
-                 , shelleyKESFile = Just ""
+                 , shelleyKESSource = Just (KESKeyFilePath "")
                  , shelleyVRFFile = Just ""
                  , shelleyCertFile = Just ""
                  , shelleyBulkCredsFile = Just ""
