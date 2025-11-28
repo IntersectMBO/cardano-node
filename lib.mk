@@ -1,16 +1,16 @@
 
-## proftgt :: target -> profile -> fullnixmode -> devmode -> autostart -> autostay -> profiled -> backend -> IO ()
+## proftgt :: target -> profile -> fullnixmode -> devmode -> autostart -> autostay -> backend -> IO ()
 define proftgt
 $(1): shell
 $(1): PROFILE = $(2)-${ERA}
-$(1): BACKEND = $(8)
+$(1): BACKEND = $(7)
 ifeq ($(strip $(3)),true)
 $(1): ARGS += --arg 'useCabalRun' false
 endif
 ifeq ($(strip $(4)),true)
 $(1): ARGS += --arg 'workbenchDevMode' true
 endif
-ifeq ($(strip $(7)),true)
+ifneq ($(strip $(WB_PROFILING)),)
 $(1): ARGS += --arg 'profiling' '"$(WB_PROFILING)"'
 else
 $(1): ARGS += --arg 'profiling' '"none"'
@@ -30,22 +30,18 @@ endef
 
 define define_profile_targets
 ID ?= $(shell git symbolic-ref HEAD | sed 's_/_\n_g' | tail -n1)
-##                                           defining this target       profname  nix   dev   auto  stay profiled  backend
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),                  $$(prof),false, true,false,false, false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-prof,             $$(prof),false, true,false,false,  true, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autoprof,         $$(prof),false, true, true,false,  true, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-profnix,          $$(prof), true, true,false,false,  true, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autoprofnix,      $$(prof), true, true, true,false,  true, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,             $$(prof),false, true, true,false, false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autostay,         $$(prof),false, true, true, true, false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nix,              $$(prof), true,false,false,false, false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonix,          $$(prof), true,false, true,false, false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec,        $$(prof), true,false,false,false, false, nomadexec)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec-auto,   $$(prof), true,false, true,false, false, nomadexec)))
+##                                           defining this target       profname  nix   dev   auto  stay  backend
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),                  $$(prof),false, true,false,false,supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,             $$(prof),false, true, true,false,supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autostay,         $$(prof),false, true, true, true,supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nix,              $$(prof), true,false,false,false,supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonix,          $$(prof), true,false, true,false,supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec,        $$(prof), true,false,false,false,nomadexec)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec-auto,   $$(prof), true,false, true,false,nomadexec)))
 endef
 
 define define_profile_targets_nomadcloud
-##                                           defining this target       profname  nix   dev   auto  stay profiled  backend
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),                  $$(prof), true,false,false,false, false, nomadcloud)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,             $$(prof), true,false, true,false, false, nomadcloud)))
+##                                           defining this target       profname  nix   dev   auto  stay   backend
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),                  $$(prof), true,false,false,false,nomadcloud)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,             $$(prof), true,false, true,false,nomadcloud)))
 endef
