@@ -149,6 +149,8 @@ let
         ];
     } // optionalAttrs (profiling != "none") {
       inherit profiling;
+      # Always add the `-l` RTS param with profiling.
+      eventlog = true;
     } // optionalAttrs (profiling == "none") {
       # Switch to `noGitRev` to avoid rebuilding with every commit.
       package    = pkgs.cardano-node.passthru.noGitRev;
