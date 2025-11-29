@@ -119,7 +119,7 @@ in pkgs.runCommand name {
     rewrite-libs bin ${exe}/bin/*
   '') exes)}
 
-  ${if (platform == "win64")
+  ${if (platform == "win")
     then "zip -r $out/${name}.zip ."
     else "tar -czf $out/${name}.tar.gz ."
   }
