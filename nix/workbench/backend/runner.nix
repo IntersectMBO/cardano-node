@@ -18,10 +18,9 @@ let
   ##############################################################################
 
   profileName = profile.name;
-  inherit (profile) profiling;
 
   backendName = backend.name;
-  inherit (backend) stateDir basePort useCabalRun;
+  inherit (backend) stateDir basePort useCabalRun profiling;
 
   profileBundle  = profile.profileBundle { inherit backend; };
 
@@ -47,6 +46,7 @@ let
     export WB_SHELL_PROFILE_DATA=${profileDataDir}
     export WB_BACKEND=${backendName}
     export WB_BACKEND_DATA=${backendDataDir}
+    export WB_PROFILING="${profiling}"
     export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
@@ -278,8 +278,8 @@ let
 
 in
 {
-  inherit backend;
-  inherit profiling;
+  # Don't expose the backend. Just what the shell could need. 
+  inherit (backend) useCabalRun profiling extraShellPkgs;
 
   inherit workbench-envars;
   inherit workbench-interactive-start;

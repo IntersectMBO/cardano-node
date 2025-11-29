@@ -17,7 +17,7 @@ project.shellFor {
   name = "workbench-shell";
 
   shellHook =
-    let inherit (workbench-runner) backend profiling;
+    let inherit (workbench-runner) useCabalRun;
     in
     ''
     while test $# -gt 0
@@ -29,8 +29,9 @@ project.shellFor {
 
     progress "profile name"            $WB_SHELL_PROFILE
     progress "backend name"            $WB_BACKEND
+    progress "profiling"               $WB_PROFILING
+    progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
     progress "deployment name"         $WB_DEPLOYMENT_NAME
-    progress "params"                  'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
     progress "WB_LOCLI_DB="            $WB_LOCLI_DB
@@ -52,9 +53,9 @@ project.shellFor {
     }
     export -f wb
     ''
-    + optionalString backend.useCabalRun
+    + optionalString useCabalRun
     ''
-    . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
+    . nix/workbench/lib-cabal.sh
     cabal update
     ''
     +
@@ -120,7 +121,7 @@ project.shellFor {
     workbench-runner.workbench-interactive-restart
   ]
   # Backend dependent packages take precedence.
-  ++ workbench-runner.backend.extraShellPkgs
+  ++ workbench-runner.extraShellPkgs
   ++ [
       # Publish
       bench-data-publish
@@ -132,19 +133,29 @@ project.shellFor {
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
   ## Cabal run flag
   # Include the packages (defined in `lib-cabal.sh`) or the tools to build them.
-  ++ lib.optionals ( workbench-runner.backend.useCabalRun) [
+  ++ lib.optionals ( workbench-runner.useCabalRun) [
        cabal-install
        ghcid
        haskellBuildUtils
        pkgs.cabal-plan
      ]
-  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [
+  ++ lib.optionals (!workbench-runner.useCabalRun) [
        cardano-node.passthru.noGitRev
        cardano-profile
        cardano-topology
        cardano-tracer
        locli
        tx-generator.passthru.noGitRev
+     ]
+  ## When profiling include useful helper programs.
+  ++ lib.optionals (   workbench-runner.profiling != null
+                    && workbench-runner.profiling != "none"
+                   )
+     [
+       # For the legacy prog.hp format.
+       # Which has been deprecated in favour of eventlog based profiling.
+       hp2pretty hp2html
+       eventlog2html
      ]
   # Include the workbench as a derivation or use the sources directly ?
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
