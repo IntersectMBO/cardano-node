@@ -153,7 +153,7 @@ missedSlots = (,)
     Filter.<->
     Filter.RightTrace
     Filter.<->
-    Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus"
+    Filter.Namespace "Forge.Loop.StartLeadershipCheck"
     Filter.<->
     (Filter.Aeson :: Filter.Aeson (Trace.Remainder Trace.DataWithSlot))
   )
@@ -176,7 +176,7 @@ slotPauses s = (,)
     Filter.<->
     Filter.RightTrace
     Filter.<->
-    Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus"
+    Filter.Namespace "Forge.Loop.StartLeadershipCheck"
     Filter.<->
     Filter.RightAt
   )
@@ -201,7 +201,7 @@ utxoSize = (,)
     Filter.<->
     Filter.RightTrace
     Filter.<->
-    Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus"
+    Filter.Namespace "LedgerMetrics"
     Filter.<->
     Filter.RightAt
     Filter.<->
