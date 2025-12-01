@@ -123,7 +123,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
 
-  liftIOAnnotated $ createDirectoryIfMissingNew_ $ logDir </> node
+  void . liftIOAnnotated $ createDirectoryIfMissingNew $ logDir </> node
   void . liftIOAnnotated $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node)
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
@@ -254,9 +254,6 @@ createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do
   IO.createDirectoryIfMissing True directory
   pure directory
 
-createDirectoryIfMissingNew_ :: HasCallStack => FilePath -> IO ()
-createDirectoryIfMissingNew_ directory = GHC.withFrozenCallStack $
-  void $ createDirectoryIfMissingNew directory
 
 createSubdirectoryIfMissingNew :: ()
   => HasCallStack
