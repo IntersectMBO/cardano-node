@@ -52,7 +52,6 @@ jobs:
           - linux-x64
           - macos-arm64
           - macos-x64
-          - win-arm64
           - win-x64
     name: "Download Asset from the Cache"
     runs-on: ubuntu-latest
@@ -94,13 +93,9 @@ jobs:
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-darwin.native.cardano-node-macos
               cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-macos-x64.tar.gz
               ;;
-            win-arm64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.aarch64-linux.windows.cardano-node-win
-              cp result/cardano-node-*-*.zip cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-win-arm64.tar.gz
-              ;;
             win-x64)
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.windows.cardano-node-win
-              cp result/cardano-node-*-*.zip cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-win-x64.tar.gz
+              cp result/cardano-node-*-*.zip cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-win-x64.zip
               ;;
           esac
       - uses: actions/upload-artifact@v4
@@ -131,5 +126,4 @@ jobs:
             cardano-node-*-macos-arm64.tar.gz
             cardano-node-*-macos-x64.tar.gz
             cardano-node-*-sha256sums.txt
-            cardano-node-*-win-arm64.zip
             cardano-node-*-win-x64.zip
