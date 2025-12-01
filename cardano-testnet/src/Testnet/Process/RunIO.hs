@@ -241,10 +241,13 @@ binDist pkg binaryEnv = do
               <> binaryEnv
               <> " and have it point to the executable you want."
 
-  Plan{installPlan} <- eitherDecode <$> liftIOAnnotated (LBS.readFile planJsonFile)
-      >>= \case
-        Left message -> error $ "Cannot decode plan in " <> planJsonFile <> ": " <> message
-        Right plan -> pure plan
+  Plan{installPlan} <- liftIOAnnotated (LBS.readFile planJsonFile)  >>=
+                         (\case
+                            Left message
+                              -> error
+                                   $ "Cannot decode plan in " <> planJsonFile <> ": " <> message
+                            Right plan -> pure plan)
+                           . eitherDecode
 
   let componentName = "exe:" <> fromString pkg
   case findComponent componentName installPlan of

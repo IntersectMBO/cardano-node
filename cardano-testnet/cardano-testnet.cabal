@@ -103,7 +103,6 @@ library
                       , transformers
                       , transformers-except
                       , unliftio
-                      , vector
                       , yaml
 
   hs-source-dirs:       src
