@@ -112,9 +112,9 @@ instance Exception AlonzoGenesisError where
   displayException = Api.docToString . Api.prettyError
 
 
-defaultAlonzoGenesis :: ShelleyBasedEra era -> Either AlonzoGenesisError AlonzoGenesis
-defaultAlonzoGenesis sbe = do
-  let genesis = Api.alonzoGenesisDefaults (toCardanoEra sbe)
+defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
+defaultAlonzoGenesis = do
+  let genesis = Api.alonzoGenesisDefaults  
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api

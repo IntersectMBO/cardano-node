@@ -29,14 +29,7 @@ import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (unsafeNonZero)
 import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
-import           Cardano.Network.PeerSelection.Bootstrap
-import           Cardano.Network.PeerSelection.PeerTrustable
-import qualified Cardano.Node.Configuration.Topology as NonP2P
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Node.Protocol.Byron
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Exception
 import           Control.Monad
@@ -47,6 +40,7 @@ import qualified Data.Aeson.Encode.Pretty as A
 import           Data.Aeson.Key hiding (fromString)
 import           Data.Aeson.KeyMap hiding (map)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
@@ -146,10 +140,9 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 getDefaultAlonzoGenesis :: ()
   => HasCallStack
   => MonadThrow m
-  => ShelleyBasedEra era
-  -> m AlonzoGenesis
-getDefaultAlonzoGenesis sbe =
-  case Defaults.defaultAlonzoGenesis sbe of 
+  => m AlonzoGenesis
+getDefaultAlonzoGenesis =
+  case Defaults.defaultAlonzoGenesis of 
     Right genesis -> return genesis
     Left err -> throwM err
 
@@ -191,16 +184,16 @@ createSPOGenesisAndFiles
   let conwayGenesis' = Defaults.defaultConwayGenesis
       dijkstraGenesis' = dijkstraGenesisDefaults
 
-  (alonzoGenesis, conwayGenesis, shelleyGenesis)   
+  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)   
      <- resolveOnChainParams onChainParams
-     (alonzoGenesis', conwayGenesis', shelleyGenesis')
+     (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGenesis')
 
   -- Write Genesis files to disk, so they can be picked up by create-testnet-data
   liftIOAnnotated $ do
     LBS.writeFile inputGenesisAlonzoFp $ A.encodePretty alonzoGenesis
     LBS.writeFile inputGenesisConwayFp $ A.encodePretty conwayGenesis
     LBS.writeFile inputGenesisShelleyFp $ A.encodePretty shelleyGenesis
-
+    LBS.writeFile inputGenesisDijkstraFp $ A.encodePretty dijkstraGenesis
   let era = toCardanoEra sbe
 
   currentTime <- liftIOAnnotated DTC.getCurrentTime
@@ -244,51 +237,6 @@ createSPOGenesisAndFiles
     createTestnetDataFlag sbe =
         ["--spec-" ++ eraToString sbe, genesisInputFilepath sbe]
 
-ifaceAddress :: String
-ifaceAddress = "127.0.0.1"
-
--- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
--- to support current era on mainnet and the upcoming era.
-mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
-  where
-    topologyNonP2P :: NonP2P.NetworkTopology NonP2P.RemoteAddress
-    topologyNonP2P =
-      NonP2P.RealNodeTopology
-        [ NonP2P.RemoteAddress (fromString ifaceAddress)
-                               (fromIntegral peerPort)
-                               (numNodes - 1)
-        | peerPort <- allPorts List.\\ [port]
-        ]
-mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
-  where
-    rootConfig :: P2P.RootConfig RelayAccessPoint
-    rootConfig =
-      P2P.RootConfig
-        [ RelayAccessAddress (fromString ifaceAddress)
-                             (fromIntegral peerPort)
-        | peerPort <- allPorts List.\\ [port]
-        ]
-        P2P.DoNotAdvertisePeer
-
-    localRootPeerGroups :: P2P.LocalRootPeersGroups RelayAccessPoint
-    localRootPeerGroups =
-      P2P.LocalRootPeersGroups
-        [ P2P.LocalRootPeersGroup rootConfig
-                                  (HotValency (numNodes - 1))
-                                  (WarmValency (numNodes - 1))
-                                  IsNotTrustable
-                                  InitiatorAndResponderDiffusionMode
-        ]
-
-    topologyP2P :: P2P.NetworkTopology RelayAccessPoint
-    topologyP2P =
-      P2P.RealNodeTopology
-        localRootPeerGroups
-        []
-        DontUseLedgerPeers
-        DontUseBootstrapPeers
-        Nothing
 
 
 data BlockfrostParamsError = BlockfrostParamsDecodeError FilePath String

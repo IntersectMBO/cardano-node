@@ -33,8 +33,6 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
-import           Cardano.Node.Configuration.Topology (RemoteAddress (..))
-import qualified Cardano.Node.Configuration.Topology as Direct
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Prelude (canonicalEncodePretty)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
@@ -133,11 +131,6 @@ createTestnetEnv
   config <- case genesisHashesPolicy of
     WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
     WithoutHashes -> pure $ createConfigJsonNoHash sbe
-  -- Setup P2P configuration value
-  let config = A.insert
-        "EnableP2P"
-        (Bool $ topologyType == P2PTopology)
-        config'
 
   liftIOAnnotated . LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
@@ -148,13 +141,8 @@ createTestnetEnv
     liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
 
     let producers = NodeId <$> filter (/= i) nodeIds
-    case topologyType of
-      DirectTopology ->
-        let topology = Direct.RealNodeTopology producers
-        in liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
-      P2PTopology ->
-        let topology = Defaults.defaultP2PTopology producers
-        in liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+        topology = Defaults.defaultP2PTopology producers
+    liftIOAnnotated . LBS.writeFile  (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:
@@ -277,24 +265,6 @@ cardanoTestnet
 
   let portNumbers = zip [1..] $ snd <$> portNumbersWithNodeOptions
 
-  forM_ portNumbers $ \(i, portNumber) -> do
-    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-    liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
-    liftIOAnnotated $ writeFile (nodeDataDir </> "port") (show portNumber)
-
-  let
-      idToRemoteAddressDirect :: ()
-        => HasCallStack
-        => MonadIO m
-        => NodeId -> m RemoteAddress
-      idToRemoteAddressDirect (NodeId i) = case lookup i portNumbers of
-        Just port -> pure $ RemoteAddress
-          { raAddress = showIpv4Address testnetDefaultIpv4Address
-          , raPort = port
-          , raValency = 1
-          }
-        Nothing -> do
-          throwString $ "Found node id that was unaccounted for: " ++ show i
       idToRemoteAddressP2P :: ()
         => MonadIO m
         => HasCallStack
@@ -306,27 +276,21 @@ cardanoTestnet
         Nothing -> do
           throwString $ "Found node id that was unaccounted for: " ++ show i
 
-  -- Implement concrete topology from abstract one, if necessary
-  forM_ portNumbers $ \(i, _port) -> do
+  forM_ portNumbers $ \(i, portNumber) -> do
+    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
+    liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
+    liftIOAnnotated $ writeFile (nodeDataDir </> "port") (show portNumber)
     let topologyPath = tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json"
-
-    -- Try to decode either a direct topology file, or a P2P one
     tBytes <- liftIOAnnotated $ LBS.readFile topologyPath
-    case eitherDecode tBytes of
-      Right (abstractTopology :: Direct.NetworkTopology NodeId) -> do
-        topology <- mapM idToRemoteAddressDirect abstractTopology
-        liftIOAnnotated . LBS.writeFile topologyPath $ encode topology
-      Left _ ->
-        case eitherDecode tBytes of
-          Right (abstractTopology :: P2P.NetworkTopology NodeId) -> do
-            topology <- mapM idToRemoteAddressP2P abstractTopology
-            liftIOAnnotated . LBS.writeFile topologyPath $ encode topology
-          Left e ->
-            -- There can be multiple reasons for why both decodings have failed.
-            -- Here we assume, very optimistically, that the user has already
-            -- instantiated it with a concrete topology file.
-            -- TODO: It is suspicious that this decoding can fail. Investigate further.
-            liftIOAnnotated . putStrLn $ "Could not decode topology file: " <> topologyPath <> ". This may be okay. Reason for decoding failure is:\n" ++ e
+    case eitherDecode tBytes of 
+      Right (abstractTopology :: P2P.NetworkTopology NodeId) -> do
+        topology <- mapM idToRemoteAddressP2P abstractTopology
+        liftIOAnnotated $ LBS.writeFile topologyPath $ encode topology
+      Left e -> do
+        -- There can be multiple reasons for why both decodings have failed.
+        -- Here we assume, very optimistically, that the user has already
+        -- instantiated it with a concrete topology file.
+        liftIOAnnotated . putStrLn $ "Could not decode topology file: " <> topologyPath <> ". This may be okay. Reason for decoding failure is:\n" ++ e
 
   -- If necessary, update the time stamps in Byron and Shelley Genesis files.
   -- This is a QoL feature so that users who edit their configuration files don't
@@ -388,7 +352,7 @@ cardanoTestnet
   -- FIXME: use foldEpochState waiting for chain extensions
   now <- liftIOAnnotated DTC.getCurrentTime
   let deadline = DTC.addUTCTime 45 now
-  forM_ (map nodeStdout testnetNodes') $ \nodeStdoutFile -> do
+  forM_ testnetNodes' $ \nodeStdoutFile -> do
     assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   let runtime = TestnetRuntime
