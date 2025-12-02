@@ -344,15 +344,16 @@
         "stackage": "stackage"
       },
       "locked": {
-        "lastModified": 1755663895,
-        "narHash": "sha256-76Ns29GQsO5S5gPRcic+vagcJicOSvhA+oKQ9r9kjFE=",
-        "owner": "input-output-hk",
+        "lastModified": 1764698140,
+        "narHash": "sha256-9G9pgtZoJdlHAapqv2fj2oDck1NI2d9y+eH+n6uoass=",
+        "owner": "mgmeier",
         "repo": "haskell.nix",
-        "rev": "71fcc9f531993aada52173fceb4ff4ce2148207d",
+        "rev": "4d236415709359fd9860645661b0de8240c51e94",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "mgmeier",
+        "ref": "backport/hkm/fix-ghc-profiling",
         "repo": "haskell.nix",
         "type": "github"
       }
