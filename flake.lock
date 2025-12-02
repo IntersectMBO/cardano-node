@@ -113,16 +113,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1764192513,
+        "lastModified": 1764682512,
         "narHash": "sha256-yY3yIBmiCKsZ7YN++ttEKZiVMIHjjlAngFWaTGvBBvg=",
         "owner": "input-output-hk",
         "repo": "cardano-automation",
-        "rev": "7f8c6c5caacfc301c90932ee55a85dd777c43989",
+        "rev": "9a91636c94317bff98ebf6b913f8c38beef0b374",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "jl/aarch64-linux",
         "repo": "cardano-automation",
         "type": "github"
       }

@@ -73,7 +73,7 @@ jobs:
       - name: Display cardano-node version
         id: cardano-node-version
         run: |
-          VERSION=$(nix eval ${{ steps.flake-metadata.outputs.LOCKED_URL }}#legacyPackages.x86_64-linux.cardanoNodePackages.cardano-node.identifier.version)
+          VERSION=$(nix eval --raw ${{ steps.flake-metadata.outputs.LOCKED_URL }}#legacyPackages.x86_64-linux.cardanoNodePackages.cardano-node.identifier.version)
           echo "$VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Build
