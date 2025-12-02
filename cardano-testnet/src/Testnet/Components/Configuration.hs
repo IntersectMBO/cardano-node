@@ -120,7 +120,7 @@ getShelleyGenesisHash path key = do
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
-startTimeOffsetSeconds :: DTC.NominalDiffTime
+startTimeOffsetSeconds :: Int
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 -- | A start time and 'ShelleyGenesis' value that are fit to pass to 'cardanoTestnet'

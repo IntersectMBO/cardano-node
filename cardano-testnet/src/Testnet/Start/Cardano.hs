@@ -79,6 +79,7 @@ import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
+import           Hedgehog.Extras.Stock (sprocketSystemName)
 import           Hedgehog.Internal.Property (failException)
 
 import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString, timeout)
@@ -236,6 +237,7 @@ cardanoTestnet
         { cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
         , cardanoEnableRpc
+        , cardanoKESSource
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
       nodeConfigFile = tmpAbsPath </> "configuration.yaml"
@@ -329,14 +331,39 @@ cardanoTestnet
             RelayNodeOptions{} -> (Nothing, [])
             SpoNodeOptions{} -> (Just keys, shelleyCliArgs <> byronCliArgs)
           where
-            shelleyCliArgs = [ "--shelley-kes-key", nodePoolKeysDir </> "kes.skey"
-                             , "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
+            shelleyCliArgs = [ "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
                              , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
                              ]
             byronCliArgs = [ "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
                            , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
                            ]
             keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
+
+    -- depending on testnet configuration, either start a 'kes-agent' or use a key from disk
+    kesSourceCliArg <-
+      case cardanoKESSource of
+        UseKESKeyFile -> pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+        UseKESSocket -> do
+          -- wait startTimeOffsetSeconds so that the startTime from shelly-jenesis.json is not in the future,
+          -- as otherwise we will trigger an underflow in kes-agent with a negative time difference.
+          H.threadDelay (startTimeOffsetSeconds * 1_000_000)
+          H.noteShowIO_ DTC.getCurrentTime
+          kesAgent <- runExceptT $
+            initAndStartKESAgent (TmpAbsolutePath tmpAbsPath) nodeName
+              TestnetKESAgentArgs{ tkaaShelleyGenesisFile = shelleyGenesisFile
+                                 , tkaaColdVKeyFile = nodePoolKeysDir </> "cold.vkey"
+                                 , tkaaColdSKeyFile = nodePoolKeysDir </> "cold.skey"
+                                 , tkaaKesVKeyFile = nodePoolKeysDir </> "kes.vkey"
+                                 , tkaaOpcertCounterFile = nodePoolKeysDir </> "opcert.counter"
+                                 , tkaaOpcertFile = nodePoolKeysDir </> "opcert.cert"
+                                 }
+          case kesAgent of
+            Left e -> do
+              -- TODO: fail if could not start KES agent
+              H.annotateShow $ "Could not start KES agent: " <> show e
+              pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+            Right (TestnetKESAgent{kesAgentServiceSprocket}) ->
+              pure ["--shelley-kes-agent-socket", sprocketSystemName kesAgentServiceSprocket]
 
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic $
@@ -345,6 +372,7 @@ cardanoTestnet
         , "--topology", nodeDataDir </> "topology.json"
         , "--database-path", nodeDataDir </> "db"
         ]
+        <> kesSourceCliArg
         <> spoNodeCliArgs
         <> extraCliArgs nodeOptions
         <> ["--grpc-enable" | RpcEnabled <- [cardanoEnableRpc]]
