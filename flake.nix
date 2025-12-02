@@ -229,7 +229,7 @@
       packages =
         exes
         # Linux only packages:
-        // optionalAttrs (system == "x86_64-linux")
+        // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"])
         (let
           workbenchTest = {
             profileName,
