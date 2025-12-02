@@ -55,6 +55,8 @@ jobs:
           - win-x64
     name: "Download Asset from the Cache"
     runs-on: ubuntu-latest
+    outputs:
+      node_version: ${{ steps.cardano-node-version.outputs.VERSION }}
     steps:
       - name: Install Nix with good defaults
         uses: input-output-hk/install-nix-action@v20
@@ -114,7 +116,7 @@ jobs:
           merge-multiple: true
       - name: Checksums
         run: |
-          sha256sums_filename="cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-sha256sums.txt"
+          sha256sums_filename="cardano-node-${{ needs.pull.outputs.node_version }}-sha256sums.txt"
           sha256sum cardano-node-* >> "$sha256sums_filename"
       - name: Release
         uses: input-output-hk/action-gh-release@v1
