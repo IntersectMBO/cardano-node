@@ -88,6 +88,11 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.help "[EXPERIMENTAL] Enable gRPC endpoint on all of testnet nodes. The listening socket file will be the same directory as node's N2C socket."
       <>  OA.showDefault
       )
+  <*> OA.flag UseKesKeyFile UseKesSocket
+      (   OA.long "use-kes-agent"
+      <>  OA.help "Get Praos block forging credentials from kes-agent via the default socket path"
+      <>  OA.showDefault
+      )
 
 pTestnetNodeOptions :: Parser (NonEmpty NodeOption)
 pTestnetNodeOptions =

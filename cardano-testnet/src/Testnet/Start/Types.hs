@@ -36,6 +36,7 @@ module Testnet.Start.Types
   , UserProvidedData(..)
   , UserProvidedEnv(..)
   , UserProvidedGeneses(..)
+  , PraosCredentialsSource(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -142,6 +143,12 @@ instance Default UserProvidedGeneses where
     def
     def
 
+data PraosCredentialsSource = UseKesKeyFile | UseKesSocket
+  deriving (Eq, Show)
+
+instance Default PraosCredentialsSource where
+  def = UseKesKeyFile
+
 -- | An HTTP request to get a file containing up-to-date mainnet on-chain parameters.
 -- The file should be formatted with Blockfrost format:
 -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
@@ -196,6 +203,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   , cardanoEnableRpc :: RpcSupport
   -- ^ Whether to enable gRPC endpoints in all testnet nodes
+  , cardanoKESSource :: PraosCredentialsSource
   } deriving (Eq, Show)
 
 -- | Path to the configuration file of the node, specified by the user
@@ -233,6 +241,7 @@ instance Default CardanoTestnetOptions where
     , cardanoEnableTxGenerator = NoTxGeneratorSupport
     , cardanoOutputDir = def
     , cardanoEnableRpc = RpcDisabled
+    , cardanoKESSource = def -- TODO(10.7): use default value
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
@@ -247,7 +256,7 @@ instance Default GenesisOptions where
   def = GenesisOptions
     { genesisTestnetMagic = defaultTestnetMagic
     , genesisEpochLength = 500
-    , genesisSlotLength = 0.1
+    , genesisSlotLength = 1 -- 0.1
     , genesisActiveSlotsCoeff = 0.05
     }
 
