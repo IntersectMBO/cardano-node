@@ -8,7 +8,7 @@
 
   inputs = {
     cardano-automation = {
-      url = "github:input-output-hk/cardano-automation/jl/aarch64-linux";
+      url = "github:input-output-hk/cardano-automation";
       inputs = {
         haskellNix.follows = "haskellNix";
         nixpkgs.follows = "nixpkgs";
