@@ -72,3 +72,10 @@ if impl (ghc >= 9.12)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Points to release/ouroboros-consensus-0.28.0.0 + backported #1780
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: 223e60ee4ae7a485c41397cde845f77db7c9c210
+  subdir: ouroboros-consensus-diffusion
