@@ -117,7 +117,7 @@ getShelleyGenesisHash path key = do
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
-startTimeOffsetSeconds :: DTC.NominalDiffTime
+startTimeOffsetSeconds :: Int
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 -- | A start time and 'ShelleyGenesis' value that are fit to pass to 'cardanoTestnet'
@@ -131,7 +131,7 @@ getDefaultShelleyGenesis :: ()
   -> m ShelleyGenesis
 getDefaultShelleyGenesis asbe maxSupply opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+  startTime <- H.noteShow $ DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
   return $ Defaults.defaultShelleyGenesis asbe startTime maxSupply opts
 
 -- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
@@ -192,7 +192,7 @@ createSPOGenesisAndFiles
   let era = toCardanoEra sbe
 
   currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+  startTime <- H.noteShow $ DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
 
   execCli_ $
     [ eraToString sbe, "genesis", "create-testnet-data" ]

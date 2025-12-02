@@ -42,6 +42,7 @@ module Testnet.Types
   , getStartTime
   , testnetDefaultIpv4Address
   , showIpv4Address
+  , TestnetKESAgent(..)
   ) where
 
 import           Cardano.Api
@@ -143,6 +144,17 @@ data TestnetNode = TestnetNode
   , nodeProcessHandle :: !IO.ProcessHandle
   }
 
+data TestnetKESAgent = TestnetKESAgent
+  { kesAgentName :: !String
+  , kesAgentPoolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
+  , kesAgentServiceSprocket :: !Sprocket
+  , kesAgentControlSprocket :: !Sprocket
+  , kesAgentStdinHandle :: !IO.Handle
+  , kesAgentStdout :: !FilePath
+  , kesAgentStderr :: !FilePath
+  , kesAgentProcessHandle :: !IO.ProcessHandle
+  }
+
 isTestnetNodeSpo :: TestnetNode -> Bool
 isTestnetNodeSpo = isJust . poolKeys
 
@@ -237,4 +249,3 @@ testnetDefaultIpv4Address = tupleToHostAddress (127, 0, 0, 1)
 showIpv4Address :: IsString s => HostAddress -> s
 showIpv4Address address = fromString . intercalate "." $ show <$> [a,b,c,d]
   where (a,b,c,d) = hostAddressToTuple address
-

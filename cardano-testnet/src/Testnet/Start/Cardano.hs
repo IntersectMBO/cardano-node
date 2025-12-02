@@ -68,6 +68,7 @@ import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
+import Hedgehog.Extras.Stock (sprocketSystemName)
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
@@ -207,6 +208,7 @@ cardanoTestnet
         { cardanoNodeLoggingFormat=nodeLoggingFormat
         , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
+        , cardanoKESSource
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
       nodeConfigFile = tmpAbsPath </> "configuration.yaml"
@@ -279,7 +281,7 @@ cardanoTestnet
   -- have to manually set up the start times themselves.
   when (updateTimestamps == UpdateTimestamps) $ do
     currentTime <- H.noteShowIO DTC.getCurrentTime
-    startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+    startTime <- H.noteShow $ DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
 
     -- Update start time in Byron genesis file
     eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
@@ -301,14 +303,39 @@ cardanoTestnet
             RelayNodeOptions{} -> (Nothing, [])
             SpoNodeOptions{} -> (Just keys, shelleyCliArgs <> byronCliArgs)
           where
-            shelleyCliArgs = [ "--shelley-kes-key", nodePoolKeysDir </> "kes.skey"
-                             , "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
+            shelleyCliArgs = [ "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
                              , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
                              ]
             byronCliArgs = [ "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
                            , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
                            ]
             keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
+
+    -- depending on testnet configuration, either start a 'kes-agent' or use a key from disk
+    kesSourceCliArg <-
+      case cardanoKESSource of
+        UseKESKeyFile -> pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+        UseKESSocket -> do
+          -- wait startTimeOffsetSeconds so that the startTime from shelly-jenesis.json is not in the future,
+          -- as otherwise we will trigger an underflow in kes-agent with a negative time difference.
+          H.threadDelay (startTimeOffsetSeconds * 1_000_000)
+          H.noteShowIO_ DTC.getCurrentTime
+          kesAgent <- runExceptT $
+            initAndStartKESAgent (TmpAbsolutePath tmpAbsPath) nodeName
+              TestnetKESAgentArgs{ tkaaShelleyGenesisFile = shelleyGenesisFile
+                                 , tkaaColdVKeyFile = nodePoolKeysDir </> "cold.vkey"
+                                 , tkaaColdSKeyFile = nodePoolKeysDir </> "cold.skey"
+                                 , tkaaKesVKeyFile = nodePoolKeysDir </> "kes.vkey"
+                                 , tkaaOpcertCounterFile = nodePoolKeysDir </> "opcert.counter"
+                                 , tkaaOpcertFile = nodePoolKeysDir </> "opcert.cert"
+                                 }
+          case kesAgent of
+            Left e -> do
+              -- TODO: fail if could not start KES agent
+              H.annotateShow $ "Could not start KES agent: " <> show e
+              pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+            Right (TestnetKESAgent{kesAgentServiceSprocket}) ->
+              pure ["--shelley-kes-agent-socket", sprocketSystemName kesAgentServiceSprocket]
 
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic $
@@ -317,6 +344,7 @@ cardanoTestnet
         , "--topology", nodeDataDir </> "topology.json"
         , "--database-path", nodeDataDir </> "db"
         ]
+        <> kesSourceCliArg
         <> spoNodeCliArgs
         <> extraCliArgs nodeOptions
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}

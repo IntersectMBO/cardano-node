@@ -73,6 +73,11 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
       <>  OA.metavar "DIRECTORY"
       )))
+  <*> OA.flag UseKESKeyFile UseKESSocket
+      (   OA.long "use-kes-agent"
+      <>  OA.help "Get Praos block forging credentials from kes-agent via the default socket path"
+      <>  OA.showDefault
+      )
 
 pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =

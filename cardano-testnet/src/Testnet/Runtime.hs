@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -12,6 +13,8 @@
 
 module Testnet.Runtime
   ( startNode
+  , initAndStartKESAgent
+  , TestnetKESAgentArgs(..)
   , startLedgerNewEpochStateLogging
   , NodeStartFailure (..)
   ) where
@@ -50,7 +53,7 @@ import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
 import           Testnet.Types (TestnetNode (..), TestnetRuntime (configurationFile),
-                   showIpv4Address, testnetSprockets)
+                   showIpv4Address, testnetSprockets, TestnetKESAgent(..))
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -211,41 +214,215 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       , nodeStderr = nodeStderrFile
       , nodeProcessHandle = hProcess
       }
-  where
-    -- close provided list of handles when 'ExceptT' throws an error
-    closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a
-    closeHandlesOnError handles action =
-      catchE action $ \e -> do
-        liftIO $ mapM_ IO.hClose handles
-        throwE e
 
-    -- Sometimes even when we close the files manually, the operating system still holds the lock for some
-    -- reason. This is most prominent on MacOS. Therefore, as a last resort, instead of
-    -- failing the node startup procedure, we simply try to use a different file name for the logs, with
-    -- the suffix @-n.log@ where @n@ is an attempt number.
-    retryOpenFile :: MonadIO m
-                  => MonadCatch m
-                  => FilePath -- ^ path we're trying to open
-                  -> IO.IOMode
-                  -> ExceptT NodeStartFailure m IO.Handle
-    retryOpenFile fullPath mode = go 0
-      where
-        go :: MonadIO m
-           => MonadCatch m
-           => Int
-           -> ExceptT NodeStartFailure m IO.Handle
-        go n = do
-          let (path, extension) = splitExtension fullPath
-              path' = if n > 0
-                         then path <> "-" <> show n <> extension
-                         else fullPath
-          r <- fmap (first FileRelatedFailure) . try . liftIO $ IO.openFile path' mode
-          case r of
-            Right h -> pure h
-            Left e
-              -- give up after 1000 attempts
-              | n >= 1000 -> throwE e
-              | otherwise -> go (n + 1)
+-- | Start a kes-agent for a particular node
+startKESAgent
+  :: HasCallStack
+  => MonadResource m
+  => MonadCatch m
+  => MonadFail m
+  => MonadTest m
+  => TmpAbsolutePath
+  -- ^ The temporary absolute path
+  -> String
+  -- ^ The name of the node
+  -> [String]
+  -- ^ additional CLI options for 'kes-agent`
+  -> ExceptT NodeStartFailure m TestnetKESAgent
+startKESAgent tp node args = GHC.withFrozenCallStack $ do
+  let tempBaseAbsPath = makeTmpBaseAbsPath tp
+      socketDir = makeSocketDir tp
+      logDir = makeLogDir tp
+      kesAgentStr= "kes-agent"
+
+  liftIO $ createDirectoryIfMissingNew_ $ logDir </> node </> kesAgentStr
+  void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node </> kesAgentStr)
+
+  let nodeStdoutFile = logDir </> node </> kesAgentStr </>  "stdout.log"
+      nodeStderrFile = logDir </> node </> kesAgentStr </> "stderr.log"
+      nodePidFile = logDir </> node </> kesAgentStr </> (node <> kesAgentStr <> ".pid")
+      serviceSocketRelPath = socketDir </> node </> kesAgentStr </> "service.sock"
+      controlSocketRelPath = socketDir </> node </> kesAgentStr </> "control.sock"
+      serviceSprocket = Sprocket tempBaseAbsPath serviceSocketRelPath
+      controlSprocket = Sprocket tempBaseAbsPath controlSocketRelPath
+
+  hNodeStdout <- retryOpenFile nodeStdoutFile IO.WriteMode
+  hNodeStderr <- retryOpenFile nodeStderrFile IO.ReadWriteMode
+
+  -- Sometimes the handles are not getting properly closed when node fails to start. This results in
+  -- operating system holding the file lock for longer than it's necessary. This in the end prevents retrying
+  -- node start and acquiring a lock for the same stderr/stdout files again.
+  closeHandlesOnError [hNodeStdout, hNodeStderr] $ do
+
+    unless (List.length (H.sprocketArgumentName serviceSprocket) <= H.maxSprocketArgumentNameLength) $
+       left MaxSprocketLengthExceededError
+    unless (List.length (H.sprocketArgumentName controlSprocket) <= H.maxSprocketArgumentNameLength) $
+       left MaxSprocketLengthExceededError
+
+    let kesAgentCmd = [ "run"
+                      , "-s", tempBaseAbsPath </> serviceSocketRelPath
+                      , "-c", tempBaseAbsPath </> controlSocketRelPath
+                      ] ++ args
+
+    kesAgentProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ procKESAgent kesAgentCmd
+
+    (Just stdIn, _, _, hProcess, _)
+      <- firstExceptT ProcessRelatedFailure $ initiateProcess
+            $ kesAgentProcess
+               { IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout
+               , IO.std_err = IO.UseHandle hNodeStderr
+               , IO.cwd = Just tempBaseAbsPath
+               }
+
+    -- We force the evaluation of initiateProcess so we can be sure that
+    -- the process has started. This allows us to read stderr in order
+    -- to fail early on errors generated from the cardano-node binary.
+    pid <- liftIO (IO.getPid hProcess)
+      >>= hoistMaybe (NodeExecutableError $ "startKESAgent:" <+> pretty node <+> "'s process did not start.")
+
+    -- We then log the pid in the temp dir structure.
+    liftIO $ IO.writeFile nodePidFile $ show pid
+
+    -- Wait for the service and control sockets to be created
+    eServiceSprocketError <-
+      H.evalIO $
+        Ping.waitForSprocket
+          120  -- timeout
+          0.2 -- check interval
+          serviceSprocket
+    eControlSprocketError <-
+      H.evalIO $
+        Ping.waitForSprocket
+          120  -- timeout
+          0.2 -- check interval
+          controlSprocket
+
+    -- If we do have anything on stderr, fail.
+    stdErrContents <- liftIO $ IO.readFile nodeStderrFile
+    unless (null stdErrContents) $
+      throwError $ mkNodeNonEmptyStderrError stdErrContents
+
+    -- No stderr and no socket? Fail.
+    firstExceptT
+      (\ioex ->
+        NodeExecutableError . hsep $
+          ["Socket", pretty serviceSocketRelPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
+      $ hoistEither eServiceSprocketError
+    firstExceptT
+      (\ioex ->
+        NodeExecutableError . hsep $
+          ["Socket", pretty controlSocketRelPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
+      $ hoistEither eControlSprocketError
+
+    -- Ping node and fail on error
+    -- FIXME: pinging of the node is broken now, has the protocol changed?
+    -- Ping.pingNode (fromIntegral testnetMagic) sprocket
+    --    >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
+
+    pure $ TestnetKESAgent
+      { kesAgentName = node
+      , kesAgentPoolKeys = Nothing -- they're set in the function caller, if present
+      , kesAgentServiceSprocket= serviceSprocket
+      , kesAgentControlSprocket = controlSprocket
+      , kesAgentStdinHandle = stdIn
+      , kesAgentStdout = nodeStdoutFile
+      , kesAgentStderr = nodeStderrFile
+      , kesAgentProcessHandle = hProcess
+      }
+
+-- | Various file paths needed to start and initialised a 'kes-agent' process
+data TestnetKESAgentArgs =
+  TestnetKESAgentArgs
+  { tkaaShelleyGenesisFile :: FilePath
+  , tkaaColdVKeyFile :: FilePath
+  , tkaaColdSKeyFile :: FilePath
+  , tkaaKesVKeyFile :: FilePath
+  , tkaaOpcertCounterFile :: FilePath
+  , tkaaOpcertFile :: FilePath
+  }
+
+-- | Start the 'kes-agent' process and initialise it to handle the kes keys
+--   for a block-producing node.
+initAndStartKESAgent
+  :: HasCallStack
+  => MonadResource m
+  => MonadCatch m
+  => MonadFail m
+  => MonadTest m
+  =>
+  TmpAbsolutePath
+  -- ^ The temporary absolute path
+  -> String
+  -- ^ The name of the node
+  -> TestnetKESAgentArgs
+  -> ExceptT NodeStartFailure m TestnetKESAgent
+initAndStartKESAgent tp nodeNameStr
+  TestnetKESAgentArgs{ tkaaShelleyGenesisFile
+                     , tkaaColdVKeyFile
+                     , tkaaColdSKeyFile
+                     , tkaaKesVKeyFile
+                     , tkaaOpcertCounterFile
+                     , tkaaOpcertFile
+                     }
+  = do
+  -- start the agent process
+  kesAgent@TestnetKESAgent{kesAgentControlSprocket} <- startKESAgent tp nodeNameStr
+    [ "--cold-verification-key", tkaaColdVKeyFile
+    , "--genesis-file", tkaaShelleyGenesisFile
+    ]
+  -- generate kes key
+  execKESAgentControl_ [ "gen-staged-key"
+                       , "--kes-verification-key-file", tkaaKesVKeyFile
+                       , "--control-address", H.sprocketSystemName kesAgentControlSprocket]
+  -- issue opcert
+  execCli_
+    [ "node", "issue-op-cert"
+    , "--kes-verification-key-file", tkaaKesVKeyFile
+    , "--cold-signing-key-file", tkaaColdSKeyFile
+    , "--operational-certificate-issue-counter", tkaaOpcertCounterFile
+    , "--kes-period", "0"
+    , "--out-file", tkaaOpcertFile
+    ]
+  -- install the opcert into the kes-agent
+  execKESAgentControl_ [ "install-key"
+                       , "--control-address", H.sprocketSystemName kesAgentControlSprocket
+                       , "--opcert-file", tkaaOpcertFile]
+  pure kesAgent
+
+-- | Close provided list of handles when 'ExceptT' throws an error
+closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a
+closeHandlesOnError handles action =
+  catchE action $ \e -> do
+    liftIO $ mapM_ IO.hClose handles
+    throwE e
+
+-- Sometimes even when we close the files manually, the operating system still holds the lock for some
+-- reason. This is most prominent on MacOS. Therefore, as a last resort, instead of
+-- failing the node startup procedure, we simply try to use a different file name for the logs, with
+-- the suffix @-n.log@ where @n@ is an attempt number.
+retryOpenFile :: MonadIO m
+              => MonadCatch m
+              => FilePath -- ^ path we're trying to open
+              -> IO.IOMode
+              -> ExceptT NodeStartFailure m IO.Handle
+retryOpenFile fullPath mode = go 0
+  where
+    go :: MonadIO m
+       => MonadCatch m
+       => Int
+       -> ExceptT NodeStartFailure m IO.Handle
+    go n = do
+      let (path, extension) = splitExtension fullPath
+          path' = if n > 0
+                     then path <> "-" <> show n <> extension
+                     else fullPath
+      r <- fmap (first FileRelatedFailure) . try . liftIO $ IO.openFile path' mode
+      case r of
+        Right h -> pure h
+        Left e
+          -- give up after 1000 attempts
+          | n >= 1000 -> throwE e
+          | otherwise -> go (n + 1)
 
 
 
