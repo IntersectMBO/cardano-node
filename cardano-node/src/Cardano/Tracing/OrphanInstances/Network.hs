@@ -142,6 +142,13 @@ import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 
 {- HLINT ignore "Use record patterns" -}
 
+import qualified Data.Bits as Bits
+import qualified Data.Vector as V
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, leiosEbBytesSize, leiosTxBytesSize, prettyBitmap, prettyEbHash)
+import           LeiosDemoTypes (TraceLeiosKernel, TraceLeiosPeer, traceLeiosKernelToObject, traceLeiosPeerToObject)
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
 --
@@ -1437,19 +1444,21 @@ instance (ToJSON peer, ConvertRawHash header)
 
 instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
-  toObject verb (TraceSendMsg m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (TraceRecvMsg m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+  toObject verb (TraceSendMsg tm m) = mconcat
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "mux_at" .= jsonTime tm  ]
+  toObject verb (TraceRecvMsg mbTm m) = mconcat
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "mux_at" Aeson..?= fmap jsonTime mbTm ]
 
 
 instance ToObject (Stateful.AnyMessage ps f)
       => ToObject (Stateful.TraceSendRecv ps f) where
-  toObject verb (Stateful.TraceSendMsg m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (Stateful.TraceRecvMsg m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+  toObject verb (Stateful.TraceSendMsg tm m) = mconcat
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "mux_at" .= jsonTime tm  ]
+  toObject verb (Stateful.TraceRecvMsg mbTm m) = mconcat
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "mux_at" Aeson..?= fmap jsonTime mbTm ]
 
+jsonTime :: Time -> Double
+jsonTime (Time x) = realToFrac x
 
 instance ToObject (TraceTxSubmissionInbound txid tx) where
   toObject _verb (TraceTxSubmissionCollected count) =
@@ -2871,3 +2880,113 @@ instance FromJSON PeerTrustable where
 instance ToJSON PeerTrustable where
   toJSON IsTrustable = Bool True
   toJSON IsNotTrustable = Bool False
+
+-----
+
+instance ToJSON EbHash where toJSON = toJSON . prettyEbHash
+
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (LN.LeiosNotify LeiosPoint ()))) where
+  trTransformer = trStructured
+
+instance ToObject (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+  toObject _verb (AnyMessageAndAgency _stok msg) = case msg of
+
+    LN.MsgLeiosNotificationRequestNext ->
+      mconcat [ "kind" .= String "MsgLeiosNotificationRequestNext"
+              ]
+
+    LN.MsgLeiosBlockAnnouncement () ->
+      mconcat [ "kind" .= String "MsgLeiosBlockAnnouncement"
+              ]
+    LN.MsgLeiosBlockOffer (MkLeiosPoint ebSlot ebHash) ebBytesSize ->
+      mconcat [ "kind" .= String "MsgLeiosBlockOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              , "ebBytesSize" .= ebBytesSize
+              ]
+    LN.MsgLeiosBlockTxsOffer (MkLeiosPoint ebSlot ebHash) ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxsOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              ]
+
+    LN.MsgDone ->
+      mconcat [ "kind" .= String "MsgDone"
+              ]
+
+--    where
+--      agency :: Aeson.Object
+--      agency = "agency" .= show stok
+
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))) where
+  trTransformer = trStructured
+
+instance ToObject (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
+  toObject _verb (AnyMessageAndAgency _stok msg) = case msg of
+
+    LF.MsgLeiosBlockRequest (MkLeiosPoint ebSlot ebHash) ->
+      mconcat [ "kind" .= String "MsgLeiosBlockRequest"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              ]
+
+    LF.MsgLeiosBlock eb ->
+      mconcat [ "kind" .= String "MsgLeiosBlock"
+              , "eb" .= String "<elided>"
+              , "ebBytesSize" .= Number (fromIntegral $ leiosEbBytesSize eb)
+              ]
+
+    LF.MsgLeiosBlockTxsRequest (MkLeiosPoint ebSlot ebHash) bitmaps ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxsRequest"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              , "numTxs" .= Number (fromIntegral $ sum $ map (Bits.popCount . snd) bitmaps)
+              , "bitmaps" .= Array (V.fromList $ map (String . pack . prettyBitmap) bitmaps)
+              ]
+
+    LF.MsgLeiosBlockTxs txs ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxs"
+              , "numTxs" .= Number (fromIntegral (V.length txs))
+              , "txsBytesSize" .= Number (fromIntegral $ V.sum $ V.map leiosTxBytesSize txs)
+              , "txs" .= String "<elided>"
+              ]
+
+    -- LF.MsgLeiosVotesRequest
+    -- LF.MsgLeiosVoteDelivery
+
+    -- LF.MsgLeiosBlockRangeRequest
+    -- LF.MsgLeiosNextBlockAndTxsInRange
+    -- LF.MsgLeiosLastBlockAndTxsInRange
+
+    LF.MsgDone ->
+      mconcat [ "kind" .= String "MsgDone"
+              ]
+
+    where
+--      agency :: Aeson.Object
+--      agency = "agency" .= show stok
+
+instance Transformable Text IO TraceLeiosKernel where
+  trTransformer = trStructured
+
+instance ToObject TraceLeiosKernel where
+  toObject _verb = traceLeiosKernelToObject
+
+instance HasPrivacyAnnotation TraceLeiosKernel
+
+instance HasSeverityAnnotation TraceLeiosKernel where
+  getSeverityAnnotation _ = Debug
+
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer TraceLeiosPeer) where
+  trTransformer = trStructured
+
+instance ToObject TraceLeiosPeer where
+  toObject _verb = traceLeiosPeerToObject
+
+instance HasPrivacyAnnotation TraceLeiosPeer
+
+instance HasSeverityAnnotation TraceLeiosPeer where
+  getSeverityAnnotation _ = Debug
