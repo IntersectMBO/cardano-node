@@ -1,0 +1,118 @@
+#set page(paper: "a4")
+
+// these settings make the output look more LaTeX-like
+// #set page(margin: 1.75in)
+#set par(leading: 0.55em, spacing: 0.55em, first-line-indent: 1.8em, justify: true)
+// #set text(font: "Ubuntu")
+// #show raw: set text(font: "Ubuntu Mono")
+#show heading: set block(above: 1.5em, below: 1.2em)
+
+#metadata("{{ report.tag }}.{{ base.fileInfix }}.pdf") <export_file_name>
+
+
+// Semibold row descriptions
+#show table.cell.where(x: 0): set text(weight: "semibold")
+
+// No strokes inside table body; left alignment for row descriptions only
+#let frame(stroke) = (x, y) => (
+  left: if x > 0 { 0pt } else { stroke },
+  right: stroke,
+  top: if y < 2 { stroke } else { 0pt },
+  bottom: stroke,
+)
+#set table(
+  stroke: frame(1pt),
+  align:  (x, _) => if x == 0 { left } else { right }
+)
+
+// table coloring
+#let gr(c) = table.cell(fill: green.lighten(60%))[c]
+
+
+//   #+CONSTANTS: base=../../{{ base.meta.tag }}/analysis
+//   {% for run in runs %}
+//   #+CONSTANTS: run{{ run.index }}=../../{{ run.value.meta.tag }}/analysis
+
+
+
+The Title Page
+
+{{ report.target }} against {{ base.ver }}
+
+{{ base.workload }} workload
+{{ report.author }}, Cardano Performance team
+{{ report.date }}
+
+#pagebreak()
+
+
+#set page(numbering: "1")
+#counter(page).update(1)
+
+#outline()
+
+#pagebreak()
+
+= Manifest
+
+We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}`{{ run.value.ver }}` ({{ run.value.meta.era | toTitle }}){% endfor %} relative to `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload.
+
+{% include "table_summary.ede" with table = summary %}
+
+#pagebreak()
+
+= Analysis
+
+
+#pagebreak()
+
+
+= Observations
+
+== Resources
+
++ ...
+
+== Forging
+
++ ...
+
+== Peer propagation
+
++ ...
+
+== End-to-end propagation
+
++ ...
+
+
+#pagebreak()
+
+= Appendix A: charts
+
+== Cluster performance charts
+
+
+#pagebreak()
+
+
+#set par(
+    first-line-indent: (amount: 0pt, all: true),
+    spacing: 1.35em
+)
+
+= Appendix B: data dictionary
+
+== Block propagation metrics
+
+{% for m in dictionary.dBlockProp %}
+*{{ m.value.deShortDesc }}* (_{{ m.value.deField }}_) -- {{ m.value.deDescription }}
+
+{% endfor %}
+
+== Cluster performance metrics
+
+{% for m in dictionary.dClusterPerf %}
+*{{ m.value.deShortDesc }}* (_{{ m.value.deField }}_) -- {{ m.value.deDescription }}
+
+{% endfor %}
