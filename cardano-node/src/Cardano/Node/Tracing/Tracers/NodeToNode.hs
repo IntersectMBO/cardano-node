@@ -104,12 +104,12 @@ instance MetaTrace (AnyMessage (BlockFetch blk1 (Point blk2))) where
     namespaceFor (AnyMessageAndAgency _stok MsgClientDone{}) =
       Namespace [] ["ClientDone"]
 
-    severityFor (Namespace _ ["RequestRange"]) _ = Just Info
-    severityFor (Namespace _ ["StartBatch"]) _ = Just Info
-    severityFor (Namespace _ ["NoBlocks"]) _ = Just Info
-    severityFor (Namespace _ ["Block"]) _ = Just Info
-    severityFor (Namespace _ ["BatchDone"]) _ = Just Info
-    severityFor (Namespace _ ["ClientDone"]) _ = Just Info
+    severityFor (Namespace _ ["RequestRange"]) _ = Just Debug
+    severityFor (Namespace _ ["StartBatch"]) _ = Just Debug
+    severityFor (Namespace _ ["NoBlocks"]) _ = Just Debug
+    severityFor (Namespace _ ["Block"]) _ = Just Debug
+    severityFor (Namespace _ ["BatchDone"]) _ = Just Debug
+    severityFor (Namespace _ ["ClientDone"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["RequestRange"]) = Just
@@ -229,12 +229,12 @@ instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
     namespaceFor (AnyMessageAndAgency _stok STX.MsgDone {}) =
       Namespace [] ["Done"]
 
-    severityFor (Namespace _ ["MsgInit"]) _ = Just Info
-    severityFor (Namespace _ ["RequestTxIds"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyTxIds"]) _ = Just Info
-    severityFor (Namespace _ ["RequestTxs"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyTxs"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["MsgInit"]) _ = Just Debug
+    severityFor (Namespace _ ["RequestTxIds"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyTxIds"]) _ = Just Debug
+    severityFor (Namespace _ ["RequestTxs"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyTxs"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["MsgInit"]) = Just
@@ -364,9 +364,9 @@ instance MetaTrace (AnyMessage KA.KeepAlive) where
     namespaceFor (AnyMessageAndAgency _stok KA.MsgDone) =
       Namespace [] ["Done"]
 
-    severityFor (Namespace _ ["KeepAlive"]) _ = Just Info
-    severityFor (Namespace _ ["KeepAliveResponse"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["KeepAlive"]) _ = Just Debug
+    severityFor (Namespace _ ["KeepAliveResponse"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["KeepAlive"]) = Just
@@ -417,7 +417,7 @@ instance MetaTrace (AnyMessage (PS.PeerSharing addr)) where
       Namespace [] ["PeerShareDone"]
 
     severityFor (Namespace _ ["PeerShareRequest"]) _ = Just Debug
-    severityFor (Namespace _ ["PeerShareResult"]) _ = Just Info
+    severityFor (Namespace _ ["PeerShareResult"]) _ = Just Debug
     severityFor (Namespace _ ["PeerShareDone"]) _ = Just Debug
     severityFor _ _ = Nothing
 
