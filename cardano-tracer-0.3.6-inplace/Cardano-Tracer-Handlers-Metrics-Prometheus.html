@@ -1,0 +1,26 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head id="head" data-base-url=".."><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Cardano.Tracer.Handlers.Metrics.Prometheus</title><link href="../linuwial.css" rel="stylesheet" type="text/css" title="Linuwial" /><link rel="stylesheet" type="text/css" href="../quick-jump.css" /><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400i,700" /><script src="../haddock-bundle.min.js" async="async" type="text/javascript"></script><script type="text/x-mathjax-config">MathJax.Hub.Config({ tex2jax: { processClass: "mathjax", ignoreClass: ".*" } });</script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script></head><body><div id="package-header"><span class="caption">cardano-tracer-0.3.6: A service for logging and monitoring over Cardano nodes</span><ul class="links" id="page-menu"><li><a href="src/Cardano.Tracer.Handlers.Metrics.Prometheus.html">Source</a></li><li><a href="../index.html">Contents</a></li><li><a href="../doc-index.html">Index</a></li></ul></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>Safe-Inferred</td></tr><tr><th>Language</th><td>Haskell2010</td></tr></table><p class="caption">Cardano.Tracer.Handlers.Metrics.Prometheus</p></div><div id="synopsis"><details id="syn"><summary>Synopsis</summary><ul class="details-toggle" data-details-id="syn"><li class="src short"><a href="#v:runPrometheusServer">runPrometheusServer</a> :: <a href="Cardano-Tracer-Environment.html#t:TracerEnv" title="Cardano.Tracer.Environment">TracerEnv</a> -&gt; <a href="Cardano-Tracer-Configuration.html#t:Endpoint" title="Cardano.Tracer.Configuration">Endpoint</a> -&gt; <a href="../base/System-IO.html#t:IO" title="System.IO">IO</a> <a href="Cardano-Tracer-Handlers-Metrics-Utils.html#t:RouteDictionary" title="Cardano.Tracer.Handlers.Metrics.Utils">RouteDictionary</a> -&gt; <a href="../base/System-IO.html#t:IO" title="System.IO">IO</a> ()</li></ul></details></div><div id="interface"><h1>Documentation</h1><div class="top"><p class="src"><a id="v:runPrometheusServer" class="def">runPrometheusServer</a> :: <a href="Cardano-Tracer-Environment.html#t:TracerEnv" title="Cardano.Tracer.Environment">TracerEnv</a> -&gt; <a href="Cardano-Tracer-Configuration.html#t:Endpoint" title="Cardano.Tracer.Configuration">Endpoint</a> -&gt; <a href="../base/System-IO.html#t:IO" title="System.IO">IO</a> <a href="Cardano-Tracer-Handlers-Metrics-Utils.html#t:RouteDictionary" title="Cardano.Tracer.Handlers.Metrics.Utils">RouteDictionary</a> -&gt; <a href="../base/System-IO.html#t:IO" title="System.IO">IO</a> () <a href="src/Cardano.Tracer.Handlers.Metrics.Prometheus.html#runPrometheusServer" class="link">Source</a> <a href="#v:runPrometheusServer" class="selflink">#</a></p><div class="doc"><p>Runs a simple HTTP server that listens on <code>endpoint</code>.</p><p>At the root, it lists the connected nodes, either as HTML or JSON, depending
+   on the request's 'Accept: ' header.</p><p>Routing is dynamic, depending on the connected nodes. A valid URL is derived
+   from the nodeName configured for the connecting node. E.g. a node name
+   of `127.0.0.1:30004` will result in the route `/12700130004` which
+   renders that node's Prometheus / OpenMetrics text exposition:</p><p># TYPE Mem_resident_int gauge
+ # HELP Mem_resident_int Kernel-reported RSS (resident set size)
+ Mem_resident_int 103792640
+ # TYPE RTS_gcMajorNum_int gauge
+ # HELP RTS_gcMajorNum_int Major GCs
+ RTS_gcMajorNum_int 4
+ # TYPE rts_gc_num_bytes_usage_samples counter
+ rts_gc_num_bytes_usage_samples 4
+ # TYPE remainingKESPeriods_int gauge
+ remainingKESPeriods_int 62
+ # TYPE rts_gc_bytes_copied counter
+ rts_gc_bytes_copied 17114384
+ # TYPE nodeCannotForge_int gauge
+ # HELP nodeCannotForge_int How many times was this node unable to forge [a block]?</p><p>The `/targets` path can be used for Prometheus HTTP service discovery. This lets
+  Prometheus dynamically discover all connected nodes, and scrape their metrics.
+  Below is a minimal example of a corresponding job definition that goes into the
+  `prometheus.yml` configuration:</p><ul><li>job_name: &quot;cardano-tracer&quot;</li></ul><p>http_sd_configs:
+        - url: '<a href="http://127.0.0.1:3200/targets'">http://127.0.0.1:3200/targets'</a>    # &lt;-- Your cardano-tracer's real hostname:prometheus port</p><p>Each target will have a label &quot;node_name&quot; which corresponds to the TraceOptionNodeName setting in the node config.</p><p>In cardano-tracer's config, you can optionally provide additional labels to be attached to *all* targets
+  (default is no additional labels):
+    &quot;prometheusLabels&quot;: {
+        &quot;<a href="labelname">labelname</a>&quot;: &quot;<a href="labelvalue">labelvalue</a>&quot;, ...
+      }</p></div></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.29.2</p></div></body></html>
