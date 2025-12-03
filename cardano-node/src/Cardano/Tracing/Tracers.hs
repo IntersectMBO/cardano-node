@@ -359,7 +359,6 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
     , nodeStartupInfoTracer = nullTracer
     , nodeStateTracer = nullTracer
     , resourcesTracer = nullTracer
-    , peersTracer = nullTracer
     , ledgerMetricsTracer = nullTracer
     }
  where
@@ -535,7 +534,6 @@ mkTracers _ _ _ _ _ =
     , nodeStateTracer = nullTracer
     , nodeVersionTracer = nullTracer
     , resourcesTracer = nullTracer
-    , peersTracer = nullTracer
     , ledgerMetricsTracer = nullTracer
     }
 

@@ -45,7 +45,6 @@ import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
 import           Cardano.Node.Tracing.Tracers.P2P ()
-import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
@@ -233,13 +232,6 @@ docTracersFirstPhase condConfigFileName = do
                 ["NodeState"]
     configureTracers configReflection trConfig [stateTr]
     stateTrDoc <- documentTracer (stateTr :: Logging.Trace IO SR.NodeState)
-
-    --  Peers tracer
-    peersTr   <- mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Peers", "List"]
-    configureTracers configReflection trConfig [peersTr]
-    peersTrDoc <- documentTracer (peersTr :: Logging.Trace IO  [PeerT blk])
 
     -- Resource tracer
     resourcesTr <- mkCardanoTracer
@@ -716,7 +708,6 @@ docTracersFirstPhase condConfigFileName = do
             <> startupTrDoc
             <> shutdownTrDoc
             <> nodeVersionDoc
-            <> peersTrDoc
             <> chainDBTrDoc
             <> replayBlockTrDoc
 -- Consensus

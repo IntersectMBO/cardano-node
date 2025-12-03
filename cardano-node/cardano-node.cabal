@@ -97,7 +97,6 @@ library
                         Cardano.Node.Tracing.Formatting
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
-                        Cardano.Node.Tracing.Peers
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
@@ -113,7 +112,6 @@ library
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
                         Cardano.Node.Tracing.Tracers.P2P
-                        Cardano.Node.Tracing.Tracers.Peer
                         Cardano.Node.Tracing.Tracers.Resources
                         Cardano.Node.Tracing.Tracers.Shutdown
                         Cardano.Node.Tracing.Tracers.Startup
