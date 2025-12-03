@@ -139,7 +139,11 @@ data StartupTrace blk =
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
-  | LedgerPeerSnapshotLoaded (Either (UseLedgerPeers, WithOrigin SlotNo) (WithOrigin SlotNo))
+  | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
+  -- | Ledger peer snapshot ignored since the peer snapshot slot is older than
+  -- `UseLedgerPeers` in the topology file.  Arguments are:
+  -- useLedgerPeersAfterSlot, peerSnapshotSlot, peerSnapshotFile.
+  | LedgerPeerSnapshotIgnored SlotNo SlotNo PeerSnapshotFile
   | MovedTopLevelOption String
 
 data EnabledBlockForging
