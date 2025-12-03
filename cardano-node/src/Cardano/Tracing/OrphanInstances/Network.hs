@@ -1913,13 +1913,14 @@ instance ToObject (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrusta
              , "targetLocalEstablished" .= tLocalEst
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
-  toObject _verb (TracePromoteColdFailed tEst aEst p d err) =
+  toObject _verb (TracePromoteColdFailed tEst aEst p d err f) =
     mconcat [ "kind" .= String "PromoteColdFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              , "delay" .= toJSON d
              , "reason" .= show err
+             , "forgotten" .= show f
              ]
   toObject _verb (TracePromoteColdDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdDone"
@@ -1933,13 +1934,14 @@ instance ToObject (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrusta
              , "actualEstablished" .= actualKnown
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
-  toObject _verb (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err) =
+  toObject _verb (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err f) =
     mconcat [ "kind" .= String "PromoteColdBigLedgerPeerFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              , "delay" .= toJSON d
              , "reason" .= show err
+             , "forgotten" .= f
              ]
   toObject _verb (TracePromoteColdBigLedgerPeerDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdBigLedgerPeerDone"
