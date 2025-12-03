@@ -21,8 +21,6 @@ env:
   # Only to avoid some repetition
   FLAKE_REF: github:${{ github.repository }}/${{ github.ref_name }}
   GH_TOKEN: ${{ github.token }}
-  # We need to tell skopeo where to write the authentication token
-  REGISTRY_AUTH_FILE: ./skopeo-registry-auth-file.json
 
 jobs:
   wait-for-hydra:
@@ -30,23 +28,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Waiting for ci/hydra-build:required to complete
-      run: |
-        while [[ true ]]; do
-          check_name='ci/hydra-build:required'
-          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check_name" --paginate --jq '.check_runs[].conclusion')
-          case "$conclusion" in
-            success)
-              echo "$check_name succeeded"
-              exit 0;;
-            '')
-              echo "$check_name pending. Waiting 30s..."
-              sleep 30;;
-            *)
-              echo "$check_name terminated unsuccessfully"
-              exit 1;;
-          esac
-        done
+      - name: Waiting for ci/hydra-build:required to complete
+        run: |
+          while [[ true ]]; do
+            check_name='ci/hydra-build:required'
+            conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check_name" --paginate --jq '.check_runs[].conclusion')
+            case "$conclusion" in
+              success)
+                echo "$check_name succeeded"
+                exit 0;;
+              '')
+                echo "$check_name pending. Waiting 30s..."
+                sleep 30;;
+              *)
+                echo "$check_name terminated unsuccessfully"
+                exit 1;;
+            esac
+          done
 
 
   prepare:
@@ -58,21 +56,22 @@ jobs:
       LOCKED_URL: ${{ steps.flake-metadata.outputs.LOCKED_URL }}
 
     steps:
-    - name: Install Nix
-      uses: input-output-hk/install-nix-action@v20
+      - name: Install Nix
+        uses: input-output-hk/install-nix-action@v20
 
-    - name: Display flake metadata
-      id: flake-metadata
-      run: |
-        nix flake metadata ${{ env.FLAKE_REF }}
-        nix flake metadata ${{ env.FLAKE_REF }} --json | jq -r '"LOCKED_URL=\(.url)"' >> "$GITHUB_OUTPUT"
+      - name: Display flake metadata
+        id: flake-metadata
+        run: |
+          nix flake metadata ${{ env.FLAKE_REF }}
+          nix flake metadata ${{ env.FLAKE_REF }} --json | jq -r '"LOCKED_URL=\(.url)"' >> "$GITHUB_OUTPUT"
 
-    - name: Obtaining latest release tag
-      id: latest-tag
-      run: |
-        LATEST_TAG=$(gh api repos/$GITHUB_REPOSITORY/releases/latest --paginate --jq '.tag_name')
-        echo "LATEST_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
-        echo "Latest release tag is: $LATEST_TAG"
+      - name: Obtaining latest release tag
+        id: latest-tag
+        run: |
+          LATEST_TAG=$(gh api repos/$GITHUB_REPOSITORY/releases/latest --paginate --jq '.tag_name')
+          echo "LATEST_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "Latest release tag is: $LATEST_TAG"
+
 
   build:
     needs: [prepare]
@@ -94,104 +93,126 @@ jobs:
           #   nix_key: dockerImage/tracer
 
     steps:
-    - name: Install Nix
-      uses: input-output-hk/install-nix-action@v20
+      - name: Install Nix
+        uses: input-output-hk/install-nix-action@v20
 
-    - name: Login to GitHub Container Registry
-      run: skopeo login --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} ghcr.io
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    # NOTE We assume that hydra has already built the image, this is
-    # reasonable since, before applying the tag, we must have already
-    # pushed the tagged commit somewhere, and Hydra will have had the
-    # change to build the image.
+      # NOTE We assume that hydra has already built the image, this is
+      # reasonable since, before applying the tag, we must have already
+      # pushed the tagged commit somewhere, and Hydra will have had the
+      # change to build the image.
 
-    - name: Uploading ${{ matrix.image.name }} (${{ matrix.arch.name }})
-      run: |
-        echo "::group::Downloading from cache"
-        nix build \
-          --accept-flake-config \
-          --print-out-paths \
-          --builders "" \
-          --max-jobs 0 \
-          --out-link ./result-${{ matrix.image.name }}-${{ matrix.arch.name }} \
-          ${{ needs.prepare.outputs.LOCKED_URL }}#packages.${{ matrix.arch.system }}.${{ matrix.image.nix_key }}
-        echo "::endgroup::"
+      - name: Uploading ${{ matrix.image.name }} (${{ matrix.arch.name }})
+        run: |
+          echo "::group::Downloading from cache"
+          nix build \
+            --accept-flake-config \
+            --print-out-paths \
+            --builders "" \
+            --max-jobs 0 \
+            --out-link ./result-${{ matrix.image.name }}-${{ matrix.arch.name }} \
+            ${{ needs.prepare.outputs.LOCKED_URL }}#packages.${{ matrix.arch.system }}.${{ matrix.image.nix_key }}
+          echo "::endgroup::"
 
-        echo "::group::Uploading to registry"
-        skopeo copy \
-          docker-archive:./result-${{ matrix.image.name }}-${{ matrix.arch.name }} \
-          docker://ghcr.io/intersectmbo/${{ matrix.image.name }}:$GITHUB_REF_NAME-${{ matrix.arch.name }}
-        echo "::endgroup::"
+          echo "::group::Uploading to registry"
+          skopeo copy \
+            docker-archive:./result-${{ matrix.image.name }}-${{ matrix.arch.name }} \
+            docker://ghcr.io/intersectmbo/${{ matrix.image.name }}:$GITHUB_REF_NAME-${{ matrix.arch.name }}
+          echo "::endgroup::"
 
 
   create-manifest:
-     needs: [prepare, build]
-     name: "Create Multi-Arch Manifest"
-     runs-on: ubuntu-latest
+    needs: [prepare, build]
+    name: "Create Multi-Arch Manifest"
+    runs-on: ubuntu-latest
 
-     steps:
-       - name: Setup Docker Buildx
-         uses: docker/setup-buildx-action@v3
+    steps:
+      - name: Install Nix
+        uses: input-output-hk/install-nix-action@v20
 
-       - name: Show buildx configuration
-         run: docker buildx ls
+      # Regctl simplifies obtaining multi-arch digests
+      - name: Install Nix Profile Commands
+        run: nix profile install nixpkgs#regctl
 
-       - name: Login to GitHub Container Registry
-         run: docker login ghcr.io --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
+      # The docker buildx action has a tight coupling with GH runners
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-       - name: Create Manifests
-         run: |
-           # TODO: re-enable upon success multi-arch manifest
-           # REPOS=(cardano-node cardano-submit-api cardano-tracer)
-           REPOS=(cardano-node)
-           ARCHES=(amd64 arm64)
+      - name: Show buildx configuration
+        run: docker buildx ls
 
-           for REPO in "${REPOS[@]}"; do
-             IMAGE_REPO="ghcr.io/intersectmbo/$REPO"
-             DIGESTS=()
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-             echo "::group::Fetching digests for $REPO"
-             for ARCH in "${ARCHES[@]}"; do
-               DIGEST=$(skopeo inspect --no-tags "docker://$IMAGE_REPO:$GITHUB_REF_NAME-$ARCH" | jq -r .Digest)
-               echo "$REPO $ARCH digest: $DIGEST"
-               DIGESTS+=("$IMAGE_REPO@$DIGEST")
-             done
-             echo "::endgroup::"
+      - name: Create Manifests
+        run: |
+          # TODO: re-enable upon success multi-arch manifest
+          # REPOS=(cardano-node cardano-submit-api cardano-tracer)
+          REPOS=(cardano-node)
+          ARCHES=(amd64 arm64)
 
-             echo "::group::Creating manifest for $REPO:$TAG"
-             docker buildx imagetools create --tag "$IMAGE_REPO:$GITHUB_REF_NAME" "${DIGESTS[@]}"
-             echo "::endgroup::"
-           done
+          for REPO in "${REPOS[@]}"; do
+            IMAGE_REPO="ghcr.io/intersectmbo/$REPO"
+            DIGESTS=()
 
-       - name: Verify multi-arch manifests
-         run: |
-           # TODO: re-enable upon success multi-arch manifest
-           # for REPO in cardano-node cardano-submit-api cardano-tracer; do
-           for REPO in cardano-node; do
-             echo "::group::Inspecting $REPO:$GITHUB_REF_NAME"
-             skopeo inspect docker://ghcr.io/intersectmbo/$REPO:$GITHUB_REF_NAME | jq '.MediaType, .Manifests[].platform'
-             echo "::endgroup::"
-           done
+            echo "::group::Fetching digests for $REPO"
+            for ARCH in "${ARCHES[@]}"; do
+              DIGEST=$(skopeo inspect --no-tags "docker://$IMAGE_REPO:$GITHUB_REF_NAME-$ARCH" | jq -r .Digest)
+              echo "$REPO $ARCH digest: $DIGEST"
+              DIGESTS+=("$IMAGE_REPO@$DIGEST")
+            done
+            echo "::endgroup::"
 
-       - name: Tag Containers as :latest
-         # Github releases are checked for latest tag in the first `or` operand of
-         # the if statement. However, promoted pre-releases or changed full
-         # releases do not count as a `published` event and so won't trigger
-         # this workflow.  For those use cases a manual workflow must be run
-         # from the matching release tag which the second `or` operand checks
-         # for.
-         if: |
-           (github.event_name == 'release' && github.event.release.tag_name == needs.prepare.outputs.LATEST_TAG) ||
-           (github.event_name == 'workflow_dispatch' && github.ref == format('refs/tags/{0}', needs.prepare.outputs.LATEST_TAG))
-         run: |
-           # TODO: re-enable upon success multi-arch manifest
-           # REPOS=(cardano-node cardano-submit-api cardano-tracer)
-           REPOS=(cardano-node)
+            echo "::group::Creating manifest for $REPO:$GITHUB_REF_NAME"
+            docker buildx imagetools create --tag "$IMAGE_REPO:$GITHUB_REF_NAME" "${DIGESTS[@]}"
+            echo "::endgroup::"
+          done
 
-           for REPO in "${REPOS[@]}"; do
-             IMAGE_REPO="ghcr.io/intersectmbo/$REPO"
+      - name: Verify multi-arch manifests
+        run: |
+          # TODO: re-enable upon success multi-arch manifest
+          # for REPO in cardano-node cardano-submit-api cardano-tracer; do
+          for REPO in cardano-node; do
+            IMAGE_REPO="ghcr.io/intersectmbo/$REPO"
+            echo "::group::Inspecting $REPO:$GITHUB_REF_NAME"
 
-             echo "::group::Creating manifest for $IMAGE_REPO:latest"
-             docker buildx imagetools create --tag "$IMAGE_REPO:latest" $IMAGE_REPO:$GITHUB_REF_NAME
-             echo "::endgroup::"
-           done
+            DIGEST=$(regctl manifest head "$IMAGE_REPO:$GITHUB_REF_NAME")
+            echo "$REPO multi-arch manifest digest: $DIGEST"
+            skopeo inspect --raw "docker://$IMAGE_REPO:$GITHUB_REF_NAME" | jq
+
+            echo "::endgroup::"
+          done
+
+      - name: Tag Containers as :latest
+        # Github releases are checked for latest tag in the first `or` operand of
+        # the if statement. However, promoted pre-releases or changed full
+        # releases do not count as a `published` event and so won't trigger
+        # this workflow.  For those use cases a manual workflow must be run
+        # from the matching release tag which the second `or` operand checks
+        # for.
+        if: |
+          (github.event_name == 'release' && github.event.release.tag_name == needs.prepare.outputs.LATEST_TAG) ||
+          (github.event_name == 'workflow_dispatch' && github.ref == format('refs/tags/{0}', needs.prepare.outputs.LATEST_TAG))
+        run: |
+          # TODO: re-enable upon success multi-arch manifest
+          # REPOS=(cardano-node cardano-submit-api cardano-tracer)
+          REPOS=(cardano-node)
+
+          for REPO in "${REPOS[@]}"; do
+            IMAGE_REPO="ghcr.io/intersectmbo/$REPO"
+            DIGEST=$(regctl manifest head "$IMAGE_REPO:$GITHUB_REF_NAME")
+
+            echo "::group::Creating manifest for $IMAGE_REPO:latest"
+            docker buildx imagetools create --tag "$IMAGE_REPO:latest" "$IMAGE_REPO@$DIGEST"
+            echo "::endgroup::"
+          done
