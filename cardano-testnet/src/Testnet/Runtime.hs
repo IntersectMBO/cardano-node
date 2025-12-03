@@ -333,7 +333,16 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          liftIOAnnotated $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+          exists <- liftIO $ IO.doesFileExist outputFp 
+          if exists 
+            then liftIOAnnotated $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+              <> displayException e <> "\n"
+            else 
+              liftIO $ writeFile outputFp $ unlines 
+                 ["Ledger new epoch logging failed - caught exception:"
+                 , displayException e
+                 ]
+          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
             <> displayException e <> "\n"
           pure ConditionMet
 
