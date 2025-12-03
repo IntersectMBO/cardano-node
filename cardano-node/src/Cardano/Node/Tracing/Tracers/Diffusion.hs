@@ -536,11 +536,11 @@ instance MetaTrace (AnyMessage (HS.Handshake a b)) where
     HS.MsgRefuse          {} -> ["Refuse"]
 
   severityFor (Namespace _ [sym]) _ = case sym of
-    "ProposeVersions" -> Just Info
-    "ReplyVersions"   -> Just Info
-    "QueryReply"      -> Just Info
-    "AcceptVersion"   -> Just Info
-    "Refuse"          -> Just Info
+    "ProposeVersions" -> Just Debug
+    "ReplyVersions"   -> Just Debug
+    "QueryReply"      -> Just Debug
+    "AcceptVersion"   -> Just Debug
+    "Refuse"          -> Just Debug
     _otherwise        -> Nothing
   severityFor _ _ = Nothing
 

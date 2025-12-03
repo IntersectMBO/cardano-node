@@ -769,8 +769,9 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) rea
     case useLedgerPeers of
       DontUseLedgerPeers       -> empty
       UseLedgerPeers afterSlot -> do
+        snapshotFile <- hoistMaybe mPeerSnapshotFile
         eSnapshot
-          <- liftIO . readPeerSnapshotFile =<< hoistMaybe mPeerSnapshotFile
+          <- liftIO $ readPeerSnapshotFile snapshotFile
         lps@(LedgerPeerSnapshot (wOrigin, _)) <-
           case ncConsensusMode of
             GenesisMode ->
@@ -779,15 +780,20 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) rea
               MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateWarning)
         case afterSlot of
           Always -> do
-            traceL $ LedgerPeerSnapshotLoaded . Right $ wOrigin
+            traceL $ LedgerPeerSnapshotLoaded wOrigin
             return lps
           After ledgerSlotNo
             | fileSlot >= ledgerSlotNo -> do
-                traceL $ LedgerPeerSnapshotLoaded . Right $ wOrigin
+                traceL $ LedgerPeerSnapshotLoaded wOrigin
                 pure lps
             | otherwise -> do
-                traceL $ LedgerPeerSnapshotLoaded . Left $ (useLedgerPeers, wOrigin)
-                empty
+                case ncConsensusMode of
+                  GenesisMode -> do
+                    traceL $ LedgerPeerSnapshotError ledgerSlotNo fileSlot snapshotFile
+                    liftIO $ throwIO (LedgerPeerSnapshotTooOld ledgerSlotNo fileSlot snapshotFile)
+                  PraosMode -> do
+                    traceL $ LedgerPeerSnapshotIgnored ledgerSlotNo fileSlot snapshotFile
+                    empty
             where
               fileSlot = case wOrigin of; Origin -> 0; At slot -> slot
 

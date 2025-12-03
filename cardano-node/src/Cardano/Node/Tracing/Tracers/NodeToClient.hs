@@ -116,6 +116,7 @@ instance MetaTrace (Stateful.AnyMessage ps f) =>
     severityFor (Namespace out tl) (Just msg)
   severityFor (Namespace out ("Send" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (Stateful.AnyMessage ps f)) Nothing
+
   severityFor (Namespace out ("Receive" : tl)) (Just (Stateful.TraceSendMsg msg)) =
     severityFor (Namespace out tl) (Just msg)
   severityFor (Namespace out ("Receive" : tl)) Nothing =
@@ -215,14 +216,14 @@ instance MetaTrace (Simple.AnyMessage (ChainSync blk pt tip)) where
     namespaceFor (Simple.AnyMessageAndAgency _agency (MsgDone {})) =
       Namespace [] ["Done"]
 
-    severityFor (Namespace _ ["RequestNext"]) _ = Just Info
-    severityFor (Namespace _ ["AwaitReply"]) _ = Just Info
-    severityFor (Namespace _ ["RollForward"]) _ = Just Info
-    severityFor (Namespace _ ["RollBackward"]) _ = Just Info
-    severityFor (Namespace _ ["FindIntersect"]) _ = Just Info
-    severityFor (Namespace _ ["IntersectFound"]) _ = Just Info
-    severityFor (Namespace _ ["IntersectNotFound"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["RequestNext"]) _ = Just Debug
+    severityFor (Namespace _ ["AwaitReply"]) _ = Just Debug
+    severityFor (Namespace _ ["RollForward"]) _ = Just Debug
+    severityFor (Namespace _ ["RollBackward"]) _ = Just Debug
+    severityFor (Namespace _ ["FindIntersect"]) _ = Just Debug
+    severityFor (Namespace _ ["IntersectFound"]) _ = Just Debug
+    severityFor (Namespace _ ["IntersectNotFound"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["RequestNext"]) = Just $ mconcat
@@ -369,19 +370,19 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
     namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgReplyGetMeasures {}) =
       Namespace [] ["ReplyGetMeasures"]
 
-    severityFor (Namespace _ ["Acquire"]) _ = Just Info
-    severityFor (Namespace _ ["Acquired"]) _ = Just Info
-    severityFor (Namespace _ ["AwaitAcquire"]) _ = Just Info
-    severityFor (Namespace _ ["NextTx"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyNextTx"]) _ = Just Info
-    severityFor (Namespace _ ["HasTx"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyHasTx"]) _ = Just Info
-    severityFor (Namespace _ ["GetSizes"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyGetSizes"]) _ = Just Info
-    severityFor (Namespace _ ["Release"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
-    severityFor (Namespace _ ["GetMeasures"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyGetMeasures"]) _ = Just Info
+    severityFor (Namespace _ ["Acquire"]) _ = Just Debug
+    severityFor (Namespace _ ["Acquired"]) _ = Just Debug
+    severityFor (Namespace _ ["AwaitAcquire"]) _ = Just Debug
+    severityFor (Namespace _ ["NextTx"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyNextTx"]) _ = Just Debug
+    severityFor (Namespace _ ["HasTx"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyHasTx"]) _ = Just Debug
+    severityFor (Namespace _ ["GetSizes"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyGetSizes"]) _ = Just Debug
+    severityFor (Namespace _ ["Release"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
+    severityFor (Namespace _ ["GetMeasures"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyGetMeasures"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Acquire"]) = Just
@@ -459,10 +460,10 @@ instance MetaTrace (Simple.AnyMessage (LTS.LocalTxSubmission tx err)) where
     namespaceFor (Simple.AnyMessageAndAgency _agency LTS.MsgDone{}) =
       Namespace [] ["Done"]
 
-    severityFor (Namespace _ ["SubmitTx"]) _ = Just Info
-    severityFor (Namespace _ ["AcceptTx"]) _ = Just Info
-    severityFor (Namespace _ ["RejectTx"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["SubmitTx"]) _ = Just Debug
+    severityFor (Namespace _ ["AcceptTx"]) _ = Just Debug
+    severityFor (Namespace _ ["RejectTx"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["SubmitTx"]) = Just
@@ -486,41 +487,6 @@ instance MetaTrace (Simple.AnyMessage (LTS.LocalTxSubmission tx err)) where
 --------------------------------------------------------------------------------
 -- TStateQuery Tracer
 --------------------------------------------------------------------------------
-
-instance (forall result. Show (Query blk result))
-      => LogFormatting (Simple.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))) where
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgAcquire{}) =
-    mconcat [ "kind" .= String "MsgAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgAcquired{}) =
-    mconcat [ "kind" .= String "MsgAcquired"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgFailure{}) =
-    mconcat [ "kind" .= String "MsgFailure"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgQuery{}) =
-    mconcat [ "kind" .= String "MsgQuery"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgResult{}) =
-    mconcat [ "kind" .= String "MsgResult"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgRelease{}) =
-    mconcat [ "kind" .= String "MsgRelease"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgReAcquire{}) =
-    mconcat [ "kind" .= String "MsgReAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgDone{}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
 
 instance (forall result. Show (Query blk result))
       => LogFormatting (Stateful.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk)) f) where
@@ -557,85 +523,6 @@ instance (forall result. Show (Query blk result))
              , "agency" .= String (pack $ show stok)
              ]
 
-instance MetaTrace (Simple.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))) where
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgAcquire{}) =
-      Namespace [] ["Acquire"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgAcquired{}) =
-      Namespace [] ["Acquired"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgFailure{}) =
-      Namespace [] ["Failure"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgQuery{}) =
-      Namespace [] ["Query"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgResult{}) =
-      Namespace [] ["Result"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgRelease{}) =
-      Namespace [] ["Release"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgReAcquire{}) =
-      Namespace [] ["ReAcquire"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgDone{}) =
-      Namespace [] ["Done"]
-
-    severityFor (Namespace _ ["Acquire"]) _ = Just Info
-    severityFor (Namespace _ ["Acquired"]) _ = Just Info
-    severityFor (Namespace _ ["Failure"]) _ = Just Warning
-    severityFor (Namespace _ ["Query"]) _ = Just Info
-    severityFor (Namespace _ ["Result"]) _ = Just Info
-    severityFor (Namespace _ ["Release"]) _ = Just Info
-    severityFor (Namespace _ ["ReAcquire"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["Acquire"]) = Just $ mconcat
-      [ "The client requests that the state as of a particular recent point on "
-      , "the server's chain (within K of the tip) be made available to query, "
-      , "and waits for confirmation or failure. "
-      , "\n "
-      , "From 'NodeToClient_V8' onwards if the point is not specified, current tip "
-      , "will be acquired.  For previous versions of the protocol 'point' must be "
-      , "given."
-      ]
-    documentFor (Namespace _ ["Acquired"]) = Just
-      "The server can confirm that it has the state at the requested point."
-    documentFor (Namespace _ ["Failure"]) = Just $ mconcat
-      [ "The server can report that it cannot obtain the state for the "
-      , "requested point."
-      ]
-    documentFor (Namespace _ ["Query"]) = Just
-      "The client can perform queries on the current acquired state."
-    documentFor (Namespace _ ["Result"]) = Just
-      "The server must reply with the queries."
-    documentFor (Namespace _ ["Release"]) = Just $ mconcat
-      [ "The client can instruct the server to release the state. This lets "
-      , "the server free resources."
-      ]
-    documentFor (Namespace _ ["ReAcquire"]) = Just $ mconcat
-      [ "This is like 'MsgAcquire' but for when the client already has a "
-      , "state. By moving to another state directly without a 'MsgRelease' it "
-      , "enables optimisations on the server side (e.g. moving to the state for "
-      , "the immediate next block). "
-      , "\n "
-      , "Note that failure to re-acquire is equivalent to 'MsgRelease', "
-      , "rather than keeping the exiting acquired state. "
-      , "\n "
-      , "From 'NodeToClient_V8' onwards if the point is not specified, current tip "
-      , "will be acquired.  For previous versions of the protocol 'point' must be "
-      , "given."
-      ]
-    documentFor (Namespace _ ["Done"]) = Just
-      "The client can terminate the protocol."
-    documentFor _ = Nothing
-
-    allNamespaces = [
-        Namespace [] ["Acquire"]
-      , Namespace [] ["Acquired"]
-      , Namespace [] ["Failure"]
-      , Namespace [] ["Query"]
-      , Namespace [] ["Result"]
-      , Namespace [] ["Release"]
-      , Namespace [] ["ReAcquire"]
-      , Namespace [] ["Done"]
-      ]
-
 instance MetaTrace (Stateful.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk)) f) where
     namespaceFor (Stateful.AnyMessageAndAgency _agency _ LSQ.MsgAcquire{}) =
       Namespace [] ["Acquire"]
@@ -654,14 +541,14 @@ instance MetaTrace (Stateful.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))
     namespaceFor (Stateful.AnyMessageAndAgency _agency _ LSQ.MsgDone{}) =
       Namespace [] ["Done"]
 
-    severityFor (Namespace _ ["Acquire"]) _ = Just Info
-    severityFor (Namespace _ ["Acquired"]) _ = Just Info
+    severityFor (Namespace _ ["Acquire"]) _ = Just Debug
+    severityFor (Namespace _ ["Acquired"]) _ = Just Debug
     severityFor (Namespace _ ["Failure"]) _ = Just Warning
-    severityFor (Namespace _ ["Query"]) _ = Just Info
-    severityFor (Namespace _ ["Result"]) _ = Just Info
-    severityFor (Namespace _ ["Release"]) _ = Just Info
-    severityFor (Namespace _ ["ReAcquire"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["Query"]) _ = Just Debug
+    severityFor (Namespace _ ["Result"]) _ = Just Debug
+    severityFor (Namespace _ ["Release"]) _ = Just Debug
+    severityFor (Namespace _ ["ReAcquire"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Acquire"]) = Just $ mconcat
