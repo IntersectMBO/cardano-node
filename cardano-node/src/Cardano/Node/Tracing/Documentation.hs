@@ -80,6 +80,7 @@ import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.Diffusion.Types (DiffusionTracer)
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
+import qualified Ouroboros.Network.Driver.Stateful as Stateful (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
@@ -98,6 +99,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                    UnversionedProtocolData (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
@@ -489,8 +491,10 @@ docTracersFirstPhase condConfigFileName = do
     stateQueryTrDoc <- documentTracer (stateQueryTr ::
       Logging.Trace IO
             (BlockFetch.TraceLabelPeer peer
-             (TraceSendRecv
-               (LocalStateQuery blk (Point blk) (Query blk)))))
+             (Stateful.TraceSendRecv
+               (LocalStateQuery blk (Point blk) (Query blk))
+               LocalStateQuery.State
+               )))
 
 -- Node to Node
 

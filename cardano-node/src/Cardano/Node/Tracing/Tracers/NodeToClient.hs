@@ -489,41 +489,6 @@ instance MetaTrace (Simple.AnyMessage (LTS.LocalTxSubmission tx err)) where
 --------------------------------------------------------------------------------
 
 instance (forall result. Show (Query blk result))
-      => LogFormatting (Simple.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))) where
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgAcquire{}) =
-    mconcat [ "kind" .= String "MsgAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgAcquired{}) =
-    mconcat [ "kind" .= String "MsgAcquired"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgFailure{}) =
-    mconcat [ "kind" .= String "MsgFailure"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgQuery{}) =
-    mconcat [ "kind" .= String "MsgQuery"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgResult{}) =
-    mconcat [ "kind" .= String "MsgResult"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgRelease{}) =
-    mconcat [ "kind" .= String "MsgRelease"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgReAcquire{}) =
-    mconcat [ "kind" .= String "MsgReAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (Simple.AnyMessageAndAgency stok LSQ.MsgDone{}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
-
-instance (forall result. Show (Query blk result))
       => LogFormatting (Stateful.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk)) f) where
   forMachine _dtal (Stateful.AnyMessageAndAgency stok _ LSQ.MsgAcquire{}) =
     mconcat [ "kind" .= String "MsgAcquire"
@@ -557,85 +522,6 @@ instance (forall result. Show (Query blk result))
     mconcat [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
-
-instance MetaTrace (Simple.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))) where
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgAcquire{}) =
-      Namespace [] ["Acquire"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgAcquired{}) =
-      Namespace [] ["Acquired"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgFailure{}) =
-      Namespace [] ["Failure"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgQuery{}) =
-      Namespace [] ["Query"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgResult{}) =
-      Namespace [] ["Result"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgRelease{}) =
-      Namespace [] ["Release"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgReAcquire{}) =
-      Namespace [] ["ReAcquire"]
-    namespaceFor (Simple.AnyMessageAndAgency _agency LSQ.MsgDone{}) =
-      Namespace [] ["Done"]
-
-    severityFor (Namespace _ ["Acquire"]) _ = Just Debug
-    severityFor (Namespace _ ["Acquired"]) _ = Just Debug
-    severityFor (Namespace _ ["Failure"]) _ = Just Warning
-    severityFor (Namespace _ ["Query"]) _ = Just Debug
-    severityFor (Namespace _ ["Result"]) _ = Just Debug
-    severityFor (Namespace _ ["Release"]) _ = Just Debug
-    severityFor (Namespace _ ["ReAcquire"]) _ = Just Debug
-    severityFor (Namespace _ ["Done"]) _ = Just Debug
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["Acquire"]) = Just $ mconcat
-      [ "The client requests that the state as of a particular recent point on "
-      , "the server's chain (within K of the tip) be made available to query, "
-      , "and waits for confirmation or failure. "
-      , "\n "
-      , "From 'NodeToClient_V8' onwards if the point is not specified, current tip "
-      , "will be acquired.  For previous versions of the protocol 'point' must be "
-      , "given."
-      ]
-    documentFor (Namespace _ ["Acquired"]) = Just
-      "The server can confirm that it has the state at the requested point."
-    documentFor (Namespace _ ["Failure"]) = Just $ mconcat
-      [ "The server can report that it cannot obtain the state for the "
-      , "requested point."
-      ]
-    documentFor (Namespace _ ["Query"]) = Just
-      "The client can perform queries on the current acquired state."
-    documentFor (Namespace _ ["Result"]) = Just
-      "The server must reply with the queries."
-    documentFor (Namespace _ ["Release"]) = Just $ mconcat
-      [ "The client can instruct the server to release the state. This lets "
-      , "the server free resources."
-      ]
-    documentFor (Namespace _ ["ReAcquire"]) = Just $ mconcat
-      [ "This is like 'MsgAcquire' but for when the client already has a "
-      , "state. By moving to another state directly without a 'MsgRelease' it "
-      , "enables optimisations on the server side (e.g. moving to the state for "
-      , "the immediate next block). "
-      , "\n "
-      , "Note that failure to re-acquire is equivalent to 'MsgRelease', "
-      , "rather than keeping the exiting acquired state. "
-      , "\n "
-      , "From 'NodeToClient_V8' onwards if the point is not specified, current tip "
-      , "will be acquired.  For previous versions of the protocol 'point' must be "
-      , "given."
-      ]
-    documentFor (Namespace _ ["Done"]) = Just
-      "The client can terminate the protocol."
-    documentFor _ = Nothing
-
-    allNamespaces = [
-        Namespace [] ["Acquire"]
-      , Namespace [] ["Acquired"]
-      , Namespace [] ["Failure"]
-      , Namespace [] ["Query"]
-      , Namespace [] ["Result"]
-      , Namespace [] ["Release"]
-      , Namespace [] ["ReAcquire"]
-      , Namespace [] ["Done"]
-      ]
 
 instance MetaTrace (Stateful.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk)) f) where
     namespaceFor (Stateful.AnyMessageAndAgency _agency _ LSQ.MsgAcquire{}) =
