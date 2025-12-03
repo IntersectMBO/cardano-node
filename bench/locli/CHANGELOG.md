@@ -1,5 +1,11 @@
 # Revision history for locli
 
+## 2.3 -- Jan 2026
+
+* Added support for `typst` reports to the `compare` CLI command: They're now automatically created alongside Org mode reports. Includes `*.ede` templates to generate them; `typst >= 0.14` required for their compilation to PDF.
+* Change some report fields' unit and metric descriptions to be more concise.
+* Adjust the selection of charts plotted for a report, excluding some less meaningful ones.
+
 ## 2.2 -- May 2025
 
 * New log object `LOLedgerMetrics` (and corresponding DB table) for ledger metrics traces, retaining full backwards compatibility to the former `TraceStartLeadershipCheckPlus`.

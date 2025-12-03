@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                2.2
+version:                2.3
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -16,6 +16,7 @@ license-files:          LICENSE
                         -- The module src-quick/Graphics/EasyPlot.hs is a forked, and heavily modded,
                         -- version of the easyplot-1.0 package by Julian Bertram.
 extra-doc-files:        CHANGELOG.md
+data-files:             report-templates/typst/*.ede
 build-type:             Simple
 
 common project-config

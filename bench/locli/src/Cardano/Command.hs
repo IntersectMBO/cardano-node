@@ -329,6 +329,7 @@ writerOpt ctor desc rcFormat = do
      AsOrg     -> (,) "org"     " as Org-mode table"
      AsReport  -> (,) "org-report"  " as Org-mode summary table"
      AsPretty  -> (,) "pretty"  " as text report"
+     AsTypst   -> (,) "typst"   " as typst document"
 
 writerOpts :: (RenderConfig -> TextOutputFile -> a) -> String -> Parser a
 writerOpts ctor desc = enumFromTo minBound maxBound
@@ -840,7 +841,7 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
       <*> readJsonData bpf  (CommandError c)
   (tmpl, tmplEnv, orgReport) <- case xs of
     baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generate ede mTmpl baseline deltas
+      Cardano.Report.generateOrg ede mTmpl baseline deltas
     _ -> throwE $ CommandError c $ mconcat
          [ "At least two runs required for comparison." ]
   liftIO $
@@ -852,6 +853,21 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
   let tmplPath = Cardano.Util.replaceExtension outfp "ede"
   liftIO . unlessM (IO.fileExist tmplPath) $
     BS.writeFile tmplPath tmpl
+
+  -- For the time being, typst output is only used by the `compare` CLI command.
+  -- It's automatically created side-by-side with the Org mode report, and will
+  -- replace it eventually.
+  let typstPath = Cardano.Util.replaceExtension outfp "typ"
+  (tmplEnv', typstReport) <- case xs of
+    baseline:deltas@(_:_) -> liftIO $ do
+      Cardano.Report.generateTypst (takeFileName typstPath) baseline deltas
+    _ -> throwE $ CommandError c $ mconcat
+         [ "At least two runs required for comparison." ]
+  liftIO $
+    withFile (outfp `System.FilePath.replaceExtension` "env.typ.json") WriteMode $
+      \hnd -> BS8.hPutStrLn hnd tmplEnv'
+  dumpText "report" [typstReport] (TextOutputFile typstPath)
+    & firstExceptT (CommandError c)
 
   pure s
 
