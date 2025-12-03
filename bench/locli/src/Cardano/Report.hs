@@ -1,33 +1,39 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
+
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Report
   ( module Cardano.Report
   )
 where
 
-import Cardano.Prelude
+import           Cardano.Analysis.API
+import           Cardano.Analysis.Summary
+import           Cardano.Prelude
+import           Cardano.Render (renderScalarLim)
+import           Cardano.Util
 
-import Data.Aeson.Encode.Pretty qualified as AEP
-import Data.ByteString      qualified as BS
-import Data.ByteString.Lazy qualified as LBS
-import Data.Map.Strict      qualified as Map
-import Data.Text            qualified as T
-import Data.Text.Lazy       qualified as LT
-import Data.Time.Clock
-import System.Posix.User
-import System.Environment (lookupEnv)
+import qualified Data.Aeson.Encode.Pretty as AEP
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict as Map
+import           Data.String (IsString (..))
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import           Data.Tuple.Extra (fst3)
+import           System.Environment (lookupEnv)
+import           System.FilePath ((</>))
+import           System.Posix.User
+import           Text.EDE hiding (Id)
 
-import Text.EDE hiding (Id)
+import           Paths_locli
 
-import Data.CDF
-import Data.Tuple.Extra (fst3)
-import Cardano.Util
-import Cardano.Analysis.API
-import Cardano.Analysis.Summary
+import Prelude (print, id)
 
 
 newtype Author   = Author   { unAuthor   :: Text } deriving newtype (FromJSON, ToJSON)
@@ -135,6 +141,7 @@ analysesReportSections mp bp =
     "End-to-end propagation"
   ]
 
+
 --
 -- Representation of a run, structured for template generator's needs.
 --
@@ -175,11 +182,11 @@ instance ToJSON TmplRun where
       , "fileInfix"  .= filenameInfix trWorkload
       ]
 
-liftTmplSection :: Section -> TmplSection
-liftTmplSection =
+liftTmplSectionOrg :: Section -> TmplSectionOrg
+liftTmplSectionOrg =
   \case
     STable{..} ->
-      TmplTable
+      TmplTableOrg
       { tsTitle       = sTitle
       , tsNameCol     = sNameCol
       , tsValueCol    = sValueCol
@@ -193,8 +200,8 @@ liftTmplSection =
                   ISel sel -> filter sel timelineFields <&> fPrecision
                   DSel sel -> filter sel      cdfFields <&> fPrecision
 
-data TmplSection
-  = TmplTable
+data TmplSectionOrg
+  = TmplTableOrg
     { tsTitle        :: !Text
     , tsNameCol      :: !Text
     , tsValueCol     :: !Text
@@ -204,8 +211,8 @@ data TmplSection
     , tsVars         :: ![(Text, Text)] -- map from Org constant name to description
     }
 
-instance ToJSON TmplSection where
-  toJSON TmplTable{..} = object
+instance ToJSON TmplSectionOrg where
+  toJSON TmplTableOrg{..} = object
     [ "title"     .= tsTitle
     , "nameCol"   .= tsNameCol
     , "valueCol"  .= tsValueCol
@@ -220,10 +227,76 @@ instance ToJSON TmplSection where
                                               ("angles", angles)]))
     ]
 
-generate :: InputDir -> Maybe TextInputFile
+
+
+data Coloring = None | Green
+
+colorCode :: Coloring -> Text
+colorCode None  = T.empty
+colorCode Green = "gr"
+
+newtype TypstCell = C (Text, Coloring, Int)
+
+instance IsString TypstCell where
+  fromString x = C (fromString x, None, 0)
+
+instance ToJSON TypstCell where
+  toJSON (C (t, col, width)) = object
+    [ "cont"  .= (colorCode col <> wrapIn "[]" t)
+    , "width" .= width
+    ]
+
+cell :: Text -> TypstCell
+cell t = C (t, None, 0)
+
+justifyCells :: [TypstCell] -> [TypstCell]
+justifyCells [] = []
+justifyCells cs =
+  let maxWidth = maximum $ map width cs
+  in map (\(C (t, c, _)) -> C (t, c, maxWidth)) cs
+  where
+    width (C (t, None, _)) = 2 + T.length t
+    width (C (t ,_ , _))   = 4 + T.length t
+
+wrapIn :: String -> Text -> Text
+wrapIn [open, close] = T.cons open . (`T.snoc` close)
+wrapIn _             = id
+
+data TmplSectionTypst
+  = TmplTableTypst
+    { tstTitle        :: !Text
+    , tstHeader       :: ![TypstCell]
+    , tstRows         :: ![[TypstCell]]
+    , tstVars         :: ![(Text, Text)]
+    }
+
+instance ToJSON TmplSectionTypst where
+  toJSON TmplTableTypst{..} = object
+    [ "title"     .= tstTitle
+    , "header"    .= tstHeader
+    , "rows"      .= tstRows
+    , "vars"      .= Map.fromList (zip tstVars ([0..] <&> flip T.replicate ">" . (length tstVars -))
+                                   <&> \((k, name), angles) ->
+                                         (k, Map.fromList @Text
+                                             [("name", name),
+                                              ("angles", angles)]))
+    ]
+
+liftTmplSectionTypst :: Section -> TmplSectionTypst
+liftTmplSectionTypst =
+  \case
+    STable{..} ->
+      TmplTableTypst
+      { tstTitle        = sTitle
+      , tstHeader       = []
+      , tstRows         = [[]]
+      , tstVars         = []
+      }
+
+generateOrg :: InputDir -> Maybe TextInputFile
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO (ByteString, ByteString, Text)
-generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
+generateOrg (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
   ctx  <- getReport metas (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion)
   tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
   tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
@@ -246,8 +319,126 @@ generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = 
      [ "report"     .= rc
      , "base"       .= b
      , "runs"       .= rs
-     , "summary"    .= liftTmplSection (summaryReportSection summ)
-     , "analyses"   .= (liftTmplSection <$> analysesReportSections cp bp)
+     , "summary"    .= liftTmplSectionOrg (summaryReportSection summ)
+     , "analyses"   .= (liftTmplSectionOrg <$> analysesReportSections cp bp)
+     , "dictionary" .= metricDictionary
+     , "charts"     .=
+       ((dClusterPerf metricDictionary & onlyKeys
+          [ "CentiCpu"
+          , "CentiGC"
+          , "CentiMut"
+          , "Alloc"
+          , "GcsMajor"
+          , "GcsMinor"
+          , "Heap"
+          , "Live"
+          , "RSS"
+
+          , "cdfStarted"
+          , "cdfBlkCtx"
+          , "cdfLgrState"
+          , "cdfLgrView"
+          , "cdfLeading"
+
+          , "cdfDensity"
+          , "cdfBlockGap"
+          , "cdfSpanLensCpu"
+          , "cdfSpanLensCpuEpoch"
+          ])
+        <>
+        (dBlockProp   metricDictionary & onlyKeys
+          [ "cdfForgerLead"
+          , "cdfForgerTicked"
+          , "cdfForgerMemSnap"
+          , "cdfForgerForge"
+          , "cdfForgerAnnounce"
+          , "cdfForgerSend"
+          , "cdfPeerNoticeFirst"
+          , "cdfPeerAdoption"
+          , "cdf0.50"
+          , "cdf0.80"
+          , "cdf0.90"
+          , "cdf0.96"
+          ]))
+     ]
+
+   onlyKeys :: [Text] -> Map.Map Text DictEntry -> [DictEntry]
+   onlyKeys ks m =
+     ks <&>
+     \case
+       (Nothing, k) -> error $ "Report.generate:  missing metric: " <> show k
+       (Just x, _) -> x
+     . (flip Map.lookup m &&& identity)
+
+
+trying :: forall f a. (a ~ Summary f, TimelineFields a)
+  => (Field ISelect I a -> Bool) -> a -> [Text]
+trying fieldSelr summ =
+  fields' <&> renderScalarLim (Just 32) summ
+ where
+   fields' :: [Field ISelect I a]
+   fields' = filter fieldSelr timelineFields
+
+trying2 :: forall f a. (a ~ Summary f, TimelineFields a)
+  => (Field ISelect I a -> Bool) -> a -> [Text]
+trying2 fieldSelr _ =
+  fields' <&> fShortDesc
+ where
+   fields' :: [Field ISelect I a]
+   fields' = filter fieldSelr timelineFields
+
+
+generateTypst :: InputDir -> Maybe TextInputFile
+         -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
+         -> IO (ByteString, ByteString, Text)
+generateTypst (InputDir _ede) _mReport theBase@(SomeSummary summ, cp, SomeBlockProp bp) rest = do
+  print ("YO!" :: String)
+
+  ctx  <- getReport metas (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion)
+
+  -- tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
+  -- tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
+
+  tmplMain <- getDataFileName $ "report-templates" </> "typst" </> "main_comparison.ede"
+  tmplRaw  <- BS.readFile tmplMain
+  tmpl <- parseFile tmplMain
+
+  let tmplEnv           = mkTmplEnv ctx baseTmpl restTmpls
+      tmplEnvSerialised = AEP.encodePretty tmplEnv
+  Text.EDE.result
+    (error . show)
+    (pure . (tmplRaw, LBS.toStrict tmplEnvSerialised,) . LT.toStrict) $ tmpl >>=
+    \x ->
+      renderWith mempty x tmplEnv
+ where
+   selSummary :: Field ISelect I a -> Bool
+   selSummary = iFields sumFieldsReport
+
+   summaryDescr = map cell (T.empty : trying2 selSummary summ)
+
+   summaryContent = [map cell (wrapIn "``" runId : trying selSummary ss) | (SomeSummary ss, _, _) <- theBase : rest, let Metadata{ident=runId} = sumMeta ss]
+   summary = transpose $ map justifyCells $ summaryDescr : summaryContent
+
+   summarySection :: TmplSectionTypst
+   summarySection = case summary of
+      (h:t) -> (liftTmplSectionTypst $ summaryReportSection summ)
+        { tstHeader   = h
+        , tstRows     = t
+        }
+      _ -> error "generateTypst: implementation error"
+
+   metas = sumMeta summ : fmap (\(SomeSummary ss, _, _) -> sumMeta ss) rest
+
+
+   baseTmpl  = liftTmplRun summ
+   restTmpls = fmap ((\(SomeSummary ss) -> liftTmplRun ss). fst3) rest
+
+   mkTmplEnv rc b rs = fromPairs
+     [ "report"     .= rc
+     , "base"       .= b
+     , "runs"       .= (b : rs)
+     , "summary"    .= summarySection
+     , "analyses"   .= (liftTmplSectionTypst <$> analysesReportSections cp bp)
      , "dictionary" .= metricDictionary
      , "charts"     .=
        ((dClusterPerf metricDictionary & onlyKeys

@@ -16,6 +16,7 @@ license-files:          LICENSE
                         -- The module src-quick/Graphics/EasyPlot.hs is a forked, and heavily modded,
                         -- version of the easyplot-1.0 package by Julian Bertram.
 extra-doc-files:        CHANGELOG.md
+data-files:             report-templates/typst/*
 build-type:             Simple
 
 common project-config

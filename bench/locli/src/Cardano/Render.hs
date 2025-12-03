@@ -44,6 +44,7 @@ data RenderFormat
   | AsOrg
   | AsReport
   | AsPretty
+  | AsTypst
   deriving (Eq, Show, Bounded, Enum)
 
 -- | Explain the poor human a little bit of what was going on:
@@ -335,8 +336,13 @@ modeFilename orig@(TextOutputFile f) name = \case
   AsOrg     -> orig
   AsReport  -> orig
   AsPretty  -> orig
+  AsTypst   -> orig
 
 renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
+
+-- TODO:MKarg
+renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=AsTypst} x =
+  renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc{rcFormat=AsOrg} x
 
 renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsJSON} x = (:[]) . ("",) . (:[]) . LT.toStrict $
   encodeToLazyText x
