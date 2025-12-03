@@ -1066,7 +1066,7 @@ instance LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWit
 instance MetaTrace (PeerSelectionCounters extraCounters) where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
 
-    severityFor (Namespace _ ["Counters"]) _ = Just Debug
+    severityFor (Namespace _ ["Counters"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Counters"]) = Just
