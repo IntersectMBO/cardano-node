@@ -156,9 +156,7 @@ jobs:
 
       - name: Create Manifests
         run: |
-          # TODO: re-enable upon success multi-arch manifest
-          # REPOS=(cardano-node cardano-submit-api cardano-tracer)
-          REPOS=(cardano-node)
+          REPOS=(cardano-node cardano-submit-api cardano-tracer)
           ARCHES=(amd64 arm64)
 
           for REPO in "${REPOS[@]}"; do
@@ -180,9 +178,7 @@ jobs:
 
       - name: Verify multi-arch manifests
         run: |
-          # TODO: re-enable upon success multi-arch manifest
-          # for REPO in cardano-node cardano-submit-api cardano-tracer; do
-          for REPO in cardano-node; do
+          for REPO in cardano-node cardano-submit-api cardano-tracer; do
             IMAGE_REPO="ghcr.io/intersectmbo/$REPO"
             echo "::group::Inspecting $REPO:$GITHUB_REF_NAME"
 
@@ -204,9 +200,7 @@ jobs:
           (github.event_name == 'release' && github.event.release.tag_name == needs.prepare.outputs.LATEST_TAG) ||
           (github.event_name == 'workflow_dispatch' && github.ref == format('refs/tags/{0}', needs.prepare.outputs.LATEST_TAG))
         run: |
-          # TODO: re-enable upon success multi-arch manifest
-          # REPOS=(cardano-node cardano-submit-api cardano-tracer)
-          REPOS=(cardano-node)
+          REPOS=(cardano-node cardano-submit-api cardano-tracer)
 
           for REPO in "${REPOS[@]}"; do
             IMAGE_REPO="ghcr.io/intersectmbo/$REPO"
