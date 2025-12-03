@@ -177,7 +177,7 @@ instance MetaTrace [PeerT blk] where
   severityFor  (Namespace _ ["PeersFromNodeKernel"]) (Just []) =
     Just Debug
   severityFor  (Namespace _ ["PeersFromNodeKernel"]) _ =
-    Just Info
+    Just Debug
   severityFor _ns _ =
     Nothing
   documentFor (Namespace _ ["PeersFromNodeKernel"]) =
