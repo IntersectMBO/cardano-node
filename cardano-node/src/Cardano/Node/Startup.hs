@@ -27,7 +27,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Types (PeerSnapshotFile)
+import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
@@ -48,6 +48,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 
 import           Prelude
 
+import           Control.Exception (Exception (..))
 import           Data.Map.Strict (Map)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text, pack)
@@ -144,7 +145,22 @@ data StartupTrace blk =
   -- `UseLedgerPeers` in the topology file.  Arguments are:
   -- useLedgerPeersAfterSlot, peerSnapshotSlot, peerSnapshotFile.
   | LedgerPeerSnapshotIgnored SlotNo SlotNo PeerSnapshotFile
+  -- | Like above, but in `GenesisMode` it is an error to have an old snapshot.
+  | LedgerPeerSnapshotError SlotNo SlotNo PeerSnapshotFile
   | MovedTopLevelOption String
+
+data LedgerPeerSnapshotError = LedgerPeerSnapshotTooOld SlotNo SlotNo PeerSnapshotFile
+  deriving Show
+
+instance Exception LedgerPeerSnapshotError where
+  displayException (LedgerPeerSnapshotTooOld useLedgerAfterSlot peerSnapshotSlot (PeerSnapshotFile snapshotFile)) =
+      "The ledger peer snapshot slot "
+    <> show peerSnapshotSlot
+    <> " is older than the 'useLedgerAfterSlot' entry in the topology file: "
+    <> show useLedgerAfterSlot
+    <> ".\n"
+    <> "Possible fix: update the ledger peer snapshot file: " <> show snapshotFile
+
 
 data EnabledBlockForging
   = EnabledBlockForging

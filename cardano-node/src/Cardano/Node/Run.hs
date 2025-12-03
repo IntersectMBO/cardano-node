@@ -787,8 +787,13 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) rea
                 traceL $ LedgerPeerSnapshotLoaded wOrigin
                 pure lps
             | otherwise -> do
-                traceL $ LedgerPeerSnapshotIgnored ledgerSlotNo fileSlot snapshotFile
-                empty
+                case ncConsensusMode of
+                  GenesisMode -> do
+                    traceL $ LedgerPeerSnapshotError ledgerSlotNo fileSlot snapshotFile
+                    liftIO $ throwIO (LedgerPeerSnapshotTooOld ledgerSlotNo fileSlot snapshotFile)
+                  PraosMode -> do
+                    traceL $ LedgerPeerSnapshotIgnored ledgerSlotNo fileSlot snapshotFile
+                    empty
             where
               fileSlot = case wOrigin of; Origin -> 0; At slot -> slot
 
