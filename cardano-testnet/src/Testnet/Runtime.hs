@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -43,7 +44,7 @@ import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
-import           RIO (runRIO)
+import           RIO (runRIO, threadDelay)
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
@@ -59,6 +60,7 @@ import           Testnet.Types (TestnetNode (..), TestnetRuntime (configurationF
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
+import RIO.Directory (doesFileExist)
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -123,7 +125,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
 
-  void . liftIOAnnotated $ createDirectoryIfMissingNew $ logDir </> node
+  void . liftIO $ createDirectoryIfMissingNew $ logDir </> node
   void . liftIOAnnotated $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node)
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
@@ -252,8 +254,16 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath
 createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do
   IO.createDirectoryIfMissing True directory
-  pure directory
-
+  exists <- IO.doesDirectoryExist directory
+  if exists
+    then pure directory
+    else do 
+      threadDelay 5_000_000 
+      IO.createDirectoryIfMissing True directory
+      exists' <- IO.doesDirectoryExist directory
+      if exists'
+        then pure directory
+        else throwString $ "Failed to create directory: " <> directory
 
 createSubdirectoryIfMissingNew :: ()
   => HasCallStack
@@ -288,7 +298,8 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
   liftIOAnnotated $ IO.doesDirectoryExist logDir >>= \case
     True -> pure ()
     False -> do
-      throwString $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
+      void $ createDirectoryIfMissingNew logDir
+      --throwString $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
 
   liftIOAnnotated (IO.doesFileExist logFile) >>= \case
     True -> return () 
@@ -333,25 +344,18 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          exists <- liftIO $ IO.doesFileExist outputFp 
+          exists <- doesFileExist outputFp
           if exists 
             then liftIOAnnotated $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
               <> displayException e <> "\n"
-            else 
+            else do 
               liftIO $ writeFile outputFp $ unlines 
                  ["Ledger new epoch logging failed - caught exception:"
                  , displayException e
                  ]
-          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
-            <> displayException e <> "\n"
           pure ConditionMet
 
 calculateEpochStateDiff
-  :: BSC.ByteString -- ^ Current epoch state
-  -> BSC.ByteString -- ^ Following epoch state
-  -> String
-calculateEpochStateDiff current next =
-  let diffResult = getGroupedDiff (BSC.unpack <$> BSC.lines current) (BSC.unpack <$> BSC.lines next)
   in if null diffResult
      then "No changes in epoch state"
      else ppDiff diffResult
