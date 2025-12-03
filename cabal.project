@@ -97,11 +97,12 @@ if impl (ghc >= 9.12)
 constraints:
     hedgehog-extras == 0.7.0.0
 
+-- Points to ouroboros-consensus/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: fe40068d881db59df3cb4be0cfd5a564a75bfabb
-  --sha256: sha256-qxj529w4d8dkpS5Kyv8aAAPu+hCQqtFvqpiJJxQ/BFE=
+  tag: a2e3c598b96efa1e2add0bc7b893a7a007ace606
+  --sha256: sha256-uMImzqUvdDCyuso/fN0BEJuhj1BuT8U1Gafbhz4CBRU=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -110,11 +111,12 @@ source-repository-package
     sop-extras
     strict-sop-core
 
+-- Points to ouroboros-network/nfrisby/leios-202511-demo
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 7e0069f85d973cfa665e1c3d0963ece269fb68e0
-  --sha256: sha256-D85sAsK4Z9yyGll1rGILzuGw/xarzRDxZvOzgeHOjv4=
+  tag: 479f0d0d82413162c8444b912394dd74c052831f
+  --sha256: sha256-Up+Zh3+nHuwlHmpXgH0nNIvQ/yHm/Hxb9ZYQHibrDLc=
   subdir:
     cardano-ping
     monoidal-synchronisation
