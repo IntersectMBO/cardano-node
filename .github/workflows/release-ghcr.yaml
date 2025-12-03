@@ -87,10 +87,10 @@ jobs:
         image:
           - name: cardano-node
             nix_key: dockerImage/node
-          # - name: cardano-submit-api
-          #   nix_key: dockerImage/submit-api
-          # - name: cardano-tracer
-          #   nix_key: dockerImage/tracer
+          - name: cardano-submit-api
+            nix_key: dockerImage/submit-api
+          - name: cardano-tracer
+            nix_key: dockerImage/tracer
 
     steps:
       - name: Install Nix
