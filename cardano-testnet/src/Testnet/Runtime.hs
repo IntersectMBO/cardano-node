@@ -297,8 +297,8 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
 
   liftIOAnnotated $ IO.doesDirectoryExist logDir >>= \case
     True -> pure ()
-    False -> do
-      throwString $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
+    False -> 
+      void $ createDirectoryIfMissingNew logDir
 
   liftIOAnnotated (IO.doesFileExist logFile) >>= \case
     True -> return () 
