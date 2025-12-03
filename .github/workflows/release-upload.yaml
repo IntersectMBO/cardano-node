@@ -48,11 +48,11 @@ jobs:
     strategy:
       matrix:
         arch:
+          - linux-amd64
           - linux-arm64
-          - linux-x64
+          - macos-amd64
           - macos-arm64
-          - macos-x64
-          - win-x64
+          - win-amd64
     name: "Download Asset from the Cache"
     runs-on: ubuntu-latest
     outputs:
@@ -79,25 +79,25 @@ jobs:
       - name: Build
         run: |
           case ${{ matrix.arch }} in
+            linux-amd64)
+              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.musl.cardano-node-linux
+              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-linux-amd64.tar.gz
+              ;;
             linux-arm64)
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.aarch64-linux.musl.cardano-node-linux
               cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-linux-arm64.tar.gz
               ;;
-            linux-x64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.musl.cardano-node-linux
-              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-linux-x64.tar.gz
+            macos-amd64)
+              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-darwin.native.cardano-node-macos
+              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-macos-amd64.tar.gz
               ;;
             macos-arm64)
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.aarch64-darwin.native.cardano-node-macos
               cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-macos-arm64.tar.gz
               ;;
-            macos-x64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-darwin.native.cardano-node-macos
-              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-macos-x64.tar.gz
-              ;;
-            win-x64)
+            win-amd64)
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.windows.cardano-node-win
-              cp result/cardano-node-*-*.zip cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-win-x64.zip
+              cp result/cardano-node-*-*.zip cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-win-amd64.zip
               ;;
           esac
       - uses: actions/upload-artifact@v4
@@ -123,9 +123,9 @@ jobs:
         with:
           draft: true
           files: |
+            cardano-node-*-linux-amd64.tar.gz
             cardano-node-*-linux-arm64.tar.gz
-            cardano-node-*-linux-x64.tar.gz
+            cardano-node-*-macos-amd64.tar.gz
             cardano-node-*-macos-arm64.tar.gz
-            cardano-node-*-macos-x64.tar.gz
             cardano-node-*-sha256sums.txt
-            cardano-node-*-win-x64.zip
+            cardano-node-*-win-amd64.zip
