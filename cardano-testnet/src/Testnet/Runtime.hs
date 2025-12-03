@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -43,7 +44,7 @@ import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
-import           RIO (runRIO)
+import           RIO (runRIO, threadDelay)
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
@@ -252,7 +253,16 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath
 createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do
   IO.createDirectoryIfMissing True directory
-  pure directory
+  exists <- IO.doesDirectoryExist directory
+  if exists
+    then pure directory
+    else do 
+      threadDelay 5_000_000 
+      IO.createDirectoryIfMissing True directory
+      exists' <- IO.doesDirectoryExist directory
+      if exists'
+        then pure directory
+        else throwString $ "Failed to create directory: " <> directory
 
 
 createSubdirectoryIfMissingNew :: ()
