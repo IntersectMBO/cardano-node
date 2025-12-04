@@ -61,6 +61,4 @@ TraceOptions:
   BlockFetchClient.CompletedBlockFetch:
     maxFrequency: 2.0
 
-TraceOptionPeerFrequency: 2000
-
 TraceOptionResourceFrequency: 5000

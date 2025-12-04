@@ -287,7 +287,6 @@ configTracerTracer defSeverity tr = do
      TraceConfig
      { tcForwarder         = Nothing
      , tcNodeName          = Nothing
-     , tcPeerFrequency     = Nothing
      , tcResourceFrequency = Nothing
      , tcLedgerMetricsFrequency = Nothing
      , tcMetricsPrefix     = Nothing

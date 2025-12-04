@@ -33,7 +33,6 @@ data ConfigRepresentation = ConfigRepresentation {
   , traceOptionForwarder          :: Maybe TraceOptionForwarder
   , traceOptionNodeName           :: Maybe Text
   , traceOptionMetricsPrefix      :: Maybe Text
-  , traceOptionPeerFrequency      :: Maybe Int
   , traceOptionResourceFrequency  :: Maybe Int
   , traceOptionLedgerMetricsFrequency :: Maybe Int
   }
@@ -45,7 +44,6 @@ instance AE.FromJSON ConfigRepresentation where
                            <*> obj .:? "TraceOptionForwarder"
                            <*> obj .:? "TraceOptionNodeName"
                            <*> obj .:? "TraceOptionMetricsPrefix"
-                           <*> obj .:? "TraceOptionPeerFrequency"
                            <*> obj .:? "TraceOptionResourceFrequency"
                            <*> obj .:? "TraceOptionLedgerMetricsFrequency"
     parseJSON _ = mempty
@@ -56,7 +54,6 @@ instance AE.ToJSON ConfigRepresentation where
     , "TraceOptionForwarder"          .= traceOptionForwarder
     , "TraceOptionNodeName"           .= traceOptionNodeName
     , "TraceOptionMetricsPrefix"      .= traceOptionMetricsPrefix
-    , "TraceOptionPeerFrequency"      .= traceOptionPeerFrequency
     , "TraceOptionResourceFrequency"  .= traceOptionResourceFrequency
     , "TraceOptionLedgerMetricsFrequency" .= traceOptionLedgerMetricsFrequency
     ]
@@ -115,7 +112,6 @@ readConfigurationWithDefault fp defaultConf = do
         (tcForwarder fileConf <|> tcForwarder defaultConf)
         (tcNodeName fileConf <|> tcNodeName defaultConf)
         (tcMetricsPrefix fileConf <|> tcMetricsPrefix defaultConf)
-        (tcPeerFrequency fileConf <|> tcPeerFrequency defaultConf)
         (tcResourceFrequency fileConf <|> tcResourceFrequency defaultConf)
         (tcLedgerMetricsFrequency fileConf <|> tcLedgerMetricsFrequency defaultConf)
 
@@ -148,7 +144,6 @@ parseRepresentation bs = transform (decodeEither' bs)
           (traceOptionForwarder cr)
           (traceOptionNodeName cr)
           (traceOptionMetricsPrefix cr)
-          (traceOptionPeerFrequency cr)
           (traceOptionResourceFrequency cr)
           (traceOptionLedgerMetricsFrequency cr)
 
@@ -171,7 +166,6 @@ configToRepresentation traceConfig =
         (tcForwarder traceConfig)
         (tcNodeName traceConfig)
         (tcMetricsPrefix traceConfig)
-        (tcPeerFrequency traceConfig)
         (tcResourceFrequency traceConfig)
         (tcLedgerMetricsFrequency traceConfig)
   where

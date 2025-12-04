@@ -63,6 +63,4 @@ TraceOptions:
   TxSubmission.Remote:
     detail:   DMinimal
 
-TraceOptionPeerFrequency: 2000
-
 TraceOptionResourceFrequency: 5000

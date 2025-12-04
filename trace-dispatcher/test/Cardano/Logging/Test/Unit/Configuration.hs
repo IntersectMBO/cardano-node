@@ -57,7 +57,6 @@ config1 = TraceConfig {
       , tofMaxReconnectDelay = 60
       }
     , tcNodeName = Nothing
-    , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
     , tcMetricsPrefix = Nothing
     , tcLedgerMetricsFrequency = Nothing
@@ -76,7 +75,6 @@ config2 = TraceConfig {
       , tofMaxReconnectDelay = 60
       }
     , tcNodeName = Just "node-1"
-    , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
     , tcMetricsPrefix = Nothing
     , tcLedgerMetricsFrequency = Nothing

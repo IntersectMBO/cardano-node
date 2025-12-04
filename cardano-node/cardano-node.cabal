@@ -125,7 +125,6 @@ library
                         Cardano.Tracing.OrphanInstances.HardFork
                         Cardano.Tracing.OrphanInstances.Network
                         Cardano.Tracing.OrphanInstances.Shelley
-                        Cardano.Tracing.Peer
                         Cardano.Tracing.Render
                         Cardano.Tracing.Shutdown
                         Cardano.Tracing.Startup
