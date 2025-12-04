@@ -12,6 +12,7 @@
 
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# LANGUAGE TypeOperators #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -118,6 +119,9 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers (TracePublicRootPeers)
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig (..), WarmValency)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
+import Ouroboros.Consensus.Util.IndexedMemPack
+import Ouroboros.Consensus.Ledger.Extended
+import Ouroboros.Consensus.Ledger.Tables.Basics
 
 import           Control.Applicative (empty)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
@@ -165,6 +169,12 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
+import Ouroboros.Consensus.Storage.LedgerDB.V2.LSM hiding (Trace)
+import Ouroboros.Consensus.Util.TypeLevel
+import Data.SOP.Constraint (All)
+import Ouroboros.Consensus.Storage.LedgerDB (LedgerSupportsLedgerDB)
+import Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
+import Ouroboros.Consensus.Ledger.Basics (LedgerState)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -373,6 +383,16 @@ handlePeersListSimple tr nodeKern = forever $ do
 handleSimpleNode
   :: forall blk .
     ( Api.Protocol IO blk
+    , IndexedMemPack LedgerState blk UTxOTable
+    , IndexedValue
+        LedgerState
+        UTxOTable
+        blk
+        ~ Value UTxOTable blk
+    , All
+                          (SerialiseTable LedgerState blk) (TablesForBlock blk)
+    , ToAllDict
+                          (MemAndDiskTable LedgerState blk) (TablesForBlock blk)
     )
   => Api.BlockType blk
   -> Api.ProtocolInfoArgs blk

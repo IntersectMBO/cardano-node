@@ -15,7 +15,7 @@ module Cardano.Node.Protocol.Cardano
   , CardanoProtocolInstantiationError(..)
   ) where
 
-import           Cardano.Api
+import           Cardano.Api hiding (LedgerState)
 import           Cardano.Api.Byron as Byron
 
 import qualified Cardano.Chain.Update as Update
@@ -38,6 +38,10 @@ import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
+import NoThunks.Class
+import Ouroboros.Consensus.Ledger.Tables
+import Ouroboros.Consensus.Ledger.LedgerStateType
+import Cardano.Protocol.Crypto (StandardCrypto)
 import           Prelude
 
 ------------------------------------------------------------------------------
@@ -57,7 +61,7 @@ import           Prelude
 -- type class instances available.
 --
 mkSomeConsensusProtocolCardano
-  :: NodeByronProtocolConfiguration
+  :: NoThunks (LedgerState (CardanoBlock StandardCrypto) EmptyMK) => NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
   -> NodeAlonzoProtocolConfiguration
   -> NodeConwayProtocolConfiguration

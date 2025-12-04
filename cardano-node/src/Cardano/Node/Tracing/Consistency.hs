@@ -97,13 +97,15 @@ import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbo
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
+import NoThunks.Class
+import Ouroboros.Consensus.Ledger.Tables (EmptyMK)
 
 
 -- | Check the configuration in the given file.
 -- If there is no configuration in the file check the standard configuration
 -- An empty return list means, everything is well
 checkNodeTraceConfiguration ::
-     FilePath
+     NoThunks (LedgerState (CardanoBlock StandardCrypto) EmptyMK) => FilePath
   -> IO NSWarnings
 checkNodeTraceConfiguration configFileName = do
   w1 <- checkTraceConfiguration

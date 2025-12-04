@@ -120,6 +120,8 @@ import qualified Options.Applicative as Opt
 import           System.IO
 
 import           Paths_cardano_node (version)
+import NoThunks.Class
+import Ouroboros.Consensus.Ledger.Tables
 
 
 data TraceDocumentationCmd
@@ -167,7 +169,7 @@ instance ToJSON UnversionedProtocol
 instance ToJSON UnversionedProtocolData
 
 runTraceDocumentationCmd
-  :: TraceDocumentationCmd
+  :: NoThunks (LedgerState (CardanoBlock StandardCrypto) EmptyMK) => TraceDocumentationCmd
   -> IO ()
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
   docTracers tdcConfigFile tdcOutput tdMetricsHelp
@@ -176,7 +178,7 @@ runTraceDocumentationCmd TraceDocumentationCmd{..} = do
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
 docTracers ::
-     FilePath
+     NoThunks (LedgerState (CardanoBlock StandardCrypto) EmptyMK) => FilePath
   -> FilePath
   -> Maybe FilePath
   -> IO ()

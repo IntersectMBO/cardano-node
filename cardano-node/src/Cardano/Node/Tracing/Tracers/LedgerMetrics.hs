@@ -25,7 +25,7 @@ import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (getBlockchainTime, getChainDB))
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB (getStatistics)
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Forker as LedgerDB (ledgerTableSize)
+-- import qualified Ouroboros.Consensus.Storage.LedgerDB.Forker as LedgerDB (ledgerTableSize)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Concurrent (threadDelay)
@@ -105,7 +105,8 @@ traceLedgerMetrics nodeKern slotNo tracer = do
   query <- mapNodeKernelDataIO
               (\nk ->
                 (,,) -- (,,,,)
-                  <$> fmap (maybe 0 LedgerDB.ledgerTableSize) (ChainDB.getStatistics $ getChainDB nk)
+                  <$> fmap (maybe 0 (const 0) -- LedgerDB.ledgerTableSize
+                           ) (ChainDB.getStatistics $ getChainDB nk)
                   <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                   <*> nkQueryChain fragmentChainDensity nk
 {- see Note [GovMetrics]

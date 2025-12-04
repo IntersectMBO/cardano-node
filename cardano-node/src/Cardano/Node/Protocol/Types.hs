@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -22,6 +23,13 @@ import           Data.Aeson
 import           GHC.Generics (Generic)
 
 import           NoThunks.Class (NoThunks)
+import Ouroboros.Consensus.Util.TypeLevel
+import Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
+import Ouroboros.Consensus.Storage.LedgerDB.API (LedgerSupportsLedgerDB)
+import Ouroboros.Consensus.Util.IndexedMemPack
+import Ouroboros.Consensus.Ledger.Basics
+import Ouroboros.Consensus.Storage.LedgerDB.V2.LSM (SerialiseTable, MemAndDiskTable)
+import Data.SOP.Constraint
 
 
 data Protocol = CardanoProtocol
@@ -45,6 +53,19 @@ data SomeConsensusProtocol where
                                           , HasKESMetricsData blk
                                           , HasKESInfo blk
                                           , TraceConstraints blk
+                                          , LedgerSupportsProtocol blk
+        , LedgerSupportsLedgerDB blk
+        , IndexedMemPack LedgerState blk UTxOTable
+        , IndexedValue
+            LedgerState
+            UTxOTable
+            blk
+            ~ Ouroboros.Consensus.Ledger.Basics.Value UTxOTable blk
+        , All
+                              (SerialiseTable LedgerState blk) (TablesForBlock blk)
+        , ToAllDict
+                          (MemAndDiskTable LedgerState blk) (TablesForBlock blk)
+
                                           )
                            => Api.BlockType blk
                            -> Api.ProtocolInfoArgs blk

@@ -77,7 +77,7 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     leaderCredentials <- firstExceptT PraosLeaderCredentialsError $
                          readLeaderCredentials files
 
-    return $ SomeConsensusProtocol Api.ShelleyBlockType $ Api.ProtocolInfoArgsShelley
+    return $ undefined -- SomeConsensusProtocol Api.ShelleyBlockType $ undefined -- Api.ProtocolInfoArgsShelley
       genesis
       Consensus.ProtocolParamsShelleyBased {
         shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,

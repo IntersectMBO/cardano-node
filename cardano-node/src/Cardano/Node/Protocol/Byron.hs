@@ -13,7 +13,7 @@ module Cardano.Node.Protocol.Byron
   ) where
 
 import           Cardano.Api.Byron
-import           Cardano.Api.Consensus
+-- import           Cardano.Api.Consensus
 import           Cardano.Api.Monad.Error
 import           Cardano.Api.Pretty
 import           Cardano.Api.Serialise.Raw
@@ -72,7 +72,8 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
 
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
-    return $ SomeConsensusProtocol ByronBlockType $ ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
+    return $ undefined -- SomeConsensusProtocol ByronBlockType $ ProtocolInfoArgsByron $
+     Consensus.ProtocolParamsByron {
         byronGenesis = genesisConfig,
         byronPbftSignatureThreshold =
           PBftSignatureThreshold <$> npcByronPbftSignatureThresh,

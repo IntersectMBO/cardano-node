@@ -1,10 +1,12 @@
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Cardano.Node.Protocol
   ( mkConsensusProtocol
   , SomeConsensusProtocol(..)
   , ProtocolInstantiationError(..)
   ) where
 
-import           Cardano.Api
+import           Cardano.Api hiding (LedgerState)
 
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Byron
@@ -14,13 +16,16 @@ import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types
 
 import           Control.Exception
+import NoThunks.Class
+import Ouroboros.Consensus.Cardano.Block
+import Ouroboros.Consensus.Ledger.Tables
 
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
 --
 
 mkConsensusProtocol
-  :: NodeProtocolConfiguration
+  :: NoThunks (LedgerState (CardanoBlock StandardCrypto) EmptyMK) => NodeProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocol ncProtocolConfig mProtocolFiles =

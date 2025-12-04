@@ -36,8 +36,8 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkN
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore as V1
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB as LMDB
+-- import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore as V1
+-- import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB as LMDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Backend as V2
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
@@ -1954,302 +1954,303 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
 --------------------------------------------------------------------------------
 
 instance LogFormatting LedgerDB.FlavorImplSpecificTrace where
-  forMachine dtal (LedgerDB.FlavorImplSpecificTraceV1 ev) = forMachine dtal ev
+  -- forMachine dtal (LedgerDB.FlavorImplSpecificTraceV1 ev) = forMachine dtal ev
   forMachine dtal (LedgerDB.FlavorImplSpecificTraceV2 ev) = forMachine dtal ev
 
-  forHuman (LedgerDB.FlavorImplSpecificTraceV1 ev) = forHuman ev
+  -- forHuman (LedgerDB.FlavorImplSpecificTraceV1 ev) = forHuman ev
   forHuman (LedgerDB.FlavorImplSpecificTraceV2 ev) = forHuman ev
 
 instance MetaTrace LedgerDB.FlavorImplSpecificTrace where
-  namespaceFor (LedgerDB.FlavorImplSpecificTraceV1 ev) =
-    nsPrependInner "V1" (namespaceFor ev)
+  -- namespaceFor (LedgerDB.FlavorImplSpecificTraceV1 ev) =
+  --   nsPrependInner "V1" (namespaceFor ev)
   namespaceFor (LedgerDB.FlavorImplSpecificTraceV2 ev) =
     nsPrependInner "V2" (namespaceFor ev)
 
-  severityFor (Namespace out ("V1" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) Nothing
-  severityFor (Namespace out ("V1" : tl)) (Just (LedgerDB.FlavorImplSpecificTraceV1 ev)) =
-    severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) (Just ev)
+  -- severityFor (Namespace out ("V1" : tl)) Nothing =
+  --   severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) Nothing
+  -- severityFor (Namespace out ("V1" : tl)) (Just (LedgerDB.FlavorImplSpecificTraceV1 ev)) =
+  --   severityFor (Namespace out tl :: Namespace V1.SomeBackendTrace) (Just ev)
   severityFor (Namespace out ("V2" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace) Nothing
   severityFor (Namespace out ("V2" : tl)) (Just (LedgerDB.FlavorImplSpecificTraceV2 ev)) =
     severityFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace) (Just ev)
   severityFor _ _ = Nothing
 
-  documentFor (Namespace out ("V1" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.SomeBackendTrace)
+  -- documentFor (Namespace out ("V1" : tl)) =
+  --   documentFor (Namespace out tl :: Namespace V1.SomeBackendTrace)
   documentFor (Namespace out ("V2" : tl)) =
     documentFor (Namespace out tl :: Namespace V2.LedgerDBV2Trace)
   documentFor _ = Nothing
 
   allNamespaces =
-       map (nsPrependInner "V1")
-         (allNamespaces :: [Namespace V1.SomeBackendTrace])
-    ++ map (nsPrependInner "V2")
+       -- map (nsPrependInner "V1")
+    --      (allNamespaces :: [Namespace V1.SomeBackendTrace])
+    -- ++
+    map (nsPrependInner "V2")
          (allNamespaces :: [Namespace V2.LedgerDBV2Trace])
 
 --------------------------------------------------------------------------------
 -- V1
 --------------------------------------------------------------------------------
 
-unwrapV1Trace :: forall a backend. Typeable backend => (V1.Trace LMDB.LMDB -> a) -> V1.Trace backend -> a
-unwrapV1Trace g ev =
-  case cast @(V1.Trace backend) @(V1.Trace LMDB.LMDB) ev of
-    Just t -> g t
-    _ -> error "blah"
+-- unwrapV1Trace :: forall a backend. Typeable backend => (V1.Trace LMDB.LMDB -> a) -> V1.Trace backend -> a
+-- unwrapV1Trace g ev =
+--   case cast @(V1.Trace backend) @(V1.Trace LMDB.LMDB) ev of
+--     Just t -> g t
+--     _ -> error "blah"
 
-instance LogFormatting V1.SomeBackendTrace where
-  forMachine dtal (V1.SomeBackendTrace ev) =
-    unwrapV1Trace (forMachine dtal) ev
+-- instance LogFormatting V1.SomeBackendTrace where
+--   forMachine dtal (V1.SomeBackendTrace ev) =
+--     unwrapV1Trace (forMachine dtal) ev
 
-  forHuman (V1.SomeBackendTrace ev) =
-    unwrapV1Trace forHuman ev
+--   forHuman (V1.SomeBackendTrace ev) =
+--     unwrapV1Trace forHuman ev
 
-instance MetaTrace V1.SomeBackendTrace where
-  namespaceFor (V1.SomeBackendTrace ev) =
-    unwrapV1Trace (nsPrependInner "LMDB" . namespaceFor) ev
+-- instance MetaTrace V1.SomeBackendTrace where
+--   namespaceFor (V1.SomeBackendTrace ev) =
+--     unwrapV1Trace (nsPrependInner "LMDB" . namespaceFor) ev
 
-  severityFor (Namespace out ("LMDB" : tl)) (Just (V1.SomeBackendTrace ev)) =
-    unwrapV1Trace (severityFor (Namespace out tl :: Namespace (V1.Trace LMDB.LMDB)) . Just) ev
-  severityFor (Namespace _ ("LMDB" : _)) Nothing =
-    Just Debug
-  severityFor _ _ = Nothing
+--   severityFor (Namespace out ("LMDB" : tl)) (Just (V1.SomeBackendTrace ev)) =
+--     unwrapV1Trace (severityFor (Namespace out tl :: Namespace (V1.Trace LMDB.LMDB)) . Just) ev
+--   severityFor (Namespace _ ("LMDB" : _)) Nothing =
+--     Just Debug
+--   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ("LMDB" : _)) =
-    Just "An LMDB trace"
-  documentFor _ = Nothing
+--   documentFor (Namespace _ ("LMDB" : _)) =
+--     Just "An LMDB trace"
+--   documentFor _ = Nothing
 
-  allNamespaces =
-    map (nsPrependInner "LMDB")
-        (allNamespaces :: [Namespace (V1.Trace LMDB.LMDB)])
+--   allNamespaces =
+--     map (nsPrependInner "LMDB")
+--         (allNamespaces :: [Namespace (V1.Trace LMDB.LMDB)])
 
-instance LogFormatting (V1.Trace LMDB.LMDB) where
-  forMachine _dtal (LMDB.OnDiskBackingStoreInitialise limits) =
-    mconcat [ "kind" .= String "LMDBBackingStoreInitialise", "limits" .= showT limits ]
-  forMachine dtal (LMDB.OnDiskBackingStoreTrace ev) = forMachine dtal ev
+-- instance LogFormatting (V1.Trace LMDB.LMDB) where
+--   forMachine _dtal (LMDB.OnDiskBackingStoreInitialise limits) =
+--     mconcat [ "kind" .= String "LMDBBackingStoreInitialise", "limits" .= showT limits ]
+--   forMachine dtal (LMDB.OnDiskBackingStoreTrace ev) = forMachine dtal ev
 
-  forHuman (LMDB.OnDiskBackingStoreInitialise limits) = "Initializing LMDB backing store with limits " <> showT limits
-  forHuman (LMDB.OnDiskBackingStoreTrace ev) = forHuman ev
+--   forHuman (LMDB.OnDiskBackingStoreInitialise limits) = "Initializing LMDB backing store with limits " <> showT limits
+--   forHuman (LMDB.OnDiskBackingStoreTrace ev) = forHuman ev
 
-instance MetaTrace (V1.Trace LMDB.LMDB) where
-  namespaceFor LMDB.OnDiskBackingStoreInitialise{} =
-    Namespace [] ["Initialise"]
-  namespaceFor (LMDB.OnDiskBackingStoreTrace ev) =
-    nsPrependInner "BackingStoreEvent" (namespaceFor ev)
+-- instance MetaTrace (V1.Trace LMDB.LMDB) where
+--   namespaceFor LMDB.OnDiskBackingStoreInitialise{} =
+--     Namespace [] ["Initialise"]
+--   namespaceFor (LMDB.OnDiskBackingStoreTrace ev) =
+--     nsPrependInner "BackingStoreEvent" (namespaceFor ev)
 
-  severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
-  severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (LMDB.OnDiskBackingStoreTrace ev)) =
-    severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
-  severityFor _ _ = Nothing
+--   severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
+--   severityFor (Namespace out ("BackingStoreEvent" : tl)) Nothing =
+--     severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) Nothing
+--   severityFor (Namespace out ("BackingStoreEvent" : tl)) (Just (LMDB.OnDiskBackingStoreTrace ev)) =
+--     severityFor (Namespace out tl :: Namespace V1.BackingStoreTrace) (Just ev)
+--   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ("Initialise" : _)) = Just
-    "Backing store is being initialised"
-  documentFor (Namespace out ("BackingStoreEvent" : tl)) =
-    documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
-  documentFor _ = Nothing
+--   documentFor (Namespace _ ("Initialise" : _)) = Just
+--     "Backing store is being initialised"
+--   documentFor (Namespace out ("BackingStoreEvent" : tl)) =
+--     documentFor (Namespace out tl :: Namespace V1.BackingStoreTrace)
+--   documentFor _ = Nothing
 
-  allNamespaces =
-    Namespace [] ["Initialise"]
-    : map (nsPrependInner "BackingStoreEvent")
-          (allNamespaces :: [Namespace V1.BackingStoreTrace])
+--   allNamespaces =
+--     Namespace [] ["Initialise"]
+--     : map (nsPrependInner "BackingStoreEvent")
+--           (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
-instance LogFormatting V1.BackingStoreTrace where
-  forMachine _dtals V1.BSOpening = mempty
-  forMachine _dtals (V1.BSOpened p) =
-    maybe mempty (\p' -> mconcat [ "path" .= showT p' ]) p
-  forMachine _dtals (V1.BSInitialisingFromCopy p) =
-    mconcat [ "path" .= showT p ]
-  forMachine _dtals (V1.BSInitialisedFromCopy p) =
-    mconcat [ "path" .= showT p ]
-  forMachine _dtals (V1.BSInitialisingFromValues sl) =
-    mconcat [ "slot" .= showT sl ]
-  forMachine _dtals (V1.BSInitialisedFromValues sl) =
-    mconcat [ "slot" .= showT sl ]
-  forMachine _dtals V1.BSClosing = mempty
-  forMachine _dtals V1.BSAlreadyClosed = mempty
-  forMachine _dtals V1.BSClosed = mempty
-  forMachine _dtals (V1.BSCopying p) =
-    mconcat [ "path" .= showT p ]
-  forMachine _dtals (V1.BSCopied p) =
-    mconcat [ "path" .= showT p ]
-  forMachine _dtals V1.BSCreatingValueHandle = mempty
-  forMachine _dtals V1.BSCreatedValueHandle = mempty
-  forMachine _dtals (V1.BSWriting s) =
-    mconcat [ "slot" .= showT s ]
-  forMachine _dtals (V1.BSWritten s1 s2) =
-    mconcat [ "old" .= showT s1, "new" .= showT s2 ]
-  forMachine _dtals (V1.BSValueHandleTrace i _ev) =
-    maybe mempty (\i' -> mconcat ["idx" .= showT i']) i
-instance LogFormatting V1.BackingStoreValueHandleTrace where
-  forMachine _dtals V1.BSVHClosing = mempty
-  forMachine _dtals V1.BSVHAlreadyClosed = mempty
-  forMachine _dtals V1.BSVHClosed = mempty
-  forMachine _dtals V1.BSVHRangeReading = mempty
-  forMachine _dtals V1.BSVHRangeRead = mempty
-  forMachine _dtals V1.BSVHReading = mempty
-  forMachine _dtals V1.BSVHRead = mempty
-  forMachine _dtals V1.BSVHStatting = mempty
-  forMachine _dtals V1.BSVHStatted = mempty
+-- instance LogFormatting V1.BackingStoreTrace where
+--   forMachine _dtals V1.BSOpening = mempty
+--   forMachine _dtals (V1.BSOpened p) =
+--     maybe mempty (\p' -> mconcat [ "path" .= showT p' ]) p
+--   forMachine _dtals (V1.BSInitialisingFromCopy p) =
+--     mconcat [ "path" .= showT p ]
+--   forMachine _dtals (V1.BSInitialisedFromCopy p) =
+--     mconcat [ "path" .= showT p ]
+--   forMachine _dtals (V1.BSInitialisingFromValues sl) =
+--     mconcat [ "slot" .= showT sl ]
+--   forMachine _dtals (V1.BSInitialisedFromValues sl) =
+--     mconcat [ "slot" .= showT sl ]
+--   forMachine _dtals V1.BSClosing = mempty
+--   forMachine _dtals V1.BSAlreadyClosed = mempty
+--   forMachine _dtals V1.BSClosed = mempty
+--   forMachine _dtals (V1.BSCopying p) =
+--     mconcat [ "path" .= showT p ]
+--   forMachine _dtals (V1.BSCopied p) =
+--     mconcat [ "path" .= showT p ]
+--   forMachine _dtals V1.BSCreatingValueHandle = mempty
+--   forMachine _dtals V1.BSCreatedValueHandle = mempty
+--   forMachine _dtals (V1.BSWriting s) =
+--     mconcat [ "slot" .= showT s ]
+--   forMachine _dtals (V1.BSWritten s1 s2) =
+--     mconcat [ "old" .= showT s1, "new" .= showT s2 ]
+--   forMachine _dtals (V1.BSValueHandleTrace i _ev) =
+--     maybe mempty (\i' -> mconcat ["idx" .= showT i']) i
+-- instance LogFormatting V1.BackingStoreValueHandleTrace where
+--   forMachine _dtals V1.BSVHClosing = mempty
+--   forMachine _dtals V1.BSVHAlreadyClosed = mempty
+--   forMachine _dtals V1.BSVHClosed = mempty
+--   forMachine _dtals V1.BSVHRangeReading = mempty
+--   forMachine _dtals V1.BSVHRangeRead = mempty
+--   forMachine _dtals V1.BSVHReading = mempty
+--   forMachine _dtals V1.BSVHRead = mempty
+--   forMachine _dtals V1.BSVHStatting = mempty
+--   forMachine _dtals V1.BSVHStatted = mempty
 
-instance MetaTrace V1.BackingStoreTrace where
-  namespaceFor V1.BSOpening = Namespace [] ["Opening"]
-  namespaceFor V1.BSOpened{} = Namespace [] ["Opened"]
-  namespaceFor V1.BSInitialisingFromCopy{} =
-    Namespace [] ["InitialisingFromCopy"]
-  namespaceFor V1.BSInitialisedFromCopy{} =
-    Namespace [] ["InitialisedFromCopy"]
-  namespaceFor V1.BSInitialisingFromValues{} =
-    Namespace [] ["InitialisingFromValues"]
-  namespaceFor V1.BSInitialisedFromValues{} =
-    Namespace [] ["InitialisedFromValues"]
-  namespaceFor V1.BSClosing = Namespace [] ["Closing"]
-  namespaceFor V1.BSAlreadyClosed = Namespace [] ["AlreadyClosed"]
-  namespaceFor V1.BSClosed = Namespace [] ["Closed"]
-  namespaceFor V1.BSCopying{} = Namespace [] ["Copying"]
-  namespaceFor V1.BSCopied{} = Namespace [] ["Copied"]
-  namespaceFor V1.BSCreatingValueHandle = Namespace [] ["CreatingValueHandle"]
-  namespaceFor V1.BSCreatedValueHandle = Namespace [] ["CreatedValueHandle"]
-  namespaceFor (V1.BSValueHandleTrace _ bsValueHandleTrace) =
-    nsPrependInner "ValueHandleTrace" (namespaceFor bsValueHandleTrace)
-  namespaceFor V1.BSWriting{} = Namespace [] ["Writing"]
-  namespaceFor V1.BSWritten{} = Namespace [] ["Written"]
+-- instance MetaTrace V1.BackingStoreTrace where
+--   namespaceFor V1.BSOpening = Namespace [] ["Opening"]
+--   namespaceFor V1.BSOpened{} = Namespace [] ["Opened"]
+--   namespaceFor V1.BSInitialisingFromCopy{} =
+--     Namespace [] ["InitialisingFromCopy"]
+--   namespaceFor V1.BSInitialisedFromCopy{} =
+--     Namespace [] ["InitialisedFromCopy"]
+--   namespaceFor V1.BSInitialisingFromValues{} =
+--     Namespace [] ["InitialisingFromValues"]
+--   namespaceFor V1.BSInitialisedFromValues{} =
+--     Namespace [] ["InitialisedFromValues"]
+--   namespaceFor V1.BSClosing = Namespace [] ["Closing"]
+--   namespaceFor V1.BSAlreadyClosed = Namespace [] ["AlreadyClosed"]
+--   namespaceFor V1.BSClosed = Namespace [] ["Closed"]
+--   namespaceFor V1.BSCopying{} = Namespace [] ["Copying"]
+--   namespaceFor V1.BSCopied{} = Namespace [] ["Copied"]
+--   namespaceFor V1.BSCreatingValueHandle = Namespace [] ["CreatingValueHandle"]
+--   namespaceFor V1.BSCreatedValueHandle = Namespace [] ["CreatedValueHandle"]
+--   namespaceFor (V1.BSValueHandleTrace _ bsValueHandleTrace) =
+--     nsPrependInner "ValueHandleTrace" (namespaceFor bsValueHandleTrace)
+--   namespaceFor V1.BSWriting{} = Namespace [] ["Writing"]
+--   namespaceFor V1.BSWritten{} = Namespace [] ["Written"]
 
-  severityFor (Namespace _ ("Opening" : _)) _ = Just Debug
-  severityFor (Namespace _ ("Opened" : _)) _ = Just Debug
-  severityFor (Namespace _ ("InitialisingFromCopy" : _)) _ = Just Debug
-  severityFor (Namespace _ ("InitialisedFromCopy" : _)) _ = Just Debug
-  severityFor (Namespace _ ("InitialisingFromValues" : _)) _ = Just Debug
-  severityFor (Namespace _ ("InitialisedFromValues" : _)) _ = Just Debug
-  severityFor (Namespace _ ("Closing" : _)) _ = Just Debug
-  severityFor (Namespace _ ("AlreadyClosed" : _)) _ = Just Debug
-  severityFor (Namespace _ ("Closed" : _)) _ = Just Debug
-  severityFor (Namespace _ ("Copying" : _)) _ = Just Debug
-  severityFor (Namespace _ ("Copied" : _)) _ = Just Debug
-  severityFor (Namespace _ ("CreatingValueHandle" : _)) _ = Just Debug
-  severityFor (Namespace _ ("CreatedValueHandle" : _)) _ = Just Debug
-  severityFor (Namespace out ("ValueHandleTrace" : t1)) Nothing =
-    severityFor
-      (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
-      Nothing
-  severityFor
-    (Namespace out ("ValueHandleTrace" : t1))
-    (Just (V1.BSValueHandleTrace _ bsValueHandleTrace)) =
-      severityFor
-        (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
-        (Just bsValueHandleTrace)
-  severityFor (Namespace _ ("Writing" : _)) _ = Just Debug
-  severityFor (Namespace _ ("Written" : _)) _ = Just Debug
-  severityFor _ _ = Nothing
+--   severityFor (Namespace _ ("Opening" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("Opened" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("InitialisingFromCopy" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("InitialisedFromCopy" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("InitialisingFromValues" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("InitialisedFromValues" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("Closing" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("AlreadyClosed" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("Closed" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("Copying" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("Copied" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("CreatingValueHandle" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("CreatedValueHandle" : _)) _ = Just Debug
+--   severityFor (Namespace out ("ValueHandleTrace" : t1)) Nothing =
+--     severityFor
+--       (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
+--       Nothing
+--   severityFor
+--     (Namespace out ("ValueHandleTrace" : t1))
+--     (Just (V1.BSValueHandleTrace _ bsValueHandleTrace)) =
+--       severityFor
+--         (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
+--         (Just bsValueHandleTrace)
+--   severityFor (Namespace _ ("Writing" : _)) _ = Just Debug
+--   severityFor (Namespace _ ("Written" : _)) _ = Just Debug
+--   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ("Opening" : _ )) = Just
-    "Opening backing store"
-  documentFor (Namespace _ ("Opened" : _ )) = Just
-    "Backing store opened"
-  documentFor (Namespace _ ("InitialisingFromCopy" : _ )) = Just
-    "Initialising backing store from copy"
-  documentFor (Namespace _ ("InitialisedFromCopy" : _ )) = Just
-    "Backing store initialised from copy"
-  documentFor (Namespace _ ("InitialisingFromValues" : _ )) = Just
-    "Initialising backing store from values"
-  documentFor (Namespace _ ("InitialisedFromValues" : _ )) = Just
-    "Backing store initialised from values"
-  documentFor (Namespace _ ("Closing" : _ )) = Just
-    "Closing backing store"
-  documentFor (Namespace _ ("AlreadyClosed" : _ )) = Just
-    "Backing store is already closed"
-  documentFor (Namespace _ ("Closed" : _ )) = Just
-    "Backing store closed"
-  documentFor (Namespace _ ("Copying" : _ )) = Just
-    "Copying backing store"
-  documentFor (Namespace _ ("Copied" : _ )) = Just
-    "Backing store copied"
-  documentFor (Namespace _ ("CreatingValueHandle" : _ )) = Just
-    "Creating value handle for backing store"
-  documentFor (Namespace _ ("CreatedValueHandle" : _ )) = Just
-    "Value handle for backing store created"
-  documentFor (Namespace out ("ValueHandleTrace" : t1 )) =
-    documentFor (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
-  documentFor (Namespace _ ("Writing" : _ )) = Just
-    "Writing backing store"
-  documentFor (Namespace _ ("Written" : _ )) = Just
-    "Backing store written"
-  documentFor _ = Nothing
+--   documentFor (Namespace _ ("Opening" : _ )) = Just
+--     "Opening backing store"
+--   documentFor (Namespace _ ("Opened" : _ )) = Just
+--     "Backing store opened"
+--   documentFor (Namespace _ ("InitialisingFromCopy" : _ )) = Just
+--     "Initialising backing store from copy"
+--   documentFor (Namespace _ ("InitialisedFromCopy" : _ )) = Just
+--     "Backing store initialised from copy"
+--   documentFor (Namespace _ ("InitialisingFromValues" : _ )) = Just
+--     "Initialising backing store from values"
+--   documentFor (Namespace _ ("InitialisedFromValues" : _ )) = Just
+--     "Backing store initialised from values"
+--   documentFor (Namespace _ ("Closing" : _ )) = Just
+--     "Closing backing store"
+--   documentFor (Namespace _ ("AlreadyClosed" : _ )) = Just
+--     "Backing store is already closed"
+--   documentFor (Namespace _ ("Closed" : _ )) = Just
+--     "Backing store closed"
+--   documentFor (Namespace _ ("Copying" : _ )) = Just
+--     "Copying backing store"
+--   documentFor (Namespace _ ("Copied" : _ )) = Just
+--     "Backing store copied"
+--   documentFor (Namespace _ ("CreatingValueHandle" : _ )) = Just
+--     "Creating value handle for backing store"
+--   documentFor (Namespace _ ("CreatedValueHandle" : _ )) = Just
+--     "Value handle for backing store created"
+--   documentFor (Namespace out ("ValueHandleTrace" : t1 )) =
+--     documentFor (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
+--   documentFor (Namespace _ ("Writing" : _ )) = Just
+--     "Writing backing store"
+--   documentFor (Namespace _ ("Written" : _ )) = Just
+--     "Backing store written"
+--   documentFor _ = Nothing
 
-  allNamespaces =
-    [ Namespace [] ["Opening"]
-    , Namespace [] ["Opened"]
-    , Namespace [] ["InitialisingFromCopy"]
-    , Namespace [] ["InitialisedFromCopy"]
-    , Namespace [] ["InitialisingFromValues"]
-    , Namespace [] ["InitialisedFromValues"]
-    , Namespace [] ["Closing"]
-    , Namespace [] ["AlreadyClosed"]
-    , Namespace [] ["Closed"]
-    , Namespace [] ["Copying"]
-    , Namespace [] ["Copied"]
-    , Namespace [] ["CreatingValueHandle"]
-    , Namespace [] ["CreatedValueHandle"]
-    , Namespace [] ["Writing"]
-    , Namespace [] ["Written"]
-    ] ++ map (nsPrependInner "ValueHandleTrace")
-             (allNamespaces :: [Namespace V1.BackingStoreValueHandleTrace])
+--   allNamespaces =
+--     [ Namespace [] ["Opening"]
+--     , Namespace [] ["Opened"]
+--     , Namespace [] ["InitialisingFromCopy"]
+--     , Namespace [] ["InitialisedFromCopy"]
+--     , Namespace [] ["InitialisingFromValues"]
+--     , Namespace [] ["InitialisedFromValues"]
+--     , Namespace [] ["Closing"]
+--     , Namespace [] ["AlreadyClosed"]
+--     , Namespace [] ["Closed"]
+--     , Namespace [] ["Copying"]
+--     , Namespace [] ["Copied"]
+--     , Namespace [] ["CreatingValueHandle"]
+--     , Namespace [] ["CreatedValueHandle"]
+--     , Namespace [] ["Writing"]
+--     , Namespace [] ["Written"]
+--     ] ++ map (nsPrependInner "ValueHandleTrace")
+--              (allNamespaces :: [Namespace V1.BackingStoreValueHandleTrace])
 
 
-instance MetaTrace V1.BackingStoreValueHandleTrace where
-  namespaceFor V1.BSVHClosing = Namespace [] ["Closing"]
-  namespaceFor V1.BSVHAlreadyClosed = Namespace [] ["AlreadyClosed"]
-  namespaceFor V1.BSVHClosed = Namespace [] ["Closed"]
-  namespaceFor V1.BSVHRangeReading = Namespace [] ["RangeReading"]
-  namespaceFor V1.BSVHRangeRead = Namespace [] ["RangeRead"]
-  namespaceFor V1.BSVHReading = Namespace [] ["Reading"]
-  namespaceFor V1.BSVHRead = Namespace [] ["Read"]
-  namespaceFor V1.BSVHStatting = Namespace [] ["Statting"]
-  namespaceFor V1.BSVHStatted = Namespace [] ["Statted"]
+-- instance MetaTrace V1.BackingStoreValueHandleTrace where
+--   namespaceFor V1.BSVHClosing = Namespace [] ["Closing"]
+--   namespaceFor V1.BSVHAlreadyClosed = Namespace [] ["AlreadyClosed"]
+--   namespaceFor V1.BSVHClosed = Namespace [] ["Closed"]
+--   namespaceFor V1.BSVHRangeReading = Namespace [] ["RangeReading"]
+--   namespaceFor V1.BSVHRangeRead = Namespace [] ["RangeRead"]
+--   namespaceFor V1.BSVHReading = Namespace [] ["Reading"]
+--   namespaceFor V1.BSVHRead = Namespace [] ["Read"]
+--   namespaceFor V1.BSVHStatting = Namespace [] ["Statting"]
+--   namespaceFor V1.BSVHStatted = Namespace [] ["Statted"]
 
-  severityFor (Namespace _ ("Closing" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("AlreadyClosed" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("Closed" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("RangeReading" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("RangeRead" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("Reading" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("Read" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("Statting" : _ )) _ = Just Debug
-  severityFor (Namespace _ ("Statted" : _ )) _ = Just Debug
-  severityFor _ _ = Nothing
+--   severityFor (Namespace _ ("Closing" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("AlreadyClosed" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("Closed" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("RangeReading" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("RangeRead" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("Reading" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("Read" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("Statting" : _ )) _ = Just Debug
+--   severityFor (Namespace _ ("Statted" : _ )) _ = Just Debug
+--   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ("Closing" : _ )) = Just
-    "Closing backing store value handle"
-  documentFor (Namespace _ ("AlreadyClosed" : _ )) = Just
-    "Backing store value handle already clsoed"
-  documentFor (Namespace _ ("Closed" : _ )) = Just
-    "Backing store value handle closed"
-  documentFor (Namespace _ ("RangeReading" : _ )) = Just
-    "Reading range for backing store value handle"
-  documentFor (Namespace _ ("RangeRead" : _ )) = Just
-    "Range for backing store value handle read"
-  documentFor (Namespace _ ("Reading" : _ )) = Just
-    "Reading backing store value handle"
-  documentFor (Namespace _ ("Read" : _ )) = Just
-    "Backing store value handle read"
-  documentFor (Namespace _ ("Statting" : _ )) = Just
-    "Statting backing store value handle"
-  documentFor (Namespace _ ("Statted" : _ )) = Just
-    "Backing store value handle statted"
-  documentFor _ = Nothing
+--   documentFor (Namespace _ ("Closing" : _ )) = Just
+--     "Closing backing store value handle"
+--   documentFor (Namespace _ ("AlreadyClosed" : _ )) = Just
+--     "Backing store value handle already clsoed"
+--   documentFor (Namespace _ ("Closed" : _ )) = Just
+--     "Backing store value handle closed"
+--   documentFor (Namespace _ ("RangeReading" : _ )) = Just
+--     "Reading range for backing store value handle"
+--   documentFor (Namespace _ ("RangeRead" : _ )) = Just
+--     "Range for backing store value handle read"
+--   documentFor (Namespace _ ("Reading" : _ )) = Just
+--     "Reading backing store value handle"
+--   documentFor (Namespace _ ("Read" : _ )) = Just
+--     "Backing store value handle read"
+--   documentFor (Namespace _ ("Statting" : _ )) = Just
+--     "Statting backing store value handle"
+--   documentFor (Namespace _ ("Statted" : _ )) = Just
+--     "Backing store value handle statted"
+--   documentFor _ = Nothing
 
-  allNamespaces =
-    [ Namespace [] ["Closing"]
-    , Namespace [] ["AlreadyClosed"]
-    , Namespace [] ["Closed"]
-    , Namespace [] ["RangeReading"]
-    , Namespace [] ["RangeRead"]
-    , Namespace [] ["Reading"]
-    , Namespace [] ["Read"]
-    , Namespace [] ["Statting"]
-    , Namespace [] ["Statted"]
-    ]
+--   allNamespaces =
+--     [ Namespace [] ["Closing"]
+--     , Namespace [] ["AlreadyClosed"]
+--     , Namespace [] ["Closed"]
+--     , Namespace [] ["RangeReading"]
+--     , Namespace [] ["RangeRead"]
+--     , Namespace [] ["Reading"]
+--     , Namespace [] ["Read"]
+--     , Namespace [] ["Statting"]
+--     , Namespace [] ["Statted"]
+--     ]
 
 {-------------------------------------------------------------------------------
   V2
