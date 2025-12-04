@@ -736,9 +736,24 @@ instance LogFormatting (FetchDecision [Point header]) where
              ]
 
 instance MetaTrace (FetchDecision [Point header]) where
+    namespaceFor (Left FetchDeclineChainIntersectionTooDeep)
+                          = Namespace [] ["Decline", "ChainIntersectionTooDeep"]
+    namespaceFor (Left FetchDeclineChainNotPlausible)
+                          = Namespace [] ["Decline", "FetchDeclineChainNotPlausible"]
+    namespaceFor (Left FetchDeclineAlreadyFetched)
+                          = Namespace [] ["Decline", "FetchDeclineAlreadyFetched"]
+    namespaceFor (Left FetchDeclineInFlightThisPeer)
+                          = Namespace [] ["Decline", "FetchDeclineInFlightThisPeer"]
+    namespaceFor (Left FetchDeclineInFlightOtherPeer)
+                          = Namespace [] ["Decline", "FetchDeclineInFlightOtherPeer"]
     namespaceFor (Left _) = Namespace [] ["Decline"]
     namespaceFor (Right _) = Namespace [] ["Accept"]
 
+    severityFor (Namespace _ ["Decline", "FetchDeclineChainNotPlausible"]) _ = Just Debug
+    severityFor (Namespace _ ["Decline", "ChainIntersectionTooDeep"]) _ = Just Notice
+    severityFor (Namespace _ ["Decline", "FetchDeclineAlreadyFetched"]) _ = Just Debug
+    severityFor (Namespace _ ["Decline", "FetchDeclineInFlightThisPeer"]) _ = Just Debug
+    severityFor (Namespace _ ["Decline", "FetchDeclineInFlightOtherPeer"]) _ = Just Debug
     severityFor (Namespace _ ["Decline"]) _ = Just Info
     severityFor (Namespace _ ["Accept"])  _ = Just Info
     severityFor _ _ = Nothing
