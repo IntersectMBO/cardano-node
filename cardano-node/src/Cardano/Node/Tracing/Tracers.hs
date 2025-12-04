@@ -24,7 +24,6 @@ import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
-import           Cardano.Node.Tracing.Peers (traceNodePeers)
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
@@ -100,13 +99,6 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = d
 
     !stateTr <- mkCardanoTracer trBase trForward mbTrEKG ["NodeState"]
     configureTracers configReflection trConfig [stateTr]
-
-    !nodePeersDP <- mkDataPointTracer trDataPoint
-    configureTracers configReflection trConfig [nodePeersDP]
-
-    !peersTr <- mkCardanoTracer trBase trForward mbTrEKG
-                    ["Net", "Peers", "List"]
-    configureTracers configReflection trConfig [peersTr]
 
     !resourcesTr <- mkCardanoTracer trBase trForward mbTrEKG []
     configureTracers configReflection trConfig [resourcesTr]
@@ -190,8 +182,6 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = d
                           <> Tracer (traceWith nodeStateDP)
       , nodeVersionTracer = Tracer (traceWith nodeVersionTr)
       , resourcesTracer = Tracer (traceWith resourcesTr)
-      , peersTracer     = Tracer (traceWith peersTr)
-                          <> Tracer (traceNodePeers nodePeersDP)
       , ledgerMetricsTracer = Tracer (traceWith ledgerMetricsTr)
     }
 

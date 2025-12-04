@@ -40,7 +40,6 @@ config1 = TraceConfig {
       , tofMaxReconnectDelay = 60
       }
     , tcNodeName = Nothing
-    , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
     , tcMetricsPrefix = Just "cardano"
     , tcLedgerMetricsFrequency = Nothing

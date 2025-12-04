@@ -189,8 +189,7 @@ initialTraceConfig = TraceConfig {
           ]
     , tcForwarder = Just defaultForwarder {tofQueueSize = 4096}
     , tcNodeName = Nothing
-    , tcPeerFrequency = Just 2000 -- Every 2 seconds
-    , tcResourceFrequency = Just 1000 -- Every second
+    , tcResourceFrequency = Nothing
     , tcMetricsPrefix = Nothing
     , tcLedgerMetricsFrequency = Nothing
     }

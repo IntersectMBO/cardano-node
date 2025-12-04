@@ -32,7 +32,6 @@ import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
 import           Cardano.Node.Tracing.Tracers.P2P ()
-import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
@@ -133,8 +132,6 @@ getAllNamespaces =
     -- NodeInfo tracer
     let stateNS = map (nsGetTuple . nsReplacePrefix ["NodeState"])
                       (allNamespaces :: [Namespace SR.NodeState])
-        peersNS = map (nsGetTuple . nsReplacePrefix ["Net", "Peers", "List"])
-                      (allNamespaces :: [Namespace [PeerT blk]])
         resourcesNS = map nsGetTuple
                           (allNamespaces :: [Namespace ResourceStats])
         ledgerMetricsNS = map nsGetTuple
@@ -385,7 +382,6 @@ getAllNamespaces =
 
         allNamespaces' :: [([T.Text],[T.Text])] =
             stateNS
-            <> peersNS
             <> resourcesNS
             <> ledgerMetricsNS
             <> startupNS

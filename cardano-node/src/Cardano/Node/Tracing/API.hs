@@ -23,7 +23,6 @@ import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics
-import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
@@ -97,11 +96,6 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
     (ledgerMetricsTracer tracers)
     (fromMaybe ledgerMetricsDefaultFreq (tcLedgerMetricsFrequency trConfig))
     nodeKernel
-
-  startPeerTracer
-    (peersTracer tracers)
-    nodeKernel
-    (fromMaybe 2000 (tcPeerFrequency trConfig))
 
   pure tracers
  where

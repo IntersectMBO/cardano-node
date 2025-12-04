@@ -80,7 +80,6 @@ Now, open your node's configuration file (if you took it from the [Cardano World
     ]
   }
 },
-"TraceOptionPeerFrequency": 2000,
 "TraceOptionResourceFrequency": 5000,
 "TurnOnLogMetrics": false,
 "TraceOptionNodeName": "relay-1"

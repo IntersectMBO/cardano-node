@@ -58,6 +58,5 @@
       "maxFrequency": 2
     }
   },
-  "TraceOptionPeerFrequency": 2000,
   "TraceOptionResourceFrequency": 5000
 }

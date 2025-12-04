@@ -545,8 +545,6 @@ data TraceConfig = TraceConfig {
   , tcNodeName  :: Maybe Text
     -- | Optional prefix for metrics.
   , tcMetricsPrefix :: Maybe Text
-    -- | Optional peer trace frequency in milliseconds.
-  , tcPeerFrequency  :: Maybe Int
     -- | Optional resource trace frequency in milliseconds.
   , tcResourceFrequency :: Maybe Int
     -- | Optional ledger metrics frequency in milliseconds.
@@ -560,7 +558,6 @@ emptyTraceConfig = TraceConfig {
   , tcForwarder = Nothing
   , tcNodeName = Nothing
   , tcMetricsPrefix = Nothing
-  , tcPeerFrequency = Just 2000 -- Every 2 seconds
   , tcResourceFrequency = Just 5000 -- Every five seconds
   , tcLedgerMetricsFrequency = Just 1 -- Every slot
   }

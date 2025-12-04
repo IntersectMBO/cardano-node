@@ -19,7 +19,7 @@
   - [Logging](#logging)
   - [Logs Rotation](#logs-rotation)
   - [Prometheus](#prometheus)
-    - [Prometheus HTTP service discovery](#prometheus-http-sd)
+    - [Prometheus HTTP service discovery](#prometheus-http-service-discovery)
   - [EKG Monitoring](#ekg-monitoring)
   - [Verbosity](#verbosity)
   - [RTView](#rtview)

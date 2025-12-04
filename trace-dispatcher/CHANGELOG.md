@@ -1,5 +1,10 @@
 # Revision history for trace-dispatcher
 
+## 2.11.1 -- Dez 2025
+
+* Removed `TraceConfig.tcPeerFrequency` and hence `TraceOptionPeerFrequency` from config representation
+* Removed unused module `Cardano.Logging.Types.NodePeers`
+
 ## 2.11.0 -- Nov 2025
 
 * `class LogFormatting`: remove redundant `forHumanFromMachine` and `forHumanOrMachine` (the system already does that inherently)

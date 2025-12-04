@@ -343,9 +343,6 @@ TraceOptions:
 TraceOptionForwarder: # Configure the forwarder
     maxReconnectDelay: 20
 
-# Frequency of Peer messages set to two seconds
-TraceOptionPeerFrequency: 2000
-
 # Any metrics emittted will get this prefix
 TraceOptionMetricsPrefix: "cardano.node.metrics."
 ```
@@ -377,7 +374,6 @@ The same in JSON looks like this:
   "TraceOptionForwarder": {
     "maxReconnectDelay": 20
   },
-  "TraceOptionPeerFrequency": 2000,
   "TraceOptionMetricsPrefix": "cardano.node.metrics."
 }
 ```
