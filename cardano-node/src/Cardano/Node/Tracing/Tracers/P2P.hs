@@ -13,11 +13,9 @@ module Cardano.Node.Tracing.Tracers.P2P
   () where
 
 import           Cardano.Logging
-import           Cardano.Network.Diffusion (TraceChurnMode (..))
+import           Cardano.Network.Diffusion.Types
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
-import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Tracing.OrphanInstances.Network ()
@@ -39,7 +37,6 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.Governor.Types (DemotionTimeoutException)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
@@ -91,12 +88,7 @@ instance LogFormatting NtN.RemoteAddress where
 -- LocalRootPeers Tracer
 --------------------------------------------------------------------------------
 
-instance
-  ( ToJSONKey ntnAddr
-  , ToJSON ntnAddr
-  , ToJSONKey RelayAccessPoint
-  , Show ntnAddr
-  ) => LogFormatting (TraceLocalRootPeers PeerTrustable ntnAddr) where
+instance LogFormatting CardanoTraceLocalRootPeers where
   forMachine _dtal (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
@@ -215,7 +207,7 @@ instance MetaTrace TracePublicRootPeers where
 -- PeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance LogFormatting CardanoTracePeerSelection where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -889,7 +881,7 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance LogFormatting CardanoDebugPeerSelection where
   forMachine dtal@DNormal (TraceGovernorState blockedAt wakeupAfter
                    st@PeerSelectionState { targets }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
