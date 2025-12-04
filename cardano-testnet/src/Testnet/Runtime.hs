@@ -44,7 +44,7 @@ import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
-import           RIO (runRIO, threadDelay)
+import           RIO (runRIO)
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
@@ -253,16 +253,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath
 createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do
   IO.createDirectoryIfMissing True directory
-  exists <- IO.doesDirectoryExist directory
-  if exists
-    then pure directory
-    else do 
-      threadDelay 5_000_000 
-      IO.createDirectoryIfMissing True directory
-      exists' <- IO.doesDirectoryExist directory
-      if exists'
-        then pure directory
-        else throwString $ "Failed to create directory: " <> directory
+  pure directory
 
 
 createSubdirectoryIfMissingNew :: ()
@@ -343,15 +334,8 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          exists <- liftIO $ IO.doesFileExist outputFp 
-          if exists 
-            then liftIOAnnotated $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
-                   <> displayException e <> "\n"
-            else do 
-              liftIO $ writeFile outputFp $ unlines 
-                 ["Ledger new epoch logging failed - caught exception:"
-                 , displayException e
-                 ]
+          liftIOAnnotated $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+            <> displayException e <> "\n"
           pure ConditionMet
 
 calculateEpochStateDiff
