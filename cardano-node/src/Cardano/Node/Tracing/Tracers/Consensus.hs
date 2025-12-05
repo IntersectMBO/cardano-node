@@ -743,7 +743,7 @@ instance MetaTrace (FetchDecision [Point header]) where
     severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineChainNotPlausible)) = Just Notice
     severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineAlreadyFetched)) = Just Debug
     severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineInFlightThisPeer)) = Just Debug
-    severityFor (Namespace _ ["Decline"]) (Just (Left (FetchDeclineInFlightOtherPeer))) = Just Debug
+    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineInFlightOtherPeer)) = Just Debug
     severityFor (Namespace _ ["Decline"]) _ = Just Info
     severityFor (Namespace _ ["Accept"])  _ = Just Info
     severityFor _ _ = Nothing
