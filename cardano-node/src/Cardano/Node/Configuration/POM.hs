@@ -10,6 +10,8 @@
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
+{- HLINT ignore "Functor law" -}
+
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
   , ResponderCoreAffinityPolicy (..)
@@ -34,6 +36,8 @@ import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
+                   makeRpcConfig)
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool
@@ -174,6 +178,9 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+         -- gRPC
+       , ncRpcConfig :: RpcConfig
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -255,6 +262,7 @@ data PartialNodeConfiguration
        , pncSyncTargetOfKnownBigLedgerPeers       :: !(Last Int)
        , pncSyncTargetOfEstablishedBigLedgerPeers :: !(Last Int)
        , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
+
          -- Minimum number of active big ledger peers we must be connected to
          -- in Genesis mode
        , pncMinBigLedgerPeersForTrustedState :: !(Last NumberOfBigLedgerPeers)
@@ -269,6 +277,9 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
+
+         -- gRPC
+       , pncRpcConfig :: !PartialRpcConfig
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -381,6 +392,12 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
+      pncRpcConfig <-
+        RpcConfig
+          <$> (Last <$> v .:? "EnableRpc")
+          <*> (Last <$> v .:? "RpcSocketPath")
+          <*> pure mempty
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -425,6 +442,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
+           , pncRpcConfig
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -687,6 +705,7 @@ defaultPartialNodeConfiguration =
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
       -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
+    , pncRpcConfig = mempty
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -827,6 +846,9 @@ makeNodeConfiguration pnc = do
   experimentalProtocols <-
     lastToEither "Missing ExperimentalProtocolsEnabled" $
       pncExperimentalProtocolsEnabled pnc
+
+  ncRpcConfig <- makeRpcConfig $ (pncRpcConfig pnc){nodeSocketPath=ncSocketPath socketConfig}
+
   return $ NodeConfiguration
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
@@ -872,6 +894,7 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncRpcConfig
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
