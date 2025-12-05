@@ -1,7 +1,6 @@
-{ pkgs, lib
+{ pkgs
 ## The binaries/scripts to use when calling the workbench.
-, cardanoNodeProject
-, cardanoNodePackages
+, haskellProject
 , workbench # The derivation.
 ## Profile dependent parameters.
 , profile
@@ -18,10 +17,9 @@ let
   ##############################################################################
 
   profileName = profile.name;
-  inherit (profile) profiling;
 
   backendName = backend.name;
-  inherit (backend) stateDir basePort useCabalRun;
+  inherit (backend) stateDir basePort useCabalRun profiling;
 
   profileBundle  = profile.profileBundle { inherit backend; };
 
@@ -34,9 +32,9 @@ let
   cacheDir = "${__getEnv "HOME"}/.cache/cardano-workbench";
 
   # recover CHaP location from cardano's project
-  chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
+  chap = haskellProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
-  nixPlanJson = cardanoNodeProject.plan-nix + "/plan.json";
+  nixPlanJson = haskellProject.plan-nix + "/plan.json";
 
   # Optimize cache hits setting gitrev using bash once inside the shell.
   workbench-envars =
@@ -47,6 +45,7 @@ let
     export WB_SHELL_PROFILE_DATA=${profileDataDir}
     export WB_BACKEND=${backendName}
     export WB_BACKEND_DATA=${backendDataDir}
+    export WB_PROFILING="${profiling}"
     export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
@@ -57,7 +56,7 @@ let
     fi
     export CARDANO_NODE_SOCKET_PATH=${stateDir}/node-0/node.socket
     ''
-    + lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
+    + pkgs.lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
       let cardano-mainnet-mirror =
             # "nix" branch last commit 819488be9eabbba6aaa7c931559bc584d8071e3d
             __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix";
@@ -122,12 +121,9 @@ let
       ]
     )
     ++
-    (with cardanoNodePackages;
-      [
-        cardano-cli
-        locli
-      ]
-    )
+    [ haskellProject.exes.locli
+      haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli
+    ]
   ;
 
   workbench-profile-run =
@@ -200,7 +196,7 @@ let
           --genesis-cache-entry ${genesisFiles}
           --batch-name          smoke-test
           --base-port           ${toString basePort}
-          --node-source         ${pkgs.cardanoNodeProject.args.src}
+          --node-source         ${haskellProject.args.src}
           --node-rev            ${cardano-node-rev}
           --cache-dir           ./cache
          ${__concatStringsSep " " workbenchStartArgs}
@@ -278,8 +274,8 @@ let
 
 in
 {
-  inherit backend;
-  inherit profiling;
+  # Don't expose the backend. Just what the shell could need. 
+  inherit (backend) useCabalRun profiling extraShellPkgs;
 
   inherit workbench-envars;
   inherit workbench-interactive-start;
