@@ -1,5 +1,6 @@
 { pkgs
 , lib
+, haskellProject
 , stateDir
 , basePort     # ignored, just passed to the runner (unlike `supervisor.nix`).
 ## `useCabalRun` overridden parameter (unlike `supervisor.nix`).
@@ -39,7 +40,9 @@ let
   # Build a Nomad Job specification for this Nomad "sub-backend".
   materialise-profile =
     let params = {
-      inherit pkgs lib stateDir;
+      inherit pkgs lib;
+      inherit haskellProject;
+      inherit stateDir;
       subBackendName = "cloud";
     };
     in (import ../nomad.nix params).materialise-profile

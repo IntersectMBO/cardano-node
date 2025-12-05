@@ -1,7 +1,6 @@
 { pkgs, lib
 ## The binaries/scripts to use when calling the workbench.
-, cardanoNodeProject
-, cardanoNodePackages
+, haskellProject
 , workbench # The derivation.
 ## Profile dependent parameters.
 , profile
@@ -33,9 +32,9 @@ let
   cacheDir = "${__getEnv "HOME"}/.cache/cardano-workbench";
 
   # recover CHaP location from cardano's project
-  chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
+  chap = haskellProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
-  nixPlanJson = cardanoNodeProject.plan-nix + "/plan.json";
+  nixPlanJson = haskellProject.plan-nix + "/plan.json";
 
   # Optimize cache hits setting gitrev using bash once inside the shell.
   workbench-envars =
@@ -122,12 +121,9 @@ let
       ]
     )
     ++
-    (with cardanoNodePackages;
-      [
-        cardano-cli
-        locli
-      ]
-    )
+    [ haskellProject.exes.locli
+      haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli
+    ]
   ;
 
   workbench-profile-run =
@@ -200,7 +196,7 @@ let
           --genesis-cache-entry ${genesisFiles}
           --batch-name          smoke-test
           --base-port           ${toString basePort}
-          --node-source         ${pkgs.cardanoNodeProject.args.src}
+          --node-source         ${haskellProject.args.src}
           --node-rev            ${cardano-node-rev}
           --cache-dir           ./cache
          ${__concatStringsSep " " workbenchStartArgs}
