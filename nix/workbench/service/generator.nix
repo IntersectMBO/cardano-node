@@ -1,5 +1,5 @@
 { pkgs
-
+, haskellProject
 , backend
 , profile
 , nodeSpecs
@@ -57,11 +57,13 @@ let
         ;
       } // optionalAttrs profile.node.tracer {
         tracerSocketPath = "../tracer/tracer.socket";
+      # Decide where the executable comes from:
+      #########################################
       } // optionalAttrs (!backend.useCabalRun) {
-        # Use to `noGitRev` to avoid rebuilding on every commit.
-        executable     = "${pkgs.cardanoNodePackages.tx-generator.passthru.noGitRev}/bin/tx-generator";
-      } // optionalAttrs backend.useCabalRun {
+        executable     = "${haskellProject.exes.tx-generator}/bin/tx-generator";
+      } // optionalAttrs   backend.useCabalRun  {
         executable     = "tx-generator";
+      #########################################
       });
 
   ##
@@ -169,7 +171,7 @@ let
                   then
                     ''
                     ${import ../workload/${workload_name}.nix
-                      {inherit pkgs profile nodeSpecs workload;}
+                      {inherit pkgs haskellProject profile nodeSpecs workload;}
                     }
                     (cd ../workloads/${workload_name} && ${entrypoint} ${node_name})
                     ''

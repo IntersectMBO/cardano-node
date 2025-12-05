@@ -1,5 +1,5 @@
 { pkgs, lib
-# The workbench development environment as it was parametrized.
+# The workbench attrset as it was parametrized.
 , workbenchNix
 , profileName
 }:
@@ -19,8 +19,8 @@ let
               moreutils # sponge
               jq
               graphviz
-              workbenchNix.cardanoNodePackages.cardano-profile
-              workbenchNix.cardanoNodePackages.cardano-topology
+              workbenchNix.haskellProject.exes.cardano-profile
+              workbenchNix.haskellProject.exes.cardano-topology
             ];
           }
           ''
@@ -56,12 +56,13 @@ let
       profile = __fromJSON (__readFile profileJsonPath);
       nodeSpecs = __fromJSON (__readFile nodeSpecsJsonPath);
       inherit
-        (pkgs.callPackage
+        (import
           ../service/nodes.nix
-          { inherit backend profile nodeSpecs;
+          { inherit pkgs;
+            inherit workbenchNix;
+            inherit backend profile nodeSpecs;
             inherit (backend) profiling;
             inherit profileJsonPath topologyJsonPath;
-            inherit workbenchNix;
             ## This ports the (very minimal) config of the deprecated iohk-nix
             ## testnet environment to workbench, removing the dependency on it.
             baseNodeConfig =
@@ -72,16 +73,18 @@ let
                 LastKnownBlockVersion-Alt   = 0;
               }
               //
-              workbenchNix.cardanoNodePackages.cardanoLib.defaultLogConfig
+              workbenchNix.haskellProject.pkgs.cardanoLib.defaultLogConfig
             ;
           }
         )
         node-services
       ;
       inherit
-        (pkgs.callPackage
+        (import
           ../service/generator.nix
-          { inherit backend profile nodeSpecs;
+          { inherit pkgs;
+            inherit (workbenchNix) haskellProject;
+            inherit backend profile nodeSpecs;
             inherit node-services;
           }
         )
@@ -93,7 +96,10 @@ let
           start =
             ''
             ${import ../workload/${name}.nix
-              {inherit pkgs profile nodeSpecs workload;}
+              { inherit pkgs;
+                inherit (workbenchNix) haskellProject;
+                inherit profile nodeSpecs workload;
+              }
             }
             ${workload.entrypoints.producers}
             ''
@@ -102,16 +108,22 @@ let
         profile.workloads
       ;
       inherit
-        (pkgs.callPackage
+        (import
           ../service/tracer.nix
-          {inherit backend profile nodeSpecs;}
+          { inherit pkgs;
+            inherit (workbenchNix) haskellProject;
+            inherit backend profile nodeSpecs;
+          }
         )
         tracer-service
       ;
       healthcheck-service =
-        (pkgs.callPackage
+        (import
           ../service/healthcheck.nix
-          {inherit backend profile nodeSpecs;}
+          { inherit pkgs;
+            inherit (workbenchNix) haskellProject;
+            inherit backend profile nodeSpecs;
+          }
         )
       ;
     in {
@@ -146,7 +158,7 @@ let
         inherit topologyJsonPath topologyDotPath;
         inherit nodeSpecsJsonPath;
         nodeServices = __toJSON
-          (lib.mapAttrs
+          (pkgs.lib.mapAttrs
             (name: node-service:
               { inherit name;
                 inherit (node-service) start config;
