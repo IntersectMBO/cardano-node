@@ -1,0 +1,108 @@
+// WIP: In case we want some ambiguity in the surface language
+
+fst t
+snd t
+(t, t)
+t == t
+t < t
+t <= t
+t > t
+t >= t
+t + t
+t - t
+t * t
+t / t
+not a
+a && b
+a || b
+\x -> t
+minutes n
+hours n
+epoch
+now
+rewind t d
+fast_forward t d
+toScalar t
+s[t; t]
+s[t; t; t]
+v{ls}
+max t
+avg t
+filter t t
+t ⊗ t
+t t
+abs t : Scalar
+increase t
+rate t
+avg_over_time t
+sum_over_time t
+quantile_over_time t t
+unless t t
+quantile-by ls t t
+
+Γ |- t ~> t' ∈ (A, B)
+------------------------
+Γ |- fst t ~> fst t' ∈ A
+
+
+Γ |- t ~> t' ∈ (A, B)
+-------------------
+Γ |- snd t ~> snd t' ∈ B
+
+
+Γ |- a ~> a' ∈ A
+Γ |- b ~> b' ∈ B
+--------------------------------
+Γ |- (a, b) ~> (a', b') ∈ (A, B)
+
+
+Γ |- a₀ ~> a₀' ∈ A
+Γ |- a₁ ~> a₁' ∈ B
+Γ |- A = B = Scalar
+------------------------------------
+Γ |- a₀ == a₁ ~> eq_scalar a₀' a₁' ∈ Scalar
+
+
+Γ |- a₀ ~> a₀' ∈ A
+Γ |- a₁ ~> a₁' ∈ B
+Γ |- A = B = Bool
+---------------------------------------
+Γ |- a₀ == a₁ ~> eq_bool a₀' a₁' ∈ Bool
+
+
+Γ |- a₀ ~> a₀' ∈ Scalar
+Γ |- a₁ ~> a₁' ∈ Scalar
+-----------------------------------------
+Γ |- a₀ < a₁ ~> lt_scalar a₀' a₁' ∈ Scalar
+
+
+Γ |- a₀ ~> a₀' ∈ InstantVector Scalar
+Γ |- a₁ ~> a₁' ∈ Scalar
+-----------------------------------------------------------------------
+Γ |- a₀ < a₁ ~> lt_instant_vector_scalar a₀' a₁' ∈ InstantVector Scalar
+
+
+Γ |- a₀ ~> a₀' ∈ Scalar
+Γ |- a₁ ~> a₁' ∈ Scalar
+----------------------------------------
+Γ |- a₀ + a₁ ~> add_scalar a₀ a₁ ∈ Scalar
+
+
+Γ |- a₀ ~> a₀' ∈ InstantVector Scalar
+Γ |- a₁ ~> a₁' ∈ InstantVector Scalar
+----------------------------------------------------------------------
+Γ |- a₀ + a₁ ~> add_instant_vector_scalar a₀ a₁ ∈ InstantVector Scalar
+
+
+Γ |- v ∋ Timestamp -> InstantVector Scalar
+Γ |- a ∋ Timestamp
+Γ |- b ∋ Timestamp
+------------------------------------------
+Γ |- v[a, b] ∈ RangeVector Scalar
+
+Γ |- v ∋ Timestamp -> InstantVector Scalar
+Γ |- a ∋ Timestamp
+Γ |- b ∋ Timestamp
+Γ |- d ∋ Duration
+------------------------------------------
+Γ |- v[a, b, d] ∈ RangeVector Scalar
