@@ -1,5 +1,4 @@
 { pkgs
-, lib
 , haskellProject
 , stateDir
 , basePort     # ignored, just passed to the runner (unlike `supervisor.nix`).
@@ -38,7 +37,7 @@ let
   # Build a Nomad Job specification for this Nomad "sub-backend".
   materialise-profile =
     let params = {
-      inherit pkgs lib;
+      inherit pkgs;
       inherit haskellProject;
       inherit stateDir;
       subBackendName = "exec";

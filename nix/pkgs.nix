@@ -8,7 +8,7 @@ let
   inherit (prev) customConfig;
   # Parametrized helper entrypoint for the workbench development environment.
   workbench = import ./workbench
-    { inherit pkgs lib;
+    { inherit pkgs;
       haskellProject = final.cardanoNodeProject;
     }
   ;
