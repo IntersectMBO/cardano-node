@@ -229,7 +229,7 @@
       packages =
         exes
         # Linux only packages:
-        // optionalAttrs (system == "x86_64-linux")
+        // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"])
         (let
           workbenchTest = {
             profileName,
@@ -323,7 +323,7 @@
           {
             cardano-deployment = pkgs.cardanoLib.mkConfigHtml {inherit (pkgs.cardanoLib.environments) mainnet preview preprod;};
           }
-          // optionalAttrs (system == "x86_64-linux") {
+          // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"]) {
             native =
               packages
               // {
@@ -343,7 +343,10 @@
                 variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
               };
             musl = let
-              muslProject = project.projectCross.musl64;
+              muslProject =
+                if system == "x86_64-linux"
+                then project.projectCross.musl64
+                else project.projectCross.aarch64-multiplatform-musl;
               projectExes = collectExes muslProject;
             in
               projectExes
@@ -359,6 +362,11 @@
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
               };
+          }
+          # Compiling windows on aarch64-linux requires aarch64 wine64 for TH code.
+          # Currently github:NixOS/nixpkgs/nixpkgs-unstable#legacyPackages.aarch64-linux.wine64 does not build.
+          # Once building, windowsProject candidate for win-arm64 is project.projectCross.ucrtAarch64.
+          // optionalAttrs (elem system ["x86_64-linux"]) {
             windows = let
               windowsProject = project.projectCross.mingwW64;
               projectExes = collectExes windowsProject;
@@ -366,10 +374,10 @@
               projectExes
               // (removeRecurse {
                 inherit (windowsProject) checks tests benchmarks;
-                cardano-node-win64 = import ./nix/binary-release.nix {
+                cardano-node-win = import ./nix/binary-release.nix {
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
-                  platform = "win64";
+                  platform = "win";
                   exes = collect isDerivation (
                     filterAttrs (n: _: elem n releaseBins) projectExes
                   );
@@ -378,7 +386,7 @@
                 variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
               });
           }
-          // optionalAttrs (system == "x86_64-darwin" || system == "aarch64-darwin") {
+          // optionalAttrs (elem system ["x86_64-darwin" "aarch64-darwin"]) {
             native =
               filterAttrs
               (n: _:
