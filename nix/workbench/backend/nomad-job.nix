@@ -4,7 +4,6 @@
 # To make it easier to improve and debug the almighty workbench!
 ################################################################################
 { pkgs
-, lib
 , stateDir
 , profileBundle
 , generatorTaskName
@@ -14,6 +13,8 @@
 }:
 
 let
+
+  inherit (pkgs) lib;
 
   profile = profileBundle.profile.value;
 
@@ -737,7 +738,7 @@ let
               destination = "local/${task_supervisord_conf}";
               data = escapeTemplate (
                 import ./supervisor-conf.nix
-                  { inherit pkgs lib stateDir;
+                  { inherit pkgs stateDir;
                     inherit profile;
                     profiling = "none";
                     # Include only this taks' node
