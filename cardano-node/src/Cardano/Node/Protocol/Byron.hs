@@ -36,6 +36,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
+import           Control.Exception
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
@@ -166,6 +167,9 @@ data ByronProtocolInstantiationError =
   | SigningKeyDeserialiseFailure !FilePath
   | SigningKeyFilepathNotSpecified
   deriving Show
+
+instance Exception ByronProtocolInstantiationError where 
+  displayException = docToString . prettyError
 
 instance Error ByronProtocolInstantiationError where
   prettyError (CanonicalDecodeFailure fp failure) =

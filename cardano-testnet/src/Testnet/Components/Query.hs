@@ -47,7 +47,7 @@ import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.UTxO as Utxo
-
+import Testnet.Runtime
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as SQ
@@ -78,6 +78,7 @@ import           GHC.Stack
 import           Lens.Micro (Lens', to, (^.))
 
 import           Testnet.Property.Assert
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Types
 
 import           Hedgehog
@@ -255,15 +256,14 @@ getEpochStateView
   :: HasCallStack
   => MonadResource m
   => MonadTest m
-  => MonadCatch m
   => NodeConfigFile In -- ^ node Yaml configuration file path
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   epochStateView <- H.evalIO $ newIORef Nothing
-  H.asyncRegister_ . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
+  void . asyncRegister_ . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
     $ \epochState slotNumber blockNumber -> do
-        liftIO . writeIORef epochStateView $ Just (epochState, slotNumber, blockNumber)
+        liftIOAnnotated . writeIORef epochStateView $ Just (epochState, slotNumber, blockNumber)
         pure ConditionNotMet
   pure $ EpochStateView nodeConfigFile socketPath epochStateView
 

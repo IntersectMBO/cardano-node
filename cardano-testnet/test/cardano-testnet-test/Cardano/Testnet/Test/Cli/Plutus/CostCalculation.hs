@@ -40,6 +40,7 @@ import           Testnet.Components.Query (findLargestUtxoForPaymentKey, getEpoc
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
                    retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
 import           Testnet.Types (PaymentKeyInfo (paymentKeyInfoAddr), paymentKeyInfoPair,
@@ -83,7 +84,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
 
   refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-publish"
   plutusV3Script <-
-    File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+    File <$> liftIOAnnotated (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
 
   let scriptPublishUTxOAmount = 10_000_000
 
@@ -231,7 +232,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
 
   includedScriptLockWork <- H.createDirectoryIfMissing $ work </> "included-script-lock"
   plutusV3Script <-
-    File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+    File <$> liftIOAnnotated (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
 
   let includedScriptLockAmount = 10_000_000
       enoughAmountForFees = 2_000_000 -- Needs to be more than min ada
@@ -341,12 +342,12 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
 
   -- We write a simple script that allows any of the two payment keys to spend the money
 
-  addrHash1 <- H.evalEitherM $ liftIO $ runExceptT $ paymentKeyInfoHash wallet0
-  addrHash2 <- H.evalEitherM $ liftIO $ runExceptT $ paymentKeyInfoHash wallet1
+  addrHash1 <- H.evalEitherM $ liftIOAnnotated $ runExceptT $ paymentKeyInfoHash wallet0
+  addrHash2 <- H.evalEitherM $ liftIOAnnotated $ runExceptT $ paymentKeyInfoHash wallet1
 
   simpleScriptLockWork <- H.createDirectoryIfMissing $ work </> "simple-script-lock"
   let simpleScript = File $ simpleScriptLockWork </> "simple-script.json"
-  liftIO $ encodeFile (unFile simpleScript) $ generateSimpleAnyKeyScript [addrHash1, addrHash2]
+  liftIOAnnotated $ encodeFile (unFile simpleScript) $ generateSimpleAnyKeyScript [addrHash1, addrHash2]
 
   -- We now submit a transaction to the script address
   let lockedAmount = 10_000_000
@@ -443,7 +444,7 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
 
   paymentKeyInfoHash :: PaymentKeyInfo -> ExceptT String IO Text
   paymentKeyInfoHash wallet = do
-    vkBs <- liftIO $ BS.readFile (unFile $ verificationKey $ paymentKeyInfoPair wallet)
+    vkBs <- liftIOAnnotated $ BS.readFile (unFile $ verificationKey $ paymentKeyInfoPair wallet)
     svk <- liftEither $ first show $ deserialiseAnyVerificationKey vkBs
     return $
       decodeLatin1 $
