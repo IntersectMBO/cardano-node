@@ -335,10 +335,10 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
         handleException = handle $ \(e :: SomeException) -> do
           exists <- liftIO $ IO.doesFileExist outputFp 
           if exists 
-            then liftIOAnnotated $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+            then liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
                    <> displayException e <> "\n"
             else 
-              liftIOAnnotated $ writeFile outputFp $ unlines 
+              liftIO $ writeFile outputFp $ unlines 
                  ["Ledger new epoch logging failed - caught exception:"
                  , displayException e
                  ]
