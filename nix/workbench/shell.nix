@@ -95,64 +95,80 @@ project.shellFor {
   };
 
   # These programs will be available inside the nix-shell.
-  nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
-    db-analyser
-    cardano-cli.passthru.noGitRev
-    pkgs.graphviz
-    graphmod
-    jq
-    weeder
-    nix
-    (pkgs.pkg-config or pkgconfig)
-    pkgs.profiteur
-    profiterole
-    ghc-prof-flamegraph
-    sqlite-interactive
-    tmux
-    pkgs.cairo
-    pkgs.dyff
-    pkgs.git
-    pkgs.hlint
-    pkgs.moreutils
-    pkgs.time
-    pkgs.util-linux
-    workbench-runner.workbench-interactive-start
-    workbench-runner.workbench-interactive-stop
-    workbench-runner.workbench-interactive-restart
-  ]
-  # Backend dependent packages take precedence.
-  ++ workbench-runner.extraShellPkgs
-  ++ [
-      # Publish
-      bench-data-publish
-      # Debugging
-      postgresql
-      # Performance report generation
-      em
-  ]
-  ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ## Cabal run flag
-  # Include the packages (defined in `lib-cabal.sh`) or the tools to build them.
-  ++ lib.optionals ( workbench-runner.useCabalRun) [
-       cabal-install
-       ghcid
-       haskellBuildUtils
-       pkgs.cabal-plan
-     ]
-  ++ lib.optionals (!workbench-runner.useCabalRun) [
-       cardano-node.passthru.noGitRev
+  nativeBuildInputs =
+     (with pkgs; [
+       cairo
+       dyff
+       em # Performance report generation
+       git
+       graphviz
+       hlint
+       jq
+       moreutils
+       nix
+       (pkgs.pkg-config or pkgconfig)
+       profiteur
+       sqlite-interactive
+       time
+       tmux
+       util-linux
+     ])
+  ++ (with pkgs.haskellPackages; [
+       ghc-prof-flamegraph
+       graphmod
+       profiterole
+       weeder
+     ])
+  ++
+  ## Cabal run flag:
+  # Include the packages or the tools to build them (see `lib-cabal.sh`).
+  (if !workbench-runner.useCabalRun
+   then
+     (with project.exes; [
+       # A `notGitRev` version, faster to enter a workbench after a new commit.
+       cardano-node
        cardano-profile
        cardano-topology
        cardano-tracer
        locli
-       tx-generator.passthru.noGitRev
-     ]
-  ## include useful profiling helper programs.
+       # A `notGitRev` version, faster to enter a workbench after a new commit.
+       tx-generator
+     ])
+   else
+     (with pkgs; [
+       pkgs.cabal-install
+       pkgs.ghcid
+       pkgs.haskellBuildUtils
+       pkgs.cabal-plan
+     ])
+  )
+  ++ (with project.hsPkgs; [
+      # A `notGitRev` version, faster to enter a workbench after a new commit.
+      cardano-cli.components.exes.cardano-cli
+      ouroboros-consensus-cardano.components.exes.db-analyser
+     ])
+  ++ (with workbench-runner; [
+       workbench-interactive-start
+       workbench-interactive-stop
+       workbench-interactive-restart
+     ])
+  # Backend dependent packages take precedence.
+  ++ workbench-runner.extraShellPkgs
+  ++ [
+      # Publish
+      pkgs.bench-data-publish
+      # Debugging
+      pkgs.postgresql
+  ]
+  ++ lib.optional haveGlibcLocales pkgs.glibcLocales
+
+  ## Include useful profiling helper programs.
   ++ [
        # For the legacy prog.hp format.
        # Which has been deprecated in favour of eventlog based profiling.
-       hp2pretty hp2html
-       eventlog2html
+       pkgs.haskellPackages.hp2pretty
+       pkgs.haskellPackages.hp2html
+       pkgs.haskellPackages.eventlog2html
      ]
   # Include the workbench as a derivation or use the sources directly ?
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]

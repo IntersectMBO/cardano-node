@@ -152,9 +152,10 @@ let
     } // optionalAttrs (profiling == "none") {
       # Switch to `noGitRev` to avoid rebuilding with every commit.
       package    = pkgs.cardano-node.passthru.noGitRev;
-    } // optionalAttrs backend.useCabalRun {
+    } // optionalAttrs   backend.useCabalRun  {
       # Allow the shell function to take precedence.
       executable = "cardano-node";
+    #########################################
     } // optionalAttrs isProducer {
       operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
       kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";
@@ -223,7 +224,7 @@ let
               # A workbench with only the dependencies needed for this command.
               [ workbenchNix.workbench
                 jq
-                workbenchNix.cardanoNodePackages.cardano-topology
+                workbenchNix.haskellProject.exes.cardano-topology
               ];
             }
             ''

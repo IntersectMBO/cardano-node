@@ -1,5 +1,6 @@
 { pkgs
 , lib
+, haskellProject
 , stateDir
 , basePort
 , useCabalRun

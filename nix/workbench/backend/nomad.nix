@@ -1,5 +1,6 @@
 { pkgs
 , lib
+, haskellProject
 , stateDir
 , subBackendName
 , ...
@@ -145,29 +146,33 @@ let
       # the one used to enter the shell.
       cardano-node = rec {
         # Local reference only used if not "cloud".
-        # Avoid rebuilding on every commit because of `set-git-rev`.
-        nix-store-path = pkgs.cardanoNodePackages.cardano-node.passthru.noGitRev;
+        nix-store-path = haskellProject.exes.cardano-node;
         flake-reference = "github:intersectmbo/cardano-node";
+        # Where to fetch the binary from during "cloud" runs.
+        # Avoid nix cache misses on every commit because of `set-git-rev`.
         flake-output = "cardanoNodePackages.cardano-node.passthru.noGitRev"
         ;
       };
       cardano-cli = rec {
         # Local reference only used if not "cloud".
-        # Avoid rebuilding on every commit because of `set-git-rev`.
-        nix-store-path = pkgs.cardanoNodePackages.cardano-cli.passthru.noGitRev;
+        nix-store-path = haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli;
         flake-reference = "github:input-output-hk/cardano-cli";
+        # Where to fetch the binary from during "cloud" runs.
+        # Avoid nix cache misses on every commit because of `set-git-rev`.
         flake-output = "cardanoNodePackages.cardano-cli.passthru.noGitRev";
       };
       cardano-tracer = rec {
         # Local reference only used if not "cloud".
-        nix-store-path = pkgs.cardanoNodePackages.cardano-tracer;
+        nix-store-path = haskellProject.exes.cardano-tracer;
         flake-reference = "github:intersectmbo/cardano-node";
         flake-output = "cardanoNodePackages.cardano-tracer";
       };
       tx-generator = rec {
         # Local reference only used if not "cloud".
-        nix-store-path = pkgs.cardanoNodePackages.tx-generator.passthru.noGitRev;
+        nix-store-path = haskellProject.exes.tx-generator;
         flake-reference = "github:intersectmbo/cardano-node";
+        # Where to fetch the binary from during "cloud" runs.
+        # Avoid nix cache misses on every commit because of `set-git-rev`.
         flake-output = "cardanoNodePackages.tx-generator.passthru.noGitRev";
       };
     }

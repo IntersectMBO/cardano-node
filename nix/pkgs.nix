@@ -6,9 +6,12 @@ let
   inherit (final) pkgs;
   inherit (prev.pkgs) lib;
   inherit (prev) customConfig;
-  # Workbench development environment entrypoint parametrized with current pkgs.
+  # Parametrized helper entrypoint for the workbench development environment.
   workbench = import ./workbench
-    {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
+    { inherit pkgs lib;
+      haskellProject = final.cardanoNodeProject;
+    }
+  ;
 
 in with final;
 {
