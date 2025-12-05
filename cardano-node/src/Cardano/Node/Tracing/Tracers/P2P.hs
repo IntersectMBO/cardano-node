@@ -1481,6 +1481,7 @@ instance MetaTrace (ConnectionManager.Trace addr
           TrHandshakeServerError {} -> Info
           TrConnectionHandlerError _ _ ShutdownNode  -> Critical
           TrConnectionHandlerError _ _ ShutdownPeer  -> Info
+    severityFor (Namespace _  ["ConnectionHandler"]) _ = Just Info
     severityFor (Namespace _  ["ConnectionHandler"]) Nothing = Just Info
     severityFor (Namespace _  ["Shutdown"]) _ = Just Info
     severityFor (Namespace _  ["ConnectionExists"]) _ = Just Info
