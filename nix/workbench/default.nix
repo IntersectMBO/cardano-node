@@ -1,5 +1,5 @@
 # The workbench entrypoint,
-{ pkgs, lib
+{ pkgs
   # This provided project attrset will be used all over the workbench instead
   # of the flake's `pkgs` or `cardanoNodePackages`. This allows to easily
   # parametrize the whole build at any point, be it only for the workbench in
@@ -14,9 +14,9 @@
 , haskellProject
 }:
 
-with lib;
-
 let
+
+  inherit (pkgs) lib;
 
   # Workbench derivation to create derivations from `wb` commands.
   ##############################################################################
@@ -43,7 +43,7 @@ let
                 profile  = [".sh" ".json"];
                 topology = [".sh"];
               };
-          in  lib.any id [
+          in  lib.any lib.id [
             # Include the "wb" file (has no ".sh", workbench's entrypoint).
             (relativePath == "wb")
             # Include all top level "*.sh" files.
@@ -61,8 +61,8 @@ let
                 )
             )
             # Include only the extensions defined above.
-            (lib.any id
-              (lib.attrValues (mapAttrs
+            (lib.any lib.id
+              (lib.attrValues (lib.mapAttrs
                 (dirName: suffixes:
                      (lib.hasPrefix (dirName + "/") relativePath)
                   &&
@@ -108,7 +108,7 @@ let
 # Output
 ################################################################################
 
-in pkgs.lib.fix (self: {
+in lib.fix (self: {
 
   inherit workbench;
   inherit haskellProject;
@@ -118,7 +118,7 @@ in pkgs.lib.fix (self: {
   # profileName -> profile
   profile = profileName:
     (import ./profile/profile.nix
-      { inherit pkgs lib;
+      { inherit pkgs;
         workbenchNix = self;
         inherit profileName;
       }
@@ -143,7 +143,7 @@ in pkgs.lib.fix (self: {
      , profiling
      }:
       (backendRegistry."${backendName}")
-        { inherit pkgs lib;
+        { inherit pkgs;
           inherit haskellProject;
           inherit stateDir basePort;
           # The `useCabalRun` and `profiling` flags are set in the backend to
@@ -187,7 +187,7 @@ in pkgs.lib.fix (self: {
         ;
     in import ./backend/runner.nix
       {
-          inherit pkgs lib;
+          inherit pkgs;
           inherit haskellProject;
           inherit workbench;
           inherit profile backend;

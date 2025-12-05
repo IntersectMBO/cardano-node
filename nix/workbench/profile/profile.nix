@@ -1,4 +1,4 @@
-{ pkgs, lib
+{ pkgs
 # The workbench attrset as it was parametrized.
 , workbenchNix
 , profileName

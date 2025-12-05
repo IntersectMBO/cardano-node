@@ -1,5 +1,4 @@
 { pkgs
-, lib
 , stateDir
 , profile
 , profiling
@@ -11,9 +10,10 @@
 , inetHttpServerPort ? null
 }:
 
-with lib;
-
 let
+
+  inherit (pkgs) lib;
+
   # The prefix for every "[program:X] command=sh start.sh" because `supervisord`
   # may run in the most unexpected places where we can't asume what is or isn't
   # included in $PATH. Just make sure pkgs.bashInteractive is in the nix store.
@@ -255,4 +255,4 @@ let
     ;
 
 in
-  generators.toINI {} supervisorConf
+  lib.generators.toINI {} supervisorConf

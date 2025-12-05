@@ -1,4 +1,4 @@
-{ pkgs, lib
+{ pkgs
 ## The binaries/scripts to use when calling the workbench.
 , haskellProject
 , workbench # The derivation.
@@ -56,7 +56,7 @@ let
     fi
     export CARDANO_NODE_SOCKET_PATH=${stateDir}/node-0/node.socket
     ''
-    + lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
+    + pkgs.lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
       let cardano-mainnet-mirror =
             # "nix" branch last commit 819488be9eabbba6aaa7c931559bc584d8071e3d
             __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix";
