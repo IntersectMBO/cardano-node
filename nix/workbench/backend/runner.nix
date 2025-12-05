@@ -18,7 +18,6 @@ let
   ##############################################################################
 
   profileName = profile.name;
-  inherit (profile) profiling;
 
   backendName = backend.name;
   inherit (backend) stateDir basePort useCabalRun;
@@ -278,8 +277,8 @@ let
 
 in
 {
-  inherit backend;
-  inherit profiling;
+  # Don't expose the backend. Just what the shell could need. 
+  inherit (backend) useCabalRun profiling extraShellPkgs;
 
   inherit workbench-envars;
   inherit workbench-interactive-start;

@@ -17,7 +17,7 @@ project.shellFor {
   name = "workbench-shell";
 
   shellHook =
-    let inherit (workbench-runner) backend profiling;
+    let inherit (workbench-runner) useCabalRun profiling;
     in
     ''
     while test $# -gt 0
@@ -30,7 +30,7 @@ project.shellFor {
     progress "profile name"            $WB_SHELL_PROFILE
     progress "backend name"            $WB_BACKEND
     progress "deployment name"         $WB_DEPLOYMENT_NAME
-    progress "params"                  'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
+    progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
     progress "WB_LOCLI_DB="            $WB_LOCLI_DB
@@ -52,7 +52,7 @@ project.shellFor {
     }
     export -f wb
     ''
-    + optionalString backend.useCabalRun
+    + optionalString useCabalRun
     ''
     . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
     cabal update
@@ -103,7 +103,8 @@ project.shellFor {
     weeder
     nix
     (pkgs.pkg-config or pkgconfig)
-    pkgs.profiteur
+    # profiteur package is in dire need of a maintenance release / package bumps for GHC9.12. Excluding it for now.
+    # pkgs.profiteur
     profiterole
     ghc-prof-flamegraph
     sqlite-interactive
@@ -120,7 +121,7 @@ project.shellFor {
     workbench-runner.workbench-interactive-restart
   ]
   # Backend dependent packages take precedence.
-  ++ workbench-runner.backend.extraShellPkgs
+  ++ workbench-runner.extraShellPkgs
   ++ [
       # Publish
       bench-data-publish
@@ -132,13 +133,13 @@ project.shellFor {
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
   ## Cabal run flag
   # Include the packages (defined in `lib-cabal.sh`) or the tools to build them.
-  ++ lib.optionals ( workbench-runner.backend.useCabalRun) [
+  ++ lib.optionals ( workbench-runner.useCabalRun) [
        cabal-install
        ghcid
        haskellBuildUtils
        pkgs.cabal-plan
      ]
-  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [
+  ++ lib.optionals (!workbench-runner.useCabalRun) [
        cardano-node.passthru.noGitRev
        cardano-profile
        cardano-topology

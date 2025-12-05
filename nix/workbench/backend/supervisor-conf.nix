@@ -2,6 +2,7 @@
 , lib
 , stateDir
 , profile
+, profiling
 , nodeSpecs
 , withGenerator
 , withTracer
@@ -140,6 +141,18 @@ let
         ### - forge-stress-large:     11300000
         ### - value:                   5000000 (50s more needed)
         startsecs      = 5 + (profile.derived.dataset_measure / (5000000 / 50));
+        # The number of seconds to wait for the OS to return a SIGCHLD to
+        # supervisord after the program has been sent a stopsignal. If this
+        # number of seconds elapses before supervisord receives a SIGCHLD from
+        # the process, supervisord will attempt to kill it with a final SIGKILL.
+        stopwaitsecs =
+          if profiling == null || profiling == "none"
+          # Use the default value.
+          then 10
+          # May need a lot of time for a long running node to dump all the
+          # profiling data. Not risking it. 5 minutes.
+          else 5*60
+        ;
       })
     nodeSpecs))
     //

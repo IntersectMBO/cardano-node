@@ -6,44 +6,53 @@ let
   inherit (final) pkgs;
   inherit (prev.pkgs) lib;
   inherit (prev) customConfig;
-
-  # A generic, fully parametric version of the workbench development environment.
+  # Workbench development environment entrypoint parametrized with current pkgs.
   workbench = import ./workbench
     {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
-
-  # Workbench runner instantiated by parameters from customConfig:
-  workbench-runner =
-    { profileName        ? customConfig.localCluster.profileName
-    , profiling          ? customConfig.profiling
-    , backendName        ? customConfig.localCluster.backendName
-    , stateDir           ? customConfig.localCluster.stateDir
-    , basePort           ? customConfig.localCluster.basePort
-    , useCabalRun        ? customConfig.localCluster.useCabalRun
-    , batchName          ? customConfig.localCluster.batchName
-    , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
-    , cardano-node-rev   ? null
-    }:
-    workbench.runner
-      { inherit profileName profiling backendName stateDir basePort useCabalRun;
-        inherit batchName workbenchStartArgs cardano-node-rev;
-      };
 
 in with final;
 {
   inherit (cardanoNodeProject.args) compiler-nix-name;
 
-  inherit workbench workbench-runner;
+  # To make it a flake output so it's available as input to external flakes.
+  inherit workbench;
 
-  cabal = haskell-nix.cabal-install.${compiler-nix-name};
+  # A workbench runner with default parameters from customConfig.
+  # Used in flake.nix for "workbench-ci-test" flake output package for CI.
+  workbench-runner =
+    { profileName        ? customConfig.localCluster.profileName
+    , backendName        ? customConfig.localCluster.backendName
+    , stateDir           ? customConfig.localCluster.stateDir
+    , basePort           ? customConfig.localCluster.basePort
+    , useCabalRun        ? customConfig.localCluster.useCabalRun
+    , profiling          ? customConfig.profiling
+    , batchName          ? customConfig.localCluster.batchName
+    , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
+    , cardano-node-rev   ? null
+    }:
+    workbench.runner
+      { # To construct profile attrset with its `materialise-profile` function.
+        inherit profileName;
+        # To construct backend attrset with its `materialise-profile` function.
+        inherit backendName stateDir basePort useCabalRun profiling;
+        # Parameters for the workbench shell `start-cluster` command.
+        inherit batchName workbenchStartArgs cardano-node-rev;
+      }
+  ;
 
-  hlint = haskell-nix.tool "ghc96" "hlint" {
-    version = "3.8";
-    index-state = "2025-04-22T00:00:00Z";
+  cabal = haskell-nix.tool compiler-nix-name "cabal" {
+    version = "latest";
+    index-state = "2025-10-17T00:26:22Z";
+  };
+
+  hlint = haskell-nix.tool compiler-nix-name "hlint" {
+    version = "latest";
+    index-state = "2025-10-17T00:26:22Z";
   };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
-    version = "0.8.7";
-    index-state = "2024-12-24T12:56:48Z";
+    version = "latest";
+    index-state = "2025-10-17T00:26:22Z";
   };
 
   # The ghc-hls point release compatibility table is documented at:
@@ -58,6 +67,7 @@ in with final;
       ghc963 = haskell-nix.sources."hls-2.5";
       ghc964 = haskell-nix.sources."hls-2.6";
       ghc981 = haskell-nix.sources."hls-2.6";
+      ghc912 = haskell-nix.sources."hls-2.12";
     }.${compiler-nix-name} or haskell-nix.sources."hls-2.10";
     cabalProject = readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
@@ -68,9 +78,10 @@ in with final;
     index-state = "2024-12-24T12:56:48Z";
   };
 
+  # profiteur package is in dire need of a maintenance release / package bumps for GHC9.12. Excluding it for now.
   profiteur = haskell-nix.tool compiler-nix-name "profiteur" {
     cabalProjectLocal = ''
-      allow-newer: profiteur:base, ghc-prof:base
+      allow-newer: profiteur:base, profiteur:text, profiteur:aeson, ghc-prof:base
     '';
   };
 
@@ -160,15 +171,13 @@ in with final;
         value =
           let
               # Default values only ("run/current", 30000, profiling "none").
-              profile = workbench.profile {
-                inherit profileName;
-                profiling = "none";
-              };
+              profile = workbench.profile profileName;
               backend = workbench.backend
                 { backendName = "nomadcloud";
                   stateDir    = customConfig.localCluster.stateDir;
                   basePort    = customConfig.localCluster.basePort;
                   useCabalRun = customConfig.localCluster.useCabalRun;
+                  profiling = "none";
                 }
               ;
               profileBundle = profile.profileBundle

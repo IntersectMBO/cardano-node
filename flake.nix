@@ -45,7 +45,7 @@
     };
 
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix";
+      url = "github:mgmeier/haskell.nix?ref=backport/hkm/fix-ghc-profiling";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
