@@ -1,11 +1,12 @@
 { pkgs
-, lib
 , haskellProject
 , stateDir
 , subBackendName
 , ...
 }:
 let
+
+  inherit (pkgs) lib;
 
   # Backend-specific Nix bits:
   materialise-profile = { profileBundle }:
@@ -192,7 +193,7 @@ let
         exec = {
           # TODO: oneTracerPerGroup
           oneTracerPerCluster = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;
@@ -200,7 +201,7 @@ let
               withSsh = false;
             };
           oneTracerPerNode = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;
@@ -215,7 +216,7 @@ let
           # Always "oneTracerPerNode"
           # TODO: oneTracerPerCluster and oneTracerPerGroup
           nomadExec = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;
@@ -223,7 +224,7 @@ let
               withSsh = false;
             };
           ssh = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;
