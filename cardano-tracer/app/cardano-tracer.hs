@@ -1,14 +1,23 @@
-import           Cardano.Tracer.CLI (TracerParams, parseTracerParams)
+{-# LANGUAGE OverloadedRecordDot #-}
+
+import           Cardano.Tracer.CLI (TracerParams(..), parseTracerParams)
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run (runCardanoTracer)
 
+import           Data.Functor (void)
 import           Data.Version (showVersion)
 import           Options.Applicative
 
 import           Paths_cardano_tracer (version)
 
 main :: IO ()
-main =
-  runCardanoTracer =<< customExecParser (prefs showHelpOnEmpty) tracerInfo
+main = void do
+  tracerParams :: TracerParams
+     <- customExecParser (prefs showHelpOnEmpty) tracerInfo
+  trace :: Trace IO TracerTrace <-
+    -- Default `Nothing' severity filter to Info.
+    mkTracerTracer $ SeverityF (tracerParams.logSeverity <|> Just Info)
+  runCardanoTracer trace tracerParams
 
 tracerInfo :: ParserInfo TracerParams
 tracerInfo = info
@@ -21,7 +30,9 @@ tracerInfo = info
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption
-  (showVersion version)
-  (long "version" <>
-   short 'v' <>
-   help "Show version")
+  do showVersion version
+  do mconcat
+       [ long  "version"
+       , short 'v'
+       , help  "Show version"
+       ]

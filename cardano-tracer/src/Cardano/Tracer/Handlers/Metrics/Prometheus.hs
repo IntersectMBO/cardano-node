@@ -17,6 +17,8 @@ import           Prelude hiding (head)
 
 import           Control.Applicative ((<|>))
 import           Data.Aeson (ToJSON (..), encode, pairs, (.=))
+import           Control.Concurrent.Async (race_)
+import           Control.Concurrent.Chan.Unagi (dupChan)
 import qualified Data.ByteString as ByteString
 import           Data.Functor ((<&>))
 import qualified Data.Map as Map (Map, empty, fromList)
@@ -85,16 +87,20 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   -- If everything is okay, the function 'simpleHttpServe' never returns.
   -- But if there is some problem, it never throws an exception, but just stops.
   -- So if it stopped - it will be re-started.
-  traceWith teTracer TracerStartedPrometheus
+  traceWith tracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
-  runSettings (setEndpoint endpoint defaultSettings) do
-    renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
+  outChan <- dupChan inChan
+  let run :: IO ()
+      run = runSettings (setEndpoint endpoint defaultSettings) $
+        renderPrometheus computeRoutes_autoUpdate noSuffix metricsHelp promLabels
+  race_ run (blockUntilShutdown outChan)
   where
     TracerEnv
-      { teTracer
-      , teConfig = TracerConfig { metricsNoSuffix, prometheusLabels }
-      , teMetricsHelp
+      { teTracer      = tracer
+      , teConfig      = TracerConfig { metricsNoSuffix, prometheusLabels }
+      , teMetricsHelp = metricsHelp
+      , teInChan      = inChan
       } = tracerEnv
 
     noSuffix    = or @Maybe metricsNoSuffix
