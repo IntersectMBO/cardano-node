@@ -365,12 +365,10 @@
           }
           # Compiling windows on aarch64-linux requires aarch64 wine64 for TH code.
           # Currently github:NixOS/nixpkgs/nixpkgs-unstable#legacyPackages.aarch64-linux.wine64 does not build.
+          # Once building, windowsProject candidate for win-arm64 is project.projectCross.ucrtAarch64.
           // optionalAttrs (elem system ["x86_64-linux"]) {
             windows = let
-              windowsProject =
-                if system == "x86_64-linux"
-                then project.projectCross.mingwW64
-                else project.projectCross.ucrtAarch64;
+              windowsProject = project.projectCross.mingwW64;
               projectExes = collectExes windowsProject;
             in
               projectExes
