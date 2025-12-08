@@ -508,6 +508,8 @@
           cardano-submit-api
           cardano-tracer
           db-analyser
+          db-synthesizer
+          db-truncater
           locli
           snapshot-converter
           tx-generator;
