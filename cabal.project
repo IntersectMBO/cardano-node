@@ -54,6 +54,10 @@ package snap-server
 package bitvec
   flags: -simd
 
+if impl(ghc < 9.6.7)
+  allow-older:
+    blockio:unix
+
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
@@ -66,28 +70,32 @@ allow-newer:
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 source-repository-package
   type: git
-  location: https://github.com/intersectmbo/cardano-cli.git
-  tag: 9bed9ca66fb4d0d7854e748c681d842bac202051
-  --sha256: sha256-7q/g7RHjO1sSW8RDiq47TpQccVOHOciDohgavH/g9t8=
-  subdir: cardano-cli
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: 053e8b90fe29e1d0ce7732d2cfbc12d02e80bd00
+  --sha256: sha256-Ygpdvwyw5jkeF5sdJqDY7XHaOFmaLbkiO48cGGfjRlI=
+  subdir:
+    cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 3d33855a5af6c6f2bb37b0c417f1ceb474ae079f
-  --sha256: sha256-zsEu8ZxF5/fLgokv/4kkII3j8/JbCvrnsHDueQyI6xI=
+  tag: 557d3da61b98c3d2a252ed90fd9149ead77f9b9e
+  --sha256: sha256-fatIubxlhhGC+Ml3IEjQJcWd1mnbY3bo2FUvaVGJcZ0=
   subdir:
     cardano-api
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: baf4ebbd924433543f8c5142b370b1061ac2e7bb
-  --sha256: sha256-dCNFxrLF7MPqNRc9aIwl2AZpjHqw9dGerTudo7GQzao=
+  tag: 22773e62030913fe6cd974563b9bfe847f1ab493
+  --sha256: sha256-wyteLIlavsR785ylIWDrAtUK6erneZmDtaPmu5FxSHg=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
     ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core
 
 source-repository-package
   type: git
