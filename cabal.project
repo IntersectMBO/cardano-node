@@ -75,7 +75,7 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e3945353d3f1961ea06bf159065fae1d30a7f58e
-  --sha256: sha256-2HE8kA2G8V5wanJywdtIfVs4puK2JvCXgteKws0Qryk=
+  tag: fc0955d9168dc98349a1c7e6eaea41196fc2506d
+  --sha256: sha256-jgm61yBuQ5eHhPKW3WScqPV4RE97tEohVZVUCVqd+mU=
   subdir:
     ouroboros-consensus
