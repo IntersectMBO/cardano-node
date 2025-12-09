@@ -96,3 +96,11 @@ if impl (ghc >= 9.12)
 
 constraints:
     hedgehog-extras == 0.7.0.0
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-network.git
+  tag: d4aa9260b21f1c1f4a9b3dd4607391f83f2941b3
+  subdir:
+    ouroboros-network
+  --sha256: sha256-r1Kf/s3bEMRgeB+6Fg2OTwy6i40GY1wfAAc+5o2dxHo=
