@@ -799,7 +799,7 @@ makeNodeConfiguration pnc = do
     fixupConsensusDbPath (LedgerDbConfiguration ds si qbs (V1LMDB ff Nothing mg mi) dopt) =
         LedgerDbConfiguration ds si qbs (V1LMDB ff (Just $ nonImmutableDbPath databaseFile </> "lmdb") mg mi) dopt
     fixupConsensusDbPath (LedgerDbConfiguration ds si qbs (V2LSM Nothing) dopt) =
-        LedgerDbConfiguration ds si qbs (V2LSM (Just $ nonImmutableDbPath databaseFile </> "lsm")) dopt
+        LedgerDbConfiguration ds si qbs (V2LSM (Just "lsm")) dopt
     fixupConsensusDbPath l = l
 
   ncLedgerDbConfig <-
