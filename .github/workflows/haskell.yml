@@ -49,7 +49,7 @@ jobs:
           - cabal: "3.12"
             ghc: "9.6"
             sys:
-              os: macos-13
+              os: macos-latest
               shell: bash
     defaults:
       run:
