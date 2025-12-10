@@ -25,6 +25,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..),
                    UserProvidedEnv (..))
 
@@ -43,7 +44,8 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  createTestnetEnv
+
+  liftToIntegration $ createTestnetEnv
     testnetOptions genesisOptions def
     -- Do not add hashes to the main config file, so that genesis files
     -- can be modified without having to recompute hashes every time.
@@ -69,6 +71,6 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
 
   -- Run testnet with generated config
-  runtime <- cardanoTestnet testnetOptions conf
+  runtime <- liftToIntegration $ cardanoTestnet testnetOptions conf
 
   nodesProduceBlocks tmpDir runtime

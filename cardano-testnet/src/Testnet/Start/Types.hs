@@ -40,6 +40,7 @@ module Testnet.Start.Types
   , NodeConfiguration
   , NodeConfigurationYaml
   , mkConf
+  , mkConfigAbs
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
@@ -50,6 +51,7 @@ import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Prelude
 
 import           Control.Exception (throw)
+import           Control.Monad (unless)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
@@ -58,6 +60,7 @@ import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
 import qualified Network.HTTP.Simple as HTTP
+import           System.Directory (createDirectory, doesDirectoryExist, makeAbsolute)
 import           System.FilePath (addTrailingPathSeparator)
 
 import           Testnet.Filepath
@@ -273,17 +276,33 @@ data Conf = Conf
   , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
--- and updating time stamps disabled.
--- Logs the argument in the test.
+-- |  Same as mkConfig except that it renders the path 
+-- when failing in a property test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
   H.note_ tempAbsPath'
-  pure $ Conf
+  pure $ mkConfig tempAbsPath'
+
+-- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
+mkConfig :: FilePath -> Conf
+mkConfig tempAbsPath' = 
+  Conf
     { genesisHashesPolicy = WithHashes
     , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     , updateTimestamps = DontUpdateTimestamps
     }
+
+-- | Create a 'Conf' from an absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
+mkConfigAbs :: FilePath -> IO Conf
+mkConfigAbs userOutputDir = do 
+  absUserOutputDir <-  makeAbsolute userOutputDir
+  dirExists <- doesDirectoryExist absUserOutputDir
+  let conf = mkConfig absUserOutputDir 
+  unless dirExists $
+    createDirectory absUserOutputDir
+  pure conf
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@
 anyEraToString :: AnyCardanoEra -> String

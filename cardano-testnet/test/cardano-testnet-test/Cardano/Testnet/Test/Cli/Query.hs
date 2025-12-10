@@ -58,6 +58,7 @@ import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSimpleSpendOutputsOnlyTx,
                    mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
@@ -331,7 +332,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       do
         -- Set up files and vars
         refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
-        plutusV3Script <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+        plutusV3Script <- File <$> liftIOAnnotated (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
         let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
         txBody <- mkSpendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1

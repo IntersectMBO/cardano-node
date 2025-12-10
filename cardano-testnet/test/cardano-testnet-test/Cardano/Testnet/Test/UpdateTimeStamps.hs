@@ -17,6 +17,7 @@ import           GHC.Float (double2Int)
 
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types (UpdateTimestamps (..),
                    GenesisHashesPolicy (..), GenesisOptions (..),
                    UserProvidedEnv (..))
@@ -34,7 +35,7 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  createTestnetEnv
+  liftToIntegration $ createTestnetEnv
     testnetOptions genesisOptions def
     -- Do not add hashes to the main config file, so that genesis files
     -- can be modified without having to recompute hashes every time.
@@ -45,6 +46,6 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
   H.threadDelay $ double2Int $ realToFrac startTimeOffsetSeconds * 1_000_000 * 1.2
 
   -- Run testnet and specify to update time stamps before starting
-  runtime <- cardanoTestnet testnetOptions conf{updateTimestamps = UpdateTimestamps}
+  runtime <- liftToIntegration $ cardanoTestnet testnetOptions conf{updateTimestamps = UpdateTimestamps}
 
   nodesProduceBlocks tmpDir runtime

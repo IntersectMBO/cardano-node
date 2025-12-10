@@ -12,6 +12,7 @@ import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
+import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.DumpConfig
@@ -55,6 +56,7 @@ tests = do
     [ T.testGroup "Spec"
         [ T.testGroup "Ledger Events"
            [ ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+           , ignoreOnWindows "Async Register" Cardano.Testnet.Test.SanityCheck.hprop_asyncRegister_sanity_check
            -- FIXME this tests gets stuck - investigate why
            -- , ignoreOnWindows "Treasury Growth" Gov.prop_check_if_treasury_is_growing
             -- TODO: Replace foldBlocks with checkConditionResult
