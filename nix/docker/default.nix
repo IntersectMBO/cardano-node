@@ -18,6 +18,9 @@
 # The main contents of the image.
 , cardano-cli
 , cardano-node
+, db-analyser
+, db-synthesizer
+, db-truncater
 , snapshot-converter
 , scripts
 
@@ -167,6 +170,9 @@ in
       cp -v ${context}/bin/* usr/local/bin
       ln -sv ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -sv ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+      ln -sv ${db-analyser}/bin/db-analyser usr/local/bin/db-analyser
+      ln -sv ${db-synthesizer}/bin/db-synthesizer usr/local/bin/db-synthesizer
+      ln -sv ${db-truncater}/bin/db-truncater usr/local/bin/db-truncater
       ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
       ln -sv ${jq}/bin/jq usr/local/bin/jq
 
