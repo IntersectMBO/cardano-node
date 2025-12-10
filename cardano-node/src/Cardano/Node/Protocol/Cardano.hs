@@ -100,7 +100,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcTestAlonzoHardForkAtEpoch,
                              npcTestBabbageHardForkAtEpoch,
                              npcTestConwayHardForkAtEpoch,
-                             npcTestDijkstraHardForkAtEpoch
+                             npcTestDijkstraHardForkAtEpoch,
+                             npcExperimentalHardForksEnabled
                            }
                            checkpointsConfiguration
                            files = do
@@ -177,7 +178,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
-      , Consensus.cardanoProtocolVersion = ProtVer (natVersion @10) 7
+      , Consensus.cardanoProtocolVersion = if npcExperimentalHardForksEnabled
+                                           then ProtVer (natVersion @11) 0
+                                           else ProtVer (natVersion @10) 7
         -- The remaining arguments specify the parameters needed to transition between two eras
       , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
