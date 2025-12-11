@@ -1,19 +1,33 @@
-#set page(paper: "a4")
+// To be able to load CDF data for plotting from other runs, you need to make
+// the root for compiling the document somewhat more permissive:
+//
+// $ typst c --root ../.. {{ typstFile }}
 
-// these settings make the output look more LaTeX-like
-// #set page(margin: 1.75in)
-#set par(leading: 0.55em, spacing: 0.55em, first-line-indent: 1.8em, justify: true)
-// #set text(font: "Ubuntu")
-// #show raw: set text(font: "Ubuntu Mono")
-#show heading: set block(above: 1.5em, below: 1.2em)
 
+// The suggested file name for the report PDF; you can query this by using
+// $ typst query --one --field value {{ typstFile }} '<export_file_name>'
+//
 #metadata("{{ report.tag }}.{{ base.fileInfix }}.pdf") <export_file_name>
 
 
-// Semibold row descriptions
-#show table.cell.where(x: 0): set text(weight: "semibold")
+// START PREAMBLE
 
-// No strokes inside table body; left alignment for row descriptions only
+
+#import "@preview/neoplot:0.0.4" as gnuplot
+
+
+// Document Styling
+//
+#set page(paper: "a4", margin: 1.5cm)
+#set text(size: 10pt)
+#set par(leading: 0.6em, spacing: 0.8em, first-line-indent: 1.8em, justify: true)
+#show heading: set block(above: 1.5em, below: 1.2em)
+#show figure.caption: emph
+
+
+// Table styling
+// No strokes inside table body; left alignment for row descriptions only; slightly smaller row descriptions
+//
 #let frame(stroke) = (x, y) => (
   left: if x > 0 { 0pt } else { stroke },
   right: stroke,
@@ -21,27 +35,35 @@
   bottom: stroke,
 )
 #set table(
-  stroke: frame(1pt),
-  align:  (x, _) => if x == 0 { left } else { right }
+  stroke: frame(0.5pt),
+  align:  (x, _) => if x == 0 { left } else { right },
 )
-
-// table coloring
-#let gr(c) = table.cell(fill: green.lighten(60%))[c]
-
-
-//   #+CONSTANTS: base=../../{{ base.meta.tag }}/analysis
-//   {% for run in runs %}
-//   #+CONSTANTS: run{{ run.index }}=../../{{ run.value.meta.tag }}/analysis
+// supposed to do the trick, but doesn't :( #show table: set par(leading: 0.4em)
+#show table.cell.where(x: 0): set text(size: 0.95em)
 
 
+// Table cell coloring
+// The function names have to be in sync with Cardano.Report.colorCode in package locli
+//
+#let gr(body) = table.cell(fill: green.lighten(60%))[#body]
+#let rd(body) = table.cell(fill: red.lighten(60%))[#body]
 
-The Title Page
+// END PREAMBLE
 
-{{ report.target }} against {{ base.ver }}
 
-{{ base.workload }} workload
-{{ report.author }}, Cardano Performance team
-{{ report.date }}
+#align(center + horizon)[
+  #text(size: 24pt)[
+  {{ report.target }} against {{ base.ver }}
+  ]
+
+  #text(size: 16pt)[
+  {{ base.workload }} workload \
+  #pad(top: 50%,[
+    {{ report.author }}, Cardano Performance & Tracing \
+    {{ report.date }}
+  ])
+  ]
+]
 
 #pagebreak()
 
@@ -55,7 +77,9 @@ The Title Page
 
 = Manifest
 
+#pad(bottom: 10pt,[
 We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}`{{ run.value.ver }}` ({{ run.value.meta.era | toTitle }}){% endfor %} relative to `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload.
+])
 
 {% include "table_summary.ede" with table = summary %}
 
@@ -63,6 +87,13 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 
 = Analysis
 
+{% for section in analyses %}
+== {{ section.value.title }}
+
+{% include "table_summary.ede" with table = section.value %}
+#pad(top: 10pt)[]
+
+{% endfor %}
 
 #pagebreak()
 
@@ -92,6 +123,9 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 
 == Cluster performance charts
 
+{% for c in charts %}
+{%include "report_gnuplot.ede" with chart = c.value %}
+{% endfor %}
 
 #pagebreak()
 

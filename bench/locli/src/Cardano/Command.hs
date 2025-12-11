@@ -854,21 +854,18 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
   liftIO . unlessM (IO.fileExist tmplPath) $
     BS.writeFile tmplPath tmpl
 
-  (tmpl', tmplEnv', typstReport) <- case xs of
+
+  let typstPath = Cardano.Util.replaceExtension outfp "typ"
+  (tmplEnv', typstReport) <- case xs of
     baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generateTypst ede mTmpl baseline deltas
+      Cardano.Report.generateTypst (takeFileName typstPath) baseline deltas
     _ -> throwE $ CommandError c $ mconcat
          [ "At least two runs required for comparison." ]
   liftIO $
     withFile (outfp `System.FilePath.replaceExtension` "env.typ.json") WriteMode $
       \hnd -> BS8.hPutStrLn hnd tmplEnv'
-  let typstPath = Cardano.Util.replaceExtension outfp "typ"
   dumpText "report" [typstReport] (TextOutputFile typstPath)
     & firstExceptT (CommandError c)
-
-  let tmplPath' = Cardano.Util.replaceExtension outfp "typ.ede"
-  liftIO . unlessM (IO.fileExist tmplPath) $
-    BS.writeFile tmplPath' tmpl'
 
   pure s
 

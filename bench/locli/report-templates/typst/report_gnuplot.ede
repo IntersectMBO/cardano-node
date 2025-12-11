@@ -1,0 +1,35 @@
+
+{% for run in runs %}
+#let input_{{ run.index }} = read("../../{{ run.value.meta.tag }}/analysis/cdf/{{ chart.deField }}.cdf")
+{% endfor %}
+#figure(
+  gnuplot.exec(
+    ```gnuplot
+    reset
+    set term svg size 800,512 lw 0.8
+    set title "{{ chart.deField }}"
+    set style data linespoints
+    set ytics nomirror
+
+    set xrange [*:*]
+
+{% for run in runs %}
+    $input_{{ run.index }} <<EOD
+
+    ```.text + input_{{ run.index }} + ```gnuplot
+
+    EOD
+{% endfor %}
+
+    set ylabel "Centile, fraction of sample population"
+    set xlabel "{{ chart.deUnit }}" 
+    plot \
+{% for run in runs %}
+      $input_{{ run.index }} using 2:1 t '{{ run.value.meta.ident }}', \
+{% endfor %}
+
+    ```.text
+  ),
+  caption: "{{ chart.deShortDesc }}",
+  gap: 0.45em,
+)

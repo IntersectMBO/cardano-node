@@ -6,7 +6,7 @@ import Cardano.Prelude          hiding (head, show)
 
 import Data.CDF
 import Data.String                     (fromString)
-import Data.Text                       (unpack)
+import Data.Text                       (pack, unpack)
 
 import Cardano.JSON
 import Cardano.Util
@@ -58,11 +58,11 @@ renderUnit :: Unit -> Text
 renderUnit = \case
     Sec -> "s"
     Hz  -> "Hz"
-    B   -> "B"
-    KB  -> "KB"
-    MB  -> "MB"
-    KBs -> "KB/s"
-    MBs -> "MB/s"
+    B   -> "Bytes"
+    KB  -> "KiB"
+    MB  -> "MiB"
+    KBs -> "KiB/s"
+    MBs -> "MiB/s"
     Era -> "era"
     Epo -> "epoch"
     Slo -> "slots"
@@ -71,16 +71,16 @@ renderUnit = \case
     Hos -> "host"
     Sig -> "+/-"
     Pct -> "%"
-    Ev  -> "#"
-    KEv -> "#"
+    Ev  -> "events"
+    KEv -> "10³ events"
     Dat -> "on"
     Tim -> "at"
     Ver -> "v"
     Ix  -> "[]"
-    Len -> "#"
-    Cnt -> "#"
-    Rto -> "/"
-    Uni -> "#"
+    Len -> "items"
+    Cnt -> "count"
+    Rto -> pack "\x2236"
+    Uni -> "units"
     Id  -> ""
 
 data Width

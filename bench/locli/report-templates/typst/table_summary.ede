@@ -1,5 +1,5 @@
 
-
+#align(center)[
 #table(
   columns: {{ table.header | length }},
 
@@ -11,3 +11,4 @@
     {% for col in row.value %}{{ col.value.cont | justifyRight(col.value.width) }},  {% endfor %}
 {% endfor %}
 )
+]

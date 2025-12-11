@@ -324,11 +324,11 @@ instance CDFFields BlockProp p where
       "For each host, number of blocks made during the entire observation period"
 
     , fGrpF' "cdfBlocksFilteredRatio" "fltrd" Rto P3 Lin R01 (DFloat cdfBlocksFilteredRatio)
-      "Filtered to chained block ratio"
+      "Filtered to chained blocks"
       "For each host, ratio of blocks that passed filtering / all on chain"
 
     , fGrpF' "cdfBlocksChainedRatio" "chaind" Rto P3 Lin R01 (DFloat cdfBlocksChainedRatio)
-      "Chained to forged block ratio"
+      "Chained to forged blocks"
       "For each host, ratio of blocks that made into chain / all forged"]
 
    <> fBoth "cdfBlockBattle"  "Battl" " #" W4 Blk P0 Lin Free (DInt cdfBlockBattle)
