@@ -24,6 +24,8 @@ module Cardano.Tracer.FilterReduce
   , heapChanges, heapChangesFR
   , liveChanges, liveChangesFR
   , rssChanges, rssChangesFR
+  , fsRdChanges, fsRdChangesFR
+  , fsWrChanges, fsWrChangesFR
   , cpuTicks, cpuTicksFR
   ) where
 
@@ -292,6 +294,60 @@ rssChanges = (,)
 
 rssChangesFR :: FilterReduce
 rssChangesFR = uncurry MkFilterReduce rssChanges
+
+fsRdChanges :: ( Filter.Compose
+                   (Filter.Compose
+                     (Filter.Compose
+                       (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                       Filter.Namespace
+                     )
+                     Filter.RightAt
+                   )
+                   (Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+               , Reducer.Changes (Trace.Remainder Trace.DataResources)
+               )
+fsRdChanges = (,)
+  ( Filter.ParseTrace
+    Filter.<->
+    Filter.RightTrace
+    Filter.<->
+    Filter.Namespace "Resources"
+    Filter.<->
+    Filter.RightAt
+    Filter.<->
+    (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+  )
+  (Reducer.Changes (Trace.resourcesFsRd . Trace.remainderData))
+
+fsRdChangesFR :: FilterReduce
+fsRdChangesFR = uncurry MkFilterReduce fsRdChanges
+
+fsWrChanges :: ( Filter.Compose
+                   (Filter.Compose
+                     (Filter.Compose
+                       (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                       Filter.Namespace
+                     )
+                     Filter.RightAt
+                   )
+                   (Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+               , Reducer.Changes (Trace.Remainder Trace.DataResources)
+               )
+fsWrChanges = (,)
+  ( Filter.ParseTrace
+    Filter.<->
+    Filter.RightTrace
+    Filter.<->
+    Filter.Namespace "Resources"
+    Filter.<->
+    Filter.RightAt
+    Filter.<->
+    (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+  )
+  (Reducer.Changes (Trace.resourcesFsWr . Trace.remainderData))
+
+fsWrChangesFR :: FilterReduce
+fsWrChangesFR = uncurry MkFilterReduce fsWrChanges
 
 cpuTicks :: ( Filter.Compose
                 (Filter.Compose
