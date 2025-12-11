@@ -77,6 +77,8 @@ cliFunctionReader str = case str of
   "heap-changes" -> Right   FilterReduce.heapChangesFR
   "live-changes" -> Right   FilterReduce.liveChangesFR
   "rss-changes"  -> Right   FilterReduce.rssChangesFR
+  "fsrd-changes" -> Right   FilterReduce.fsRdChangesFR
+  "fswr-changes" -> Right   FilterReduce.fsWrChangesFR
   "cpu-ticks"    -> Right   FilterReduce.cpuTicksFR
   _ -> Left str
 
