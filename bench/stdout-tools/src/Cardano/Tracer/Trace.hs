@@ -159,6 +159,7 @@ data DataResources = DataResources
   , resourcesCentiGC :: Integer
   , resourcesCentiMut :: Integer
   , resourcesFsRd :: Integer
+  , resourcesFsWr :: Integer
   , resourcesGcsMajor :: Integer
   , resourcesGcsMinor :: Integer
   , resourcesHeap :: Integer
