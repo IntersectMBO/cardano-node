@@ -100,7 +100,7 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: abcceea393466dab9dc837806947270797c860de
+  tag: 3270d142132067008d6fce870275c80d166f8379
   subdir:
     ouroboros-network
-  --sha256: sha256-17QcDQg+U0Hr6np1A5xyijSjN+fpXV2HPr3MJA3WPH8=
+  --sha256: sha256-MESajJv10RTYJdGEHe9IzmaoW0/CB+fXbPxUJQgO0ZE=
