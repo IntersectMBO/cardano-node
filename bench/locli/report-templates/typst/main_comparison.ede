@@ -29,11 +29,6 @@
 #let gr(c) = table.cell(fill: green.lighten(60%))[c]
 
 
-//   #+CONSTANTS: base=../../{{ base.meta.tag }}/analysis
-//   {% for run in runs %}
-//   #+CONSTANTS: run{{ run.index }}=../../{{ run.value.meta.tag }}/analysis
-
-
 
 The Title Page
 
@@ -63,6 +58,12 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 
 = Analysis
 
+{% for section in analyses %}
+== {{ section.value.title }}
+
+{% include "table_summary.ede" with table = section.value %}
+
+{% endfor %}
 
 #pagebreak()
 
