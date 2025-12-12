@@ -20,6 +20,7 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Control.Concurrent.Async (asyncBound, uninterruptibleCancel)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (ifM)
+import           Data.Functor (void)
 import qualified Data.List.NonEmpty as NE
 import           System.Directory (removePathForcibly)
 import           System.Directory.Extra (listDirectories)
@@ -41,8 +42,8 @@ propNetworkForwarder ts rootDir localSock = do
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   propNetwork' ts rootDir
-    ( launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000
-    , doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer brake dpRequestors
+    ( launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 1000
+    , void $ doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer brake dpRequestors
     )
 
 propNetwork'
