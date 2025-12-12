@@ -1,8 +1,9 @@
 { pkgs
-, lib
+, haskellProject
 , stateDir
-, basePort # Ignored here and just returned to be used by `runner.nix`!
-## `useCabalRun` not used here unlike `supervisor.nix`.
+, basePort     # ignored, just passed to the runner (unlike `supervisor.nix`).
+## `useCabalRun` overridden parameter (unlike `supervisor.nix`).
+## `profiling`   overridden parameter (unlike `supervisor.nix`).
 , ...
 }:
 let
@@ -12,8 +13,11 @@ let
   # genesis files (Buckets needs write permissions for the deployer machine).
   name = "nomadcloud";
 
-  # Unlike the supervisor backend `useCabalRun` is always false here.
+  # Unlike the supervisor backend `useCabalRun` is always `false` here.
   useCabalRun = false;
+
+  # Unlike the supervisor backend `profiling` is always `"none"` here.
+  profiling = "none";
 
   extraShellPkgs =
     [
@@ -35,7 +39,9 @@ let
   # Build a Nomad Job specification for this Nomad "sub-backend".
   materialise-profile =
     let params = {
-      inherit pkgs lib stateDir;
+      inherit pkgs;
+      inherit haskellProject;
+      inherit stateDir;
       subBackendName = "cloud";
     };
     in (import ../nomad.nix params).materialise-profile
@@ -58,7 +64,11 @@ in
   inherit extraShellPkgs;
   inherit materialise-profile;
   inherit service-modules;
-  inherit stateDir basePort;
+  inherit stateDir;
 
-  inherit useCabalRun;
+  # Returns something only to be compatible with what `runner.nix` expects.
+  inherit basePort;
+
+  # Ignores the parameters and always returns `false` and `"none"`.
+  inherit useCabalRun profiling;
 }
