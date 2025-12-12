@@ -141,29 +141,12 @@ let
         cache_key_input=$(wb genesis profile-cache-key-input ${profileJson})
         cache_key=$(      wb genesis profile-cache-key       ${profileJson})
 
-        genesis_keepalive() {
-          while test ! -e $out/profile
-          do
-            echo 'genesis_keepalive for Hydra'
-            sleep 10s
-          done
-        }
-        genesis_keepalive &
-        __genesis_keepalive_pid=$!
-        __genesis_keepalive_termination() {
-          kill $__genesis_keepalive_pid 2>/dev/null || true
-        }
-        trap __genesis_keepalive_termination EXIT
-
-        time \
-          wb genesis actually-genesis \
-            "${profileJson}"          \
-            "${nodeSpecsJson}"        \
-            "$out"                    \
-            "$cache_key_input"        \
-            "$cache_key"
-
-        touch done
+        wb genesis actually-genesis \
+          "${profileJson}"          \
+          "${nodeSpecsJson}"        \
+          "$out"                    \
+          "$cache_key_input"        \
+          "$cache_key"
         ''
       ;
       # Run the profile.
