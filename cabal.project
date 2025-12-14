@@ -32,6 +32,13 @@ packages:
   trace-resources
   trace-forward
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: fc0955d9168dc98349a1c7e6eaea41196fc2506d
+  --sha256: sha256-jgm61yBuQ5eHhPKW3WScqPV4RE97tEohVZVUCVqd+mU=
+  subdir: ouroboros-consensus/
+
 -- Needed when cross compiling
 extra-packages: alex
 
