@@ -345,6 +345,7 @@ ciTestBage = Types.Profile {
   , Types.scenario = Types.FixedLoaded
   , Types.node = Types.Node {
       Types.utxo_lmdb = False
+    , Types.utxo_lsmt = False
     , Types.ssd_directory = Nothing
     , Types.verbatim = Types.NodeVerbatim (Just True)     -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = True

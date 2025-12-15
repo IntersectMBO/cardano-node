@@ -117,6 +117,12 @@ let
                    hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
                  })
             )
+            // optionalAttrs (cfg.withUtxoHdLsmt i){
+              LedgerDB = {
+                Backend = "V2LSM";
+                LSMDatabasePath = cfg.lmdbDatabasePath i;
+              };
+            }
             // optionalAttrs (cfg.withUtxoHdLmdb i){
               LedgerDB = {
                 Backend = "V1LMDB";
@@ -428,7 +434,7 @@ in {
         default = null;
         apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
         description = ''
-          A node UTxO-HD LMDB path for performant disk I/O, for each instance.
+          A node UTxO-HD on-disk (LMDB or LSM-trees) path for performant disk I/O, for each instance.
           This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
         '';
       };
@@ -800,6 +806,16 @@ in {
         description = ''
           On a UTxO-HD enabled node, the in-memory backend is the default.
           This activates the on-disk backend (LMDB) instead.
+        '';
+      };
+
+      withUtxoHdLsmt = mkOption {
+        type = funcToOr bool;
+        default = false;
+        apply = x: if lib.isFunction x then x else _: x;
+        description = ''
+          On a UTxO-HD enabled node, the in-memory backend is the default.
+          This activates the on-disk backend (LSM-Trees) instead.
         '';
       };
 
