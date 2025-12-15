@@ -392,6 +392,7 @@ instance Aeson.FromJSON Chunks where
 data Node = Node
   { 
     utxo_lmdb :: Bool
+  , utxo_lsmt :: Bool
   , ssd_directory :: Maybe String
 
   , verbatim :: NodeVerbatim
@@ -414,6 +415,7 @@ instance Aeson.ToJSON Node where
   toJSON n =
     Aeson.object
       [ "utxo_lmdb"                Aeson..= utxo_lmdb n
+      , "utxo_lsmt"                Aeson..= utxo_lsmt n
       , "ssd_directory"            Aeson..= ssd_directory n
       , "verbatim"                 Aeson..= verbatim n
       -- TODO: Rename in workbench/bash to "trace_forwarding".
@@ -430,6 +432,7 @@ instance Aeson.FromJSON Node where
     Aeson.withObject "Node" $ \o -> do
       Node
         <$> o Aeson..:  "utxo_lmdb"
+        <*> o Aeson..:  "utxo_lsmt"
         <*> o Aeson..:? "ssd_directory"
         <*> o Aeson..:  "verbatim"
         -- TODO: Rename in workbench/bash to "trace_forwarding".
