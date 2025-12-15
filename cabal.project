@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-12-03T15:53:31Z
+  , hackage.haskell.org 2025-12-10T13:12:22Z
   , cardano-haskell-packages 2025-11-20T19:55:27Z
 
 packages:
@@ -54,10 +54,6 @@ package snap-server
 package bitvec
   flags: -simd
 
-if impl(ghc < 9.6.7)
-  allow-older:
-    blockio:unix
-
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
@@ -87,8 +83,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 8e3b611cd33dfc6b432e01f9c638358a39b9d1c5
-  --sha256: sha256-ET4bu3xlYI6lxL7YZdGKOzdet2F6+som1BxsO76cHnY=
+  tag: 981eb30015987b82daefd8981308a43b8520bcd8
+  --sha256: sha256-afnvWKa/0FqpxUors/8kC70yr+X1jy++ZHv/KveML/Y=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano

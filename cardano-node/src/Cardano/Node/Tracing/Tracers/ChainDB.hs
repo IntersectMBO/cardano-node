@@ -59,6 +59,7 @@ import           Numeric (showFFloat)
 import Data.Void (absurd)
 import Data.Typeable (Typeable, cast)
 import Ouroboros.Consensus.Peras.SelectView
+import qualified Data.Aeson as Aeson
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
@@ -2255,28 +2256,65 @@ instance MetaTrace V1.BackingStoreValueHandleTrace where
   V2
 -------------------------------------------------------------------------------}
 
+enclosingToMachine :: EnclosingTimed -> Aeson.Object
+enclosingToMachine RisingEdge = "enclosing" .= String "rising"
+enclosingToMachine (FallingEdgeWith t) = "enclosing" .= toJSON t
+
+enclosingToHuman :: EnclosingTimed -> Text
+enclosingToHuman RisingEdge = "starting"
+enclosingToHuman (FallingEdgeWith t) = "finished, took " <> showT t
+
+
 instance LogFormatting V2.LedgerDBV2Trace where
-  forMachine _dtal V2.TraceLedgerTablesHandleCreate =
-    mconcat [ "kind" .= String "LedgerTablesHandleCreate" ]
-  forMachine _dtal V2.TraceLedgerTablesHandleClose =
-    mconcat [ "kind" .= String "LedgerTablesHandleClose" ]
+  forMachine _dtal (V2.TraceLedgerTablesHandleCreate e) =
+    mconcat [ "kind" .= String "LedgerTablesHandleCreate", enclosingToMachine e ]
+  forMachine _dtal (V2.TraceLedgerTablesHandleClose e) =
+    mconcat [ "kind" .= String "LedgerTablesHandleClose", enclosingToMachine e]
+  forMachine _dtal (V2.TraceLedgerTablesHandleDuplicate e) =
+    mconcat [ "kind" .= String "LedgerTablesHandleDuplicate", enclosingToMachine e ]
+  forMachine _dtal (V2.TraceLedgerTablesHandleRead e) =
+    mconcat [ "kind" .= String "LedgerTablesHandleRead", enclosingToMachine e]
+  forMachine _dtal (V2.TraceLedgerTablesHandleCreateFirst e) =
+    mconcat [ "kind" .= String "LedgerTablesHandleCreateFirst", enclosingToMachine e ]
+  forMachine _dtal (V2.TraceLedgerTablesHandlePush e) =
+    mconcat [ "kind" .= String "LedgerTablesHandlePush", enclosingToMachine e]
   forMachine dtal (V2.BackendTrace ev) = forMachine dtal ev
 
-  forHuman V2.TraceLedgerTablesHandleCreate =
-    "Created a new 'LedgerTablesHandle', potentially by duplicating an existing one"
-  forHuman V2.TraceLedgerTablesHandleClose =
-    "Closed a 'LedgerTablesHandle'"
+  forHuman (V2.TraceLedgerTablesHandleCreate e) =
+    "Created a new handle " <> enclosingToHuman e
+  forHuman (V2.TraceLedgerTablesHandleClose e) =
+    "Closed a handle " <> enclosingToHuman e
+  forHuman (V2.TraceLedgerTablesHandleDuplicate e) =
+    "Duplicated a handle " <> enclosingToHuman e
+  forHuman (V2.TraceLedgerTablesHandleRead e) =
+    "Reading from a handle " <> enclosingToHuman e
+  forHuman (V2.TraceLedgerTablesHandleCreateFirst e) =
+    "Created first handle " <> enclosingToHuman e
+  forHuman (V2.TraceLedgerTablesHandlePush e) =
+    "Pushing to a handle " <> enclosingToHuman e
   forHuman (V2.BackendTrace ev) = forHuman ev
 
 instance MetaTrace V2.LedgerDBV2Trace where
-  namespaceFor V2.TraceLedgerTablesHandleCreate =
+  namespaceFor V2.TraceLedgerTablesHandleCreate{} =
     Namespace [] ["LedgerTablesHandleCreate"]
-  namespaceFor V2.TraceLedgerTablesHandleClose =
+  namespaceFor V2.TraceLedgerTablesHandleClose{} =
     Namespace [] ["LedgerTablesHandleClose"]
+  namespaceFor V2.TraceLedgerTablesHandleRead{} =
+    Namespace [] ["LedgerTablesHandleRead"]
+  namespaceFor V2.TraceLedgerTablesHandlePush{} =
+    Namespace [] ["LedgerTablesHandlePush"]
+  namespaceFor V2.TraceLedgerTablesHandleDuplicate{} =
+    Namespace [] ["LedgerTablesHandleDuplicate"]
+  namespaceFor V2.TraceLedgerTablesHandleCreateFirst{} =
+    Namespace [] ["LedgerTablesHandleCreateFirst"]
   namespaceFor (V2.BackendTrace ev) = nsPrependInner "BackendTrace" (namespaceFor ev)
 
   severityFor (Namespace _ ["LedgerTablesHandleCreate"]) _ = Just Debug
   severityFor (Namespace _ ["LedgerTablesHandleClose"])   _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandleRead"]) _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandlePush"])   _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandleCreateFirst"]) _ = Just Debug
+  severityFor (Namespace _ ["LedgerTablesHandleDuplicate"])   _ = Just Debug
   severityFor (Namespace _ ("BackendTrace":_)) _ = Just Debug
   severityFor _                          _ = Nothing
 
@@ -2284,11 +2322,23 @@ instance MetaTrace V2.LedgerDBV2Trace where
     Just "Created a ledger tables handle"
   documentFor (Namespace _ ["LedgerTablesHandleClose"]) =
     Just "Closed a ledger tables handle"
+  documentFor (Namespace _ ["LedgerTablesHandleRead"]) =
+    Just "Read from ledger tables handle"
+  documentFor (Namespace _ ["LedgerTablesHandlePush"]) =
+    Just "Push to ledger tables handle"
+  documentFor (Namespace _ ["LedgerTablesHandleCreateFirst"]) =
+    Just "Created first ledger tables handle"
+  documentFor (Namespace _ ["LedgerTablesHandleDuplicate"]) =
+    Just "Duplicate a ledger tables handle"
   documentFor _ = Nothing
 
   allNamespaces =
     [ Namespace [] ["LedgerTablesHandleCreate"]
     , Namespace [] ["LedgerTablesHandleClose"]
+    , Namespace [] ["LedgerTablesHandleRead"]
+    , Namespace [] ["LedgerTablesHandlePush"]
+    , Namespace [] ["LedgerTablesHandleCreateFirst"]
+    , Namespace [] ["LedgerTablesHandleDuplicate"]
     ] ++ map (nsPrependInner "BackendTrace") (allNamespaces :: [Namespace V2.SomeBackendTrace])
 
 instance LogFormatting V2.SomeBackendTrace where
@@ -2311,18 +2361,52 @@ instance MetaTrace V2.SomeBackendTrace where
 
 instance LogFormatting (V2.Trace LSM.LSM) where
   forMachine _dtal (LSM.LSMTreeTrace ev) = mconcat [ "kind" .= String "LSMTreeTrace", "content" .= showT ev]
+  forMachine _dtal (LSM.LSMLookup ev) = mconcat [ "kind" .= String "LSMLookup", enclosingToMachine ev]
+  forMachine _dtal (LSM.LSMUpdate ev) = mconcat [ "kind" .= String "LSMUpdate", enclosingToMachine ev]
+  forMachine _dtal (LSM.LSMSnap ev) = mconcat [ "kind" .= String "LSMSnap", enclosingToMachine ev]
+  forMachine _dtal (LSM.LSMOpenSession ev) = mconcat [ "kind" .= String "LSMOpenSession", enclosingToMachine ev]
   forHuman (LSM.LSMTreeTrace ev) = showT ev
+  forHuman (LSM.LSMLookup ev) =
+    "Looking up LSM " <> enclosingToHuman ev
+  forHuman (LSM.LSMUpdate ev) =
+    "Updating LSM " <> enclosingToHuman ev
+  forHuman (LSM.LSMSnap ev) =
+    "Creating a snapshot in LSM " <> enclosingToHuman ev
+  forHuman (LSM.LSMOpenSession ev) =
+    "Opening LSM session " <> enclosingToHuman ev
 
 instance MetaTrace (V2.Trace LSM.LSM) where
   namespaceFor LSM.LSMTreeTrace{} = Namespace [] ["LSMTrace"]
+  namespaceFor LSM.LSMLookup{} = Namespace [] ["LSMLookup"]
+  namespaceFor LSM.LSMUpdate{} = Namespace [] ["LSMUpdate"]
+  namespaceFor LSM.LSMSnap{} = Namespace [] ["LSMSnap"]
+  namespaceFor LSM.LSMOpenSession{} = Namespace [] ["LSMOpenSession"]
   severityFor (Namespace _ ["LSMTrace"]) _ = Just Debug
+  severityFor (Namespace _ ["LSMLookup"]) _ = Just Debug
+  severityFor (Namespace _ ["LSMUpdate"]) _ = Just Debug
+  severityFor (Namespace _ ["LSMSnap"]) _ = Just Debug
+  severityFor (Namespace _ ["LSMOpenSession"]) _ = Just Debug
   severityFor _ _ = Nothing
 
   documentFor (Namespace _ ["LSMTrace"]) =
     Just "A trace from the LSM-trees backend"
+  documentFor (Namespace _ ["LSMLookup"]) =
+    Just "Performing a lookup in LSM-trees backend"
+  documentFor (Namespace _ ["LSMUpdate"]) =
+    Just "Performing an update in LSM-trees backend"
+  documentFor (Namespace _ ["LSMSnap"]) =
+    Just "Taking a snapshot in LSM-trees backend"
+  documentFor (Namespace _ ["LSMOpenSession"]) =
+    Just "Opening the LSM-trees backend session"
   documentFor _ = Nothing
 
-  allNamespaces = [Namespace [] ["LSMTrace"]]
+  allNamespaces =
+    [ Namespace [] ["LSMTrace"]
+    , Namespace [] ["LSMLookup"]
+    , Namespace [] ["LSMUpdate"]
+    , Namespace [] ["LSMSnap"]
+    , Namespace [] ["LSMOpenSession"]
+    ]
 
 unwrapV2Trace :: forall a backend. Typeable backend => (V2.Trace LSM.LSM -> a) -> V2.Trace backend -> a
 unwrapV2Trace g ev =
