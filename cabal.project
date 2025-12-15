@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-12-03T15:53:31Z
+  , hackage.haskell.org 2025-12-10T13:12:22Z
   , cardano-haskell-packages 2025-11-20T19:55:27Z
 
 packages:
@@ -53,10 +53,6 @@ package snap-server
 
 package bitvec
   flags: -simd
-
-if impl(ghc < 9.6.7)
-  allow-older:
-    blockio:unix
 
 -- required for haddocks to build successfully
 package plutus-scripts-bench
