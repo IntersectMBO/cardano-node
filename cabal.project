@@ -101,15 +101,12 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a2e3c598b96efa1e2add0bc7b893a7a007ace606
-  --sha256: sha256-uMImzqUvdDCyuso/fN0BEJuhj1BuT8U1Gafbhz4CBRU=
+  tag: e3ffce853e85d6e5e9ff6c7c078816fea689a5b1
+  --sha256: sha256-tFUNTbyhnaaNv8AFSCSs+pPhQydGgOuhfJMGv3pvE1M=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
     ouroboros-consensus-diffusion
-    sop-extras
-    strict-sop-core
 
 -- Points to ouroboros-network/nfrisby/leios-202511-demo
 source-repository-package

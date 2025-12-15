@@ -37,7 +37,7 @@ import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 import qualified Data.Bits as Bits
 import qualified Data.Vector as V
-import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, leiosEbBytesSize, leiosTxBytesSize, prettyBitmap, prettyEbHash)
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, leiosEbBytesSize, leiosTxBytesSize, prettyBitmap, prettyEbHash, hashLeiosEb)
 import qualified LeiosDemoOnlyTestFetch as LF
 import qualified LeiosDemoOnlyTestNotify as LN
 
@@ -508,6 +508,7 @@ instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
 instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
   forHuman = showT
 
+  -- FIXME: Duplicated (orphan!) instance with Cardano.Tracing.OrphanInstances.Network
   forMachine _dtal (AnyMessageAndAgency _stok msg) = case msg of
 
     LF.MsgLeiosBlockRequest (MkLeiosPoint ebSlot ebHash) ->
@@ -518,7 +519,7 @@ instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) w
 
     LF.MsgLeiosBlock eb ->
       mconcat [ "kind" .= String "MsgLeiosBlock"
-              , "eb" .= String "<elided>"
+              , "eb" .= hashLeiosEb eb
               , "ebBytesSize" .= Number (fromIntegral $ leiosEbBytesSize eb)
               ]
 
