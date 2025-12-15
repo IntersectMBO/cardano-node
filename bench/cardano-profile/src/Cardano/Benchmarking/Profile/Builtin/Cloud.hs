@@ -142,15 +142,15 @@ profilesNoEraCloud =
       blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay Pl.calibrateLoopBlockMemx15
       blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay Pl.calibrateLoopBlockMemx2
       -- LMDB helper. Node config add the "hostvolume"s as a cluster constraint.
-      lmdb =   P.lmdb
-             -- The name of the defined volume in the Nomad Client config and
-             -- where to mount it inside the isolated chroot.
-             -- If the volume is not present the deployment will fail!
-             . P.appendNomadHostVolume (Types.ByNodeType {
-                 Types.producer = [Types.HostVolume "/ephemeral" False "ephemeral"]
-               , Types.explorer = Nothing
-               })
-             . P.ssdDirectory "/ephemeral"
+      ephemeral =
+                -- The name of the defined volume in the Nomad Client config and
+                -- where to mount it inside the isolated chroot.
+                -- If the volume is not present the deployment will fail!
+                  P.appendNomadHostVolume (Types.ByNodeType {
+                    Types.producer = [Types.HostVolume "/ephemeral" False "ephemeral"]
+                  , Types.explorer = Nothing
+                  })
+                . P.ssdDirectory "/ephemeral"
       -- Helper adding workload that takes periodic snapshots of cgroup's `memory.stat`.
       cgmem = -- Require the cgroup fs mounted by default.
                P.appendNomadHostVolume (Types.ByNodeType {
@@ -168,9 +168,10 @@ profilesNoEraCloud =
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.rtsGcParallel . P.rtsGcLoadBalance
-  , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . lmdb
+  , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb
+  , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing        . cgmem
-  , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . lmdb . cgmem
+  , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb . cgmem
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing
   , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000 . P.newTracing
@@ -185,7 +186,8 @@ profilesNoEraCloud =
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . P.newTracing . blockMem15x
   , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . P.newTracing . blockMem2x
   , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.newTracing . P.rtsGcParallel . P.rtsGcLoadBalance
-  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . P.newTracing . lmdb
+  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb
+  , loopVolt    & P.name "plutus-volt-lsmt-nomadperf"                      . P.dreps  10000 . P.newTracing . ephemeral . P.lsmt
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
   , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000 . P.newTracing
   , blst      & P.name "plutusv3-blst-stepx15-nomadperf"                   . P.dreps  10000 . P.newTracing . P.budgetBlockStepsOneAndAHalf
