@@ -373,6 +373,7 @@
     "tracer": true,
     "tracing_backend": "trace-dispatcher",
     "utxo_lmdb": false,
+    "utxo_lsmt": false,
     "verbatim": {
       "EnableP2P": true
     }

@@ -55,7 +55,7 @@ let
 
   liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
-    then "${profile.node.ssd_directory}/lmdb-node-${toString i}"
+    then "${profile.node.ssd_directory}/node-${toString i}"
     else null;
 
   ##

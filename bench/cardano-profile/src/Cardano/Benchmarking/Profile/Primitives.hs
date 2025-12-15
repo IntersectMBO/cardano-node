@@ -70,8 +70,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   , chaindb
 
   -- Node
-  -- LMDB True or False.
-  , lmdb
+  -- LMDB or LSMT True or False.
+  , lmdb, lsmt
   -- Node's tracer flag.
   , traceForwardingOn, traceForwardingOff
   -- Node's tracer type.
@@ -592,6 +592,9 @@ node f p = p {Types.node = f (Types.node p)}
 
 lmdb :: Types.Profile -> Types.Profile
 lmdb = node (\n -> n {Types.utxo_lmdb = True})
+
+lsmt :: Types.Profile -> Types.Profile
+lsmt = node (\n -> n {Types.utxo_lsmt = True})
 
 ssdDirectory :: String -> Types.Profile -> Types.Profile
 ssdDirectory str = node (\n -> n {Types.ssd_directory = Just str})

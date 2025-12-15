@@ -698,13 +698,13 @@ allocate-run-nomadcloud() {
           read -p "Hit enter to continue ..."
         fi
       fi
-      # Clean, only on producers, the "host_volumes" if being used for LMDB.
+      # Clean, only producers, the "host_volumes" if being used for LMDB/LSMT.
       # We do this for each producer instead of for all producer at once because
       # even if modules have the same name from a Nomad perspective, in each
       # client the real path is defined in Nomad's config file and may differ!
       # It's "slow" (fetches individual client configs), done only if necessary.
       if    test "${node_name}" != "explorer"                                  \
-         && jqtest '.node.utxo_lmdb' "${dir}"/profile.json                     \
+         && jqtest '.node.utxo_lmdb or .node.utxo_lsmt' "${dir}"/profile.json  \
          && jqtest '(.cluster.nomad.host_volumes.producer | length) > 0' "${dir}"/profile.json
       then
         # Iterate over the profile's Nomad "host_volumes" array by key/index.
