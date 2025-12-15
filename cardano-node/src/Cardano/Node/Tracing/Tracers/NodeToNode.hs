@@ -23,23 +23,22 @@ import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
-import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PS
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad.Class.MonadTime.SI (Time (..))
-import           Data.Aeson (ToJSON (..), Value (Array, Number, String), (.=))
+import           Data.Aeson (ToJSON (..), Value (String), (.=))
 import           Data.Proxy (Proxy (..))
-import           Data.Time (DiffTime)
 import           Data.Text (pack)
+import           Data.Time (DiffTime)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
-import qualified Data.Bits as Bits
-import qualified Data.Vector as V
-import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, leiosEbBytesSize, leiosTxBytesSize, prettyBitmap, prettyEbHash, hashLeiosEb)
 import qualified LeiosDemoOnlyTestFetch as LF
 import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx,
+                   messageLeiosFetchToObject, prettyEbHash)
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -508,50 +507,8 @@ instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
 instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
   forHuman = showT
 
-  -- FIXME: Duplicated (orphan!) instance with Cardano.Tracing.OrphanInstances.Network
-  forMachine _dtal (AnyMessageAndAgency _stok msg) = case msg of
-
-    LF.MsgLeiosBlockRequest (MkLeiosPoint ebSlot ebHash) ->
-      mconcat [ "kind" .= String "MsgLeiosBlockRequest"
-              , "ebSlot" .= ebSlot
-              , "ebHash" .= ebHash
-              ]
-
-    LF.MsgLeiosBlock eb ->
-      mconcat [ "kind" .= String "MsgLeiosBlock"
-              , "eb" .= hashLeiosEb eb
-              , "ebBytesSize" .= Number (fromIntegral $ leiosEbBytesSize eb)
-              ]
-
-    LF.MsgLeiosBlockTxsRequest (MkLeiosPoint ebSlot ebHash) bitmaps ->
-      mconcat [ "kind" .= String "MsgLeiosBlockTxsRequest"
-              , "ebSlot" .= ebSlot
-              , "ebHash" .= ebHash
-              , "numTxs" .= Number (fromIntegral $ sum $ map (Bits.popCount . snd) bitmaps)
-              , "bitmaps" .= Array (V.fromList $ map (String . pack . prettyBitmap) bitmaps)
-              ]
-
-    LF.MsgLeiosBlockTxs txs ->
-      mconcat [ "kind" .= String "MsgLeiosBlockTxs"
-              , "numTxs" .= Number (fromIntegral (V.length txs))
-              , "txsBytesSize" .= Number (fromIntegral $ V.sum $ V.map leiosTxBytesSize txs)
-              , "txs" .= String "<elided>"
-              ]
-
-    -- LF.MsgLeiosVotesRequest
-    -- LF.MsgLeiosVoteDelivery
-
-    -- LF.MsgLeiosBlockRangeRequest
-    -- LF.MsgLeiosNextBlockAndTxsInRange
-    -- LF.MsgLeiosLastBlockAndTxsInRange
-
-    LF.MsgDone ->
-      mconcat [ "kind" .= String "MsgDone"
-              ]
-
-    where
---      agency :: Aeson.Object
---      agency = "agency" .= show stok
+  forMachine _dtal (AnyMessageAndAgency _stok msg) =
+    messageLeiosFetchToObject msg
 
 instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
     namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
