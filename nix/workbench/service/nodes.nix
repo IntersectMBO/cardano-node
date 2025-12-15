@@ -76,6 +76,7 @@ let
       # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory;
       # non-block producers (like the explorer node) keep using the in-memory backend
       withUtxoHdLmdb   = profile.node.utxo_lmdb && isProducer;
+      withUtxoHdLsmt   = profile.node.utxo_lsmt && isProducer;
       lmdbDatabasePath = liveTablesPath i;
 
       ## Combine:
@@ -122,6 +123,12 @@ let
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
                   DijkstraGenesisFile          = "../genesis/genesis.dijkstra.json";
+                } // optionalAttrs (profile.node.utxo_lsmt && isProducer)
+                {
+                  LedgerDB = {
+                    Backend = "V2LSM";
+                    LSMDatabasePath = liveTablesPath i;
+                  };
                 } // optionalAttrs (profile.node.utxo_lmdb && isProducer)
                 {
                   LedgerDB = {
