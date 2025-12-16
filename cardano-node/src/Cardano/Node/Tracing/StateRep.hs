@@ -22,6 +22,7 @@ module Cardano.Node.Tracing.StateRep
 import           Cardano.Api (textShow)
 
 import           Cardano.Logging
+import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
@@ -47,6 +48,11 @@ deriving instance FromJSON ChunkNo
 deriving instance ToJSON ChunkNo
 
 deriving instance NFData ChunkNo
+
+deriving instance Generic  TracePrometheusSimple
+deriving instance FromJSON TracePrometheusSimple
+deriving instance ToJSON   TracePrometheusSimple
+deriving instance NFData   TracePrometheusSimple
 
 data OpeningDbs
   = StartedOpeningImmutableDB
@@ -100,6 +106,7 @@ data NodeState
   = NodeTracingOnlineConfiguring
   | NodeTracingFailure String
   | NodeTracingForwardingInterrupted HowToConnect String
+  | NodePrometheusSimple TracePrometheusSimple
   | NodeOpeningDbs OpeningDbs
   | NodeReplays Replays
   | NodeInitChainSelection InitChainSelection
@@ -112,7 +119,7 @@ data NodeState
 deriving instance (NFData NodeState)
 
 instance LogFormatting NodeState where
-  forMachine _ = \case
+  forMachine _dtal = \case
     NodeTracingOnlineConfiguring -> mconcat
       [ "kind" .= String "NodeTracingOnlineConfiguring" ]
     NodeOpeningDbs x -> mconcat
@@ -136,12 +143,16 @@ instance LogFormatting NodeState where
       , "conn" .= howToConnect
       , "message" .= toJSON x
       ]
+    NodePrometheusSimple promSimple ->
+      forMachine _dtal promSimple
 
   forHuman = \case
     NodeTracingFailure errMsg ->
       T.pack errMsg
     NodeTracingForwardingInterrupted howToConnect errMsg ->
       T.pack $ "trace forwarding connection with " <> show howToConnect <> " failed: " <> errMsg
+    NodePrometheusSimple promSimple ->
+      forHuman promSimple
     _
       -> ""
 
@@ -152,6 +163,10 @@ instance MetaTrace NodeState where
     Namespace [] ["NodeTracingFailure"]
   namespaceFor NodeTracingForwardingInterrupted {} =
     Namespace [] ["NodeTracingForwardingInterrupted"]
+  namespaceFor (NodePrometheusSimple TracePrometheusSimpleStart{}) =
+    Namespace [] ["PrometheusSimple", "Start"]
+  namespaceFor (NodePrometheusSimple TracePrometheusSimpleStop{}) =
+    Namespace [] ["PrometheusSimple", "Stop"]
   namespaceFor NodeOpeningDbs {}  =
     Namespace [] ["OpeningDbs"]
   namespaceFor NodeReplays {}  =
@@ -172,6 +187,10 @@ instance MetaTrace NodeState where
   severityFor  (Namespace _ ["NodeTracingFailure"]) _ =
     Just Error
   severityFor  (Namespace _ ["NodeTracingForwardingInterrupted"]) _ =
+    Just Warning
+  severityFor  (Namespace _ ["PrometheusSimple", "Start"]) _ =
+    Just Info
+  severityFor  (Namespace _ ["PrometheusSimple", "Stop"]) _ =
     Just Warning
   severityFor  (Namespace _ ["OpeningDbs"]) _ =
     Just Info
@@ -210,12 +229,18 @@ instance MetaTrace NodeState where
     "Node startup"
   documentFor  (Namespace _ ["NodeShutdown"]) = Just
     "Node shutting down"
+  documentFor  (Namespace _ ["PrometheusSimple", "Start"]) =
+    Just "PrometheusSimple backend is starting"
+  documentFor  (Namespace _ ["PrometheusSimple", "Stop"]) =
+    Just "PrometheusSimple backend stopped"
   documentFor _ns = Nothing
 
   allNamespaces = [
           Namespace [] ["NodeTracingOnlineConfiguring"]
         , Namespace [] ["NodeTracingFailure"]
         , Namespace [] ["NodeTracingForwardingInterrupted"]
+        , Namespace [] ["PrometheusSimple", "Start"]
+        , Namespace [] ["PrometheusSimple", "Stop"]
         , Namespace [] ["OpeningDbs"]
         , Namespace [] ["NodeReplays"]
         , Namespace [] ["NodeInitChainSelection"]

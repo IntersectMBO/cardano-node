@@ -44,12 +44,12 @@ data NetworkRunParams = NetworkRunParams
 
 defaultRunParams :: String -> NetworkRunParams
 defaultRunParams name = NetworkRunParams
-  { runSocketTimeout    = 30
+  { runSocketTimeout    = 22
   , runSocketGraceful   = 1000
   , runRecvMaxSize      = 2048
   , runRateLimit        = 3.0
   , runConnLimitGlobal  = 12
-  , runConnLimitPerHost = 3
+  , runConnLimitPerHost = 4
   , runServerName       = name
   }
 
@@ -68,8 +68,8 @@ mkTCPServerRunner
   :: NetworkRunParams
   -> Maybe HostName
   -> PortNumber
-  -> TimeoutServer a
-  -> IO (IO a)
+  -> TimeoutServer ()
+  -> IO (IO ())
 mkTCPServerRunner runParams (fromMaybe "127.0.0.1" -> host) portNo server = do
   !sock <- openTCPServerSocket =<< resolve host portNo
   let
@@ -81,8 +81,8 @@ mkTCPServerRunner runParams (fromMaybe "127.0.0.1" -> host) portNo server = do
 runTCPServerWithSocket
   :: NetworkRunParams
   -> Socket
-  -> TimeoutServer a
-  -> IO a
+  -> TimeoutServer ()
+  -> IO ()
 runTCPServerWithSocket runParams@NetworkRunParams{..} sock server = do
   rateLimiter     <- mkRateLimiter runServerName runRateLimit
   ConnLimiter{..} <- mkConnLimiter runConnLimitGlobal runConnLimitPerHost
@@ -91,13 +91,13 @@ runTCPServerWithSocket runParams@NetworkRunParams{..} sock server = do
     E.bracketOnError (accept sock) (close . fst) $ \(conn, peer) -> do
       noLimitHit <- canServeThisPeer peer
       if noLimitHit
-        then void $ forkFinally (server' mgr conn) (const $ gclose conn >> releasePeer peer)
+        then void $ forkFinally (runServer mgr conn) (const $ gclose conn >> releasePeer peer)
         else close conn
   where
     gclose = if runSocketGraceful > 0 then flip gracefulClose runSocketGraceful else close
-    server' mgr conn = do
+    runServer mgr conn = do
       threadLabelMe $ runServerName ++ " timeout server"
-      T.withHandle mgr (return ()) $ \timeoutHandle ->
+      T.withHandleKillThread mgr (return ()) $ \timeoutHandle ->
         server runParams (T.tickle timeoutHandle) conn
 
 resolve :: HostName -> PortNumber -> IO AddrInfo

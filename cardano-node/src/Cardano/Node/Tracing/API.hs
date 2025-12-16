@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE PackageImports #-}
@@ -11,7 +12,7 @@ module Cardano.Node.Tracing.API
   ) where
 
 import           Cardano.Logging hiding (traceWith)
-import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
+import           Cardano.Logging.Prometheus.TCPServer
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
@@ -36,11 +37,12 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Prelude
 
+import           Control.Concurrent.Async (link)
 import           Control.DeepSeq (deepseq)
 import           Control.Exception (SomeException (..))
-import           Control.Monad (forM_)
 import           "contra-tracer" Control.Tracer (traceWith)
 import           "trace-dispatcher" Control.Tracer (nullTracer)
+import           Data.Functor.Contravariant ((>$<))
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Time.Clock (getCurrentTime)
@@ -83,10 +85,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
 
   traceWith (nodeStateTracer tracers) NodeTracingOnlineConfiguring
 
-  mError <- kickoffPrometheusSimple
-  forM_ mError $ \errMsg ->
-    let errMsg' = "PrometheusSimple backend disabled due to initialisation error: " ++ errMsg
-    in traceWith (nodeStateTracer tracers) (NodeTracingFailure errMsg')
+  kickoffPrometheusSimple
 
   startResourceTracer
     (resourcesTracer tracers)
@@ -105,15 +104,13 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
   mkTracers
     :: TraceConfig
     -> IO ( IO ()
-          , IO (Maybe String)
+          , IO ()
           , Tracers RemoteAddress LocalAddress blk IO
           )
   mkTracers trConfig = mdo
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer trConfig ekgStore
-
-    let kickoffPrometheusSimple = maybe (pure Nothing) (runPrometheusSimple ekgStore) prometheusSimple
 
     stdoutTrace <- standardTracer
 
@@ -155,6 +152,16 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
       dpTracer
       trConfig
       p
+
+    let
+      kickoffPrometheusSimple = case prometheusSimple of
+        Nothing -> pure ()
+        Just ps ->
+          let
+            !nsTr            = nodeStateTracer tracers
+            !tracePrometheus = NodePrometheusSimple >$< nsTr
+          in runPrometheusSimple tracePrometheus ekgStore ps >>= link
+
     pure (kickoffForwarder, kickoffPrometheusSimple, tracers)
 
    where

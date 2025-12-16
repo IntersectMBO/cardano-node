@@ -1,20 +1,35 @@
+{-# LANGUAGE PackageImports #-}
+
+{-# OPTIONS_GHC -Wno-partial-fields #-}
+
 -- | Run a simple Prometheus TCP server, responding *only* to the '/metrics' URL with current Node metrics
-module Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple) where
+module Cardano.Logging.Prometheus.TCPServer
+       ( runPrometheusSimple
+       , runPrometheusSimpleSilent
+
+       , TracePrometheusSimple (..)
+       ) where
 
 import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSample)
 import           Cardano.Logging.Prometheus.NetworkRun
+import           Cardano.Logging.Types
+import           Cardano.Logging.Utils (runInLoop, showT)
 
-import           Control.Concurrent.Async (async, link)
+import           Control.Concurrent.Async (Async, async)
 import qualified Control.Exception as E
-import           Control.Monad (when)
+import           Control.Monad (join, when)
+import           "contra-tracer" Control.Tracer
+import           Data.Aeson.Types as AE (Value (String), (.=))
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Builder
 import qualified Data.ByteString.Char8 as BC
 import           Data.Int (Int64)
 import           Data.List (find, intersperse)
+import           Data.Text as TS (pack)
 import           Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T (encodeUtf8Builder)
+import           Data.Word (Word16)
 import           Network.HTTP.Date (epochTimeToHTTPDate, formatHTTPDate)
 import           Network.Socket (HostName, PortNumber)
 import qualified Network.Socket.ByteString as Strict (recv)
@@ -24,13 +39,41 @@ import           System.Posix.Types (EpochTime)
 import           System.PosixCompat.Time (epochTime)
 
 
--- Will provide a 'Just errormessage' iff creating the Prometheus server failed
-runPrometheusSimple :: EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO (Maybe String)
-runPrometheusSimple ekgStore (noSuffixes, mHost, portNo) =
-  E.try createRunner >>= \case
-    Left (E.SomeException e) -> pure (Just $ E.displayException e)
-    Right runner             -> async runner >>= link >> pure Nothing
+data TracePrometheusSimple =
+    TracePrometheusSimpleStart { port :: Word16 }
+  | TracePrometheusSimpleStop  { message :: String }
+  deriving Show
+
+instance LogFormatting TracePrometheusSimple where
+  forMachine _ = \case
+    TracePrometheusSimpleStart portNo -> mconcat
+      [ "kind"        .= AE.String "PrometheusSimpleStart"
+      , "port"        .= portNo
+      ]
+    TracePrometheusSimpleStop message -> mconcat
+      [ "kind"        .= AE.String "TracePrometheusSimpleStop"
+      , "message"     .= message
+      ]
+
+  forHuman = \case
+    TracePrometheusSimpleStart portNo -> "PrometheusSimple backend starting on port " <> showT portNo
+    TracePrometheusSimpleStop message -> "PrometheusSimple backend stop: " <> TS.pack message
+
+
+-- Same as below, but will not trace anything
+runPrometheusSimpleSilent :: EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO (Async ())
+runPrometheusSimpleSilent = runPrometheusSimple nullTracer
+
+-- Will retry / restart Prometheus server when an exception occurs, in increasing intervals
+runPrometheusSimple :: Tracer IO TracePrometheusSimple -> EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO (Async ())
+runPrometheusSimple tr ekgStore (noSuffixes, mHost, portNo) =
+    async $ runInLoop fromScratchThrowing traceInterruption 1 60
   where
+    traceInterruption (E.SomeException e) =
+      traceWith tr $ TracePrometheusSimpleStop (E.displayException e)
+
+    fromScratchThrowing  = traceWith tr (TracePrometheusSimpleStart $ fromIntegral portNo) >> join createRunner
+
     getCurrentExposition = renderExpositionFromSample noSuffixes <$> sampleAll ekgStore
     createRunner         = mkTCPServerRunner (defaultRunParams "PrometheusSimple") mHost portNo (serveAccepted getCurrentExposition)
 
