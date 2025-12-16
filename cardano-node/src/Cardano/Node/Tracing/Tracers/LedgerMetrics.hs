@@ -105,7 +105,7 @@ traceLedgerMetrics nodeKern slotNo tracer = do
   query <- mapNodeKernelDataIO
               (\nk ->
                 (,,) -- (,,,,)
-                  <$> fmap (maybe 0 LedgerDB.ledgerTableSize) (ChainDB.getStatistics $ getChainDB nk)
+                  <$> fmap LedgerDB.ledgerTableSize (ChainDB.getStatistics $ getChainDB nk)
                   <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                   <*> nkQueryChain fragmentChainDensity nk
 {- see Note [GovMetrics]
