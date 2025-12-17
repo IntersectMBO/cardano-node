@@ -556,6 +556,8 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.gsmTracer = nullTracer
       , Consensus.csjTracer = nullTracer
       , Consensus.dbfTracer = nullTracer
+      , Consensus.leiosKernelTracer = nullTracer
+      , Consensus.leiosPeerTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -571,6 +573,8 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       , NodeToNode.tKeepAliveTracer = nullTracer
       , NodeToNode.tPeerSharingTracer = nullTracer
+      , NodeToNode.tLeiosNotifyTracer = nullTracer
+      , NodeToNode.tLeiosFetchTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -862,6 +866,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
     , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr
+    , Consensus.leiosKernelTracer = tracerOnOff (traceLeiosKernel trSel) verb "LeiosKernel" tr
+    , Consensus.leiosPeerTracer = tracerOnOff (traceLeiosPeer trSel) verb "LeiosPeer" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1513,6 +1519,12 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tPeerSharingTracer =
       tracerOnOff (tracePeerSharingProtocol trSel)
                   verb "PeerSharingPrototocol" tr
+  , NodeToNode.tLeiosNotifyTracer =
+      tracerOnOff (traceLeiosNotifyProtocol trSel)
+                  verb "LeiosNotifyPrototocol" tr
+  , NodeToNode.tLeiosFetchTracer =
+      tracerOnOff (traceLeiosFetchProtocol trSel)
+                  verb "LeiosFetchPrototocol" tr
   }
 
 -- TODO @ouroboros-network
