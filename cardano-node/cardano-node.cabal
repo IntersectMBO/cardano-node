@@ -226,7 +226,6 @@ library
                       , transformers-except
                       , typed-protocols >= 0.3
                       , typed-protocols-stateful >= 0.3
-                      , vector
                       , yaml
 
 executable cardano-node
