@@ -41,6 +41,7 @@ import           System.IO
 import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
 import           System.Process
+import           Testnet.Process.RunIO (liftIOAnnotated)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
@@ -227,7 +228,7 @@ initiateProcess
   -> ExceptT ProcessError m (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
 initiateProcess cp = do
   (mhStdin, mhStdout, mhStderr, hProcess)
-    <- handlesExceptT resourceAndIOExceptionHandlers . liftIO $ IO.createProcess cp
+    <- handlesExceptT resourceAndIOExceptionHandlers . liftIOAnnotated $ IO.createProcess cp
 
   releaseKey <- handlesExceptT resourceAndIOExceptionHandlers
                   . register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)

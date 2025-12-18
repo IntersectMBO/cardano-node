@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -23,6 +24,8 @@ module Testnet.Start.Cardano
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
   , retryOnAddressInUseError
+
+  , liftToIntegration
   ) where
 
 
@@ -38,12 +41,15 @@ import           Prelude hiding (lines)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import           Control.Monad.Catch
+import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class (def)
 import           Data.Either
 import           Data.Functor
+import           Data.List (uncons)
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
@@ -52,41 +58,52 @@ import qualified Data.Time.Clock as DTC
 import           GHC.Stack
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
-import qualified System.Info as OS
 
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
 import           Testnet.Handlers (interruptNodesOnSigINT)
-import           Testnet.Process.Run (execCli', execCli_, mkExecConfig)
+import           Testnet.Orphans ()
+import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
 import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
 import           Testnet.Start.Types
 import           Testnet.Types as TR hiding (shelleyGenesis)
 
-import           Hedgehog (MonadTest)
-import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
+import           Hedgehog.Internal.Property (failException)
+
+import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString)
+import           RIO.Orphans (ResourceMap)
+import           UnliftIO.Async
+import           UnliftIO.Exception (stringException)
+
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
 testMinimumConfigurationRequirements :: ()
   => HasCallStack
-  => MonadTest m
+  => MonadIO m
   => CardanoTestnetOptions -> m ()
 testMinimumConfigurationRequirements options = withFrozenCallStack $ do
   when (cardanoNumPools options < 1) $ do
-    H.note_ "Need at least one SPO node to produce blocks, but got none."
-    H.failure
+    throwString "Need at least one SPO node to produce blocks, but got none."
+
+liftToIntegration :: HasCallStack => RIO ResourceMap a -> H.Integration a
+liftToIntegration r =  do
+   rMap <- lift $ lift getInternalState
+   catch @_ @SomeException (runRIO rMap r) (withFrozenCallStack $ failException . toException . stringException . displayException)
 
 createTestnetEnv :: ()
   => HasCallStack
+  => MonadIO m
+  => MonadThrow m
   => CardanoTestnetOptions
   -> GenesisOptions
   -> CreateEnvOptions
   -> Conf
-  -> H.Integration ()
+  -> m ()
 createTestnetEnv
   testnetOptions@CardanoTestnetOptions
     { cardanoNodeEra=asbe
@@ -104,27 +121,28 @@ createTestnetEnv
   testMinimumConfigurationRequirements testnetOptions
 
   AnyShelleyBasedEra sbe <- pure asbe
+
   _ <- createSPOGenesisAndFiles
     testnetOptions genesisOptions onChainParams
     (TmpAbsolutePath tmpAbsPath)
 
-  configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
+  let configurationFile = tmpAbsPath </> "configuration.yaml"
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   config <- case genesisHashesPolicy of
     WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
     WithoutHashes -> pure $ createConfigJsonNoHash sbe
-  -- Setup P2P configuration value
-  H.evalIO $ LBS.writeFile configurationFile $ A.encodePretty $ Object config
+
+  liftIOAnnotated . LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
   -- Create network topology, with abstract IDs in lieu of addresses
   let nodeIds = fst <$> zip [1..] cardanoNodes
   forM_ nodeIds $ \i -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-    H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
+    liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
 
     let producers = NodeId <$> filter (/= i) nodeIds
         topology = Defaults.defaultP2PTopology producers
-    H.lbsWriteFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+    liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:
@@ -192,11 +210,15 @@ createTestnetEnv
 -- > ├── configuration.json
 -- > ├── current-stake-pools.json
 -- > └── module
-cardanoTestnet :: ()
-  => HasCallStack
+cardanoTestnet
+  :: HasCallStack
+  => MonadUnliftIO m
+  => MonadResource m
+  => MonadCatch m
+  => MonadFail m
   => CardanoTestnetOptions -- ^ The options to use
   -> Conf -- ^ Path to the test sandbox
-  -> H.Integration TestnetRuntime
+  -> m TestnetRuntime
 cardanoTestnet
   testnetOptions
   Conf
@@ -213,9 +235,11 @@ cardanoTestnet
       byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
       shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
 
-  H.note_ OS.os
-
-  shelleyGenesis@ShelleyGenesis{sgNetworkMagic} <- H.readJsonFileOk shelleyGenesisFile
+  sBytes <- liftIOAnnotated (LBS.readFile shelleyGenesisFile)
+  shelleyGenesis@ShelleyGenesis{sgNetworkMagic}
+    <- case eitherDecode sBytes of
+          Right sg -> return sg
+          Left err -> throwString $ "Could not decode shelley genesis file: " <> shelleyGenesisFile <> " Error: " <> err
   let testnetMagic :: Int = fromIntegral sgNetworkMagic
 
   wallets <- forM [1..3] $ \idx -> do
@@ -229,7 +253,7 @@ cardanoTestnet
       , "--out-file", paymentAddrFile
       ]
 
-    paymentAddr <- H.readFile paymentAddrFile
+    paymentAddr <- liftIOAnnotated $ readFile paymentAddrFile
 
     pure $ PaymentKeyInfo
       { paymentKeyInfoPair = utxoKeys
@@ -241,14 +265,8 @@ cardanoTestnet
 
   let portNumbers = zip [1..] $ snd <$> portNumbersWithNodeOptions
 
-  forM_ portNumbers $ \(i, portNumber) -> do
-    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-    H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
-    H.writeFile (nodeDataDir </> "port") (show portNumber)
-
-  let
       idToRemoteAddressP2P :: ()
-        => MonadTest m
+        => MonadIO m
         => HasCallStack
         => NodeId -> m RelayAccessPoint
       idToRemoteAddressP2P (NodeId i) = case lookup i portNumbers of
@@ -256,46 +274,48 @@ cardanoTestnet
             (showIpv4Address testnetDefaultIpv4Address)
             port
         Nothing -> do
-          H.note_ $ "Found node id that was unaccounted for: " ++ show i
-          H.failure
+          throwString $ "Found node id that was unaccounted for: " ++ show i
 
-  -- Implement concrete topology from abstract one, if necessary
-  forM_ portNumbers $ \(i, _port) -> do
+  forM_ portNumbers $ \(i, portNumber) -> do
+    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
+    liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
+    liftIOAnnotated $ writeFile (nodeDataDir </> "port") (show portNumber)
     let topologyPath = tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json"
-
-    -- Try to decode either a direct topology file, or a P2P one
-    H.readJsonFile topologyPath >>= \case
+    tBytes <- liftIOAnnotated $ LBS.readFile topologyPath
+    case eitherDecode tBytes of 
       Right (abstractTopology :: P2P.NetworkTopology NodeId) -> do
         topology <- mapM idToRemoteAddressP2P abstractTopology
-        H.lbsWriteFile topologyPath $ encode topology
-      Left e ->
+        liftIOAnnotated $ LBS.writeFile topologyPath $ encode topology
+      Left e -> do
         -- There can be multiple reasons for why both decodings have failed.
         -- Here we assume, very optimistically, that the user has already
         -- instantiated it with a concrete topology file.
-        H.note_ $ "Could not decode topology file. This may be okay. Reason for decoding failure is:\n" ++ e
+        liftIOAnnotated . putStrLn $ "Could not decode topology file: " <> topologyPath <> ". This may be okay. Reason for decoding failure is:\n" ++ e
 
   -- If necessary, update the time stamps in Byron and Shelley Genesis files.
   -- This is a QoL feature so that users who edit their configuration files don't
   -- have to manually set up the start times themselves.
   when (updateTimestamps == UpdateTimestamps) $ do
-    currentTime <- H.noteShowIO DTC.getCurrentTime
-    startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+    currentTime <- liftIOAnnotated DTC.getCurrentTime
+    let startTime = DTC.addUTCTime startTimeOffsetSeconds currentTime
 
     -- Update start time in Byron genesis file
     eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
-    (byronGenesis', _byronHash) <- H.leftFail eByron
+    (byronGenesis', _byronHash) <-
+      case eByron of
+        Right bg -> return bg
+        Left err -> throwString $ "Could not read byron genesis data from file: " <> byronGenesisFile <> " Error: " <> show err
     let byronGenesis = byronGenesis'{gdStartTime = startTime}
-    H.lbsWriteFile byronGenesisFile $ canonicalEncodePretty byronGenesis
+    liftIOAnnotated . LBS.writeFile  byronGenesisFile $ canonicalEncodePretty byronGenesis
 
     -- Update start time in Shelley genesis file (which has been read already)
     let shelleyGenesis' = shelleyGenesis{sgSystemStart = startTime}
-    H.lbsWriteFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
+    liftIOAnnotated . LBS.writeFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
 
-  eTestnetNodes <- H.forConcurrently (zip [1..] portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
+  eTestnetNodes <- forConcurrently (zip [1..] portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
     let nodeName = Defaults.defaultNodeName i
         nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
         nodePoolKeysDir = tmpAbsPath </> Defaults.defaultSpoKeysDir i
-    H.note_ $ "Node name: " <> nodeName
     let (mKeys, spoNodeCliArgs) =
           case nodeOptions of
             RelayNodeOptions{} -> (Nothing, [])
@@ -319,24 +339,21 @@ cardanoTestnet
         ]
         <> spoNodeCliArgs
         <> extraCliArgs nodeOptions
+
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
   let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
   unless (null failedNodes) $ do
-    H.noteShow_ . vsep $ prettyError <$> failedNodes
-    H.failure
+    throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
 
   -- Interrupt cardano nodes when the main process is interrupted
-  H.evalIO $ interruptNodesOnSigINT testnetNodes'
-  H.annotateShow $ nodeSprocket <$> testnetNodes'
+  liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
 
   -- FIXME: use foldEpochState waiting for chain extensions
-  now <- H.noteShowIO DTC.getCurrentTime
-  deadline <- H.noteShow $ DTC.addUTCTime 45 now
-  forM_ testnetNodes' $ \node -> do
-    assertChainExtended deadline nodeLoggingFormat node
-
-  H.noteShowIO_ DTC.getCurrentTime
+  now <- liftIOAnnotated DTC.getCurrentTime
+  let deadline = DTC.addUTCTime 45 now
+  forM_ testnetNodes' $ \nodeStdoutFile -> do
+    assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
@@ -349,22 +366,20 @@ cardanoTestnet
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
-  node1sprocket <- H.headM $ testnetSprockets runtime
+  node1sprocket <- case uncons $ testnetSprockets runtime of
+        Just (sprocket, _) -> pure sprocket
+        Nothing            -> throwString "No testnet sprocket available"
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   forM_ wallets $ \wallet -> do
-    H.cat . signingKeyFp $ paymentKeyInfoPair wallet
-    H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
-    utxos <- execCli' execConfig
+    execCli' execConfig
       [ "latest", "query", "utxo"
       , "--address", Text.unpack $ paymentKeyInfoAddr wallet
       , "--cardano-mode"
       ]
 
-    H.note_ utxos
-
-  stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
+  let stakePoolsFp = tmpAbsPath </> "current-stake-pools.json"
 
   assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
@@ -390,15 +405,15 @@ createAndRunTestnet :: ()
   -> Conf -- ^ Path to the test sandbox
   -> H.Integration TestnetRuntime
 createAndRunTestnet testnetOptions genesisOptions conf = do
-  createTestnetEnv
-    testnetOptions genesisOptions def
-    conf
-  cardanoTestnet testnetOptions conf
+  liftToIntegration $ do
+     createTestnetEnv
+       testnetOptions genesisOptions def
+       conf
+     cardanoTestnet testnetOptions conf
 
 -- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
 retryOnAddressInUseError
   :: forall m a. HasCallStack
-  => MonadTest m
   => MonadIO m
   => ExceptT NodeStartFailure m a -- ^ action being retried
   -> ExceptT NodeStartFailure m a
@@ -407,17 +422,15 @@ retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTime
     go :: HasCallStack => NominalDiffTime -> NominalDiffTime -> ExceptT NodeStartFailure m a
     go timeout interval
       | timeout <= 0 = withFrozenCallStack $ do
-        H.note_ "Exceeded timeout when retrying node start"
         act
       | otherwise = withFrozenCallStack $ do
-        !time <- liftIO DTC.getCurrentTime
+        !time <- liftIOAnnotated DTC.getCurrentTime
         catchError act $ \case
           NodeAddressAlreadyInUseError _ -> do
-            liftIO $ threadDelay (round $ interval * 1_000_000)
-            !time' <- liftIO DTC.getCurrentTime
+            liftIOAnnotated $ threadDelay (round $ interval * 1_000_000)
+            !time' <- liftIOAnnotated DTC.getCurrentTime
             let elapsedTime = time' `diffUTCTime` time
                 newTimeout = timeout - elapsedTime
-            H.note_ $ "Retrying on 'address in use' error, timeout: " <> show newTimeout
             go newTimeout interval
           e -> throwError e
 

@@ -77,6 +77,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 
 import           Prelude
 
+import           Control.Exception (Exception (..))
 import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
@@ -107,9 +108,13 @@ newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
 
+instance Exception AlonzoGenesisError where 
+  displayException = Api.docToString . Api.prettyError
+
+
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis = do
-  let genesis = Api.alonzoGenesisDefaults
+  let genesis = Api.alonzoGenesisDefaults  
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
