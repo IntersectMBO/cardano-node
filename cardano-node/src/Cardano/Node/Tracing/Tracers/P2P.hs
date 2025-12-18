@@ -1473,6 +1473,7 @@ instance MetaTrace handler => MetaTrace (ConnectionManager.Trace addr handler) w
     severityFor (Namespace _  ["TerminatedConnection"]) _ = Just Debug
     severityFor (Namespace out ("ConnectionHandler" : tl)) (Just (TrConnectionHandler _ hdl)) =
       severityFor (Namespace out tl) (Just hdl)
+    severityFor (Namespace _  ("ConnectionHandler" : _)) Nothing = Just Info  
     severityFor (Namespace _  ["Shutdown"]) _ = Just Info
     severityFor (Namespace _  ["ConnectionExists"]) _ = Just Info
     severityFor (Namespace _  ["ForbiddenConnection"]) _ = Just Info
@@ -1558,6 +1559,7 @@ instance MetaTrace (ConnectionHandlerTrace versionNumber agreedOptions) where
     severityFor (Namespace _ ["HandshakeServerError"]) _ = Just Info
     severityFor (Namespace _ ["Error"]) (Just (TrConnectionHandlerError _ _ ShutdownNode)) = Just Critical
     severityFor (Namespace _ ["Error"]) (Just (TrConnectionHandlerError _ _ ShutdownPeer)) = Just Info
+    severityFor (Namespace _ ["Error"]) Nothing = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["HandshakeSuccess"]) = Just ""
