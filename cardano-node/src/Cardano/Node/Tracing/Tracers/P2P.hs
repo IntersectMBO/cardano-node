@@ -1248,9 +1248,8 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
 -- Connection Manager Tracer
 --------------------------------------------------------------------------------
 
-instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
-          ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
-      => LogFormatting (ConnectionManager.Trace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
+instance (Show addr, LogFormatting addr, ToJSON addr, LogFormatting handler, Show handler)
+      => LogFormatting (ConnectionManager.Trace addr handler) where
     forMachine dtal (TrIncludeConnection prov peerAddr) =
         mconcat $ reverse
           [ "kind" .= String "IncludeConnection"
@@ -1299,11 +1298,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           , "provenance" .= String (pack . show $ prov)
           , "remoteAddress" .= forMachine dtal remoteAddress
           ]
-    forMachine dtal (TrConnectionHandler connId a) =
+    forMachine dtal (TrConnectionHandler connId handler) =
         mconcat
           [ "kind" .= String "ConnectionHandler"
           , "connectionId" .= toJSON connId
-          , "connectionHandler" .= forMachine dtal a
+          , "connectionHandler" .= forMachine dtal handler
           ]
     forMachine _dtal TrShutdown =
         mconcat
@@ -1442,15 +1441,15 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
         , "command" .= show cerr
         ]
 
-instance MetaTrace (ConnectionManager.Trace addr
-                      (ConnectionHandlerTrace versionNumber agreedOptions)) where
+instance MetaTrace handler => MetaTrace (ConnectionManager.Trace addr handler) where
     namespaceFor TrIncludeConnection {}  = Namespace [] ["IncludeConnection"]
     namespaceFor TrReleaseConnection {}  = Namespace [] ["UnregisterConnection"]
     namespaceFor TrConnect {}  = Namespace [] ["Connect"]
     namespaceFor TrConnectError {}  = Namespace [] ["ConnectError"]
     namespaceFor TrTerminatingConnection {}  = Namespace [] ["TerminatingConnection"]
     namespaceFor TrTerminatedConnection {}  = Namespace [] ["TerminatedConnection"]
-    namespaceFor TrConnectionHandler {}  = Namespace [] ["ConnectionHandler"]
+    namespaceFor (TrConnectionHandler _ hdl)  = 
+      nsPrependInner "ConnectionHandler" (namespaceFor hdl)      
     namespaceFor TrShutdown {}  = Namespace [] ["Shutdown"]
     namespaceFor TrConnectionExists {}  = Namespace [] ["ConnectionExists"]
     namespaceFor TrForbiddenConnection {}  = Namespace [] ["ForbiddenConnection"]
@@ -1472,17 +1471,8 @@ instance MetaTrace (ConnectionManager.Trace addr
     severityFor (Namespace _  ["ConnectError"]) _ = Just Info
     severityFor (Namespace _  ["TerminatingConnection"]) _ = Just Debug
     severityFor (Namespace _  ["TerminatedConnection"]) _ = Just Debug
-    severityFor (Namespace _  ["ConnectionHandler"])
-      (Just (TrConnectionHandler _ ev')) = Just $
-        case ev' of
-          TrHandshakeSuccess {}     -> Info
-          TrHandshakeQuery {}       -> Info
-          TrHandshakeClientError {} -> Notice
-          TrHandshakeServerError {} -> Info
-          TrConnectionHandlerError _ _ ShutdownNode  -> Critical
-          TrConnectionHandlerError _ _ ShutdownPeer  -> Info
-    severityFor (Namespace _  ["ConnectionHandler"]) _ = Just Info
-    severityFor (Namespace _  ["ConnectionHandler"]) Nothing = Just Info
+    severityFor (Namespace out ("ConnectionHandler" : tl)) (Just (TrConnectionHandler _ hdl)) =
+      severityFor (Namespace out tl) (Just hdl)
     severityFor (Namespace _  ["Shutdown"]) _ = Just Info
     severityFor (Namespace _  ["ConnectionExists"]) _ = Just Info
     severityFor (Namespace _  ["ForbiddenConnection"]) _ = Just Info
@@ -1504,7 +1494,8 @@ instance MetaTrace (ConnectionManager.Trace addr
     documentFor (Namespace _  ["ConnectError"]) = Just ""
     documentFor (Namespace _  ["TerminatingConnection"]) = Just ""
     documentFor (Namespace _  ["TerminatedConnection"]) = Just ""
-    documentFor (Namespace _  ["ConnectionHandler"]) = Just ""
+    documentFor (Namespace out ("ConnectionHandler" : tl)) =
+      documentFor (Namespace out tl :: Namespace handler) 
     documentFor (Namespace _  ["Shutdown"]) = Just ""
     documentFor (Namespace _  ["ConnectionExists"]) = Just ""
     documentFor (Namespace _  ["ForbiddenConnection"]) = Just ""
@@ -1537,7 +1528,6 @@ instance MetaTrace (ConnectionManager.Trace addr
       , Namespace [] ["ConnectError"]
       , Namespace [] ["TerminatingConnection"]
       , Namespace [] ["TerminatedConnection"]
-      , Namespace [] ["ConnectionHandler"]
       , Namespace [] ["Shutdown"]
       , Namespace [] ["ConnectionExists"]
       , Namespace [] ["ForbiddenConnection"]
@@ -1550,8 +1540,40 @@ instance MetaTrace (ConnectionManager.Trace addr
       , Namespace [] ["ConnectionTimeWaitDone"]
       , Namespace [] ["ConnectionManagerCounters"]
       , Namespace [] ["State"]
-      , Namespace [] ["UnexpectedlyFalseAssertion"]
-      ]
+      , Namespace [] ["UnexpectedlyFalseAssertion"]]
+      ++ map  (nsPrependInner "ConnectionHandler")
+                  (allNamespaces :: [Namespace handler])
+
+
+instance MetaTrace (ConnectionHandlerTrace versionNumber agreedOptions) where     
+    namespaceFor TrHandshakeSuccess {} = Namespace [] ["HandshakeSuccess"]
+    namespaceFor TrHandshakeQuery {} = Namespace [] ["HandshakeQuery"]
+    namespaceFor TrHandshakeClientError {} = Namespace [] ["HandshakeClientError"]
+    namespaceFor TrHandshakeServerError {} = Namespace [] ["HandshakeServerError"]
+    namespaceFor TrConnectionHandlerError {} = Namespace [] ["Error"]
+
+    severityFor (Namespace _ ["HandshakeSuccess"]) _ = Just Info
+    severityFor (Namespace _ ["HandshakeQuery"]) _ = Just Info
+    severityFor (Namespace _ ["HandshakeClientError"]) _ = Just Notice
+    severityFor (Namespace _ ["HandshakeServerError"]) _ = Just Info
+    severityFor (Namespace _ ["Error"]) (Just (TrConnectionHandlerError _ _ ShutdownNode)) = Just Critical
+    severityFor (Namespace _ ["Error"]) (Just (TrConnectionHandlerError _ _ ShutdownPeer)) = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["HandshakeSuccess"]) = Just ""
+    documentFor (Namespace _ ["HandshakeQuery"]) = Just ""
+    documentFor (Namespace _ ["HandshakeClientError"]) = Just ""
+    documentFor (Namespace _ ["HandshakeServerError"]) = Just ""
+    documentFor (Namespace _ ["Error"]) = Just ""
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["HandshakeSuccess"]
+      , Namespace [] ["HandshakeQuery"]
+      , Namespace [] ["HandshakeClientError"]
+      , Namespace [] ["HandshakeServerError"]
+      , Namespace [] ["Error"]
+      ]    
 
 --------------------------------------------------------------------------------
 -- Connection Manager Transition Tracer
