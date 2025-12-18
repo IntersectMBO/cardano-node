@@ -100,7 +100,7 @@ assertExpectedSposInLedgerState output (NumPools numExpectedPools) execConfig = 
       let numPoolsInLedgerState = Set.size poolSet
       unless (numPoolsInLedgerState == numExpectedPools) $
         throwString $ unlines 
-          [ "Expected number of stake pooFvls not found in ledger state"
+          [ "Expected number of stake pools not found in ledger state"
           , "Expected: ", show numExpectedPools
           , "Actual: ", show numPoolsInLedgerState
           ]

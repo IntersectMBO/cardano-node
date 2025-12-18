@@ -139,9 +139,6 @@ execFlexAny'
   -> m (ExitCode, String, String) -- ^ exit code, stdout, stderr
 execFlexAny' execConfig pkgBin envBin arguments = GHC.withFrozenCallStack $ do
   cp <- procFlex' execConfig pkgBin envBin arguments
-  --H.annotate . ("━━━━ command ━━━━\n" <>) $ case IO.cmdspec cp of
-  --  IO.ShellCommand cmd -> cmd
-  --  IO.RawCommand cmd args -> cmd <> " " <> L.unwords (argQuote <$> args)
   liftIOAnnotated $ IO.readCreateProcessWithExitCode cp ""
 
 

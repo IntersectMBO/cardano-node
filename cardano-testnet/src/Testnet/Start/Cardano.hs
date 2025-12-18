@@ -142,7 +142,7 @@ createTestnetEnv
 
     let producers = NodeId <$> filter (/= i) nodeIds
         topology = Defaults.defaultP2PTopology producers
-    liftIOAnnotated . LBS.writeFile  (nodeDataDir </> "topology.json") $ A.encodePretty topology
+    liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:

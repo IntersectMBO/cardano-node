@@ -165,9 +165,11 @@ createSPOGenesisAndFiles
   (TmpAbsolutePath tempAbsPath) =  do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
 
-  let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
+  
+  let genesisShelleyDir = takeDirectory inputGenesisShelleyFp
+  
+  liftIOAnnotated $ System.createDirectoryIfMissing True genesisShelleyDir
 
-  genesisShelleyDir <- liftIOAnnotated $ System.createDirectoryIfMissing True genesisShelleyDirAbs >> pure genesisShelleyDirAbs
   let -- At least there should be a delegator per DRep
       -- otherwise some won't be representing anybody
       numStakeDelegators = max 3 (fromIntegral cardanoNumDReps) :: Int

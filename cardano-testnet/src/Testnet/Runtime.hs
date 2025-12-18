@@ -153,10 +153,11 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
-
-    isClosed <- liftIOAnnotated $ Ping.waitForPortClosed 45 0.1 port
+    
+    let portWaitTimeout = 45
+    isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 port
     unless isClosed $ 
-      throwString $ "Port is still in use after 30 seconds before starting node: " <> show port 
+      throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting node: " <> show port 
 
     (Just stdIn, _, _, hProcess, _)
       <- firstExceptT ProcessRelatedFailure $ initiateProcess
