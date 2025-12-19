@@ -2,6 +2,7 @@
 
 ## 2.11.1 -- Dez 2025
 
+* Increase `PrometheusSimple` robustness by restarting the backend upon crash, adding start/stop traces and more eagerly reaping of dangling sockets
 * Removed `TraceConfig.tcPeerFrequency` and hence `TraceOptionPeerFrequency` from config representation
 * Removed unused module `Cardano.Logging.Types.NodePeers`
 
