@@ -61,6 +61,9 @@ package plutus-scripts-bench
 allow-newer:
   , katip:Win32
 
+constraints:
+    cuddle <1.1
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
