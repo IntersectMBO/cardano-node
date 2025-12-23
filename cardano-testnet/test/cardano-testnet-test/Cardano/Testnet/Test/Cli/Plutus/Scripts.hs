@@ -44,7 +44,7 @@ import qualified Hedgehog.Extras as H
 -- Voting NO
 -- Proposing NO
 -- Execute me with:
--- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Scripts/"@
+-- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/PlutusV3 purposes/"@
 hprop_plutus_purposes_v3 :: Property
 hprop_plutus_purposes_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -190,11 +190,12 @@ hprop_plutus_purposes_v3 = integrationWorkspace "all-plutus-script-purposes" $ \
     ]
 
   H.success
-
+-- TODO: Left off here. The transaction has a v3 script but you are reading a v2 script! 
+-- The hash is also different inside the transaction!
 
 -- |
 -- Execute me with:
--- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV2 Create transaction with two script certs/"'@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV2 transaction with two script certs/"'@
 hprop_tx_two_script_certs_v2 :: Property
 hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -229,7 +230,7 @@ hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempA
   txin <- T.unpack . renderTxIn <$> findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV2"
-  H.writeFile plutusScript $ T.unpack plutusV2StakeScript
+  H.writeFile plutusScript $ T.unpack plutusV3Script
 
   scriptStakeRegistrationCertificate
     <- H.note $ work </> "script-stake-registration-certificate"
@@ -257,7 +258,9 @@ hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempA
   let txbody = work </> "two-certs-tx-body"
       tx = work </> "two-certs-tx"
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000 ]
-
+  
+  s <- execCli' execConfig [anyEraToString anyEra, "transaction", "policyid", "--script-file", plutusScript] 
+  H.note_ $ "Script hash: " <> s
   let txBuildArgs =
         [ anyEraToString anyEra, "transaction", "build"
         , "--change-address", T.unpack $ paymentKeyInfoAddr wallet0

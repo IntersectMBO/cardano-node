@@ -157,7 +157,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   -- TODO: Left off here. No certificate was in transaction!
   stakeCertTx <- execCli' execConfig
     ["debug", "transaction"
-    , "view", "--output-json", "--tx-file", stakeCertTxSignedFp
+    , "view", "--output-json", "--tx-body-file", stakeCertTxBodyFp
     ]
 
   H.note_ $ "Stake registration transaction: " <> stakeCertTx
