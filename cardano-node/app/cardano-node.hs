@@ -18,8 +18,8 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Version (showVersion)
 import           Options.Applicative
+import           Options.Applicative.Help.Pretty
 import qualified Options.Applicative as Opt
-import           Options.Applicative.Help ((<$$>))
 import           System.Info (arch, compilerName, compilerVersion, os)
 import           System.IO (hPutStrLn, stderr)
 
@@ -70,10 +70,12 @@ main = do
 
       nodeCliHelpMain :: String
       nodeCliHelpMain = renderHelpDoc 80 $
-        parserHelpHeader "cardano-node" nodeCLIParser
-        <$$> ""
-        <$$> parserHelpOptions nodeCLIParser
-
+        mconcat [ parserHelpHeader "cardano-node" nodeCLIParser
+                , line'
+                , ""
+                , line'
+                , parserHelpOptions nodeCLIParser
+                ]
 
 data Command = RunCmd PartialNodeConfiguration
              | TraceDocumentation TraceDocumentationCmd

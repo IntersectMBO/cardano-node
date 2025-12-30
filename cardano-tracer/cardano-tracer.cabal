@@ -257,7 +257,7 @@ library demo-forwarder-lib
                       , generic-data
                       , network
                       , network-mux
-                      , optparse-applicative-fork >= 0.18.1
+                      , optparse-applicative
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , tasty-quickcheck
@@ -302,7 +302,7 @@ library demo-acceptor-lib
                       , extra
                       , filepath
                       , generic-data
-                      , optparse-applicative-fork >= 0.18.1
+                      , optparse-applicative
                       , ouroboros-network-api
                       , stm <2.5.2 || >=2.5.3
                       , tasty-quickcheck
@@ -363,7 +363,7 @@ test-suite cardano-tracer-test
                       , generic-data
                       , network
                       , network-mux
-                      , optparse-applicative-fork >= 0.18.1
+                      , optparse-applicative
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , stm <2.5.2 || >=2.5.3
@@ -423,7 +423,7 @@ test-suite cardano-tracer-test-ext
                       , Glob
                       , network
                       , network-mux
-                      , optparse-applicative-fork >= 0.18.1
+                      , optparse-applicative
                       , ouroboros-network ^>= 0.22.4
                       , ouroboros-network-api
                       , ouroboros-network-framework

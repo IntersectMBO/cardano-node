@@ -38,6 +38,7 @@ import           Options.Applicative hiding (str, switch)
 -- file.  See `parseStartAsNonProducingNode` and `parseValidateDB`.
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
+import qualified Prettyprinter.Internal as PP
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
 
@@ -433,4 +434,4 @@ parserHelpOptions = fromMaybe mempty . OptI.unChunk . OptI.fullDesc (Opt.prefs m
 -- | Render the help pretty document.
 renderHelpDoc :: Int -> OptI.Doc -> String
 renderHelpDoc cols =
-  (`OptI.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))
+  (`PP.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))

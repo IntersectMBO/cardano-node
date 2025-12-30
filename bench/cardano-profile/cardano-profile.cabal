@@ -92,7 +92,7 @@ executable cardano-profile
                       , vector
                       , bytestring
                       , containers
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , text
                       , cardano-profile
 
