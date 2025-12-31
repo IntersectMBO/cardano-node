@@ -1,5 +1,9 @@
 # ChangeLog
 
+## NEXT
+* Cardano-tracer library functionality, allows shutting down and sending signals to running
+  instances through channels.
+
 ## 0.3.6 (November 2025)
 * Implement Prometheus HTTP service discovery (SD) under the URL `/targets`
 * Add optional config field `"prometheusLabels": { "<labelname>": "<labelvalue>", ... }` for custom labels to be attached with Prometheus SD
