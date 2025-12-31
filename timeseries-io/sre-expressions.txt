@@ -1,0 +1,132 @@
+// PromQL
+(
+   (abs(max(${blockMetric}{environment="${env}"}) - ${blockMetric}{environment="${env}"}) > bool ${toString lagBlocks})
+     -
+   (abs(max(${slotMetric}{environment="${env}"}) - on() group_right() ${slotMetric}{environment="${env}"}) < bool ${toString lagSeconds})
+) == 1
+
+// Ours
+let maxBlock = max ((${blockMetric} now) {environment = "${env}"})
+let maxSlot = max ((${slotMetric} now) {environment="${env}"})
+let block = (\x -> abs (maxBlock - x)) ((${blockMetric} now) {environment="${env}"})
+              > bool
+            ${toString lagBlocks}
+let slot = (\x -> abs (maxSlot - x)) ((${slotMetric} now) {environment="${env}"})
+             < bool
+           ${toString lagSeconds}
+(\x -> fst x && not (snd x)) (block ⊗ slot)
+
+
+
+
+
+
+//PromQL
+${kesPeriodsRemaining} <= ${toString periodNotice}
+
+//Ours
+${kesPeriodsRemaining} now <= ${toString periodNotice}
+
+
+
+
+
+
+//PromQL
+increase(cardano_node_metrics_Forge_forged_int[24h]) == 0
+
+//Ours
+increase cardano_node_metrics_Forge_forged_int[now - 24h; now] == 0.0
+
+
+
+
+
+//PromQL
+rate(cardano_node_metrics_slotsMissedNum_int[5m]) * 1 > 0.5
+
+//Ours
+rate cardano_node_metrics_slotsMissedNum_int[now - 5m; now] > 0.5
+
+
+
+
+
+
+//PromQL
+avg_over_time(netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average[5m]) > 500
+
+//Ours
+avg_over_time netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average[now - 5m; now] > 500.0
+
+
+
+
+
+
+//PromQL
+avg(quantile_over_time(0.95, cardano_node_metrics_blockadoption_forgeDelay_real[6h])) >= 4.5
+
+//Ours
+avg (quantile_over_time 0.95 cardano_node_metrics_blockadoption_forgeDelay_real[now - 6h; now]) >= 4.5
+
+
+
+
+
+
+
+//PromQL
+100 * avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize[6h]) / 90112) > ${highBlockUtilization}
+
+//Ours
+100.0 * avg(avg_over_time cardano_node_metrics_blockfetchclient_blocksize[now - 6h; now] / 90112.0) > ${highBlockUtilization}
+
+
+
+
+//PromQL
+cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.90
+
+//Ours
+cardano_node_metrics_blockfetchclient_blockdelay_cdfFive now < 0.90
+
+
+
+
+
+//PromQL
+round(increase((time() - cardano_node_metrics_nodeStartTime_int < bool 300)[1h:1m])) > 1
+
+//Ours
+round (increase (\t -> toScalar (t - cardano_node_metrics_nodeStartTime_int t < bool 300.0))[now-1h;now:1m]) > 1.0
+
+
+
+
+//PromQL
+(sum_over_time((cardano_node_metrics_blockNum_int != bool 0)[360m:1m]) < bool 350) > 0 unless cardano_node_metrics_blockNum_int"
+
+//Ours
+(sum_over_time (\t -> toScalar (cardano_node_metrics_blockNum_int t != bool 0.0))[now-360m;now:1m] < bool 350) > 0.0
+  unless cardano_node_metrics_blockNum_int now
+
+
+
+
+//PromQL
+100 * quantile by(environment) (0.2, (cardano_node_metrics_density_real * 20)) < ${chainDensityVeryLow}
+
+
+//Ours
+100 * quantile-by [environment] 0.2 (cardano_node_metrics_density_real now * 20) < ${chainDensityVeryLow}
+
+
+
+
+
+//PromQL
+100 * quantile by(environment) (0.2, (cardano_node_metrics_density_real{environment!~"preview"} * 20)) < ${chainDensityLow}
+
+//Ours
+// We need to enhance the filtering by operations other than "subset"
