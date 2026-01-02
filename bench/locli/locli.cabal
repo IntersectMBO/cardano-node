@@ -124,7 +124,7 @@ library
                       , filepath
                       , fingertree == 0.1.5.0
                       , hashable
-                      , optparse-applicative-fork >= 0.18.1
+                      , optparse-applicative
                       , ouroboros-consensus
                       , ouroboros-network-api ^>= 0.16
                       , sop-core
@@ -156,7 +156,7 @@ executable locli
   build-depends:        aeson
                       , cardano-prelude
                       , locli
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , text
                       , text-short
                       , transformers

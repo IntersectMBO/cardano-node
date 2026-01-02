@@ -50,7 +50,7 @@ executable cardano-node-chairman
                       , containers
                       , contra-tracer
                       , io-classes:{io-classes, strict-stm, si-timers}
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
                       , ouroboros-network-api

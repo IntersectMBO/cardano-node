@@ -65,7 +65,7 @@ executable cardano-topology
                       , bytestring
                       , containers
                       , graphviz
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , split
                       , text
                       , cardano-topology
