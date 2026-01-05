@@ -38,6 +38,7 @@ import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import           Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Hashes as Hashes
@@ -461,6 +462,37 @@ instance
       mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS" , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals ]
     Conway.CertFailure f -> toObject verb f
 
+instance
+  ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraGovPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
 
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
