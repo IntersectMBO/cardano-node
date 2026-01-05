@@ -1,28 +1,35 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Configuration.LedgerDB (
-    DeprecatedOptions (..)
-  , LedgerDbConfiguration (..)
-  , LedgerDbSelectorFlag(..)
-  , Gigabytes
-  , noDeprecatedOptions
-  , selectorToArgs
-  ) where
+    DeprecatedOptions (..),
+    LedgerDbConfiguration (..),
+    LedgerDbSelectorFlag (..),
+    Gigabytes,
+    noDeprecatedOptions,
+    selectorToArgs,
+) where
 
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
+import           Ouroboros.Consensus.Storage.LedgerDB.API
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.Args as V1
-import           Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB (LMDBLimits (..))
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
-import           Ouroboros.Consensus.Util.Args
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB as LMDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
 
 import qualified Data.Aeson.Types as Aeson (FromJSON)
 import           Data.Maybe (fromMaybe)
-import           Data.SOP.Dict
+import           Data.Proxy
+import           System.FilePath
+import           System.Random (StdGen)
 
 -- | Choose the LedgerDB Backend
 --
@@ -34,21 +41,25 @@ import           Data.SOP.Dict
 --
 -- - 'V1LMDB': uses less memory but is somewhat slower.
 --
--- - 'V1InMemory': Not intended for production. It is an in-memory reproduction
---   of the LMDB implementation.
+-- - 'V2LSM': Uses the LSM backend.
 data LedgerDbSelectorFlag =
     V1LMDB
       V1.FlushFrequency
       -- ^ The frequency at which changes are flushed to the disk.
       (Maybe FilePath)
-      -- ^ Path for the live tables.
+      -- ^ Path for the live tables. If not provided the default will be used
+      -- (@<fast-storage>/lmdb@).
       (Maybe Gigabytes)
       -- ^ A map size can be specified, this is the maximum disk space the LMDB
       -- database can fill. If not provided, the default of 16GB will be used.
       (Maybe Int)
       -- ^ An override to the max number of readers.
-  | V1InMemory V1.FlushFrequency
   | V2InMemory
+  | V2LSM
+      (Maybe FilePath)
+      -- ^ Maybe a custom path to the LSM database. If not provided the default
+      -- will be used (@<fast-storage>/lsm@).
+
   deriving (Eq, Show)
 
 -- | Some options that existed in the TopLevel were now moved to a
@@ -118,24 +129,23 @@ toBytes (Gigabytes x) = x * 1024 * 1024 * 1024
 -- * The @lmdb-simple@ and @haskell-lmdb@ forked repositories.
 -- * The official LMDB API documentation at
 --    <http://www.lmdb.tech/doc/group__mdb.html>.
-defaultLMDBLimits :: LMDBLimits
-defaultLMDBLimits = LMDBLimits {
-    lmdbMapSize = 16 * 1024 * 1024 * 1024
-  , lmdbMaxDatabases = 10
-  , lmdbMaxReaders = 16
+defaultLMDBLimits :: LMDB.LMDBLimits
+defaultLMDBLimits = LMDB.LMDBLimits {
+    LMDB.lmdbMapSize = 16 * 1024 * 1024 * 1024
+  , LMDB.lmdbMaxDatabases = 10
+  , LMDB.lmdbMaxReaders = 16
   }
 
-defaultLMDBPath :: FilePath
-defaultLMDBPath = "mainnet/db/lmdb"
+defaultLMDBPath :: FilePath -> FilePath
+defaultLMDBPath = (</> "lmdb")
 
-selectorToArgs :: LedgerDbSelectorFlag -> Complete LedgerDbFlavorArgs IO
-selectorToArgs (V1InMemory ff)  = LedgerDbFlavorArgsV1 $ V1.V1Args ff V1.InMemoryBackingStoreArgs
-selectorToArgs V2InMemory      = LedgerDbFlavorArgsV2 $ V2.V2Args V2.InMemoryHandleArgs
-selectorToArgs (V1LMDB ff fp l mxReaders) =
-    LedgerDbFlavorArgsV1
-  $ V1.V1Args ff
-  $ V1.LMDBBackingStoreArgs
-      (fromMaybe defaultLMDBPath fp)
-      (maybe id (\overrideMaxReaders lim -> lim { lmdbMaxReaders = overrideMaxReaders }) mxReaders
-       $ maybe id (\ll lim -> lim { lmdbMapSize = toBytes ll }) l defaultLMDBLimits)
-      Dict
+selectorToArgs :: forall blk. (LedgerSupportsProtocol blk, LedgerSupportsLedgerDB blk) => LedgerDbSelectorFlag -> FilePath -> StdGen -> (LedgerDbBackendArgs IO blk, StdGen)
+selectorToArgs V2InMemory _ = InMemory.mkInMemoryArgs
+selectorToArgs (V1LMDB ff fp l mxReaders) fastStoragePath =
+    LMDB.mkLMDBArgs
+        ff
+        (fromMaybe (defaultLMDBPath fastStoragePath) fp)
+        ( maybe id (\overrideMaxReaders lim -> lim{LMDB.lmdbMaxReaders = overrideMaxReaders}) mxReaders $
+            maybe id (\ll lim -> lim{LMDB.lmdbMapSize = toBytes ll}) l defaultLMDBLimits
+        )
+selectorToArgs (V2LSM fp) fastStoragePath = LSM.mkLSMArgs (Proxy @blk) (fromMaybe "lsm" fp) fastStoragePath
