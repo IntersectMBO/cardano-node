@@ -35,11 +35,15 @@ packages:
   trace-resources
   trace-forward
 
+  -- ../network/ouroboros-network
+  -- ../network/cardano-diffusion
+  -- ../network/network-mux
+
 -- Needed when cross compiling
 extra-packages: alex
 
 program-options
-  ghc-options: -Werror
+  -- ghc-options: -Werror
 
 test-show-details: direct
 
@@ -75,3 +79,102 @@ if impl (ghc >= 9.12)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Points to https://github.com/IntersectMBO/cardano-ledger/pull/5573
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: bd2c3fc558c8b053b03f25a84fc02e26dd17d927
+  --sha256: sha256-JCzOtN0/eQob9IneXjihwxDgWZlSZ2ZdIkz2qBPhtU8=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-api
+    libs/cardano-ledger-core
+    libs/cardano-ledger-binary
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/cardano-data
+    libs/vector-map
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/crypto
+
+-- geo2a/bump-ntc
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 2fcfa7194246e5bcc99cb1bb4507206cef2aa798
+  --sha256: sha256-x4sWbe3Wp0Dv6eq7awiB3Vx3gdY6teXDd3nBfhJZNNc=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    strict-sop-core
+    sop-extras
+
+-- Network main several commits past the o-n-24 release
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: fdb48717260acf4414b73fc5186f1be11c066d9a
+  --sha256: sha256-7ImdsdRwiQaFZduxYd6CMHwrho1XkieDXX1oVXX6Tqk=
+  subdir:
+    ouroboros-network
+    cardano-diffusion
+    network-mux
+
+-- TODO: remove once plutus packages are released
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/plutus
+  tag: 9b47adbd2e0cf9b4749e53f5138b3817eaa5f0b4
+  --sha256: sha256-wqriBVjkC1mW/Mp+FButFNBRClync9cDwZtgG+a6lb0=
+  subdir:
+    plutus-core
+    plutus-ledger-api
+
+-- Network main several commits past the o-n-24 release
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/kes-agent
+  tag: 84c98f369d58e86cf7a339ccce583252d4cb5773
+  --sha256: sha256-0RsKmpXcJfO4bFos5Mx71lUye3bo7g6lc+gXCaKzxJs=
+  subdir:
+    kes-agent
+    kes-agent-crypto
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/cardano-api
+   tag: 71e925af2071f0f3f99565671612dfcbd1eddd86
+   --sha256: sha256-1kcvLjJa6+KFupHZp+/J0oeazk/xJo3xAx+pfDRk+20=
+   subdir:
+     cardano-api
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/cardano-cli
+   tag: 0c2bb4a629b348a2e519032e44bc416f9e4823a1
+   --sha256: sha256-5104xsjG3oqVRp7uGO51vitHOehaI1zMQqXwvPxSJdQ=
+   subdir:
+     cardano-cli
+
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/ekg-forward
+   tag: 8651aff14954803c61d81482914c672054b0ac06
+   --sha256: sha256-ZrA7hoTbvZVJ4tg/A0zEXGBpnLIDPHV4YNQF2MvKYcQ=
+   subdir:
+     .
