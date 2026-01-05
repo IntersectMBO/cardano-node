@@ -57,9 +57,13 @@ let
           nix-prefetch-git
           pkg-config
           hlint
-          ghcid
           haskell-language-server
-          cabal
+          # TODO: for some reason it tries to build very old cabal-install and ghcid from source,
+          #       probably because haskell.nix is pinned
+          # cabal
+          # ghcid
+          # use cabal-install from nixpkgs instead for now:
+          cabal-install
           actionlint
           shellcheck
           stylish-haskell
@@ -123,7 +127,7 @@ let
       modules =
         [
           ({ lib, pkgs, ... }: {
-            packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
+            # packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
             package-keys = ["plutus-tx-plugin"];
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
 
