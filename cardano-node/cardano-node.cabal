@@ -138,8 +138,8 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.23
-                      , cardano-crypto-class ^>=2.2.3.2
+                      , cardano-api ^>= 10.24
+                      , cardano-crypto-class ^>=2.3
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
@@ -169,7 +169,7 @@ library
                       , generic-data
                       , hashable
                       , hostname
-                      , io-classes:{io-classes,strict-stm,si-timers} >= 1.5
+                      , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8
                       , iohk-monitoring ^>= 0.2
                       , kes-agent ^>=0.2
                       , microlens
