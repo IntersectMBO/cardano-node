@@ -19,6 +19,7 @@
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
+import Ouroboros.Consensus.Peras.SelectView
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Prelude (Typeable, maximumDef)
@@ -175,7 +176,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
     ChainDB.ChainSelectionLoEDebug _ _ -> Debug
 
-
   getSeverityAnnotation (ChainDB.TraceLedgerDBEvent ev) = case ev of
     LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
       LedgerDB.TookSnapshot {} -> Info
@@ -252,6 +252,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
 
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
+
+  getSeverityAnnotation (ChainDB.TracePerasCertDbEvent _) = undefined -- TODO @amesgen
+  getSeverityAnnotation (ChainDB.TraceAddPerasCertEvent _) = undefined -- TODO @amesgen
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -786,9 +789,13 @@ instance ( ConvertRawHash blk
       ChainDB.TraceChainSelStarvationEvent ev -> case ev of
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
+      ChainDB.TracePerasCertDbEvent _ -> undefined -- TODO @amesgen
+      ChainDB.TraceAddPerasCertEvent _ -> undefined -- TODO @amesgen
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
+
+
 
 --
 -- | instances of @ToObject@
@@ -972,10 +979,10 @@ instance ( ConvertRawHash blk
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint extended)
                , "chainLengthDelta" .= extended `chainLengthΔ` base
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
@@ -988,10 +995,10 @@ instance ( ConvertRawHash blk
                , "chainLengthDelta" .= new `chainLengthΔ` old
                -- Check that the SwitchedToAFork event was triggered by a proper fork.
                , "realFork" .= not (AF.withinFragmentBounds (AF.headPoint old) new)
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
@@ -1065,6 +1072,9 @@ instance ( ConvertRawHash blk
          Nothing -> [] -- No sense to do validation here.
      chainLengthΔ :: AF.AnchoredFragment (Header blk) -> AF.AnchoredFragment (Header blk) -> Int
      chainLengthΔ = on (-) (fromWithOrigin (-1) . fmap (fromIntegral . unBlockNo) . AF.headBlockNo)
+
+  toObject _verb (ChainDB.TracePerasCertDbEvent _) = undefined -- TODO @amesgen
+  toObject _verb (ChainDB.TraceAddPerasCertEvent _) = undefined -- TODO @amesgen
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerDBEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceLedgerDBEvent ev) = case ev of
@@ -1457,6 +1467,9 @@ instance ( LedgerSupportsProtocol blk,
               , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
               , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info))
               ]
+
+instance ToObject (WeightedSelectView proto) where -- TODO @amesgen
+  toObject _ _ = undefined
 
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
 instance HasSeverityAnnotation (ChainSync.Client.TraceEventCsj peer blk) where

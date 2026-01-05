@@ -334,6 +334,14 @@ instance
   , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
+  toObject _ (Conway.ConwayWithdrawalsMissingAccounts missingWithdrawals) =
+    mconcat [ "kind" .= String "ConwayWithdrawalsMissingAccounts"
+            , "withdrawals" .= unWithdrawals missingWithdrawals
+            ]
+  toObject _ (Conway.ConwayIncompleteWithdrawals incompleteWithdrawals) =
+    mconcat [ "kind" .= String "ConwayIncompleteWithdrawals"
+            , "withdrawals" .= unWithdrawals incompleteWithdrawals
+            ]
   toObject _    (Conway.ConwayTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
             , "actual" .= mismatchSupplied

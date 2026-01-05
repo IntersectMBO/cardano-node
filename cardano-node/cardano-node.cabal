@@ -185,7 +185,7 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus ^>= 0.30
+                      , ouroboros-consensus:{ouroboros-consensus, ouroboros-consensus-lmdb, ouroboros-consensus-lsm} ^>= 0.28
                       , ouroboros-consensus-cardano ^>= 0.26
                       , ouroboros-consensus-diffusion ^>= 0.25
                       , ouroboros-consensus-protocol
