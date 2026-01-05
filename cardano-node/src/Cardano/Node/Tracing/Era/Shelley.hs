@@ -36,6 +36,7 @@ import           Cardano.Ledger.BaseTypes (Mismatch (..), activeSlotLog, strictM
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Ledger.Shelley.API
@@ -1195,6 +1196,37 @@ instance
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
 
+instance
+  ( LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
+  forMachine _ = undefined -- TODO(geo2a)
+
+instance
+  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
+  forMachine _ = undefined -- TODO(geo2a)
+
+instance
+  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraGovPredFailure ledgerera) where
+  forMachine _ = undefined -- TODO(geo2a)
+
+instance
+  (LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
+  forMachine _ = undefined -- TODO(geo2a)
+
+instance
+  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
+  forMachine _ = undefined -- TODO(geo2a)
+
+instance
+  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
+  forMachine _ = undefined -- TODO(geo2a)
 
 instance
   ( Ledger.Crypto crypto
