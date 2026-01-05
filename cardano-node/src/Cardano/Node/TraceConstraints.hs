@@ -73,6 +73,6 @@ type TraceConstraints blk =
     , LogFormatting (ValidationErr (BlockProtocol blk))
     , LogFormatting (CannotForge blk)
     , LogFormatting (ForgeStateUpdateError blk)
-    , LogFormatting (Set (Credential 'Staking))
-    , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking))
+    , LogFormatting (Set (Credential Staking))
+    , LogFormatting (NonEmpty.NonEmpty (KeyHash Staking))
     )

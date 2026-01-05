@@ -93,13 +93,13 @@ instance
         ( "txid" .= txId tx )
       : [ "tx"   .= condense tx | dtal == DDetailed ]
 
-instance LogFormatting (Set (Credential 'Staking)) where
+instance LogFormatting (Set (Credential Staking)) where
   forMachine _dtal creds =
     mconcat [ "kind" .= String "StakeCreds"
              , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
 
-instance LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking)) where
+instance LogFormatting (NonEmpty.NonEmpty (KeyHash Staking)) where
   forMachine _dtal keyHashes =
     mconcat [ "kind" .= String "StakingKeyHashes"
              , "stakeKeyHashes" .= toJSON keyHashes

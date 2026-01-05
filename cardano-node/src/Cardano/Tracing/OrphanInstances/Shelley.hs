@@ -237,13 +237,13 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "error" .= String "Refund mismatch"
       ]
 
-instance ToObject (Set (Credential 'Staking)) where
+instance ToObject (Set (Credential Staking)) where
   toObject _verb creds =
     mconcat [ "kind" .= String "StakeCreds"
              , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
 
-instance ToObject (NonEmpty.NonEmpty (KeyHash 'Staking)) where
+instance ToObject (NonEmpty.NonEmpty (KeyHash Staking)) where
   toObject _verb keyHashes =
     mconcat [ "kind" .= String "StakeKeyHashes"
              , "stakeKeyHashes" .= toJSON keyHashes
