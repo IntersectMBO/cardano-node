@@ -22,7 +22,7 @@ constraints:
 packages:
   cardano-node
   cardano-node-capi
-  cardano-node-chairman
+  -- cardano-node-chairman
   cardano-submit-api
   cardano-testnet
   cardano-tracer
