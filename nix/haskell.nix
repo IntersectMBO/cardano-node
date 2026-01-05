@@ -222,30 +222,30 @@ let
               # split data output for ekg to reduce closure size
               package-keys = ["ekg"];
               packages.ekg.components.library.enableSeparateDataOutput = true;
-              packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
-                lib.mkForce [
-                  pkgs.lsof
-                  config.hsPkgs.cardano-node.components.exes.cardano-node
-                  config.hsPkgs.cardano-cli.components.exes.cardano-cli
-                  config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman
-                ];
-              # cardano-node-chairman depends on cardano-node and cardano-cli, and some config files
-              packages.cardano-node-chairman.preCheck =
-                let
-                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
-                in
-                # work around 104 chars socket path limit by using a different temporary directory
-                ''
-                  ${exportCliPath}
-                  ${exportNodePath}
-                  ${exportChairmanPath}
-                  export CARDANO_NODE_SRC=${filteredProjectBase}
-                  # unset TMPDIR, otherwise mktemp will use that as a base
-                  unset TMPDIR
-                  export TMPDIR=$(mktemp -d)
-                  export TMP=$TMPDIR
-                '';
+              # packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
+              #   lib.mkForce [
+              #     pkgs.lsof
+              #     config.hsPkgs.cardano-node.components.exes.cardano-node
+              #     config.hsPkgs.cardano-cli.components.exes.cardano-cli
+              #     config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman
+              #   ];
+              # # cardano-node-chairman depends on cardano-node and cardano-cli, and some config files
+              # packages.cardano-node-chairman.preCheck =
+              #   let
+              #     # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+              #     filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
+              #   in
+              #   # work around 104 chars socket path limit by using a different temporary directory
+              #   ''
+              #     ${exportCliPath}
+              #     ${exportNodePath}
+              #     ${exportChairmanPath}
+              #     export CARDANO_NODE_SRC=${filteredProjectBase}
+              #     # unset TMPDIR, otherwise mktemp will use that as a base
+              #     unset TMPDIR
+              #     export TMPDIR=$(mktemp -d)
+              #     export TMP=$TMPDIR
+              #   '';
               # cardano-testnet depends on cardano-node, cardano-cli, cardano-submit-api and some config files
               packages.cardano-node.components.tests.cardano-node-test.preCheck =
                 let
