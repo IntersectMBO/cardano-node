@@ -487,6 +487,9 @@ handleSimpleNode blockType runP tracers nc onKernel = do
               onKernel nodeKernel
           , rnPeerSharing    = ncPeerSharing nc
           , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+          , rnFeatureFlags = mempty
+          , rnTxSubmissionLogicVersion = undefined -- TODO(10.7)
+          , rnTxSubmissionInitDelay = undefined -- TODO(10.7)
           }
 #ifdef UNIX
     -- initial `SIGHUP` handler, which only rereads the topology file but
