@@ -116,9 +116,6 @@ TraceOptionMetricsPrefix: "cardano.node.metrics."
 # set in downstream code where the node's name is known.
 # TraceOptionNodeName:
 
-# The frequency of peer messages.
-TraceOptionPeerFrequency: 2000
-
 # The frequency of resource messages.
 TraceOptionResourceFrequency: 1000
 
@@ -186,7 +183,7 @@ TraceOptions:
     maxFrequency: 2.0
 
   BlockFetch.Decision:
-    severity: Silence
+    severity: Info
 
   ChainDB:
     severity: Info
@@ -221,9 +218,6 @@ TraceOptions:
   Net.ConnectionManager.Remote:
     severity: Info
 
-  Net.ConnectionManager.Remote.ConnectionManagerCounters:
-    severity: Silence
-
   Net.InboundGovernor:
     severity: Warning
 
@@ -234,7 +228,7 @@ TraceOptions:
     severity: Info
 
   Net.PeerSelection:
-    severity: Silence
+    severity: Info
 
   Resources:
     severity: Silence
