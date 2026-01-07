@@ -33,7 +33,6 @@
     "maxReconnectDelay": 30
   },
   "TraceOptionMetricsPrefix": "cardano.node.metrics.",
-  "TraceOptionPeerFrequency": 2000,
   "TraceOptionResourceFrequency": 1000,
   "TraceOptions": {
     "": {
@@ -50,7 +49,7 @@
       "maxFrequency": 2.0
     },
     "BlockFetch.Decision": {
-      "severity": "Silence"
+      "severity": "Info"
     },
     "ChainDB": {
       "severity": "Info"
@@ -94,9 +93,6 @@
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
     },
-    "Net.ConnectionManager.Remote.ConnectionManagerCounters": {
-      "severity": "Silence"
-    },
     "Net.InboundGovernor": {
       "severity": "Warning"
     },
@@ -107,7 +103,7 @@
       "severity": "Info"
     },
     "Net.PeerSelection": {
-      "severity": "Silence"
+      "severity": "Info"
     },
     "Resources": {
       "severity": "Silence"
