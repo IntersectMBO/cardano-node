@@ -740,7 +740,7 @@ let
                 import ./supervisor-conf.nix
                   { inherit pkgs stateDir;
                     inherit profile;
-                    profiling = "none";
+                    profiling = {};
                     # Include only this taks' node
                     nodeSpecs = if taskName == "tracer"
                       then {}

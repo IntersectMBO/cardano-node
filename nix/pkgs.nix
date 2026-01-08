@@ -23,21 +23,22 @@ in with final;
   # A workbench runner with default parameters from customConfig.
   # Used in flake.nix for "workbench-ci-test" flake output package for CI.
   workbench-runner =
-    { profileName        ? customConfig.localCluster.profileName
+    { profiling          ? {}
+    , profileName        ? customConfig.localCluster.profileName
     , backendName        ? customConfig.localCluster.backendName
     , stateDir           ? customConfig.localCluster.stateDir
     , basePort           ? customConfig.localCluster.basePort
     , useCabalRun        ? customConfig.localCluster.useCabalRun
-    , profiling          ? customConfig.profiling
     , batchName          ? customConfig.localCluster.batchName
     , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
     , cardano-node-rev   ? null
     }:
     workbench.runner
-      { # To construct profile attrset with its `materialise-profile` function.
+      { inherit profiling;
+        # To construct profile attrset with its `materialise-profile` function.
         inherit profileName;
         # To construct backend attrset with its `materialise-profile` function.
-        inherit backendName stateDir basePort useCabalRun profiling;
+        inherit backendName stateDir basePort useCabalRun;
         # Parameters for the workbench shell `start-cluster` command.
         inherit batchName workbenchStartArgs cardano-node-rev;
       }
@@ -175,7 +176,7 @@ in with final;
                   stateDir    = customConfig.localCluster.stateDir;
                   basePort    = customConfig.localCluster.basePort;
                   useCabalRun = customConfig.localCluster.useCabalRun;
-                  profiling = "none";
+                  profiling = {};
                 }
               ;
               profileBundle = profile.profileBundle

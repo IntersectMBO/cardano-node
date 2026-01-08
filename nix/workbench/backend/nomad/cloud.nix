@@ -1,9 +1,9 @@
 { pkgs
 , haskellProject
 , stateDir
-, basePort     # ignored, just passed to the runner (unlike `supervisor.nix`).
+, basePort # ignored, just passed to the runner (unlike `supervisor.nix`).
 ## `useCabalRun` overridden parameter (unlike `supervisor.nix`).
-## `profiling`   overridden parameter (unlike `supervisor.nix`).
+, profiling # Checks below for no profiled builds and no info-table support.
 , ...
 }:
 let
@@ -15,9 +15,6 @@ let
 
   # Unlike the supervisor backend `useCabalRun` is always `false` here.
   useCabalRun = false;
-
-  # Unlike the supervisor backend `profiling` is always `"none"` here.
-  profiling = "none";
 
   extraShellPkgs =
     [
@@ -70,5 +67,15 @@ in
   inherit basePort;
 
   # Ignores the parameters and always returns `false` and `"none"`.
-  inherit useCabalRun profiling;
+  inherit useCabalRun;
+  # Nomad cloud backend clients/nodes get their dependencies from the flake.
+  profiling =
+         # Being extra cautious, no Makefile target for this combination.
+         if profiling.profiledBuild or false
+    then throw "Backend \"nomadcloud\" does not support profiled builds."
+         # The binaries from the flake outputs won't have info-table.
+    else if profiling.infoTable or false
+    then throw "Backend \"nomadcloud\" does not support info-table builds."
+    else profiling
+  ;
 }

@@ -17,7 +17,7 @@ project.shellFor {
   name = "workbench-shell";
 
   shellHook =
-    let inherit (workbench-runner) useCabalRun;
+    let inherit (workbench-runner) profiling useCabalRun;
     in
     ''
     while test $# -gt 0
@@ -29,7 +29,7 @@ project.shellFor {
 
     progress "profile name"            $WB_SHELL_PROFILE
     progress "backend name"            $WB_BACKEND
-    progress "profiling"               $WB_PROFILING
+    progress "profiling"               'profiledBuild=${if profiling.profiledBuild or false then "yes" else "no"} profilingType=${profiling.profilingType or ""}'
     progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
     progress "deployment name"         $WB_DEPLOYMENT_NAME
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA

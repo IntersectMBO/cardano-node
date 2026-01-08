@@ -45,7 +45,6 @@ let
     export WB_SHELL_PROFILE_DATA=${profileDataDir}
     export WB_BACKEND=${backendName}
     export WB_BACKEND_DATA=${backendDataDir}
-    export WB_PROFILING="${profiling}"
     export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
@@ -56,6 +55,16 @@ let
     fi
     export CARDANO_NODE_SOCKET_PATH=${stateDir}/node-0/node.socket
     ''
+    + (pkgs.lib.optionalString (profiling.profiledBuild or false) (
+        ''
+        export WB_PROFILEDBUILD=yes
+        ''
+      ))
+    + (pkgs.lib.optionalString (profiling.infoTable or false) (
+        ''
+        export WB_PROFILINGINFOTABLE=yes
+        ''
+      ))
     + pkgs.lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
       let cardano-mainnet-mirror =
             # "nix" branch last commit 819488be9eabbba6aaa7c931559bc584d8071e3d

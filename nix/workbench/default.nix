@@ -150,6 +150,8 @@ in lib.fix (self: {
           # allow the backend to override its values. The runner must use the
           # value of these two flags from the backend to prevent having a runner
           # that uses a different value than the ones the backend supports.
+          # Note that different flags can be altered, but if Nix dependencies
+          # are built with profiling support is given by `haskellProject`.
           inherit useCabalRun profiling;
         }
   ;
@@ -157,16 +159,16 @@ in lib.fix (self: {
   # A conveniently-parametrizable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
-  # 1. profileName -> profiling -> profile
-  # 2. backendName -> stateDir -> basePort -> useCabalRun -> backend
+  # 1. profileName -> profile
+  # 2. backendName -> stateDir -> basePort -> useCabalRun -> profiling -> backend
   # 3. profile -> backend -> batchName -> runner
   runner =
-    { profileName
+    { profiling
+    , profileName
     , backendName
     , stateDir
     , basePort
     , useCabalRun
-    , profiling
     , batchName
     , workbenchStartArgs
     , cardano-node-rev
@@ -178,7 +180,8 @@ in lib.fix (self: {
                     { inherit backendName stateDir basePort;
                       # The `useCabalRun` and `profiling` flags final decisions
                       # belong to the backend. We allow the backend to override
-                      # its values.
+                      # its attributes that are not `profiling.profiledBuild`,
+                      # this is controlled by the `haskellProject`.
                       # The runner must use the values returned from the backend
                       # to prevent having a runner that uses a different value
                       # than the ones supported by the chosen backend.

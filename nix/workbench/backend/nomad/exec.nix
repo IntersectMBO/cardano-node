@@ -1,9 +1,9 @@
 { pkgs
 , haskellProject
 , stateDir
-, basePort     # ignored, just passed to the runner (unlike `supervisor.nix`).
+, basePort # ignored, just passed to the runner (unlike `supervisor.nix`).
 ## `useCabalRun` overridden parameter (unlike `supervisor.nix`).
-## `profiling`   overridden parameter (unlike `supervisor.nix`).
+, profiling # Nomad cloud limits do not apply here to Nomad exec / local.
 , ...
 }:
 let
@@ -15,9 +15,6 @@ let
 
   # Unlike the supervisor backend `useCabalRun` is always false here.
   useCabalRun = false;
-
-  # Unlike the supervisor backend `profiling` is always `"none"` here.
-  profiling = "none";
 
   extraShellPkgs =
     [

@@ -146,7 +146,7 @@ let
         # number of seconds elapses before supervisord receives a SIGCHLD from
         # the process, supervisord will attempt to kill it with a final SIGKILL.
         stopwaitsecs =
-          if profiling == null || profiling == "none"
+          if !(profiling.profiledBuild or false)
           # Use the default value.
           then 10
           # May need a lot of time for a long running node to dump all the

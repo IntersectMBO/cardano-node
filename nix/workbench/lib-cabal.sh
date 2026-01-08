@@ -1,11 +1,20 @@
-progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(red WB_PROFILING):$(white $WB_PROFILING)"
+progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(red WB_PROFILEDBUILD):$(white ${WB_PROFILEDBUILD:-no}) $(red WB_PROFILINGINFOTABLE):$(white ${WB_PROFILINGINFOTABLE:-no})"
 
-# If profiling envar not empty and not "none", we build with profiling.
-if test -z "${WB_PROFILING:-}" || test "${WB_PROFILING}" = 'none'
+# Check if we build with profiling.
+if test -n "${WB_PROFILEDBUILD:-}" && test "${WB_PROFILEDBUILD}" = 'yes'
 then
-  export WB_FLAGS_CABAL=""
-else
+  # These flags apply only to the executable target.
+  # The dependencies should already be included with profiling in `shell.nix`.
   export WB_FLAGS_CABAL='--enable-profiling --builddir dist-profiled'
+else
+  export WB_FLAGS_CABAL=""
+fi
+# Check if we build with info-table.
+if test -n "${WB_PROFILINGINFOTABLE:-}" && test "${WB_PROFILINGINFOTABLE}" = 'yes'
+then
+  # These flags apply only to the executable target.
+  # The options should already be applied to the dependencies in `shell.nix`.
+  export WB_FLAGS_CABAL="${WB_FLAGS_CABAL} --ghc-options=\"-finfo-table-map\" --ghc-options=\"-fdistinct-constructor-tables\""
 fi
 
 # If RTS args envar not empty, append the extra RTS parameters to `cabal run`.

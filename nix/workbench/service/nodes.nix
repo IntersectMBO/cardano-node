@@ -147,11 +147,16 @@ let
           "--shutdown-on-slot-synced"
           (toString nodeSpec.shutdown_on_slot_synced)
         ];
-    } // optionalAttrs (profiling != "none") {
-      inherit profiling;
-    } // optionalAttrs (profiling == "none") {
-      # Switch to `noGitRev` to avoid rebuilding with every commit.
-      package    = pkgs.cardano-node.passthru.noGitRev;
+    } // optionalAttrs ((profiling.profilingTypeParam or "none") != "none") {
+      # Add the profiling `-h*` RTS option.
+      profiling = profiling.profilingTypeParam;
+    } // optionalAttrs (profiling.eventlog or false) {
+      # Add the `-l` RTS param with profiling.
+      eventlog = true;
+    # Decide where the executable comes from:
+    #########################################
+    } // optionalAttrs (!backend.useCabalRun) {
+      package    = workbenchNix.haskellProject.exes.cardano-node;
     } // optionalAttrs   backend.useCabalRun  {
       # Allow the shell function to take precedence.
       executable = "cardano-node";
