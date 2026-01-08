@@ -111,13 +111,13 @@ newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
 
-instance Exception AlonzoGenesisError where 
+instance Exception AlonzoGenesisError where
   displayException = Api.docToString . Api.prettyError
 
 
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis = do
-  let genesis = Api.alonzoGenesisDefaults  
+  let genesis = Api.alonzoGenesisDefaults
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
@@ -309,7 +309,7 @@ defaultYamlHardforkViaConfig sbe =
         [ "backends" .= Aeson.Array
           [ "EKGBackend"
           , "Forwarder"
-          , fromString $ "PrometheusSimple suffix 0.0.0.0 12798"
+          , fromString $ "PrometheusSimple suffix 127.0.0.1 12798"
           , "Stdout HumanFormatColoured"
           ]
         ]
