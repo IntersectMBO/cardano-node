@@ -24,8 +24,12 @@ import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
@@ -48,9 +52,6 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
@@ -120,7 +121,6 @@ import qualified Options.Applicative as Opt
 import           System.IO
 
 import           Paths_cardano_node (version)
-import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 
 data TraceDocumentationCmd

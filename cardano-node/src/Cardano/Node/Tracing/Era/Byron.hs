@@ -17,7 +17,6 @@ import           Cardano.Api (textShow)
 
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
                    ChainValidationError (..), delegationCertificate)
-import           Ouroboros.Consensus.Protocol.PBFT (PBft, PBftTiebreakerView(..))
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)
@@ -30,6 +29,7 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
                    ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
+import           Ouroboros.Consensus.Protocol.PBFT (PBft, PBftTiebreakerView (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 

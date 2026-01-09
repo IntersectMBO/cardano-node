@@ -23,6 +23,7 @@ module Cardano.Node.Handlers.Shutdown
 where
 
 
+import           Cardano.Node.Handlers.Shutdown.Config (ShutdownConfig (..), ShutdownOn (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block (Header)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -46,7 +47,6 @@ import qualified System.IO.Error as IO
 import           System.Posix.Types (Fd (Fd))
 
 import           Generic.Data.Orphans ()
-import Cardano.Node.Handlers.Shutdown.Config (ShutdownOn (..), ShutdownConfig (..))
 
 data ShutdownTrace
   = ShutdownRequested

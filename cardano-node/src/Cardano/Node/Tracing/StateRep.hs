@@ -23,6 +23,7 @@ import           Cardano.Api (textShow)
 
 import           Cardano.Logging
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin, withOrigin)
@@ -41,7 +42,6 @@ import           Data.Text as T (Text, pack)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
-import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 deriving instance FromJSON ChunkNo
 

@@ -24,7 +24,7 @@ import           Cardano.Ledger.Shelley.API as SL
 import           Cardano.Logging
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol (SomeConsensusProtocol (..), ProtocolInstantiationError)
+import           Cardano.Node.Protocol (ProtocolInstantiationError, SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (EpochSize (..))

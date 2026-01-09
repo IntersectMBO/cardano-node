@@ -11,6 +11,7 @@ import           Cardano.BM.Data.Tracer (HasTextFormatter (..), trStructuredText
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                    Severity (..), ToObject (..), Transformable (..))
 import           Cardano.Logging (LogFormatting (..))
+import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.Compat
 import           Cardano.Node.Tracing.Tracers.Startup
@@ -22,7 +23,6 @@ import           Prelude
 
 import           Data.Aeson (ToJSON)
 import           Data.Text (Text)
-import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 
 instance HasSeverityAnnotation (StartupTrace blk ProtocolInstantiationError) where

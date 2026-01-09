@@ -11,8 +11,8 @@ import           Cardano.Ledger.Credential
 import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Protocol.Traits (ConvertTxId)
-import           Cardano.Node.Queries (GetKESInfo (..), HasKESInfo (..),
-                   HasKESMetricsData (..), LedgerQueries)
+import           Cardano.Node.Queries (GetKESInfo (..), HasKESInfo (..), HasKESMetricsData (..),
+                   LedgerQueries)
 import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,

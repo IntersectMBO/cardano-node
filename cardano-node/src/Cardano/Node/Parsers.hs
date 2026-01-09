@@ -15,19 +15,19 @@ module Cardano.Node.Parsers
 
 import           Cardano.Logging.Types
 import qualified Cardano.Logging.Types as Net
-import           Cardano.Node.Configuration.NodeAddress (
-                   NodeHostIPv4Address (NodeHostIPv4Address), File (..),
+import           Cardano.Node.Configuration.NodeAddress (File (..),
+                   NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Handlers.Shutdown.Config (parseShutdownOn, ShutdownConfig (..))
+import           Cardano.Node.Handlers.Shutdown.Config (ShutdownConfig (..), parseShutdownOn)
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
-import           Data.Foldable
 import           Data.Char (isDigit)
+import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)

@@ -19,6 +19,7 @@
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Prelude (Typeable, maximumDef)
@@ -81,8 +82,8 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
-import           Control.Monad (guard)
 import           Control.Exception
+import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))
@@ -95,7 +96,6 @@ import           Data.Word (Word32)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core
 import           Numeric (showFFloat)
-import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 
 
 {- HLINT ignore "Use const" -}

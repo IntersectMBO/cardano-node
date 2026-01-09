@@ -16,8 +16,12 @@ module Cardano.Node.Tracing.Consistency
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
@@ -35,9 +39,6 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -76,9 +77,9 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
-import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
@@ -97,7 +98,6 @@ import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbo
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
-import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 
 -- | Check the configuration in the given file.

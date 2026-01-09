@@ -23,16 +23,16 @@ import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
-import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PS
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
 import           Data.Proxy (Proxy (..))
-import           Data.Time (DiffTime)
 import           Data.Text (pack)
+import           Data.Time (DiffTime)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 --------------------------------------------------------------------------------

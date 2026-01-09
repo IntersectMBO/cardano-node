@@ -4,8 +4,8 @@ module Cardano.Node.Tracing.NodeStartupInfo
   ( NodeStartupInfo (..)
   ) where
 
+import           Cardano.Logging.Types (MetaTrace (..), Namespace (..), SeverityS (..))
 import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
-import           Cardano.Logging.Types (MetaTrace(..), Namespace (..), SeverityS (..))
 
 instance MetaTrace NodeStartupInfo where
   namespaceFor NodeStartupInfo {}  =

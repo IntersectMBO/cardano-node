@@ -24,8 +24,7 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import qualified Data.ByteString.Lazy as LB
-
-import Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe)
 
 readGenesisMaybe :: Maybe GenesisFile
                  -> Maybe GenesisHash

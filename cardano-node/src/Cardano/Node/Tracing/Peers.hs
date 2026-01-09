@@ -6,8 +6,8 @@ module Cardano.Node.Tracing.Peers
   ) where
 
 import           Cardano.Logging
+import           Cardano.Logging.Types.NodePeers (NodePeers (..))
 import           Cardano.Node.Tracing.Tracers.Peer (PeerT, ppPeer)
-import           Cardano.Logging.Types.NodePeers (NodePeers(..))
 
 instance MetaTrace NodePeers where
   namespaceFor NodePeers {}  =
