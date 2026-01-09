@@ -46,6 +46,83 @@ common maybe-unix
   if !os(windows)
     build-depends:      unix
 
+library cardano-configuration
+  import:               project-config
+  visibility:           public
+                      
+  if flag(unexpected_thunks)
+    cpp-options:        -DUNEXPECTED_THUNKS
+
+  if os(linux) && flag(systemd)
+    cpp-options:        -DSYSTEMD
+    build-depends:      lobemo-scribe-systemd
+                      , systemd >= 2.3.0
+
+  hs-source-dirs:       cardano-configuration/src
+
+  exposed-modules:      Cardano.Node.Configuration.POM
+                        Cardano.Node.Configuration.LedgerDB
+                        Cardano.Node.Configuration.NodeAddress
+                        Cardano.Node.Configuration.Socket
+                        Cardano.Node.Configuration.TopologyP2P
+                        Cardano.Node.Handlers.Shutdown.Config
+                        Cardano.Node.Orphans
+                        Cardano.Node.Protocol.Parsing
+                        Cardano.Node.Protocol.Traits
+                        Cardano.Node.Startup.Types
+                        Cardano.Node.Types
+                        Cardano.Tracing.Config
+                        Cardano.Tracing.Render
+                        Cardano.Tracing.OrphanInstances.Common
+                        Cardano.Tracing.OrphanInstances.Network
+
+  other-modules:        Paths_cardano_node
+  autogen-modules:      Paths_cardano_node
+
+  build-depends:        base
+                      , aeson >= 2.1.0.0
+                      , base16-bytestring
+                      , bytestring
+                      , cardano-api ^>= 10.19
+                      , cardano-crypto-class ^>=2.2.3.2
+                      , cardano-crypto-wrapper
+                      , cardano-ledger-core
+                      , cardano-prelude
+                      , cardano-slotting >= 0.2
+                      , containers
+                      , contra-tracer
+                      , deepseq
+                      , directory
+                      , dns
+                      , filepath
+                      , generic-data
+                      , hashable
+                      , io-classes:si-timers >= 1.5
+                      , iohk-monitoring ^>= 0.2
+                      , network-mux
+                      , iproute
+                      , network
+                      , network-mux >= 0.8
+                      , nothunks
+                      , optparse-applicative-fork >= 0.18.1
+                      , ouroboros-consensus ^>= 0.28
+                      , ouroboros-consensus-cardano ^>= 0.26
+                      , ouroboros-consensus-diffusion ^>= 0.24
+                      , ouroboros-network-api ^>= 0.16
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.4
+                      , ouroboros-network-framework ^>= 0.19.2
+                      , ouroboros-network-protocols ^>= 0.15
+                      , random
+                      , safe-exceptions
+                      , scientific
+                      , sop-core
+                      , text >= 2.0
+                      , time
+                      , trace-dispatcher ^>= 2.11.0
+                      , transformers-except
+                      , typed-protocols:{typed-protocols, stateful} >= 1.0
+                      , yaml
+
 library
   import:               project-config
                       , maybe-unix
@@ -61,15 +138,8 @@ library
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.Node.Configuration.Logging
-                        Cardano.Node.Configuration.NodeAddress
-                        Cardano.Node.Configuration.POM
-                        Cardano.Node.Configuration.LedgerDB
-                        Cardano.Node.Configuration.Socket
-                        Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
-                        Cardano.Node.Handlers.Shutdown.Config
                         Cardano.Node.Handlers.TopLevel
-                        Cardano.Node.Orphans
                         Cardano.Node.Parsers
                         Cardano.Node.Pretty
                         Cardano.Node.Protocol
@@ -79,14 +149,11 @@ library
                         Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
                         Cardano.Node.Protocol.Dijkstra
-                        Cardano.Node.Protocol.Parsing
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
-                        Cardano.Node.Protocol.Traits
                         Cardano.Node.Queries
                         Cardano.Node.Run
                         Cardano.Node.Startup
-                        Cardano.Node.Startup.Types
                         Cardano.Node.STM
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
@@ -121,18 +188,13 @@ library
                         Cardano.Node.Tracing.Tracers.Resources
                         Cardano.Node.Tracing.Tracers.Shutdown
                         Cardano.Node.Tracing.Tracers.Startup
-                        Cardano.Node.Types
-                        Cardano.Tracing.Config
                         Cardano.Tracing.HasIssuer
                         Cardano.Tracing.Metrics
                         Cardano.Tracing.OrphanInstances.Byron
-                        Cardano.Tracing.OrphanInstances.Common
                         Cardano.Tracing.OrphanInstances.Consensus
                         Cardano.Tracing.OrphanInstances.HardFork
-                        Cardano.Tracing.OrphanInstances.Network
                         Cardano.Tracing.OrphanInstances.Shelley
                         Cardano.Tracing.Peer
-                        Cardano.Tracing.Render
                         Cardano.Tracing.Shutdown
                         Cardano.Tracing.Startup
                         Cardano.Tracing.Tracers
@@ -159,6 +221,7 @@ library
                       , cardano-ledger-core
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
+                      , cardano-node:cardano-configuration
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
@@ -171,10 +234,8 @@ library
                       , dns
                       , ekg-wai
                       , ekg-core
-                      , filepath
                       , formatting
                       , generic-data
-                      , hashable
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} >= 1.5
                       , iohk-monitoring ^>= 0.2
@@ -206,7 +267,6 @@ library
                       , random
                       , resource-registry
                       , safe-exceptions
-                      , scientific
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
@@ -222,7 +282,6 @@ library
                       , transformers
                       , transformers-except
                       , typed-protocols:{typed-protocols, stateful} >= 1.0
-                      , yaml
 
 executable cardano-node
   import:               project-config
@@ -241,8 +300,9 @@ executable cardano-node
 
   build-depends:        base
                       , cardano-crypto-class
+                      
                       , cardano-git-rev
-                      , cardano-node
+                      , cardano-node:{cardano-node,cardano-configuration}
                       , optparse-applicative-fork
                       , text
 

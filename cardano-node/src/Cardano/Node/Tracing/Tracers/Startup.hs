@@ -24,7 +24,7 @@ import           Cardano.Ledger.Shelley.API as SL
 import           Cardano.Logging
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
+import           Cardano.Node.Protocol (SomeConsensusProtocol (..), ProtocolInstantiationError)
 import           Cardano.Node.Startup
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
@@ -63,7 +63,7 @@ getStartupInfo
   :: NodeConfiguration
   -> SomeConsensusProtocol
   -> FilePath
-  -> IO [StartupTrace blk]
+  -> IO [StartupTrace blk ProtocolInstantiationError]
 getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
   nodeStartTime <- getCurrentTime
   let cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
@@ -147,7 +147,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
          , ToJSON (BlockNodeToNodeVersion blk)
          , ToJSON (BlockNodeToClientVersion blk)
          )
-        => LogFormatting (StartupTrace blk) where
+        => LogFormatting (StartupTrace blk ProtocolInstantiationError) where
   forHuman = ppStartupInfoTrace
 
   forMachine dtal (StartupInfo addresses
@@ -309,7 +309,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
     ]
   asMetrics _ = []
 
-instance MetaTrace  (StartupTrace blk) where
+instance MetaTrace  (StartupTrace blk ProtocolInstantiationError) where
   namespaceFor StartupInfo {}  =
     Namespace [] ["Info"]
   namespaceFor StartupP2PInfo {}  =
@@ -497,7 +497,7 @@ nodeToNodeVersionToInt = \case
 
 -- | Pretty print 'StartupInfoTrace'
 --
-ppStartupInfoTrace :: StartupTrace blk -> Text
+ppStartupInfoTrace :: StartupTrace blk ProtocolInstantiationError -> Text
 ppStartupInfoTrace (StartupInfo addresses
                                 localSocket
                                 supportedNodeToNodeVersions

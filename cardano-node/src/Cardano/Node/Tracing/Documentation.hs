@@ -120,6 +120,7 @@ import qualified Options.Applicative as Opt
 import           System.IO
 
 import           Paths_cardano_node (version)
+import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 
 data TraceDocumentationCmd
@@ -255,7 +256,7 @@ docTracersFirstPhase condConfigFileName = do
                 trBase trForward mbTrEKG
                 ["Startup"]
     configureTracers configReflection trConfig [startupTr]
-    startupTrDoc <- documentTracer (startupTr :: Logging.Trace IO (StartupTrace blk))
+    startupTrDoc <- documentTracer (startupTr :: Logging.Trace IO (StartupTrace blk ProtocolInstantiationError))
 
     shutdownTr <- mkCardanoTracer
                 trBase trForward mbTrEKG

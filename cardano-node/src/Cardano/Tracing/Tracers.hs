@@ -136,6 +136,7 @@ import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring.Wai as EKG
+import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -351,7 +352,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
     -- TODO: startupTracer should ignore severity level (i.e. it should always
     -- be printed)!
     , startupTracer = toLogObject' verb (appendName "startup" tr)
-              <> Tracer (\(ev :: StartupTrace blk) -> traceForgeEnabledMetric ekgDirect ev)
+              <> Tracer (\(ev :: StartupTrace blk ProtocolInstantiationError) -> traceForgeEnabledMetric ekgDirect ev)
 
     , shutdownTracer = toLogObject' verb $ appendName "shutdown" tr
     , nodeVersionTracer = Tracer (\(ev :: NodeVersionTrace) -> traceVersionMetric ekgDirect ev)
@@ -364,7 +365,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
     , ledgerMetricsTracer = nullTracer
     }
  where
-   traceForgeEnabledMetric :: Maybe EKGDirect -> StartupTrace blk -> IO ()
+   traceForgeEnabledMetric :: Maybe EKGDirect -> StartupTrace blk ProtocolInstantiationError -> IO ()
    traceForgeEnabledMetric mbEKGDirect ev =
       case mbEKGDirect of
         Just ekgDirect' ->

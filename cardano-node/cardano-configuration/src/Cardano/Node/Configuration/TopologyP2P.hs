@@ -247,7 +247,7 @@ instance ToJSON adr => ToJSON (NetworkTopology adr) where
 readTopologyFile :: ()
   => forall adr. FromJSON adr
   => NodeConfiguration
-  -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text (NetworkTopology adr))
+  -> CT.Tracer IO (StartupTrace blk protocolInstantiationError) -> IO (Either Text (NetworkTopology adr))
 readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode, ncProtocolFiles} tracer = runExceptT $ do
   bs <- handleIOExceptionsLiftWith handler $ BS.readFile topologyFilePath
   topology@RealNodeTopology{ntUseLedgerPeers, ntUseBootstrapPeers, ntPeerSnapshotPath} <-
@@ -340,7 +340,7 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
 
 readTopologyFileOrError :: ()
   => forall adr. FromJSON adr
-  => NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (NetworkTopology adr)
+  => NodeConfiguration -> CT.Tracer IO (StartupTrace blk protocolInstantiationError) -> IO (NetworkTopology adr)
 readTopologyFileOrError nc tr =
       readTopologyFile nc tr
   >>= either (\err -> error $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "

@@ -55,7 +55,7 @@ library
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
-                      , cardano-node
+                      , cardano-node:{cardano-node,cardano-configuration}
                       , cardano-ping ^>= 0.9
                       , cardano-prelude
                       , contra-tracer

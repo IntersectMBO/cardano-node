@@ -29,6 +29,7 @@ import           Prelude (IO)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           "contra-tracer" Control.Tracer (Tracer (..))
+import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 data Tracers peer localPeer blk m = Tracers
   { -- | Trace the ChainDB
@@ -43,7 +44,7 @@ data Tracers peer localPeer blk m = Tracers
     -- | Diffusion tracers
   , diffusionTracers      :: !(Cardano.Diffusion.CardanoTracers m)
   , churnModeTracer       :: !(Tracer IO Cardano.Diffusion.TraceChurnMode)
-  , startupTracer         :: !(Tracer IO (StartupTrace blk))
+  , startupTracer         :: !(Tracer IO (StartupTrace blk ProtocolInstantiationError))
   , shutdownTracer        :: !(Tracer IO ShutdownTrace)
   , nodeInfoTracer        :: !(Tracer IO NodeInfo)
   , nodeVersionTracer     :: !(Tracer IO NodeVersionTrace)

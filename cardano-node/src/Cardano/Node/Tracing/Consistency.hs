@@ -97,6 +97,7 @@ import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbo
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
+import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 
 -- | Check the configuration in the given file.
@@ -138,7 +139,7 @@ getAllNamespaces =
         ledgerMetricsNS = map nsGetTuple
                           (allNamespaces :: [Namespace LedgerMetrics])
         startupNS = map (nsGetTuple . nsReplacePrefix ["Startup"])
-                        (allNamespaces :: [Namespace (StartupTrace blk)])
+                        (allNamespaces :: [Namespace (StartupTrace blk ProtocolInstantiationError)])
         shutdownNS = map (nsGetTuple . nsReplacePrefix ["Shutdown"])
                         (allNamespaces :: [Namespace ShutdownTrace])
         nodeVersionNS = map (nsGetTuple . nsReplacePrefix ["Version"])

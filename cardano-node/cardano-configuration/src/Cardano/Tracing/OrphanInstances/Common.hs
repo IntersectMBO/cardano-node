@@ -45,7 +45,6 @@ import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                    Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                    Transformable (..))
-import           Cardano.Node.Handlers.Shutdown ()
 
 import           Data.Aeson hiding (Value)
 import           Data.Scientific (coefficient)

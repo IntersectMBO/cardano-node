@@ -41,6 +41,7 @@ import           Data.Text as T (Text, pack)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
+import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 deriving instance FromJSON ChunkNo
 
@@ -289,7 +290,7 @@ traceNodeStateChainDB _scp tr ev =
 
 traceNodeStateStartup
   :: Trace IO NodeState
-  -> Startup.StartupTrace blk
+  -> Startup.StartupTrace blk ProtocolInstantiationError
   -> IO ()
 traceNodeStateStartup tr ev =
   case ev of

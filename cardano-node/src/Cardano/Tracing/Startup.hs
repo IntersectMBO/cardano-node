@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -21,9 +22,10 @@ import           Prelude
 
 import           Data.Aeson (ToJSON)
 import           Data.Text (Text)
+import Cardano.Node.Protocol (ProtocolInstantiationError)
 
 
-instance HasSeverityAnnotation (StartupTrace blk) where
+instance HasSeverityAnnotation (StartupTrace blk ProtocolInstantiationError) where
     getSeverityAnnotation (StartupSocketConfigError _) = Error
     getSeverityAnnotation NetworkConfigUpdate = Notice
     getSeverityAnnotation (NetworkConfigUpdateError _) = Error
@@ -35,17 +37,17 @@ instance HasSeverityAnnotation (StartupTrace blk) where
     getSeverityAnnotation WarningDevelopmentNodeToClientVersions {} = Warning
     getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (StartupTrace blk)
+instance HasPrivacyAnnotation (StartupTrace blk ProtocolInstantiationError)
 
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
          , ToJSON (BlockNodeToNodeVersion blk)
          , ToJSON (BlockNodeToClientVersion blk)
          )
-      => Transformable Text IO (StartupTrace blk) where
+      => Transformable Text IO (StartupTrace blk ProtocolInstantiationError) where
   trTransformer = trStructuredText
 
-instance HasTextFormatter (StartupTrace blk) where
+instance HasTextFormatter (StartupTrace blk ProtocolInstantiationError) where
   formatText a _ = ppStartupInfoTrace a
 
 instance ( Show (BlockNodeToNodeVersion blk)
@@ -53,5 +55,5 @@ instance ( Show (BlockNodeToNodeVersion blk)
          , ToJSON (BlockNodeToNodeVersion blk)
          , ToJSON (BlockNodeToClientVersion blk)
          )
-        => ToObject (StartupTrace blk) where
+        => ToObject (StartupTrace blk ProtocolInstantiationError) where
   toObject verb = forMachine (toDetailLevel verb)

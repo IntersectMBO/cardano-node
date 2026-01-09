@@ -318,7 +318,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
 --   by 'cardano-tracer' service as a datapoint. It can be extended in the future.
 traceNodeStartupInfo
   :: Tracer IO NodeStartupInfo
-  -> [StartupTrace blk]
+  -> [StartupTrace blk ProtocolInstantiationError]
   -> IO ()
 traceNodeStartupInfo t startupTrace =
   forM_ startupTrace $ \case
@@ -633,7 +633,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
 
 -- | The P2P SIGHUP handler can update block forging & reconfigure network topology.
 --
-installSigHUPHandler :: Tracer IO (StartupTrace blk)
+installSigHUPHandler :: Tracer IO (StartupTrace blk ProtocolInstantiationError)
                      -> Tracer IO KESAgentClientTrace
                      -> Api.BlockType blk
                      -> NodeConfiguration
@@ -668,7 +668,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc nodeKernel localR
 
 
 #ifdef UNIX
-updateBlockForging :: Tracer IO (StartupTrace blk)
+updateBlockForging :: Tracer IO (StartupTrace blk ProtocolInstantiationError)
                    -> Tracer IO KESAgentClientTrace
                    -> Api.BlockType blk
                    -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
@@ -720,7 +720,7 @@ updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
     wasFileRemovedFromScope (CardanoProtocolInstantiationError _) = Nothing
 
 
-updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
+updateTopologyConfiguration :: Tracer IO (StartupTrace blk ProtocolInstantiationError)
                             -> NodeConfiguration
                             -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
                             -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
@@ -752,7 +752,7 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
           writeTVar ledgerPeerSnapshotPathVar ntPeerSnapshotPath
 #endif
 
-updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
+updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk ProtocolInstantiationError)
                          -> NodeConfiguration
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> STM IO UseLedgerPeers

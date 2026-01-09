@@ -6,7 +6,6 @@ import qualified Cardano.Api as Api
 
 import           Cardano.Network.Diffusion (CardanoLocalRootConfig)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Types (PeerSnapshotFile)
 import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
 import           Ouroboros.Consensus.Cardano.Block
@@ -27,7 +26,7 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import           Data.Word (Word64)
 import qualified Network.Socket as Socket
 
-data StartupTrace blk =
+data StartupTrace blk protocolInstantiationError =
   -- | Log startup information.
   --
     StartupInfo
@@ -55,7 +54,7 @@ data StartupTrace blk =
   | BlockForgingUpdate EnabledBlockForging
 
   -- | Protocol instantiation error when updating block forging
-  | BlockForgingUpdateError ProtocolInstantiationError
+  | BlockForgingUpdateError protocolInstantiationError
 
   -- | Mismatched block type
   | BlockForgingBlockTypeMismatch
