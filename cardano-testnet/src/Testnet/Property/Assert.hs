@@ -1,7 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -10,7 +9,6 @@
 module Testnet.Property.Assert
   ( assertByDeadlineIOCustom
   , readJsonLines
-  , assertChainExtended
   , getRelevantSlots
   , assertExpectedSposInLedgerState
   , assertErasEqual
@@ -38,30 +36,23 @@ import qualified Data.Time.Clock as DTC
 import           Data.Type.Equality
 import           Data.Word (Word8)
 import           GHC.Stack as GHC
-import           RIO (throwString)
 
 import           Testnet.Process.RunIO
 import           Testnet.Start.Types
-import           Testnet.Types
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 import           Hedgehog.Extras.Internal.Test.Integration (IntegrationState)
-import qualified Hedgehog.Extras.Stock.IO.File as IO
-import qualified Hedgehog.Extras.Test.Base as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
+
+import           RIO (throwString)
 
 newlineBytes :: Word8
 newlineBytes = 10
 
 readJsonLines :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m [Value]
 readJsonLines fp = withFrozenCallStack $ mapMaybe (Aeson.decode @Value) . LBS.split newlineBytes <$> H.evalIO (LBS.readFile fp)
-
-fileJsonGrep :: FilePath -> (Value -> Bool) -> IO Bool
-fileJsonGrep fp f = do
-  lines <- LBS.split newlineBytes <$> LBS.readFile fp
-  let jsons = mapMaybe (Aeson.decode @Value) lines
-  return $ L.any f jsons
 
 assertByDeadlineIOCustom
   :: (MonadIO m, HasCallStack)
@@ -93,30 +84,16 @@ assertExpectedSposInLedgerState output (NumPools numExpectedPools) execConfig = 
 
   ePoolSet <-  liftIOAnnotated (Aeson.eitherDecodeFileStrict' @(Set PoolId) output)
   case ePoolSet of
-    Left err -> 
+    Left err ->
       throwString $ "Failed to decode stake pools from ledger state: " <> err
     Right poolSet -> do
       let numPoolsInLedgerState = Set.size poolSet
       unless (numPoolsInLedgerState == numExpectedPools) $
-        throwString $ unlines 
+        throwString $ unlines
           [ "Expected number of stake pools not found in ledger state"
           , "Expected: ", show numExpectedPools
           , "Actual: ", show numPoolsInLedgerState
           ]
-
-assertChainExtended
-  :: HasCallStack
-  => MonadIO m
-  => DTC.UTCTime
-  -> NodeLoggingFormat
-  -> TestnetNode
-  -> m ()
-assertChainExtended deadline nodeLoggingFormat TestnetNode{nodeName, nodeStdout} = withFrozenCallStack $
-  assertByDeadlineIOCustom ("Chain not extended in " <> nodeName) deadline $ do
-    case nodeLoggingFormat of
-      NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdout
-      NodeLoggingFormatAsJson -> fileJsonGrep nodeStdout $ \v ->
-                                    Aeson.parseMaybe (Aeson.parseJSON @(LogEntry Kind)) v == Just (LogEntry (Kind "AddedToCurrentChain"))
 
 newtype LogEntry a = LogEntry
   { unLogEntry :: a
