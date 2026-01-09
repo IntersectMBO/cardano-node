@@ -190,6 +190,7 @@ defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
     <> tracers
     <> [("TraceOptions", traceOptions)]
+    -- <> [("TraceOptions", Aeson.Object mempty)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
  where
@@ -308,10 +309,11 @@ defaultYamlHardforkViaConfig sbe =
       [ "" .= Aeson.object
         [ "backends" .= Aeson.Array
           [ "EKGBackend"
-          , "Forwarder"
-          , fromString $ "PrometheusSimple suffix 127.0.0.1 12798"
+          , "PrometheusSimple suffix 0.0.0.0 12798"
           , "Stdout HumanFormatColoured"
           ]
+        , "detail" .= ("DNormal" :: Aeson.Value)
+        , "severity" .= ("Notice" :: Aeson.Value)
         ]
       ]
 
