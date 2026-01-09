@@ -44,7 +44,7 @@ import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..)
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Startup (StartupTrace (..))
+import           Cardano.Node.Startup.Types (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
