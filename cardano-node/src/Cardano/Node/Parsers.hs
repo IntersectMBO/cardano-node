@@ -20,7 +20,7 @@ import           Cardano.Node.Configuration.NodeAddress (
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Handlers.Shutdown.Config (parseShutdownOn, ShutdownConfig (..))
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool

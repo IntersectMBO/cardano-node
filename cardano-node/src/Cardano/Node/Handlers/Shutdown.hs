@@ -9,17 +9,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Handlers.Shutdown
-  ( ShutdownOn (..)
-  , parseShutdownOn
-
-  -- * Generalised shutdown handling
-  , ShutdownConfig (..)
-  , withShutdownHandling
-
+  ( -- * Generalised shutdown handling
+    withShutdownHandling
   , ShutdownTrace (..)
 
   -- * Watch ChainDB for passing a configured slot sync limit threshold,
@@ -43,53 +37,16 @@ import           Control.Monad (void, when)
 import           Control.ResourceRegistry (ResourceRegistry)
 import           "contra-tracer" Control.Tracer
 import           Data.Aeson (FromJSON, ToJSON)
-import           Data.Foldable (asum)
 import           Data.Text (Text, pack)
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle.FD as IO (fdToHandle)
-import qualified Options.Applicative as Opt
 import           System.Exit (ExitCode (..))
 import qualified System.IO as IO
 import qualified System.IO.Error as IO
 import           System.Posix.Types (Fd (Fd))
-import qualified Text.Read as Read
 
 import           Generic.Data.Orphans ()
-
-data ShutdownOn
-  = ASlot  !SlotNo
-  | ABlock !BlockNo
-  | NoShutdown
-  deriving (Generic, Eq, Show)
-
-deriving instance FromJSON ShutdownOn
-deriving instance ToJSON ShutdownOn
-deriving instance NFData ShutdownOn
-
-
-parseShutdownOn :: Opt.Parser ShutdownOn
-parseShutdownOn = asum
-  [ Opt.option (ASlot . SlotNo <$> bounded "SLOT") $ mconcat
-    [ Opt.long "shutdown-on-slot-synced"
-    , Opt.metavar "SLOT"
-    , Opt.help "Shut down the process after ChainDB is synced up to the specified slot"
-    , Opt.hidden
-    ]
-  , Opt.option (ABlock . BlockNo <$> bounded "BLOCK") $ mconcat
-    [ Opt.long "shutdown-on-block-synced"
-    , Opt.metavar "BLOCK"
-    , Opt.help "Shut down the process after ChainDB is synced up to the specified block"
-    , Opt.hidden
-    ]
-  , pure NoShutdown
-  ]
-  where
-    bounded :: forall a. (Bounded a, Integral a, Show a) => String -> Opt.ReadM a
-    bounded t = Opt.eitherReader $ \s -> do
-      i <- Read.readEither @Integer s
-      when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
-      when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
-      pure (fromIntegral i)
+import Cardano.Node.Handlers.Shutdown.Config (ShutdownOn (..), ShutdownConfig (..))
 
 data ShutdownTrace
   = ShutdownRequested
@@ -112,13 +69,6 @@ data AndWithOrigin
   | WithoutOrigin
 
 deriving instance Eq AndWithOrigin
-
-data ShutdownConfig
-  = ShutdownConfig
-    { scIPC         :: !(Maybe Fd)
-    , scOnSyncLimit :: !(Maybe ShutdownOn)
-    }
-    deriving (Eq, Show)
 
 -- | We provide an optional cross-platform method to politely request shut down.
 -- The parent process passes us the file descriptor number of the read end of a pipe,

@@ -67,6 +67,7 @@ library
                         Cardano.Node.Configuration.Socket
                         Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
+                        Cardano.Node.Handlers.Shutdown.Config
                         Cardano.Node.Handlers.TopLevel
                         Cardano.Node.Orphans
                         Cardano.Node.Parsers

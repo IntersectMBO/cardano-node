@@ -12,7 +12,7 @@ import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
 
 import qualified Cardano.Ledger.Api.Transition as Ledger (tcShelleyGenesisL)
 import           Cardano.Node.Configuration.POM
-import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
+import           Cardano.Node.Handlers.Shutdown.Config (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile,

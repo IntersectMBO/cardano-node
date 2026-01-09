@@ -31,7 +31,7 @@ import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
-import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Handlers.Shutdown.Config (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
