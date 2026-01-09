@@ -504,7 +504,7 @@ instance AE.FromJSON TraceOptionForwarder where
       queueSize <- case maybeQueueSize of
                      -- If the new field was provided we use it.
                      (Just qs) -> return qs
-                     -- Else we look for the deprectaed fields.
+                     -- Else we look for the deprecated fields.
                      Nothing   -> do
                        -- We keep the same default values.
                        connQueueSize    <- obj AE..:? "connQueueSize"    AE..!= 1024

@@ -274,7 +274,7 @@ In this example, `cardano-tracer` listens on port 34567. Nodes can connect via I
 
 ### Important
 
-On same-host setups sockets are always preferrable due to **less overhead and better performance**. On multi-host setups, socket connection via SSH tunnels is always preferrable due to **increased security**.
+On same-host setups sockets are always preferable due to **less overhead and better performance**. On multi-host setups, socket connection via SSH tunnels is always preferable due to **increased security**.
 
 Use TCP forwarding **if and only if** you control each and every aspect of the environment, such as port mapping or firewalls, or virtual network setup - the 'forwarding protocol' does not implement encrypting traffic nor authentication methods.
 
@@ -449,7 +449,7 @@ rts_gc_bytes_copied 17114384
 # EOF
 ```
 
-Passing metric help annotations to the service can be done in the config file, either as a key-value map from metric name to help text, or as a seperate JSON file containing such a map.
+Passing metric help annotations to the service can be done in the config file, either as a key-value map from metric name to help text, or as a separate JSON file containing such a map.
 The system's internal metric names have to be used as keys (cf. [metrics documentation](https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/new-tracing/tracers_doc_generated.md#metrics)).
 ```
 "metricsHelp": "path/to/key-value-map.json"
