@@ -10,7 +10,8 @@ import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Ledger.Credential
 import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
-import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
+import           Cardano.Node.Protocol.Traits (ConvertTxId)
+import           Cardano.Node.Queries (GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
 import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.HasIssuer (HasIssuer)

@@ -40,7 +40,7 @@ import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Logging
-import           Cardano.Node.Queries (ConvertTxId (..))
+import           Cardano.Node.Protocol.Traits (ConvertTxId (..))
 import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
 import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))

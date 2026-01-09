@@ -27,7 +27,7 @@ import           Cardano.Network.OrphanInstances ()
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
-import           Cardano.Node.Queries (ConvertTxId)
+import           Cardano.Node.Protocol.Traits (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)

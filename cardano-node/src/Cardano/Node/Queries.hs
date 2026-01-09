@@ -11,9 +11,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Node.Queries
-  ( ConvertTxId (..)
-  -- * KES
-  , MaxKESEvolutions (..)
+  ( -- * KES
+    MaxKESEvolutions (..)
   , OperationalCertStartKESPeriod (..)
   , GetKESInfo(..)
   , HasKESInfo(..)
@@ -38,21 +37,16 @@ module Cardano.Node.Queries
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hash as Crypto
-import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 import qualified Cardano.Ledger.Conway.State as Conway
-import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.State as Ledger
-import qualified Cardano.Ledger.TxIn as Ledger
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
-import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
 import qualified Ouroboros.Consensus.Cardano as Cardano
 import qualified Ouroboros.Consensus.Cardano.Block as Cardano
 import           Ouroboros.Consensus.HardFork.Combinator
@@ -65,7 +59,6 @@ import           Ouroboros.Consensus.Node (NodeKernel (..))
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.Shelley.Node ()
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.TypeFamilyWrappers
@@ -75,40 +68,12 @@ import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
 
 import           Control.Monad.STM (atomically)
-import           Data.ByteString (ByteString)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP
 import           Data.SOP.Functors
 import           Data.Word (Word64)
 import           Lens.Micro ((^.))
-
---
--- * TxId -> ByteString projection
---
--- | Convert a transaction ID to raw bytes.
-class ConvertTxId blk where
-  txIdToRawBytes :: TxId (GenTx blk) -> ByteString
-
-instance ConvertTxId ByronBlock where
-  txIdToRawBytes (ByronTxId txId) = Byron.Crypto.abstractHashToBytes txId
-  txIdToRawBytes (ByronDlgId dlgId) = Byron.Crypto.abstractHashToBytes dlgId
-  txIdToRawBytes (ByronUpdateProposalId upId) =
-    Byron.Crypto.abstractHashToBytes upId
-  txIdToRawBytes (ByronUpdateVoteId voteId) =
-    Byron.Crypto.abstractHashToBytes voteId
-
-instance ConvertTxId (ShelleyBlock protocol c) where
-  txIdToRawBytes (ShelleyTxId txId) =
-    Crypto.hashToBytes . Ledger.extractHash . Ledger.unTxId $ txId
-
-instance All ConvertTxId xs
-      => ConvertTxId (HardForkBlock xs) where
-  txIdToRawBytes =
-    hcollapse
-      . hcmap (Proxy @ConvertTxId) (K . txIdToRawBytes . unwrapGenTxId)
-      . getOneEraGenTxId
-      . getHardForkGenTxId
 
 --
 -- * KES

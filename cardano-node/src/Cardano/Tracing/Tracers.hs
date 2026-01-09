@@ -38,6 +38,7 @@ import           Cardano.BM.Tracing
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
+import           Cardano.Node.Protocol.Traits (ConvertTxId) 
 import           Cardano.Node.Queries
 import           Cardano.Node.Startup
 import qualified Cardano.Node.STM as STM

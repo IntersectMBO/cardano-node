@@ -23,7 +23,7 @@ module Cardano.Tracing.Render
   ) where
 
 import           Cardano.BM.Tracing (TracingVerbosity (..))
-import           Cardano.Node.Queries (ConvertTxId (..))
+import           Cardano.Node.Protocol.Traits (ConvertTxId (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
