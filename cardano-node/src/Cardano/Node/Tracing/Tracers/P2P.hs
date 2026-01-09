@@ -299,13 +299,14 @@ instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerT
              , "targetLocalEstablished" .= tLocalEst
              , "selectedPeers" .= toJSONList (toList sp)
              ]
-  forMachine _dtal (TracePromoteColdFailed tEst aEst p d err) =
+  forMachine _dtal (TracePromoteColdFailed tEst aEst p d err f) =
     mconcat [ "kind" .= String "PromoteColdFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              , "delay" .= toJSON d
              , "reason" .= show err
+             , "forgotten" .= show f
              ]
   forMachine _dtal (TracePromoteColdDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdDone"
@@ -319,13 +320,14 @@ instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerT
              , "actualEstablished" .= actualKnown
              , "selectedPeers" .= toJSONList (toList sp)
              ]
-  forMachine _dtal (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err) =
+  forMachine _dtal (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err f) =
     mconcat [ "kind" .= String "PromoteColdBigLedgerPeerFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              , "delay" .= toJSON d
              , "reason" .= show err
+             , "forgotten" .= show f
              ]
   forMachine _dtal (TracePromoteColdBigLedgerPeerDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdBigLedgerPeerDone"
