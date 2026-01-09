@@ -79,6 +79,7 @@ library
                         Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
                         Cardano.Node.Protocol.Dijkstra
+                        Cardano.Node.Protocol.Parsing
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Protocol.Traits
