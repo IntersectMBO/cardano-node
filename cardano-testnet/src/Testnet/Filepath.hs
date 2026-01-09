@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,6 +18,8 @@ import           System.FilePath
 
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
+import           RIO (Display (..))
+
 
 makeSprocket
   :: TmpAbsolutePath
@@ -31,6 +34,9 @@ makeSprocket tmpAbsPath node
 newtype TmpAbsolutePath = TmpAbsolutePath
   { unTmpAbsPath :: FilePath
   } deriving (Eq, Show, IsString)
+
+instance Display TmpAbsolutePath where
+  textDisplay = fromString . unTmpAbsPath
 
 makeTmpRelPath :: TmpAbsolutePath -> FilePath
 makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp
