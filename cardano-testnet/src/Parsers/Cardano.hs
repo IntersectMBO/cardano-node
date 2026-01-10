@@ -160,7 +160,7 @@ pGenesisOptions =
         )
 
 cmdCardano :: Mod CommandFields CardanoTestnetCliOptions
-cmdCardano = command' "cardano" "Start a testnet in any era" optsTestnet
+cmdCardano = command' "cardano" "Start a testnet and keep it running until stopped" optsTestnet
 
 cmdCreateEnv :: Mod CommandFields CardanoTestnetCreateEnvOptions
 cmdCreateEnv = command' "create-env" "Create a sandbox for Cardano testnet" optsCreateTestnet
