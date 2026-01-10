@@ -58,7 +58,7 @@ shell:                                           ## Nix shell, (workbench from /
 	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
 shell-dev shell-prof shell-nix: shell
 shell-nix: ARGS += --arg 'useCabalRun' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD, RUN
-shell-prof: ARGS += --arg 'profiling' '"space"'  ## Nix shell, everything Haskell built profiled
+shell-prof: ARGS += --arg 'profiledBuild' true --arg 'profilingType' '"space-heap"'  ## Nix shell, everything Haskell built profiled and run with `-hT`.
 
 analyse: RUN := wb analyse std ${TAG}
 analyse: shell

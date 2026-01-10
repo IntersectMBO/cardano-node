@@ -117,6 +117,12 @@ let
                    hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
                  })
             )
+            // optionalAttrs (cfg.withUtxoHdLsmt i){
+              LedgerDB = {
+                Backend = "V2LSM";
+                LSMDatabasePath = cfg.lmdbDatabasePath i;
+              };
+            }
             // optionalAttrs (cfg.withUtxoHdLmdb i){
               LedgerDB = {
                 Backend = "V1LMDB";
@@ -222,16 +228,17 @@ in {
       profiling = mkOption {
         type = enum [
           "none"
+          "time"
+          "time-detail"
           "space"
           "space-bio"
           "space-closure"
           "space-cost"
           "space-heap"
+          "space-info"
           "space-module"
           "space-retainer"
           "space-type"
-          "time"
-          "time-detail"
         ];
         default = "none";
         description = ''
@@ -427,7 +434,7 @@ in {
         default = null;
         apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
         description = ''
-          A node UTxO-HD LMDB path for performant disk I/O, for each instance.
+          A node UTxO-HD on-disk (LMDB or LSM-trees) path for performant disk I/O, for each instance.
           This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
         '';
       };
@@ -802,6 +809,16 @@ in {
         '';
       };
 
+      withUtxoHdLsmt = mkOption {
+        type = funcToOr bool;
+        default = false;
+        apply = x: if lib.isFunction x then x else _: x;
+        description = ''
+          On a UTxO-HD enabled node, the in-memory backend is the default.
+          This activates the on-disk backend (LSM-Trees) instead.
+        '';
+      };
+
       extraArgs = mkOption {
         type = listOf str;
         default = [];
@@ -825,19 +842,27 @@ in {
 
       profilingArgs = mkOption {
         type = listOf str;
-        default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
-          ++ optional (cfg.eventlog) "-l";
-          in if cfg.profiling == "time" then ["-p"] ++ commonProfilingArgs
-            else if cfg.profiling == "time-detail" then ["-P"] ++ commonProfilingArgs
-            else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-cost" then ["-hc"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-closure" then ["-hd"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-type" then ["-hy"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-retainer" then ["-hr"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-bio" then ["-hb"] ++ commonProfilingArgs
-            else if cfg.profiling == "space-heap" then ["-hT"] ++ commonProfilingArgs
-            else [];
+        default =
+             [ "--machine-readable"
+               "-tcardano-node.stats"
+               "-pocardano-node"
+             ]
+          ++ optional (cfg.eventlog) "-l"
+          ++ (
+                    if cfg.profiling == "time"           then ["-p"]
+               else if cfg.profiling == "time-detail"    then ["-P"]
+               else if cfg.profiling == "space"          then ["-h"]
+               else if cfg.profiling == "space-bio"      then ["-hb"]
+               else if cfg.profiling == "space-closure"  then ["-hd"]
+               else if cfg.profiling == "space-cost"     then ["-hc"]
+               else if cfg.profiling == "space-heap"     then ["-hT"]
+               else if cfg.profiling == "space-info"     then ["-hi"]
+               else if cfg.profiling == "space-module"   then ["-hm"]
+               else if cfg.profiling == "space-retainer" then ["-hr"]
+               else if cfg.profiling == "space-type"     then ["-hy"]
+               else []
+             )
+        ;
         description = ''RTS profiling options'';
       };
 

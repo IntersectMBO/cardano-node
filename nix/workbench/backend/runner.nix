@@ -1,7 +1,6 @@
-{ pkgs, lib
+{ pkgs
 ## The binaries/scripts to use when calling the workbench.
-, cardanoNodeProject
-, cardanoNodePackages
+, haskellProject
 , workbench # The derivation.
 ## Profile dependent parameters.
 , profile
@@ -18,10 +17,9 @@ let
   ##############################################################################
 
   profileName = profile.name;
-  inherit (profile) profiling;
 
   backendName = backend.name;
-  inherit (backend) stateDir basePort useCabalRun;
+  inherit (backend) stateDir basePort useCabalRun profiling;
 
   profileBundle  = profile.profileBundle { inherit backend; };
 
@@ -34,9 +32,9 @@ let
   cacheDir = "${__getEnv "HOME"}/.cache/cardano-workbench";
 
   # recover CHaP location from cardano's project
-  chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
+  chap = haskellProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
-  nixPlanJson = cardanoNodeProject.plan-nix + "/plan.json";
+  nixPlanJson = haskellProject.plan-nix + "/plan.json";
 
   # Optimize cache hits setting gitrev using bash once inside the shell.
   workbench-envars =
@@ -57,7 +55,17 @@ let
     fi
     export CARDANO_NODE_SOCKET_PATH=${stateDir}/node-0/node.socket
     ''
-    + lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
+    + (pkgs.lib.optionalString (profiling.profiledBuild or false) (
+        ''
+        export WB_PROFILEDBUILD=yes
+        ''
+      ))
+    + (pkgs.lib.optionalString (profiling.infoTable or false) (
+        ''
+        export WB_PROFILINGINFOTABLE=yes
+        ''
+      ))
+    + pkgs.lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
       let cardano-mainnet-mirror =
             # "nix" branch last commit 819488be9eabbba6aaa7c931559bc584d8071e3d
             __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix";
@@ -122,12 +130,9 @@ let
       ]
     )
     ++
-    (with cardanoNodePackages;
-      [
-        cardano-cli
-        locli
-      ]
-    )
+    [ haskellProject.exes.locli
+      haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli
+    ]
   ;
 
   workbench-profile-run =
@@ -145,29 +150,12 @@ let
         cache_key_input=$(wb genesis profile-cache-key-input ${profileJson})
         cache_key=$(      wb genesis profile-cache-key       ${profileJson})
 
-        genesis_keepalive() {
-          while test ! -e $out/profile
-          do
-            echo 'genesis_keepalive for Hydra'
-            sleep 10s
-          done
-        }
-        genesis_keepalive &
-        __genesis_keepalive_pid=$!
-        __genesis_keepalive_termination() {
-          kill $__genesis_keepalive_pid 2>/dev/null || true
-        }
-        trap __genesis_keepalive_termination EXIT
-
-        time \
-          wb genesis actually-genesis \
-            "${profileJson}"          \
-            "${nodeSpecsJson}"        \
-            "$out"                    \
-            "$cache_key_input"        \
-            "$cache_key"
-
-        touch done
+        wb genesis actually-genesis \
+          "${profileJson}"          \
+          "${nodeSpecsJson}"        \
+          "$out"                    \
+          "$cache_key_input"        \
+          "$cache_key"
         ''
       ;
       # Run the profile.
@@ -200,7 +188,7 @@ let
           --genesis-cache-entry ${genesisFiles}
           --batch-name          smoke-test
           --base-port           ${toString basePort}
-          --node-source         ${pkgs.cardanoNodeProject.args.src}
+          --node-source         ${haskellProject.args.src}
           --node-rev            ${cardano-node-rev}
           --cache-dir           ./cache
          ${__concatStringsSep " " workbenchStartArgs}
@@ -278,8 +266,8 @@ let
 
 in
 {
-  inherit backend;
-  inherit profiling;
+  # Don't expose the backend. Just what the shell could need. 
+  inherit (backend) useCabalRun profiling extraShellPkgs;
 
   inherit workbench-envars;
   inherit workbench-interactive-start;

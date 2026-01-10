@@ -55,7 +55,7 @@ let
 
   liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
-    then "${profile.node.ssd_directory}/lmdb-node-${toString i}"
+    then "${profile.node.ssd_directory}/node-${toString i}"
     else null;
 
   ##
@@ -76,6 +76,7 @@ let
       # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory;
       # non-block producers (like the explorer node) keep using the in-memory backend
       withUtxoHdLmdb   = profile.node.utxo_lmdb && isProducer;
+      withUtxoHdLsmt   = profile.node.utxo_lsmt && isProducer;
       lmdbDatabasePath = liveTablesPath i;
 
       ## Combine:
@@ -122,6 +123,12 @@ let
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
                   DijkstraGenesisFile          = "../genesis/genesis.dijkstra.json";
+                } // optionalAttrs (profile.node.utxo_lsmt && isProducer)
+                {
+                  LedgerDB = {
+                    Backend = "V2LSM";
+                    LSMDatabasePath = liveTablesPath i;
+                  };
                 } // optionalAttrs (profile.node.utxo_lmdb && isProducer)
                 {
                   LedgerDB = {
@@ -147,14 +154,20 @@ let
           "--shutdown-on-slot-synced"
           (toString nodeSpec.shutdown_on_slot_synced)
         ];
-    } // optionalAttrs (profiling != "none") {
-      inherit profiling;
-    } // optionalAttrs (profiling == "none") {
-      # Switch to `noGitRev` to avoid rebuilding with every commit.
-      package    = pkgs.cardano-node.passthru.noGitRev;
-    } // optionalAttrs backend.useCabalRun {
+    } // optionalAttrs ((profiling.profilingTypeParam or "none") != "none") {
+      # Add the profiling `-h*` RTS option.
+      profiling = profiling.profilingTypeParam;
+    } // optionalAttrs (profiling.eventlog or false) {
+      # Add the `-l` RTS param with profiling.
+      eventlog = true;
+    # Decide where the executable comes from:
+    #########################################
+    } // optionalAttrs (!backend.useCabalRun) {
+      package    = workbenchNix.haskellProject.exes.cardano-node;
+    } // optionalAttrs   backend.useCabalRun  {
       # Allow the shell function to take precedence.
       executable = "cardano-node";
+    #########################################
     } // optionalAttrs isProducer {
       operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
       kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";
@@ -223,7 +236,7 @@ let
               # A workbench with only the dependencies needed for this command.
               [ workbenchNix.workbench
                 jq
-                workbenchNix.cardanoNodePackages.cardano-topology
+                workbenchNix.haskellProject.exes.cardano-topology
               ];
             }
             ''

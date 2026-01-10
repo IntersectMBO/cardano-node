@@ -1,8 +1,9 @@
 { pkgs
-, lib
+, haskellProject
 , stateDir
-, basePort # Ignored here and just returned to be used by `runner.nix`!
-## `useCabalRun` not used here unlike `supervisor.nix`.
+, basePort # ignored, just passed to the runner (unlike `supervisor.nix`).
+## `useCabalRun` overridden parameter (unlike `supervisor.nix`).
+, profiling # Checks below for no profiled builds and no info-table support.
 , ...
 }:
 let
@@ -12,7 +13,7 @@ let
   # genesis files (Buckets needs write permissions for the deployer machine).
   name = "nomadcloud";
 
-  # Unlike the supervisor backend `useCabalRun` is always false here.
+  # Unlike the supervisor backend `useCabalRun` is always `false` here.
   useCabalRun = false;
 
   extraShellPkgs =
@@ -35,7 +36,9 @@ let
   # Build a Nomad Job specification for this Nomad "sub-backend".
   materialise-profile =
     let params = {
-      inherit pkgs lib stateDir;
+      inherit pkgs;
+      inherit haskellProject;
+      inherit stateDir;
       subBackendName = "cloud";
     };
     in (import ../nomad.nix params).materialise-profile
@@ -58,7 +61,21 @@ in
   inherit extraShellPkgs;
   inherit materialise-profile;
   inherit service-modules;
-  inherit stateDir basePort;
+  inherit stateDir;
 
+  # Returns something only to be compatible with what `runner.nix` expects.
+  inherit basePort;
+
+  # Ignores the parameters and always returns `false` and `"none"`.
   inherit useCabalRun;
+  # Nomad cloud backend clients/nodes get their dependencies from the flake.
+  profiling =
+         # Being extra cautious, no Makefile target for this combination.
+         if profiling.profiledBuild or false
+    then throw "Backend \"nomadcloud\" does not support profiled builds."
+         # The binaries from the flake outputs won't have info-table.
+    else if profiling.infoTable or false
+    then throw "Backend \"nomadcloud\" does not support info-table builds."
+    else profiling
+  ;
 }

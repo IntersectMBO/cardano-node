@@ -6,15 +6,25 @@ let
   inherit (final) pkgs;
   inherit (prev.pkgs) lib;
   inherit (prev) customConfig;
-
-  # A generic, fully parametric version of the workbench development environment.
+  # Parametrized helper entrypoint for the workbench development environment.
   workbench = import ./workbench
-    {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
+    { inherit pkgs;
+      haskellProject = final.cardanoNodeProject;
+    }
+  ;
 
-  # Workbench runner instantiated by parameters from customConfig:
+in with final;
+{
+  inherit (cardanoNodeProject.args) compiler-nix-name;
+
+  # To make it a flake output so it's available as input to external flakes.
+  inherit workbench;
+
+  # A workbench runner with default parameters from customConfig.
+  # Used in flake.nix for "workbench-ci-test" flake output package for CI.
   workbench-runner =
-    { profileName        ? customConfig.localCluster.profileName
-    , profiling          ? customConfig.profiling
+    { profiling          ? {}
+    , profileName        ? customConfig.localCluster.profileName
     , backendName        ? customConfig.localCluster.backendName
     , stateDir           ? customConfig.localCluster.stateDir
     , basePort           ? customConfig.localCluster.basePort
@@ -24,15 +34,15 @@ let
     , cardano-node-rev   ? null
     }:
     workbench.runner
-      { inherit profileName profiling backendName stateDir basePort useCabalRun;
+      { inherit profiling;
+        # To construct profile attrset with its `materialise-profile` function.
+        inherit profileName;
+        # To construct backend attrset with its `materialise-profile` function.
+        inherit backendName stateDir basePort useCabalRun;
+        # Parameters for the workbench shell `start-cluster` command.
         inherit batchName workbenchStartArgs cardano-node-rev;
-      };
-
-in with final;
-{
-  inherit (cardanoNodeProject.args) compiler-nix-name;
-
-  inherit workbench workbench-runner;
+      }
+  ;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
@@ -160,15 +170,13 @@ in with final;
         value =
           let
               # Default values only ("run/current", 30000, profiling "none").
-              profile = workbench.profile {
-                inherit profileName;
-                profiling = "none";
-              };
+              profile = workbench.profile profileName;
               backend = workbench.backend
                 { backendName = "nomadcloud";
                   stateDir    = customConfig.localCluster.stateDir;
                   basePort    = customConfig.localCluster.basePort;
                   useCabalRun = customConfig.localCluster.useCabalRun;
+                  profiling = {};
                 }
               ;
               profileBundle = profile.profileBundle

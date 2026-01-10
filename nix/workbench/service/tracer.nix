@@ -1,5 +1,5 @@
 { pkgs
-
+, haskellProject
 , backend
 , profile
 , nodeSpecs
@@ -27,8 +27,13 @@ let
           networkMagic = profile.genesis.network_magic;
           configFile     = "config.json";
           metricsHelp    = "../../../cardano-tracer/configuration/metrics_help.json";
-        } // optionalAttrs backend.useCabalRun {
+        # Decide where the executable comes from:
+        #########################################
+        } // optionalAttrs (!backend.useCabalRun) {
+          executable     = "${haskellProject.exes.cardano-tracer}/bin/cardano-tracer";
+        } // optionalAttrs   backend.useCabalRun  {
           executable     = "cardano-tracer";
+        #########################################
         } // optionalAttrs profile.tracer.rtview {
           RTView         = {
             epHost = "127.0.0.1";

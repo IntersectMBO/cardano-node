@@ -1,23 +1,29 @@
-progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(yellow $*)"
+progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(red WB_PROFILEDBUILD):$(white ${WB_PROFILEDBUILD:-no}) $(red WB_PROFILINGINFOTABLE):$(white ${WB_PROFILINGINFOTABLE:-no})"
 
-while test $# -gt 0
-do case "$1" in
-       --profiling-time )     export WB_PROFILING='time';           WB_RTSARGS=-p;;
-       --profiling-space )    export WB_PROFILING='space-cost';     WB_RTSARGS=-hc;;
-       --profiling-heap )     export WB_PROFILING='space-heap';     WB_RTSARGS=-hT;;
-       --profiling-module )   export WB_PROFILING='space-module';   WB_RTSARGS=-hm;;
-       --profiling-retainer ) export WB_PROFILING='space-retainer'; WB_RTSARGS=-hr;;
-       --profiling-type )     export WB_PROFILING='space-type';     WB_RTSARGS=-hy;;
-       * ) break;; esac;
-   progress "workbench" "enabling $(red profiling mode):  $(white $WB_PROFILING)"
-   shift; done
+# Check if we build with profiling.
+if test -n "${WB_PROFILEDBUILD:-}" && test "${WB_PROFILEDBUILD}" = 'yes'
+then
+  # These flags apply only to the executable target.
+  # The dependencies should already be included with profiling in `shell.nix`.
+  export WB_FLAGS_CABAL='--enable-profiling --builddir dist-profiled'
+else
+  export WB_FLAGS_CABAL=""
+fi
+# Check if we build with info-table.
+if test -n "${WB_PROFILINGINFOTABLE:-}" && test "${WB_PROFILINGINFOTABLE}" = 'yes'
+then
+  # These flags apply only to the executable target.
+  # The options should already be applied to the dependencies in `shell.nix`.
+  export WB_FLAGS_CABAL="${WB_FLAGS_CABAL} --ghc-options=\"-finfo-table-map\" --ghc-options=\"-fdistinct-constructor-tables\""
+fi
 
-if test ! -v WB_PROFILING || test "$WB_PROFILING" = 'none'
-then export WB_PROFILING='none' WB_FLAGS_CABAL=
-else export WB_FLAGS_CABAL='--enable-profiling --builddir dist-profiled'; fi
-
-if test ! -v WB_RTSARGS;   then export WB_RTSARGS= ; fi
-export WB_FLAGS_RTS=${WB_RTSARGS:++RTS $WB_RTSARGS -RTS}
+# If RTS args envar not empty, append the extra RTS parameters to `cabal run`.
+if test -z "${WB_RTSARGS:-}"
+then
+  export WB_FLAGS_RTS=
+else
+  export WB_FLAGS_RTS="+RTS ${WB_RTSARGS} -RTS"
+fi
 
 WB_TIME=(
     time
@@ -25,7 +31,6 @@ WB_TIME=(
     -o kernel-resource-summary.json
 )
 export WB_NODE_EXECPREFIX="eval ${WB_TIME[*]@Q}"
-
 
 function workbench-prebuild-executables()
 {
@@ -37,45 +42,46 @@ function workbench-prebuild-executables()
     newline
 
     unset NIX_ENFORCE_PURITY
-    for exe in cardano-node cardano-profile cardano-topology cardano-tracer tx-generator locli
+    # Executables with profiling support.
+    for exe in cardano-node cardano-tracer tx-generator locli
     do echo "workbench:  $(blue prebuilding) $(red $exe)"
-       verbose "exec"                         "cabal build ${WB_FLAGS_CABAL} -- exe:$exe"
-       cabal $(test -z "${verbose:-}" && echo '-v0') build ${WB_FLAGS_CABAL} -- exe:$exe || return 1
+        verbose "exec"                         "cabal build ${WB_FLAGS_CABAL} -- exe:$exe"
+        cabal $(test -z "${verbose:-}" && echo '-v0') build ${WB_FLAGS_CABAL} -- exe:$exe || return 1
+    done
+    # Executables without profiling support.
+    for exe in cardano-profile cardano-topology
+    do echo "workbench:  $(blue prebuilding) $(red $exe)"
+       verbose "exec"                         "cabal build                    -- exe:$exe"
+       cabal $(test -z "${verbose:-}" && echo '-v0') build                    -- exe:$exe || return 1
     done
     echo
     eval $restore_trace
 }
 
 function cardano-node() {
-    ${WB_NODE_EXECPREFIX} cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-node     -- ${WB_FLAGS_RTS} "$@"
-}
-
-function cardano-profile() {
-                          cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-profile  -- ${WB_FLAGS_RTS} "$@"
-}
-
-function cardano-topology() {
-                          cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-topology -- ${WB_FLAGS_RTS} "$@"
+    ${WB_NODE_EXECPREFIX} cabal -v0 run ${WB_FLAGS_CABAL} exe:cardano-node   -- ${WB_FLAGS_RTS} "$@"
 }
 
 function cardano-tracer() {
-                          cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-tracer   -- ${WB_FLAGS_RTS} "$@"
+                          cabal -v0 run ${WB_FLAGS_CABAL} exe:cardano-tracer -- ${WB_FLAGS_RTS} "$@"
 }
 
 function locli() {
-    #cabal -v0 build ${WB_FLAGS_CABAL} exe:locli
-    #set-git-rev \
-    #    $(git rev-parse HEAD) \
-    #    $(cabal list-bin locli) || true
-    #                     cabal -v0 exec  ${WB_FLAGS_CABAL}     locli            -- ${WB_FLAGS_RTS} "$@"
-
-                          cabal -v0 run   ${WB_FLAGS_CABAL} exe:locli            -- ${WB_FLAGS_RTS} "$@"
+                          cabal -v0 run ${WB_FLAGS_CABAL} exe:locli          -- ${WB_FLAGS_RTS} "$@"
 }
 
 function tx-generator() {
-                          cabal -v0 run   ${WB_FLAGS_CABAL} exe:tx-generator     -- ${WB_FLAGS_RTS} "$@"
+                          cabal -v0 run ${WB_FLAGS_CABAL} exe:tx-generator   -- ${WB_FLAGS_RTS} "$@"
+}
+
+function cardano-profile() {
+                          cabal -v0 run                   exe:cardano-profile                   "$@"
+}
+
+function cardano-topology() {
+                          cabal -v0 run                   exe:cardano-topology                  "$@"
 }
 
 export WB_MODE_CABAL=t
 
-export -f cardano-node cardano-profile cardano-topology cardano-tracer locli tx-generator
+export -f cardano-node cardano-tracer locli tx-generator cardano-profile cardano-topology

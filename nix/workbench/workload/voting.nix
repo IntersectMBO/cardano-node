@@ -1,4 +1,5 @@
 { pkgs
+, haskellProject
 , profile
 , nodeSpecs
 , workload
@@ -13,7 +14,7 @@ let
   coreutils          = pkgs.coreutils;
   jq                 = pkgs.jq;
   # Avoid rebuilding on every commit because of `set-git-rev`.
-  cardano-cli        = pkgs.cardanoNodePackages.cardano-cli.passthru.noGitRev;
+  cardano-cli        = haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli;
 
   # Script params!
   ################
