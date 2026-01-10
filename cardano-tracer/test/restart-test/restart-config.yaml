@@ -1,0 +1,8 @@
+networkMagic: 42
+network:
+  tag: AcceptAt
+  contents: "sock"
+logging:
+- logRoot: "/tmp/cardano-tracer-restart-test-logs"
+  logMode: FileMode
+  logFormat: ForMachine
