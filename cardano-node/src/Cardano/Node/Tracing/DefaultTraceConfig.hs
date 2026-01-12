@@ -12,7 +12,7 @@ import qualified Data.Map.Strict as Map
 defaultCardanoConfig :: TraceConfig
 defaultCardanoConfig = emptyTraceConfig {
     tcMetricsPrefix = Just "cardano.node.metrics."
-  , tcLedgerMetricsFrequency = Nothing             -- discard the default from 'trace-dispatcher'; Cardano has own ones, different for block producers and relays
+  , tcPeriodic = Map.singleton "Resources" 5000
   , tcOptions = Map.fromList
      [([],
           [ ConfSeverity (SeverityF (Just Notice))

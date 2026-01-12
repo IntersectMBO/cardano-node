@@ -286,9 +286,8 @@ configTracerTracer defSeverity tr = do
    initialTraceConfig =
      TraceConfig
      { tcForwarder         = Nothing
-     , tcNodeName          = Nothing
-     , tcResourceFrequency = Nothing
-     , tcLedgerMetricsFrequency = Nothing
+     , tcApplicationName   = Nothing
+     , tcPeriodic          = Map.empty
      , tcMetricsPrefix     = Nothing
      , tcOptions = Map.fromList
                    [ ([],         [ConfSeverity defSeverity])

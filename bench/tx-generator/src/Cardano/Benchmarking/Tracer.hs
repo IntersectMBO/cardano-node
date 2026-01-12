@@ -187,11 +187,10 @@ initialTraceConfig = TraceConfig {
           , setMaxDetail TracerNameConnect
           , setMaxDetail TracerNameSubmit
           ]
-    , tcForwarder = Just defaultForwarder {tofQueueSize = 4096}
-    , tcNodeName = Nothing
-    , tcResourceFrequency = Nothing
+    , tcForwarder = Just defaultForwarder {tofQueueSize = 2048}
+    , tcApplicationName = Nothing
+    , tcPeriodic = Map.empty
     , tcMetricsPrefix = Nothing
-    , tcLedgerMetricsFrequency = Nothing
     }
   where
     setMaxDetail :: Text -> ([Text], [ConfigOption])

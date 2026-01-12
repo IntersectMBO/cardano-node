@@ -245,7 +245,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
   getSystemStartShelley = sgSystemStart . shelleyLedgerGenesis . shelleyLedgerConfig
 
   prepareNodeName =
-    case tcNodeName tc of
+    case tcApplicationName tc of
       Just aName -> return aName
       Nothing -> do
         -- The user didn't specify node's name in the configuration.

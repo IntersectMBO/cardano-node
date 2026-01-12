@@ -1,12 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StrictData #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Logging.ConfigurationParser
-  (
-    readConfiguration
+  ( readConfiguration
   , readConfigurationWithDefault
   , configToRepresentation
   ) where
@@ -20,8 +20,8 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.List as List (foldl')
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, listToMaybe)
-import           Data.Text (Text, intercalate, split)
+import           Data.Maybe
+import           Data.Text (Text, intercalate, splitOn)
 import           Data.Yaml
 
 -- -----------------------------------------------------------------------------
@@ -29,97 +29,107 @@ import           Data.Yaml
 
 -- | The external representation of a configuration file
 data ConfigRepresentation = ConfigRepresentation {
-    traceOptions                  :: OptionsRepresentation
-  , traceOptionForwarder          :: Maybe TraceOptionForwarder
-  , traceOptionNodeName           :: Maybe Text
-  , traceOptionMetricsPrefix      :: Maybe Text
-  , traceOptionResourceFrequency  :: Maybe Int
-  , traceOptionLedgerMetricsFrequency :: Maybe Int
+    traceOptions                      :: OptionsRepresentation
+  , traceOptionForwarder              :: Maybe TraceOptionForwarder
+  , traceOptionApplicationName        :: Maybe Text
+  , traceOptionMetricsPrefix          :: Maybe Text
+  , traceOptionPeriodic               :: Map.Map Text Int
   }
-  deriving (Eq, Ord, Show)
+  deriving Show
 
 instance AE.FromJSON ConfigRepresentation where
-    parseJSON (Object obj) = ConfigRepresentation
-                           <$> obj .: "TraceOptions"
-                           <*> obj .:? "TraceOptionForwarder"
-                           <*> obj .:? "TraceOptionNodeName"
-                           <*> obj .:? "TraceOptionMetricsPrefix"
-                           <*> obj .:? "TraceOptionResourceFrequency"
-                           <*> obj .:? "TraceOptionLedgerMetricsFrequency"
-    parseJSON _ = mempty
+    parseJSON = withObject "TraceDispatcher" $ \obj ->
+      parseAsInner obj <|> parseAsTopLevel obj
+      where
+        parseAsTopLevel obj =
+          ConfigRepresentation
+              <$> obj .:  "Options"
+              <*> obj .:? "Forwarder"
+              <*> obj .:? "ApplicationName"
+              <*> obj .:? "MetricsPrefix"
+              <*> obj .:? "Periodic"        .!= Map.empty
+        parseAsInner obj =
+          obj .: "TraceDispatcher" >>= parseAsTopLevel
 
 instance AE.ToJSON ConfigRepresentation where
-  toJSON ConfigRepresentation{..} = object
-    [ "TraceOptions"                  .= traceOptions
-    , "TraceOptionForwarder"          .= traceOptionForwarder
-    , "TraceOptionNodeName"           .= traceOptionNodeName
-    , "TraceOptionMetricsPrefix"      .= traceOptionMetricsPrefix
-    , "TraceOptionResourceFrequency"  .= traceOptionResourceFrequency
-    , "TraceOptionLedgerMetricsFrequency" .= traceOptionLedgerMetricsFrequency
+  toJSON ConfigRepresentation{..} = object $
+    [ "Options"                  .= traceOptions
+    , "Forwarder"                .= traceOptionForwarder
+    , "AppicationName"           .= traceOptionApplicationName
+    , "MetricsPrefix"            .= traceOptionMetricsPrefix
     ]
+    <>
+    [ "Periodic" .= traceOptionPeriodic | (not . Map.null) traceOptionPeriodic ]
 
 type OptionsRepresentation = Map.Map Text ConfigOptionRep
 
 -- | In the external configuration representation for configuration files
 -- all options for a namespace are part of a record
 data ConfigOptionRep = ConfigOptionRep
-    { severity :: Maybe SeverityF
-    , detail :: Maybe DetailLevel
-    , backends :: Maybe [BackendConfig]
-    , maxFrequency :: Maybe Double
+    { severity      :: Maybe SeverityF
+    , detail        :: Maybe DetailLevel
+    , backends      :: Maybe [BackendConfig]
+    , maxFrequency  :: Maybe Double
     }
-  deriving (Eq, Ord, Show)
+  deriving Show
 
 instance AE.FromJSON ConfigOptionRep where
-  parseJSON (Object obj) = ConfigOptionRep
-                         <$> obj .:? "severity"
-                         <*> obj .:? "detail"
-                         <*> obj .:? "backends"
-                         <*> obj .:? "maxFrequency"
-
-  parseJSON _ = mempty
+  parseJSON = withObject "ConfigOptionRep" $ \obj ->
+    ConfigOptionRep
+      <$> obj .:? "severity"
+      <*> obj .:? "detail"
+      <*> obj .:? "backends"
+      <*> obj .:? "maxFrequency"
 
 instance AE.ToJSON ConfigOptionRep where
-  toJSON ConfigOptionRep{..} = object (conss [])
-    where
-      consMay attr = maybe id ((:) . (attr .=))
-      conss = consMay "severity" severity
-            . consMay "detail" detail
-            . consMay "backends" backends
-            . consMay "maxFrequency" maxFrequency
+  toJSON ConfigOptionRep{..} = object $
+    catMaybes
+      [ ("severity" .=)     <$> severity
+      , ("detail" .=)       <$> detail
+      , ("backends" .=)     <$> backends
+      , ("maxFrequency" .=) <$> maxFrequency 
+      ]
 
 instance AE.ToJSON TraceConfig where
   toJSON tc = toJSON (configToRepresentation tc)
 
 -- | Read a configuration file and returns the internal representation
 readConfiguration :: FilePath -> IO TraceConfig
-readConfiguration fp =
-    either throwIO pure . parseRepresentation =<< BS.readFile fp
+readConfiguration = readConfigurationInt id
 
 -- | Read a configuration file and returns the internal representation
 -- Uses values which are not in the file fram the defaultConfig
-readConfigurationWithDefault :: FilePath -> TraceConfig -> IO TraceConfig
-readConfigurationWithDefault fp defaultConf = do
-    fileConf <- either throwIO pure . parseRepresentation =<< BS.readFile fp
-    pure $ mergeWithDefault fileConf
-  where
-    mergeWithDefault ::  TraceConfig -> TraceConfig
-    mergeWithDefault fileConf =
-      TraceConfig
-        (if (not . Map.null) (tcOptions fileConf)
-          then tcOptions fileConf
-          else tcOptions defaultConf)
-        (tcForwarder fileConf <|> tcForwarder defaultConf)
-        (tcNodeName fileConf <|> tcNodeName defaultConf)
-        (tcMetricsPrefix fileConf <|> tcMetricsPrefix defaultConf)
-        (tcResourceFrequency fileConf <|> tcResourceFrequency defaultConf)
-        (tcLedgerMetricsFrequency fileConf <|> tcLedgerMetricsFrequency defaultConf)
+readConfigurationWithDefault :: TraceConfig -> FilePath -> IO TraceConfig
+readConfigurationWithDefault defaultConf = readConfigurationInt (mergeWithDefault defaultConf)
+
+readConfigurationInt :: (TraceConfig -> TraceConfig) -> FilePath -> IO TraceConfig
+readConfigurationInt modify fp = do
+    !fileConf <- either throwIO pure . parseRepresentation =<< BS.readFile fp
+    pure $ modify fileConf
+
+mergeWithDefault :: TraceConfig -> TraceConfig -> TraceConfig
+mergeWithDefault defaultConf fileConf =
+  TraceConfig
+    (if (not . Map.null) (tcOptions fileConf)
+      then tcOptions fileConf
+      else tcOptions defaultConf)
+    (tcForwarder fileConf <|> tcForwarder defaultConf)
+    (tcApplicationName fileConf <|> tcApplicationName defaultConf)
+    (tcMetricsPrefix fileConf <|> tcMetricsPrefix defaultConf)
+    (if Map.null (tcPeriodic fileConf)
+      then tcPeriodic defaultConf
+      else tcPeriodic fileConf
+    )
 
 -- | Parse the byteString as external representation and converts to internal
 -- representation
 parseRepresentation :: ByteString -> Either ParseException TraceConfig
 parseRepresentation bs = transform (decodeEither' bs)
   where
+    -- these are JSON string aliases for the Haskell namespace root value [] :: [Text]
+    isNamespaceRoot :: Text -> Bool
+    isNamespaceRoot ns = ns == "" || ns == "_root_"
+
     transform ::
          Either ParseException ConfigRepresentation
          -> Either ParseException TraceConfig
@@ -128,24 +138,19 @@ parseRepresentation bs = transform (decodeEither' bs)
     transform' :: TraceConfig -> ConfigRepresentation -> TraceConfig
     transform' TraceConfig {tcOptions=to'} cr =
       let to''  = List.foldl' (\ tci (nsp, opts') ->
-                              let ns' = split (=='.') nsp
-                                  ns'' = if ns' == [""] then [] else ns'
-                                  ns''' = case ns'' of
-                                            "Cardano" : tl -> tl
-                                            other -> other
+                              let ns' = if isNamespaceRoot nsp then [] else splitOn "." nsp
                               in Map.insertWith
                                   (++)
-                                  ns'''
+                                  ns'
                                   (toConfigOptions opts')
                                   tci)
                            to' (Map.toList (traceOptions cr))
       in TraceConfig
           to''
           (traceOptionForwarder cr)
-          (traceOptionNodeName cr)
+          (traceOptionApplicationName cr)
           (traceOptionMetricsPrefix cr)
-          (traceOptionResourceFrequency cr)
-          (traceOptionLedgerMetricsFrequency cr)
+          (traceOptionPeriodic cr)
 
 
     -- | Convert from external to internal representation
@@ -164,10 +169,9 @@ configToRepresentation traceConfig =
      ConfigRepresentation
         (toOptionRepresentation (tcOptions traceConfig))
         (tcForwarder traceConfig)
-        (tcNodeName traceConfig)
+        (tcApplicationName traceConfig)
         (tcMetricsPrefix traceConfig)
-        (tcResourceFrequency traceConfig)
-        (tcLedgerMetricsFrequency traceConfig)
+        (tcPeriodic traceConfig)
   where
     toOptionRepresentation :: Map.Map [Text] [ConfigOption]
                               ->  Map.Map Text ConfigOptionRep
@@ -190,8 +194,3 @@ configToRepresentation traceConfig =
       , backends     = listToMaybe [d | ConfBackend d <- opts]
       , maxFrequency = listToMaybe [d | ConfLimiter d <- opts]
       }
-
-
-
-
-

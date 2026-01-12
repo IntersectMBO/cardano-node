@@ -70,8 +70,8 @@ initTraceDispatcher ::
   -> IO (Tracers RemoteAddress LocalAddress blk  IO)
 initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
   trConfig <- readConfigurationWithDefault
-                (unConfigPath $ ncConfigFile nc)
                 defaultCardanoConfig
+                (unConfigPath $ ncConfigFile nc)
 
   (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig
 
@@ -89,11 +89,11 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
 
   startResourceTracer
     (resourcesTracer tracers)
-    (fromMaybe 1000 (tcResourceFrequency trConfig))
+    (fromMaybe 1000 (lookupPeriodicDelay "Resources" trConfig))
 
   startLedgerMetricsTracer
     (ledgerMetricsTracer tracers)
-    (fromMaybe ledgerMetricsDefaultFreq (tcLedgerMetricsFrequency trConfig))
+    (fromMaybe ledgerMetricsDefaultFreq (lookupPeriodicDelay "LedgerMetrics" trConfig))
     nodeKernel
 
   pure tracers

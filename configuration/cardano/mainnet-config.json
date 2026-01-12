@@ -23,89 +23,93 @@
   "RequiresNetworkMagic": "RequiresNoMagic",
   "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
   "ShelleyGenesisHash": "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81",
-  "TraceOptionForwarder": {
-    "connQueueSize": 64,
-    "disconnQueueSize": 128,
-    "maxReconnectDelay": 30
-  },
-  "TraceOptionMetricsPrefix": "cardano.node.metrics.",
-  "TraceOptionResourceFrequency": 1000,
-  "TraceOptions": {
-    "": {
-      "backends": [
-        "EKGBackend",
-        "Forwarder",
-        "PrometheusSimple suffix 127.0.0.1 12798",
-        "Stdout HumanFormatColoured"
-      ],
-      "detail": "DNormal",
-      "severity": "Notice"
+  "TraceDispatcher": {
+    "ApplicationName": "mainnetsingle",
+    "Forwarder": {
+      "maxReconnectDelay": 30,
+      "queueSize": 128
     },
-    "BlockFetch.Client.CompletedBlockFetch": {
-      "maxFrequency": 2.0
+    "MetricsPrefix": "cardano.node.metrics.",
+    "Options": {
+      "_root_": {
+        "backends": [
+          "EKGBackend",
+          "Forwarder",
+          "PrometheusSimple suffix 127.0.0.1 12798",
+          "Stdout HumanFormatColoured"
+        ],
+        "detail": "DNormal",
+        "severity": "Notice"
+      },
+      "BlockFetch.Client.CompletedBlockFetch": {
+        "maxFrequency": 2.0
+      },
+      "BlockFetch.Decision": {
+        "severity": "Info"
+      },
+      "ChainDB": {
+        "severity": "Info"
+      },
+      "ChainDB.AddBlockEvent.AddBlockValidation": {
+        "severity": "Silence"
+      },
+      "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
+        "maxFrequency": 2.0
+      },
+      "ChainDB.AddBlockEvent.AddedBlockToQueue": {
+        "maxFrequency": 2.0
+      },
+      "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
+        "maxFrequency": 2.0
+      },
+      "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
+        "maxFrequency": 2.0
+      },
+      "ChainDB.LedgerEvent.Forker": {
+        "severity": "Silence"
+      },
+      "ChainSync.Client": {
+        "severity": "Warning"
+      },
+      "Forge.Loop": {
+        "severity": "Info"
+      },
+      "Forge.StateInfo": {
+        "severity": "Info"
+      },
+      "Mempool": {
+        "severity": "Silence"
+      },
+      "Mempool.AttemptAdd": {
+        "severity": "Silence"
+      },
+      "Mempool.SyncNotNeeded": {
+        "severity": "Silence"
+      },
+      "Net.ConnectionManager.Remote": {
+        "severity": "Info"
+      },
+      "Net.InboundGovernor": {
+        "severity": "Warning"
+      },
+      "Net.InboundGovernor.Remote": {
+        "severity": "Info"
+      },
+      "Net.Mux.Remote": {
+        "severity": "Info"
+      },
+      "Net.PeerSelection": {
+        "severity": "Info"
+      },
+      "Resources": {
+        "severity": "Silence"
+      },
+      "Startup.DiffusionInit": {
+        "severity": "Info"
+      }
     },
-    "BlockFetch.Decision": {
-      "severity": "Info"
-    },
-    "ChainDB": {
-      "severity": "Info"
-    },
-    "ChainDB.AddBlockEvent.AddBlockValidation": {
-      "severity": "Silence"
-    },
-    "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
-      "maxFrequency": 2.0
-    },
-    "ChainDB.AddBlockEvent.AddedBlockToQueue": {
-      "maxFrequency": 2.0
-    },
-    "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
-      "maxFrequency": 2.0
-    },
-    "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
-      "maxFrequency": 2.0
-    },
-    "ChainDB.LedgerEvent.Forker": {
-      "severity": "Silence"
-    },
-    "ChainSync.Client": {
-      "severity": "Warning"
-    },
-    "Forge.Loop": {
-      "severity": "Info"
-    },
-    "Forge.StateInfo": {
-      "severity": "Info"
-    },
-    "Mempool": {
-      "severity": "Silence"
-    },
-    "Mempool.AttemptAdd": {
-      "severity": "Silence"
-    },
-    "Mempool.SyncNotNeeded": {
-      "severity": "Silence"
-    },
-    "Net.ConnectionManager.Remote": {
-      "severity": "Info"
-    },
-    "Net.InboundGovernor": {
-      "severity": "Warning"
-    },
-    "Net.InboundGovernor.Remote": {
-      "severity": "Info"
-    },
-    "Net.Mux.Remote": {
-      "severity": "Info"
-    },
-    "Net.PeerSelection": {
-      "severity": "Info"
-    },
-    "Resources": {
-      "severity": "Silence"
-    },
-    "Startup.DiffusionInit": {
-      "severity": "Info"
+    "Periodic": {
+      "Resources": 1000
     }
   },
   "TurnOnLogMetrics": true,

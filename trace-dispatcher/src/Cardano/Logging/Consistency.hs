@@ -34,7 +34,7 @@ checkTraceConfiguration ::
   -> [([T.Text], [T.Text])]
   -> IO NSWarnings
 checkTraceConfiguration configFileName defaultTraceConfig allNamespaces' = do
-    trConfig <- readConfigurationWithDefault configFileName defaultTraceConfig
+    trConfig <- readConfigurationWithDefault defaultTraceConfig configFileName
     pure $ checkTraceConfiguration' trConfig allNamespaces'
 
 checkTraceConfiguration' ::

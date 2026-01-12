@@ -56,10 +56,9 @@ config1 = TraceConfig {
       , tofVerbosity = Minimum
       , tofMaxReconnectDelay = 60
       }
-    , tcNodeName = Nothing
-    , tcResourceFrequency = Nothing
+    , tcApplicationName = Nothing
     , tcMetricsPrefix = Nothing
-    , tcLedgerMetricsFrequency = Nothing
+    , tcPeriodic = Map.empty
     }
 
 config2 :: TraceConfig
@@ -74,10 +73,9 @@ config2 = TraceConfig {
       , tofVerbosity = Minimum
       , tofMaxReconnectDelay = 60
       }
-    , tcNodeName = Just "node-1"
-    , tcResourceFrequency = Nothing
+    , tcApplicationName = Just "node-1"
     , tcMetricsPrefix = Nothing
-    , tcLedgerMetricsFrequency = Nothing
+    , tcPeriodic = Map.empty
     }
 
 testConfig' ::

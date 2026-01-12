@@ -46,6 +46,7 @@ module Cardano.Logging.Types (
   , emptyConfigReflection
   , TraceConfig(..)
   , emptyTraceConfig
+  , lookupPeriodicDelay
   , FormattedMessage(..)
   , TraceControl(..)
   , DocCollector(..)
@@ -540,25 +541,25 @@ data TraceConfig = TraceConfig {
      -- | Options for the forwarder
   , tcForwarder :: Maybe TraceOptionForwarder
     -- | Optional human-readable name of the node.
-  , tcNodeName  :: Maybe Text
+  , tcApplicationName  :: Maybe Text
     -- | Optional prefix for metrics.
   , tcMetricsPrefix :: Maybe Text
-    -- | Optional resource trace frequency in milliseconds.
-  , tcResourceFrequency :: Maybe Int
-    -- | Optional ledger metrics frequency in milliseconds.
-  , tcLedgerMetricsFrequency :: Maybe Int
-}
-  deriving stock (Eq, Ord, Show)
+    -- | Possbly empty delay values by tracer name for tracers run periodically by the application (delay unit is tracer-dependent)
+  , tcPeriodic :: Map.Map Text Int
+  }
+  deriving stock Show
 
 emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {
-    tcOptions = Map.empty
-  , tcForwarder = Nothing
-  , tcNodeName = Nothing
-  , tcMetricsPrefix = Nothing
-  , tcResourceFrequency = Just 5000 -- Every five seconds
-  , tcLedgerMetricsFrequency = Just 1 -- Every slot
+    tcOptions                 = Map.empty
+  , tcForwarder               = Nothing
+  , tcApplicationName         = Nothing
+  , tcMetricsPrefix           = Nothing
+  , tcPeriodic                = Map.empty
   }
+
+lookupPeriodicDelay :: Text -> TraceConfig -> Maybe Int
+lookupPeriodicDelay tracerName = Map.lookup tracerName . tcPeriodic
 
 ---------------------------------------------------------------------------
 -- Control and Documentation

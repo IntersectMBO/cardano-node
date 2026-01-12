@@ -39,9 +39,8 @@ config1 = TraceConfig {
       , tofVerbosity = Minimum
       , tofMaxReconnectDelay = 60
       }
-    , tcNodeName = Nothing
-    , tcResourceFrequency = Nothing
+    , tcApplicationName = Nothing
     , tcMetricsPrefix = Just "cardano"
-    , tcLedgerMetricsFrequency = Nothing
+    , tcPeriodic = Map.empty
     }
 

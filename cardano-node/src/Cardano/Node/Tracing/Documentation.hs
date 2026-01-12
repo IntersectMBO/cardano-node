@@ -199,7 +199,7 @@ docTracersFirstPhase :: forall blk peer remotePeer.
   -> IO (DocTracer, TraceConfig)
 docTracersFirstPhase condConfigFileName = do
     trConfig      <- case condConfigFileName of
-                        Just fn -> readConfigurationWithDefault fn defaultCardanoConfig
+                        Just fn -> readConfigurationWithDefault defaultCardanoConfig fn
                         Nothing -> pure defaultCardanoConfig
     let trBase    :: Logging.Trace IO FormattedMessage = docTracer (Stdout MachineFormat)
         trForward :: Logging.Trace IO FormattedMessage = docTracer Forwarder
