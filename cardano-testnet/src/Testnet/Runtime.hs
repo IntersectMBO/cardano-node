@@ -47,6 +47,7 @@ import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
+import           System.Process (waitForProcess)
 
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
@@ -59,7 +60,7 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 
-import           RIO (runRIO)
+import           RIO (race, runRIO)
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -177,13 +178,15 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- We then log the pid in the temp dir structure.
     liftIOAnnotated $ IO.writeFile nodePidFile $ show pid
 
-    -- Wait for socket to be created
-    eSprocketError <-
-      liftIOAnnotated $
-        Ping.waitForSprocket
-          120  -- timeout
-          0.2 -- check interval
-          sprocket
+    -- Wait for socket to be created and check for process to not exit
+    res <- liftIOAnnotated $
+      race
+        (waitForProcess hProcess)
+        ( Ping.waitForSprocket
+            120 -- timeout
+            0.2 -- check interval
+            sprocket
+        )
 
     -- If we do have anything on stderr, fail.
     stdErrContents <- liftIOAnnotated $ IO.readFile nodeStderrFile
@@ -191,11 +194,15 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       throwError $ mkNodeNonEmptyStderrError stdErrContents
 
     -- No stderr and no socket? Fail.
-    firstExceptT
-      (\ioex ->
-        NodeExecutableError . hsep $
-          ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
-      $ hoistEither eSprocketError
+    case res of
+      Left _ -> pure () -- Handled using stderr above
+      Right eSprocketError -> do
+        -- No stderr and no socket? Fail.
+        firstExceptT
+          (\ioex ->
+            NodeExecutableError . hsep $
+              ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
+          $ hoistEither eSprocketError
 
     -- Ping node and fail on error
     -- FIXME: pinging of the node is broken now, has the protocol changed?
