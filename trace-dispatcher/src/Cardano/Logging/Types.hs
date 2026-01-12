@@ -497,7 +497,7 @@ data TraceOptionForwarder = TraceOptionForwarder {
 -- requests periodically, the default for that being 100. Here, the queue can
 -- hold enough traces for 10 subsequent polls by cardano-tracer.
 instance AE.FromJSON TraceOptionForwarder where
-    parseJSON (AE.Object obj) = do
+    parseJSON = AE.withObject "TraceOptionForwarder" $ \obj -> do
       -- Field "queueSize" is the new field that replaces and unifies
       -- both "connQueueSize" and "disconnQueueSize".
       maybeQueueSize <- obj AE..:? "queueSize"
@@ -506,14 +506,12 @@ instance AE.FromJSON TraceOptionForwarder where
                      (Just qs) -> return qs
                      -- Else we look for the deprectaed fields.
                      Nothing   -> do
-                       -- We keep the same default values.
-                       connQueueSize    <- obj AE..:? "connQueueSize"    AE..!= 1024
-                       disconnQueueSize <- obj AE..:? "disconnQueueSize" AE..!= 2048
+                       connQueueSize    <- obj AE..:? "connQueueSize"    AE..!= 128
+                       disconnQueueSize <- obj AE..:? "disconnQueueSize" AE..!= 192
                        return $ max connQueueSize disconnQueueSize
       verbosity         <- obj AE..:? "verbosity"         AE..!= Minimum
-      maxReconnectDelay <- obj AE..:? "maxReconnectDelay" AE..!= 60
+      maxReconnectDelay <- obj AE..:? "maxReconnectDelay" AE..!= 45
       return $ TraceOptionForwarder queueSize verbosity maxReconnectDelay
-    parseJSON _ = mempty
 
 instance AE.ToJSON TraceOptionForwarder where
   toJSON TraceOptionForwarder{..} = AE.object
@@ -525,9 +523,9 @@ instance AE.ToJSON TraceOptionForwarder where
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
-    tofQueueSize           = 2048
+    tofQueueSize           = 192
   , tofVerbosity           = Minimum
-  , tofMaxReconnectDelay   = 60
+  , tofMaxReconnectDelay   = 45
 }
 
 instance AE.FromJSON ForwarderMode where

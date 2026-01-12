@@ -17,9 +17,8 @@ defaultCardanoConfig = emptyTraceConfig {
      [([],
           [ ConfSeverity (SeverityF (Just Notice))
           , ConfDetail DNormal
-          , ConfBackend  [Stdout MachineFormat
+          , ConfBackend  [ Stdout MachineFormat
                          , EKGBackend
-                         , Forwarder
                          ]])
 
      -- more important tracers going here
