@@ -1,5 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Parsers.Run
@@ -8,22 +10,21 @@ module Parsers.Run
   , pref
   , opts
   ) where
-
 import           Cardano.CLI.Environment
-import           Control.Monad
 
+import           Control.Monad (void)
 import           Data.Default.Class (def)
-import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
-import           RIO (runRIO)
-import           RIO.Orphans 
+
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
+import           RIO (display, forever, logInfo, runSimpleApp, threadDelay)
+import           UnliftIO.Resource (runResourceT)
 
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
@@ -60,7 +61,7 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvGenesisOptions=genesisOptions
   , createEnvOutputDir=outputDir
   , createEnvCreateEnvOptions=ceOptions
-  } = do 
+  } = do
       conf <- mkConfigAbs outputDir
       createTestnetEnv
         testnetOptions genesisOptions ceOptions
@@ -74,21 +75,32 @@ runCardanoOptions CardanoTestnetCliOptions
   , cliGenesisOptions=genesisOptions
   , cliNodeEnvironment=env
   , cliUpdateTimestamps=updateTimestamps'
-  } = do 
+  } = do
     case env of
       NoUserProvidedEnv -> do
         -- Create the sandbox, then run cardano-testnet.
         -- It is not necessary to honor `cliUpdateTimestamps` here, because
         -- the genesis files will be created with up-to-date stamps already.
         conf <- mkConfigAbs "testnet"
-        runRIO () $ createTestnetEnv
-                   testnetOptions genesisOptions def
-                   conf
-        withResourceMap (\rm -> void . runRIO rm $ cardanoTestnet testnetOptions conf)
+        runSimpleApp . runResourceT $ do
+          logInfo $ "Creating environment: " <> display (tempAbsPath conf)
+          createTestnetEnv testnetOptions genesisOptions def conf
+          logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
+          void $ cardanoTestnet testnetOptions conf
+          logInfo "Testnet started"
+          waitForShutdown
       UserProvidedEnv nodeEnvPath -> do
         -- Run cardano-testnet in the sandbox provided by the user
         -- In that case, 'cardanoOutputDir' is not used
         conf <- mkConfigAbs nodeEnvPath
-        withResourceMap (\rm -> void . runRIO rm $ cardanoTestnet
+        runSimpleApp . runResourceT $ do
+          logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
+          void $ cardanoTestnet
             testnetOptions
-            conf{updateTimestamps=updateTimestamps'})
+            conf{updateTimestamps=updateTimestamps'}
+          logInfo "Testnet started"
+          waitForShutdown
+  where
+    waitForShutdown = do
+      logInfo "Waiting for shutdown (Ctrl+C)"
+      forever (threadDelay 100_000)

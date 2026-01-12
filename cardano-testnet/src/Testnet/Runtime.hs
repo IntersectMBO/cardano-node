@@ -22,8 +22,8 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Shelley.State as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
+import qualified Cardano.Ledger.Shelley.State as L
 
 import           Prelude
 
@@ -43,22 +43,24 @@ import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
-import           RIO (runRIO)
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
+import           System.Process (waitForProcess)
 
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run (ProcessError (..), initiateProcess)
-import           Testnet.Process.RunIO (procNode, liftIOAnnotated)
+import           Testnet.Process.RunIO (liftIOAnnotated, procNode)
 import           Testnet.Types (TestnetNode (..), TestnetRuntime (configurationFile),
                    showIpv4Address, testnetSprockets)
 
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
+
+import           RIO (race, runRIO)
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -153,11 +155,11 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
-    
+
     let portWaitTimeout = 45
     isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 port
-    unless isClosed $ 
-      throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting node: " <> show port 
+    unless isClosed $
+      throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting node: " <> show port
 
     (Just stdIn, _, _, hProcess, _)
       <- firstExceptT ProcessRelatedFailure $ initiateProcess
@@ -176,13 +178,15 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- We then log the pid in the temp dir structure.
     liftIOAnnotated $ IO.writeFile nodePidFile $ show pid
 
-    -- Wait for socket to be created
-    eSprocketError <-
-      liftIOAnnotated $
-        Ping.waitForSprocket
-          120  -- timeout
-          0.2 -- check interval
-          sprocket
+    -- Wait for socket to be created and check for process to not exit
+    res <- liftIOAnnotated $
+      race
+        (waitForProcess hProcess)
+        ( Ping.waitForSprocket
+            120 -- timeout
+            0.2 -- check interval
+            sprocket
+        )
 
     -- If we do have anything on stderr, fail.
     stdErrContents <- liftIOAnnotated $ IO.readFile nodeStderrFile
@@ -190,11 +194,15 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       throwError $ mkNodeNonEmptyStderrError stdErrContents
 
     -- No stderr and no socket? Fail.
-    firstExceptT
-      (\ioex ->
-        NodeExecutableError . hsep $
-          ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
-      $ hoistEither eSprocketError
+    case res of
+      Left _ -> pure () -- Handled using stderr above
+      Right eSprocketError -> do
+        -- No stderr and no socket? Fail.
+        firstExceptT
+          (\ioex ->
+            NodeExecutableError . hsep $
+              ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
+          $ hoistEither eSprocketError
 
     -- Ping node and fail on error
     -- FIXME: pinging of the node is broken now, has the protocol changed?
@@ -288,18 +296,18 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
 
   liftIOAnnotated $ IO.doesDirectoryExist logDir >>= \case
     True -> pure ()
-    False -> 
+    False ->
       void $ createDirectoryIfMissingNew logDir
 
   liftIOAnnotated (IO.doesFileExist logFile) >>= \case
-    True -> return () 
-    False -> do 
+    True -> return ()
+    False -> do
       liftIOAnnotated $ appendFile logFile ""
 
       let socketPath = case uncons (testnetSprockets testnetRuntime) of
             Just (sprocket, _) -> H.sprocketSystemName sprocket
             Nothing            -> throwString "No testnet sprocket available"
-    
+
       void $ asyncRegister_ . runExceptT $
                   foldEpochState
                     (configurationFile testnetRuntime)
@@ -308,7 +316,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
                     (EpochNo maxBound)
                     Nothing
                     (handler logFile diffFile)
-                    
+
   where
     handler :: FilePath -- ^ log file
             -> FilePath -- ^ diff file
@@ -334,12 +342,12 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          exists <- liftIO $ IO.doesFileExist outputFp 
-          if exists 
+          exists <- liftIO $ IO.doesFileExist outputFp
+          if exists
             then liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
                    <> displayException e <> "\n"
-            else 
-              liftIO $ writeFile outputFp $ unlines 
+            else
+              liftIO $ writeFile outputFp $ unlines
                  ["Ledger new epoch logging failed - caught exception:"
                  , displayException e
                  ]
@@ -372,13 +380,13 @@ asyncRegister_ :: HasCallStack
                => MonadResource m
                => IO a -- ^ Action to run in background
                -> m (ReleaseKey, H.Async a)
-asyncRegister_ act = GHC.withFrozenCallStack $ do 
-      allocate 
+asyncRegister_ act = GHC.withFrozenCallStack $ do
+      allocate
         (do a <- H.async act
-            H.link a 
-            return a   
-        ) 
+            H.link a
+            return a
+        )
         cleanUp
   where
     cleanUp :: H.Async a -> IO ()
-    cleanUp = H.cancel 
+    cleanUp = H.cancel
