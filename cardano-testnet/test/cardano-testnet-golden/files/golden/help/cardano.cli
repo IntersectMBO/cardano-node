@@ -11,7 +11,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--node-env FILEPATH]
   [--update-time]
 
-  Start a testnet in any era
+  Start a testnet and keep it running until stopped
 
 Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
