@@ -1,6 +1,6 @@
 # Revision history for trace-dispatcher
 
-## 2.11.1 -- Dez 2025
+## 2.11.1 -- Jan 2026
 
 * Add strict `contramap'` (infix alias `>!$!<`) to the API, capturing a common pattern to avoid unintentional space leaks when composing tracers
 * Increase `PrometheusSimple` robustness by restarting the backend upon crash, adding start/stop traces and more eagerly reaping of dangling sockets
