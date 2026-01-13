@@ -34,6 +34,9 @@ module Cardano.Logging.Trace (
   , appendInnerName
   , appendInnerNames
   , withInnerNames
+
+  , contramap'
+  , (>!$!<)
   ) where
 
 import           Cardano.Logging.Types
@@ -41,6 +44,7 @@ import           Cardano.Logging.Types
 import           Control.Monad (forM_, join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
+import           Data.Functor.Contravariant as Contr (Contravariant, (>$<))
 import           Data.Maybe (isJust)
 import           Data.Text (Text)
 
@@ -371,3 +375,15 @@ routingTrace rf rc = contramapM'
       (lc, Left control) ->
           T.traceWith (unpackTrace rc) (lc, Left control))
 
+-- | A contramap' which is strict in its second argument and its result captures
+--   a common pattern to avoid unintentionally leaking space when composing tracers.
+--   The infix alias is (>!$!<).
+contramap', (>!$!<) :: Contravariant f => (a' -> a) -> (f a -> f a')
+
+contramap' a !b =
+  let !result = a Contr.>$< b
+  in result
+
+infixl 4 >!$!<
+
+(>!$!<) = contramap'
