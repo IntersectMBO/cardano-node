@@ -47,6 +47,7 @@ import qualified Cardano.Node.STM as STM
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Tracers.NodeVersion
+import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Cardano.Tracing.Config
