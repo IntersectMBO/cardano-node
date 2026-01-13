@@ -196,7 +196,7 @@ runNode cmdPc = do
   forM_ mShelleyVrfFile $
     runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-  consensusProtocol@(SomeConsensusProtocol _ runP) <-
+  consensusProtocol <-
     runThrowExceptT $
       mkConsensusProtocol
        ncProtocolConfig
@@ -557,7 +557,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
 
         ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
         networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
-    withAsync (runRpcServer earlyTracer (pure $ (ncRpcConfig, networkMagic)))  $ \_ ->
+    withAsync (runRpcServer (rpcTracer tracers) (pure (ncRpcConfig nc, networkMagic)))  $ \_ ->
         Node.run
           nodeArgs {
               rnNodeKernelHook = \registry nodeKernel -> do

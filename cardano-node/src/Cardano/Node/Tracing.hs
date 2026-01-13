@@ -18,13 +18,14 @@ import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
+import           Cardano.Rpc.Server (TraceRpc)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.ConnectionId
 
-import           Prelude (IO, String)
+import           Prelude (IO)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           "contra-tracer" Control.Tracer (Tracer (..))
@@ -50,5 +51,5 @@ data Tracers peer localPeer blk m = Tracers
   , nodeStateTracer       :: !(Tracer IO NodeState)
   , resourcesTracer       :: !(Tracer IO ResourceStats)
   , ledgerMetricsTracer   :: !(Tracer IO LedgerMetrics)
-  , rpcTracer             :: !(Tracer IO String)
+  , rpcTracer             :: !(Tracer IO TraceRpc)
   }

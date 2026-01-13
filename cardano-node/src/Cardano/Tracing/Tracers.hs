@@ -49,6 +49,7 @@ import           Cardano.Node.Tracing
 import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
 import qualified Cardano.Node.Tracing.Tracers.Diffusion as DiffusionTracers
 import           Cardano.Node.Tracing.Tracers.NodeVersion
+import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Cardano.Tracing.Config

@@ -113,6 +113,7 @@ library
                         Cardano.Node.Tracing.Tracers.NodeVersion
                         Cardano.Node.Tracing.Tracers.P2P
                         Cardano.Node.Tracing.Tracers.Resources
+                        Cardano.Node.Tracing.Tracers.Rpc
                         Cardano.Node.Tracing.Tracers.Shutdown
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
