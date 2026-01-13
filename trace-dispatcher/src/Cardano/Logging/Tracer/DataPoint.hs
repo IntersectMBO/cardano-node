@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -21,7 +22,7 @@ import           Cardano.Logging.Types
 
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
-import           Control.DeepSeq (NFData, deepseq)
+import           Control.DeepSeq (NFData, ($!!))
 import           Control.Monad.IO.Class
 import qualified Control.Tracer as NT
 import           Data.Aeson
@@ -39,10 +40,11 @@ import           Data.Text (Text, intercalate)
 --   available for the acceptor application, to decode unstructured JSON.
 --
 data DataPoint where
-  DataPoint :: (ToJSON v, NFData v) => v -> DataPoint
+  DataPoint :: (ToJSON v, NFData v) => !v -> DataPoint
 
-type DataPointName   = Text
+type DataPointName  = Text
 type DataPointStore = TVar (M.Map DataPointName DataPoint)
+
 
 initDataPointStore :: IO DataPointStore
 initDataPointStore = newTVarIO M.empty
@@ -53,11 +55,11 @@ writeToStore
   -> DataPointName
   -> DataPoint
   -> IO ()
-writeToStore dpStore dpName (DataPoint obj) = atomically $
-  modifyTVar' dpStore $ \store ->
-    if dpName `M.member` store
-      then M.adjust (const (DataPoint (deepseq obj obj))) dpName store
-      else M.insert dpName (DataPoint (deepseq obj obj)) store
+writeToStore dpStore dpName (DataPoint obj) =
+  let !newVal = DataPoint $!! obj
+  in atomically $
+      modifyTVar' dpStore $
+        M.insert dpName newVal
 
 dataPointTracer :: forall m. MonadIO m
   => DataPointStore

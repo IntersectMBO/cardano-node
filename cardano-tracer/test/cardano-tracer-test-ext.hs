@@ -138,7 +138,8 @@ getExternalTracerState TestSetup{..} ref = do
        -- For simplicity, we are always 'Initiator',
        -- so 'cardano-tracer' is always a 'Responder'.
        let forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
-       initForwarding iomgr forwardingConf $
+       -- weaker machines (like CI runners) need to be able to buffer more trace objects for the stress test
+       initForwarding iomgr forwardingConf{ tofQueueSize = 768 } $
          InitForwardingWith
            { initNetworkMagic          = unI tsNetworkMagic
            , initEKGStore              = Nothing
