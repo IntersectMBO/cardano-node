@@ -205,6 +205,7 @@ library
                       , trace-resources ^>= 0.2.4
                       , wai ^>= 3.2
                       , warp ^>= 3.4
+                      , warp-tls
                       , yaml
 
   if os(windows)

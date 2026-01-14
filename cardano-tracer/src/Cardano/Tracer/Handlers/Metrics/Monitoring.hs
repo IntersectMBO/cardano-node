@@ -1,3 +1,6 @@
+-- BALDUR
+{-# options_GHC -w #-}
+
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,10 +22,14 @@ import           Data.ByteString.Builder (stringUtf8)
 import qualified Data.Text as T
 import           Network.HTTP.Types
 import           Network.Wai
-import           Network.Wai.Handler.Warp (defaultSettings, runSettings)
+import           Network.Wai.Handler.Warp (Settings, defaultSettings, runSettings)
 import qualified System.Metrics as EKG
 import           System.Remote.Monitoring.Wai
 import           System.Time.Extra (sleep)
+
+-- BALDUR
+import Cardano.Tracer.Handlers.System (getPathsToSSLCerts)
+import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings, TLSSettings)
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
 --   for particular EKG.Store. Since 'cardano-tracer' can be connected to any number
@@ -47,8 +54,24 @@ runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
     , ttMonitoringType     = "list"
     }
   dummyStore <- EKG.newStore
-  runSettings (setEndpoint endpoint defaultSettings) do
-    renderEkg dummyStore computeRoutes_autoUpdate
+
+  -- (cert, key) <- getPathsToSSLCerts tracerEnv
+  -- let tls_settings :: TLSSettings
+  --     tls_settings = tlsSettings cert key
+  let settings     :: Settings
+      tls_settings :: TLSSettings
+      tls_settings = tlsSettings "/home/baldur/certificate.pem" "/home/baldur/key.pem"
+      settings = setEndpoint endpoint defaultSettings
+
+      application :: Application
+      application = renderEkg dummyStore computeRoutes_autoUpdate
+
+      run :: IO ()
+      run | Just True <- epForceSSL endpoint 
+          = runTLS tls_settings settings application
+          | otherwise
+          = runSettings settings application
+  run
 
 renderEkg :: EKG.Store -> IO RouteDictionary -> Application
 renderEkg dummyStore computeRoutes_autoUpdate request send = do
