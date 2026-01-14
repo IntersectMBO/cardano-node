@@ -38,13 +38,15 @@ let serviceConfigToJSON =
         } // (cfg.rotation or {});
 
         hasEKG = {
-          epHost  = "127.0.0.1";
-          epPort  = cfg.ekgPortBase;
+          epHost     = "127.0.0.1";
+          epPort     = cfg.ekgPortBase;
+          epForceSSL = false;
         };
         ekgRequestFreq = 1;
         hasPrometheus = {
-          epHost    = "127.0.0.1";
-          epPort    = 3200; ## supervisord.portShiftPrometheus
+          epHost     = "127.0.0.1";
+          epPort     = 3200; ## supervisord.portShiftPrometheus
+          epForceSSL = false; 
         } // (cfg.prometheus or {});
         # Just an example for metrics compatibility mapping.
         # An entry means the first entry has the second entry as alias.

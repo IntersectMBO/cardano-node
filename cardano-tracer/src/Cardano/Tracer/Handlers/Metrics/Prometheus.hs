@@ -1,3 +1,6 @@
+-- BALDUR
+{-# options_GHC -w #-}
+
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -28,9 +31,13 @@ import           Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Encoding as TL
 import           Network.HTTP.Types
 import           Network.Wai
-import           Network.Wai.Handler.Warp (defaultSettings, runSettings)
+import           Network.Wai.Handler.Warp (Settings, defaultSettings, runSettings)
 import           System.Metrics as EKG (Store, sampleAll)
 import           System.Time.Extra (sleep)
+
+-- BALDUR
+import Cardano.Tracer.Handlers.System (getPathsToSSLCerts)
+import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings, TLSSettings)
 
 -- | Runs a simple HTTP server that listens on @endpoint@.
 --
@@ -88,8 +95,25 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   traceWith teTracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
-  runSettings (setEndpoint endpoint defaultSettings) do
-    renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
+  -- (cert, key) <- getPathsToSSLCerts tracerEnv
+  -- let tls_settings :: TLSSettings
+  --     tls_settings = tlsSettings cert key
+  let 
+    settings     :: Settings
+    tls_settings :: TLSSettings
+    settings     = setEndpoint endpoint defaultSettings
+    tls_settings = tlsSettings "/home/baldur/certificate.pem" "/home/baldur/key.pem"
+
+    application :: Application
+    application = renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
+
+    run :: IO ()
+    run | Just True <- epForceSSL endpoint 
+        = runTLS tls_settings settings application
+        | otherwise
+        = runSettings settings application
+  run
+
   where
     TracerEnv
       { teTracer
@@ -139,12 +163,6 @@ renderPrometheus computeRoutes_autoUpdate noSuffix helpTextDict promLabels reque
     wantsJson         = all @Maybe ("application/json"             `ByteString.isInfixOf`) acceptHeader
     wantsOpenMetrics  = all @Maybe ("application/openmetrics-text" `ByteString.isInfixOf`) acceptHeader
 
-    -- we might support the more complex 'Forward:' header in the future
-    getHostNameRequest :: Maybe ByteString.ByteString
-    getHostNameRequest =
-          lookup "x-forwarded-host" (requestHeaders request)
-      <|> requestHeaderHost request
-
     metricsExposition store = do
       metrics <- getMetricsFromNode noSuffix helpTextDict store
       send $ responseBuilder status200
@@ -153,7 +171,7 @@ renderPrometheus computeRoutes_autoUpdate noSuffix helpTextDict promLabels reque
 
     serviceDiscovery (RouteDictionary routeDict) =
       send $ responseLBS status200 contentHdrJSON $
-        case getHostNameRequest of
+        case getHostNameRequest request of
           Just (T.decodeUtf8 -> hostName) -> encode
             [PSD (slug, nodeName, hostName, promLabels) | (slug, (_, nodeName)) <- routeDict]
           Nothing -> "[]"
@@ -162,6 +180,12 @@ renderPrometheus computeRoutes_autoUpdate noSuffix helpTextDict promLabels reque
       "Not found: " <> (TL.encodeUtf8 . TL.fromStrict) t
     wrongMType = send $ responseLBS status415 contentHdrUtf8Text
       "Unsupported Media Type"
+
+-- we might support the more complex 'Forward:' header in the future
+getHostNameRequest :: Request -> Maybe ByteString.ByteString
+getHostNameRequest request =
+      lookup "x-forwarded-host" (requestHeaders request)
+  <|> requestHeaderHost request
 
 getMetricsFromNode
   :: Bool

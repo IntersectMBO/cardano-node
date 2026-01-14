@@ -55,8 +55,11 @@ type Address = HowToConnect
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
-  { epHost :: !String
-  , epPort :: !Port
+  { epHost     :: !String
+  , epPort     :: !Port
+  , epForceSSL :: !(Maybe Bool) 
+  -- ^ `Nothing' (absent field) and `Just False' (present `True'
+  -- value) both disable SSL.
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
@@ -223,7 +226,7 @@ wellFormed TracerConfig
   nullAddress (Net.RemoteSocket host _port) = Text.null host
 
   nullEndpoint :: Endpoint -> Bool
-  nullEndpoint (Endpoint host _port) = null host
+  nullEndpoint (Endpoint host _port _) = null host
 
   invalidFileMode :: LoggingParams -> Bool
   invalidFileMode (LoggingParams root FileMode    _) = null root
