@@ -62,26 +62,27 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
   checkPropLogsResults rootDir format
  where
   acceptConfig root = TracerConfig
-    { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
-    , network        = AcceptAt (Net.LocalPipe localSock)
-    , loRequestNum   = Just 1
-    , ekgRequestFreq = Just 1.0
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , logging        = LoggingParams root FileMode format :| []
-    , rotation       = Just $ RotationParams
+    { networkMagic     = unNetworkMagic $ unI tsNetworkMagic
+    , network          = AcceptAt (Net.LocalPipe localSock)
+    , loRequestNum     = Just 1
+    , ekgRequestFreq   = Just 1.0
+    , hasEKG           = Nothing
+    , hasPrometheus    = Nothing
+    , hasRTView        = Nothing
+    , logging          = LoggingParams root FileMode format :| []
+    , rotation         = Just $ RotationParams
                          { rpFrequencySecs = 3
                          , rpLogLimitBytes = logRotLimitBytes
                          , rpMaxAgeMinutes = logRotMaxAgeMinutes
                          , rpKeepFilesNum  = 10
                          }
-    , verbosity      = Just Minimum
-    , metricsNoSuffix = Nothing
-    , metricsHelp    = Nothing
-    , hasForwarding  = Nothing
-    , resourceFreq   = Nothing
-    , ekgRequestFull = Nothing
+    , tlsCertificate   = Nothing
+    , verbosity        = Just Minimum
+    , metricsNoSuffix  = Nothing
+    , metricsHelp      = Nothing
+    , hasForwarding    = Nothing
+    , resourceFreq     = Nothing
+    , ekgRequestFull   = Nothing
     , prometheusLabels = Nothing
     }
 
@@ -107,21 +108,22 @@ propMultiInit ts@TestSetup{..} format rootDir howToConnect1 howToConnect2 = do
  where
   initConfig :: TracerConfig
   initConfig = TracerConfig
-    { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
-    , network        = ConnectTo $ howToConnect1 :| [howToConnect2]
-    , loRequestNum   = Just 1
-    , ekgRequestFreq = Just 1.0
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , logging        = LoggingParams rootDir FileMode format :| []
-    , rotation       = Nothing
-    , verbosity      = Just Minimum
-    , metricsNoSuffix = Nothing
-    , metricsHelp    = Nothing
-    , hasForwarding  = Nothing
-    , resourceFreq   = Nothing
-    , ekgRequestFull = Nothing
+    { networkMagic     = unNetworkMagic $ unI tsNetworkMagic
+    , network          = ConnectTo $ howToConnect1 :| [howToConnect2]
+    , loRequestNum     = Just 1
+    , ekgRequestFreq   = Just 1.0
+    , hasEKG           = Nothing
+    , hasPrometheus    = Nothing
+    , hasRTView        = Nothing
+    , tlsCertificate   = Nothing
+    , logging          = LoggingParams rootDir FileMode format :| []
+    , rotation         = Nothing
+    , verbosity        = Just Minimum
+    , metricsNoSuffix  = Nothing
+    , metricsHelp      = Nothing
+    , hasForwarding    = Nothing
+    , resourceFreq     = Nothing
+    , ekgRequestFull   = Nothing
     , prometheusLabels = Nothing
     }
 
@@ -150,21 +152,22 @@ propMultiResp ts@TestSetup{..} format rootDir howToConnect = do
  where
   respConfig :: TracerConfig
   respConfig = TracerConfig
-    { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
-    , network        = AcceptAt howToConnect
-    , loRequestNum   = Just 1
-    , ekgRequestFreq = Just 1.0
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , logging        = LoggingParams rootDir FileMode format :| []
-    , rotation       = Nothing
-    , verbosity      = Just Minimum
-    , metricsNoSuffix = Nothing
-    , metricsHelp    = Nothing
-    , hasForwarding  = Nothing
-    , resourceFreq   = Nothing
-    , ekgRequestFull = Nothing
+    { networkMagic     = unNetworkMagic $ unI tsNetworkMagic
+    , network          = AcceptAt howToConnect
+    , loRequestNum     = Just 1
+    , ekgRequestFreq   = Just 1.0
+    , hasEKG           = Nothing
+    , hasPrometheus    = Nothing
+    , hasRTView        = Nothing
+    , tlsCertificate   = Nothing
+    , logging          = LoggingParams rootDir FileMode format :| []
+    , rotation         = Nothing
+    , verbosity        = Just Minimum
+    , metricsNoSuffix  = Nothing
+    , metricsHelp      = Nothing
+    , hasForwarding    = Nothing
+    , resourceFreq     = Nothing
+    , ekgRequestFull   = Nothing
     , prometheusLabels = Nothing
     }
 
