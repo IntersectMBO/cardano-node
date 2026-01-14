@@ -119,6 +119,7 @@
         {
           # Add some executables from other relevant packages
           inherit (bech32.components.exes) bech32;
+          inherit (dmq-node.components.exes) dmq-node;
           inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
           # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
           # Keep available an alternative without the git revision, like the other
@@ -299,6 +300,7 @@
           "db-analyser"
           "db-synthesizer"
           "db-truncater"
+          "dmq-node"
           "snapshot-converter"
           "tx-generator"
         ];
@@ -502,6 +504,7 @@
           db-analyser
           db-synthesizer
           db-truncater
+          dmq-node
           locli
           snapshot-converter
           tx-generator
