@@ -60,8 +60,6 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     } <-
     createAndRunTestnet options def conf
 
-  H.failure
-
   execConfig <- mkExecConfig tempAbsPath' nodeSprocket testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)
   pparams <- unLedgerProtocolParameters <$> getProtocolParams epochStateView ceo
