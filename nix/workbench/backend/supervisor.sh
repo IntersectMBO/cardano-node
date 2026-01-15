@@ -224,23 +224,28 @@ EOF
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        if jqtest '.node.tracing_backend == "trace-dispatcher"' "$dir"/profile.json
-        then if ! supervisorctl start tracer
-             then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
-                  echo "$(red config.json) -------------------------------------" >&2
-                  cat "$dir"/tracer/config.json
-                  echo "$(red tracer stdout) -----------------------------------" >&2
-                  cat "$dir"/tracer/stdout
-                  echo "$(red tracer stderr) -----------------------------------" >&2
-                  cat "$dir"/tracer/stderr
-                  echo "$(white -------------------------------------------------)" >&2
-                  fatal "could not start $(white cardano-tracer)"
-             fi
-
-             progress_ne "supervisor" "waiting for $(yellow cardano-tracer) to create socket: "
-             while test ! -e "$dir"/tracer/tracer.socket; do sleep 1; done
-             echo $(green ' OK') >&2
-             backend_supervisor save-child-pids "$dir"
+        # A "tracer"(s) is optional.
+        if ! jqtest ".node.tracer" "${dir}"/profile.json
+        then
+            true
+        else
+            if jqtest '.node.tracing_backend == "trace-dispatcher"' "$dir"/profile.json
+            then if ! supervisorctl start tracer
+                 then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
+                      echo "$(red config.json) -------------------------------------" >&2
+                      cat "$dir"/tracer/config.json
+                      echo "$(red tracer stdout) -----------------------------------" >&2
+                      cat "$dir"/tracer/stdout
+                      echo "$(red tracer stderr) -----------------------------------" >&2
+                      cat "$dir"/tracer/stderr
+                      echo "$(white -------------------------------------------------)" >&2
+                      fatal "could not start $(white cardano-tracer)"
+                 fi
+                progress_ne "supervisor" "waiting for $(yellow cardano-tracer) to create socket: "
+                while test ! -e "$dir"/tracer/tracer.socket; do sleep 1; done
+                echo $(green ' OK') >&2
+                backend_supervisor save-child-pids "$dir"
+            fi
         fi;;
 
     get-node-socket-path )
@@ -295,28 +300,25 @@ EOF
         fi
         backend_supervisor save-child-pids "$dir";;
 
-    start-workloads )
+    start-workload-by-name )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
+        local workload=${1:?$usage}; shift
 
         while test $# -gt 0
         do case "$1" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
-        # For every workload
-        for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
-        do
-            if ! supervisorctl start "${workload}"
-            then progress "supervisor" "$(red fatal: failed to start) $(white "${workload} workload")"
-                 echo "$(red "${workload}" workload stdout) ----------------------" >&2
-                 cat "$dir"/workloads/"${workload}"/stdout
-                 echo "$(red "${workload}" workload stderr) ----------------------" >&2
-                 cat "$dir"/workloads/"${workload}"/stderr
-                 echo "$(white -------------------------------------------------)" >&2
-                 fatal "could not start $(white "${workload} workload")"
-            fi
-        done
+        if ! supervisorctl start "${workload}"
+        then progress "supervisor" "$(red fatal: failed to start) $(white "${workload} workload")"
+             echo "$(red "${workload}" workload stdout) ----------------------" >&2
+             cat "$dir"/workloads/"${workload}"/stdout
+             echo "$(red "${workload}" workload stderr) ----------------------" >&2
+             cat "$dir"/workloads/"${workload}"/stderr
+             echo "$(white -------------------------------------------------)" >&2
+             fatal "could not start $(white "${workload} workload")"
+        fi
         backend_supervisor save-child-pids "$dir";;
 
     wait-node-stopped )

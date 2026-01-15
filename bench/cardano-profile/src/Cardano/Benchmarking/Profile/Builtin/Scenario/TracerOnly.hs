@@ -32,9 +32,8 @@ profilesNoEraTracerOnly =
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
         . P.delegators 6
         . P.analysisStandard . P.analysisUnitary
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     tracerOnly & P.name "tracer-only"
                . P.desc "Idle scenario:  start only the tracer & detach from tty;  no termination"
-               . P.traceForwardingOn . P.newTracing . P.p2pOff
+               . P.traceForwardingOn . P.newTracing
   ]

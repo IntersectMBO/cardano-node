@@ -34,10 +34,9 @@ profilesNoEraIdle =
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
         . P.delegators 6
         . P.analysisUnitary
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
       updateQuorum = P.shelley (KeyMap.insert "updateQuorum" (Aeson.Number 1))
   in [
-    idle & P.name "devops" . V.timescaleDevops     . P.extraFutureOffset 10 . updateQuorum . P.traceForwardingOn . P.newTracing . P.p2pOff . P.analysisOff
-  , idle & P.name "idle"   . V.timescaleCompressed . P.extraFutureOffset  0                . P.traceForwardingOn . P.newTracing . P.p2pOff . P.analysisStandard
+    idle & P.name "devops" . V.timescaleDevops     . P.extraFutureOffset 10 . updateQuorum . P.traceForwardingOn . P.newTracing . P.analysisOff
+  , idle & P.name "idle"   . V.timescaleCompressed . P.extraFutureOffset  0                . P.traceForwardingOn . P.newTracing . P.analysisStandard
          . P.desc "Idle scenario:  start nodes & detach from tty;  no cluster termination"
   ]

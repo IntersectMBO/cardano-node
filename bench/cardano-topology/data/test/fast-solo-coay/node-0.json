@@ -1,3 +1,5 @@
 {
-  "Producers": []
+  "localRoots": [],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
 }

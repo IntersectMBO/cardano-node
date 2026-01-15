@@ -3,8 +3,8 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile.Workload.Latency (
-  latencyWorkload
+module Cardano.Benchmarking.Profile.Workload.CGroupMemory (
+  cgroupMemoryWorkload
 ) where
 
 --------------------------------------------------------------------------------
@@ -15,14 +15,14 @@ import qualified Cardano.Benchmarking.Profile.Types as Types
 
 --------------------------------------------------------------------------------
 
-latencyWorkload :: Types.Workload
-latencyWorkload = Types.Workload {
-    Types.workloadName = "latency"
+cgroupMemoryWorkload :: Types.Workload
+cgroupMemoryWorkload = Types.Workload {
+    Types.workloadName = "cgroup_memory"
   , Types.parameters = mempty
   , Types.entrypoints = Types.Entrypoints {
       Types.pre_generator = Nothing
-    , Types.producers = "latency"
+    , Types.producers = "cgroup_memory"
     }
-  , Types.before_nodes = False
-  , Types.wait_pools = False
+  , Types.before_nodes = True
+  , Types.wait_pools = True
 }

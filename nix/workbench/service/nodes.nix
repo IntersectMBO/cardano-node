@@ -53,9 +53,9 @@ let
        then go {} (__head eras) (__tail eras)
        else throw "configHardforksIntoEra:  unknown era '${era}'";
 
-  liveTablesPath = i: 
-    if (profile.cluster ? "ssd_directory" && profile.cluster.ssd_directory != null)
-    then "${profile.cluster.ssd_directory}/lmdb-node-${toString i}"
+  liveTablesPath = i:
+    if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
+    then "${profile.node.ssd_directory}/node-${toString i}"
     else null;
 
   ##
@@ -73,8 +73,10 @@ let
       topology       = "topology.json";
       nodeConfigFile = "config.json";
 
-      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory
-      withUtxoHdLmdb   = profile.node.utxo_lmdb;
+      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory;
+      # non-block producers (like the explorer node) keep using the in-memory backend
+      withUtxoHdLmdb   = profile.node.utxo_lmdb && isProducer;
+      withUtxoHdLsmt   = profile.node.utxo_lsmt && isProducer;
       lmdbDatabasePath = liveTablesPath i;
 
       ## Combine:
@@ -99,6 +101,7 @@ let
                   "ShelleyGenesisHash"
                   "AlonzoGenesisHash"
                   "ConwayGenesisHash"
+                  "DijkstraGenesisHash"
                 ] //
                 {
                   ExperimentalHardForksEnabled = true;
@@ -106,6 +109,7 @@ let
                   TurnOnLogMetrics             = true;
                   SnapshotInterval             = 4230;
                   ChainSyncIdleTimeout         = 0;
+                  PeerSharing                  = false;
 
                   ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
                   ## NB. the following inequality must hold: known >= established >= active >= 0
@@ -118,7 +122,14 @@ let
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
-                } // optionalAttrs profile.node.utxo_lmdb
+                  DijkstraGenesisFile          = "../genesis/genesis.dijkstra.json";
+                } // optionalAttrs (profile.node.utxo_lsmt && isProducer)
+                {
+                  LedgerDB = {
+                    Backend = "V2LSM";
+                    LSMDatabasePath = liveTablesPath i;
+                  };
+                } // optionalAttrs (profile.node.utxo_lmdb && isProducer)
                 {
                   LedgerDB = {
                     Backend = "V1LMDB";
@@ -143,14 +154,20 @@ let
           "--shutdown-on-slot-synced"
           (toString nodeSpec.shutdown_on_slot_synced)
         ];
-    } // optionalAttrs (profiling != "none") {
-      inherit profiling;
-    } // optionalAttrs (profiling == "none") {
-      # Switch to `noGitRev` to avoid rebuilding with every commit.
-      package    = pkgs.cardano-node.passthru.noGitRev;
-    } // optionalAttrs backend.useCabalRun {
+    } // optionalAttrs ((profiling.profilingTypeParam or "none") != "none") {
+      # Add the profiling `-h*` RTS option.
+      profiling = profiling.profilingTypeParam;
+    } // optionalAttrs (profiling.eventlog or false) {
+      # Add the `-l` RTS param with profiling.
+      eventlog = true;
+    # Decide where the executable comes from:
+    #########################################
+    } // optionalAttrs (!backend.useCabalRun) {
+      package    = workbenchNix.haskellProject.exes.cardano-node;
+    } // optionalAttrs   backend.useCabalRun  {
       # Allow the shell function to take precedence.
       executable = "cardano-node";
+    #########################################
     } // optionalAttrs isProducer {
       operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
       kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";
@@ -192,6 +209,7 @@ let
       systemd.sockets = mkOption {};
       users = mkOption {};
       assertions = mkOption {};
+      warnings = mkOption {};
       environment = mkOption {};
     };
     eval = let
@@ -218,7 +236,7 @@ let
               # A workbench with only the dependencies needed for this command.
               [ workbenchNix.workbench
                 jq
-                workbenchNix.cardanoNodePackages.cardano-topology
+                workbenchNix.haskellProject.exes.cardano-topology
               ];
             }
             ''
@@ -262,9 +280,9 @@ let
       valency =
         let
           topo = topology.value;
-          val  = if hasAttr "localRoots" topo
+          val  = if hasAttr "localRoots" topo && __length topo.localRoots > 0
                   then let lr = head topo.localRoots; in lr.valency
-                  else length topo.Producers;
+                  else length (topo.Producers or []);
         in val;
 
     in {
