@@ -164,6 +164,7 @@ library
                       , deepseq
                       , directory
                       , dns
+                      , ekg
                       , ekg-wai
                       , ekg-core
                       , filepath

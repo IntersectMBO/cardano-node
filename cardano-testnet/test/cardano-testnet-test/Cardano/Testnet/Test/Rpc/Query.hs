@@ -41,6 +41,7 @@ import           Testnet.Start.Types
 import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 hprop_rpc_query_pparams :: Property
@@ -182,5 +183,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
 
   utxoFromUtxoRpc <- H.leftFail $ utxosResponse ^. #items . to (anyUtxoDataUtxoRpcToUtxo $ convert ceo)
   utxos === utxoFromUtxoRpc
+
+  H.threadDelay 90000000
 
   H.failure
