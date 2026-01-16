@@ -170,7 +170,7 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
-import GHC.Stack
+import           GHC.Stack
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
