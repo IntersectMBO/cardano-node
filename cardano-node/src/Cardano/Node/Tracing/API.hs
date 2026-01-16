@@ -49,6 +49,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (HostName)
 import           System.Metrics as EKG
+import           System.Remote.Monitoring
 
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject (writeToSink)
@@ -109,6 +110,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
           )
   mkTracers trConfig = mdo
     ekgStore <- EKG.newStore
+    forkServerWith ekgStore  "localhost" 1900
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer trConfig ekgStore
 
