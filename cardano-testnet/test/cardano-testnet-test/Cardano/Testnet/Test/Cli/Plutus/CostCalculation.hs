@@ -18,6 +18,7 @@ import           Cardano.Api.Ledger (EpochInterval (..))
 import           Cardano.Testnet
 
 import           Prelude
+import           Testnet.Types
 
 import           Control.Monad (void)
 import           Data.Aeson (Value, encodeFile)
@@ -43,8 +44,6 @@ import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
-import           Testnet.Types (PaymentKeyInfo (paymentKeyInfoAddr), paymentKeyInfoPair,
-                   verificationKey)
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
