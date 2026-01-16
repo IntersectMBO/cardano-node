@@ -85,9 +85,11 @@ import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.Default.Class as DefaultClass
+import           Data.IORef
 import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
+import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
@@ -95,6 +97,7 @@ import           Data.Word (Word64)
 import           Lens.Micro
 import           Numeric.Natural
 import           System.FilePath ((</>))
+import           System.IO.Unsafe
 
 import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Start.Types
@@ -108,13 +111,13 @@ newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
 
-instance Exception AlonzoGenesisError where 
+instance Exception AlonzoGenesisError where
   displayException = Api.docToString . Api.prettyError
 
 
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis = do
-  let genesis = Api.alonzoGenesisDefaults  
+  let genesis = Api.alonzoGenesisDefaults
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
@@ -186,7 +189,8 @@ defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
     <> tracers
-    <> [("TraceOptions", Aeson.Object mempty)]
+    <> [("TraceOptions", traceOptions)]
+    -- <> [("TraceOptions", Aeson.Object mempty)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
  where
@@ -299,6 +303,19 @@ defaultYamlHardforkViaConfig sbe =
     , (proxyName (Proxy @TraceTxOutbound), False)
     , (proxyName (Proxy @TraceTxSubmissionProtocol), False)
     ]
+
+  traceOptions = do
+    Aeson.object
+      [ "" .= Aeson.object
+        [ "backends" .= Aeson.Array
+          [ "EKGBackend"
+          , "PrometheusSimple suffix 0.0.0.0 12798"
+          , "Stdout HumanFormatColoured"
+          ]
+        , "detail" .= ("DNormal" :: Aeson.Value)
+        , "severity" .= ("Notice" :: Aeson.Value)
+        ]
+      ]
 
 defaultYamlConfig :: Aeson.KeyMap Aeson.Value
 defaultYamlConfig =
