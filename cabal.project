@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-10-17T00:26:22Z
-  , cardano-haskell-packages 2025-11-20T19:55:27Z
+  , hackage.haskell.org 2025-12-02T22:23:29Z
+  , cardano-haskell-packages 2025-12-16T19:04:42Z
 
 packages:
   cardano-node
@@ -35,8 +35,8 @@ packages:
 -- Needed when cross compiling
 extra-packages: alex
 
-program-options
-  ghc-options: -Werror
+-- program-options
+--   ghc-options: -Werror
 
 test-show-details: direct
 
@@ -78,7 +78,7 @@ if impl (ghc >= 9.12)
 source-repository-package
    type:     git
    location: https://github.com/IntersectMBO/cardano-api.git
-   tag:      f6b3fdf064d626ca94a77883f4a5b8a0a0597608
+   tag:      2adba748a22666f6258096081680605e9ed97e70
    --sha256: sha256-Xmni6Kal8fE77ul7HjFB0bvJRZHr07bjiJ4zrkrcMVU=
    subdir:   cardano-api
 
@@ -87,6 +87,6 @@ source-repository-package
 source-repository-package
    type:     git
    location: https://github.com/IntersectMBO/cardano-cli.git
-   tag:      e4e1025f163dbb197a9942416bdcde3807df8525
+   tag:      e7253b72c051dd633d74cc45df1204974f11e5e2
    --sha256: sha256-+uS6wo+lfYkfZLAz6A7QIFZCiLezMOkRqTEdTrUGMdM=
    subdir:   cardano-cli
