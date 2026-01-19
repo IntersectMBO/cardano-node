@@ -110,7 +110,6 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
           )
   mkTracers trConfig = mdo
     ekgStore <- EKG.newStore
-    forkServerWith ekgStore  "localhost" 1900
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer trConfig ekgStore
 

@@ -701,11 +701,9 @@ docTracersFirstPhase condConfigFileName = do
     internalTrDoc <- documentTracer (internalTr ::
       Logging.Trace IO TraceDispatcherMessage)
 
-
     rpcTr <- mkCardanoTracer trBase trForward mbTrEKG ["RPC"]
     configureTracers configReflection trConfig [rpcTr]
     rpcTrDoc <- documentTracer (rpcTr :: Logging.Trace IO TraceRpc)
-
 
     let bl =   nodeInfoDpDoc
             <> nodeStartupInfoDpDoc
