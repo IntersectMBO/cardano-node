@@ -20,85 +20,103 @@ import           Cardano.Rpc.Server (TraceRpc (..), TraceRpcQuery (..), TraceRpc
 import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList,
                    (.=))
 
-
 instance LogFormatting TraceRpc where
-  forMachine _dtal tr = mconcat $
-    ( "reason" .= prettyShow tr ) :
-    case tr of
-      TraceRpcFatalError _ -> [ "kind" .= String "FatalError" ]
-      TraceRpcError _ -> [ "kind" .= String "Error" ]
-
-      TraceRpcQuery queryTrace -> [ "kind" .= String "Query" ]
-        <> case queryTrace of
-          TraceRpcQueryParamsSpan s ->
-            [ "queryName" .= String "ProtocolParameters"
-            , spanToObject s
-            ]
-
-      TraceRpcSubmit submitTrace -> [ "kind" .= String "Submit" ]
-        <> case submitTrace of
-          TraceRpcSubmitTxDecodingFailure i _ -> [ "txIndex" .= show i ]
-          TraceRpcSubmitN2cConnectionError _ -> [ ]
-          TraceRpcSubmitTxValidationError i _ -> [ "txIndex" .= show i ]
-          TraceRpcSubmitSpan s -> [spanToObject s]
+  forMachine _dtal tr =
+    mconcat $
+      ("reason" .= prettyShow tr)
+        : case tr of
+          TraceRpcFatalError _ -> ["kind" .= String "FatalError"]
+          TraceRpcError _ -> ["kind" .= String "Error"]
+          TraceRpcQuery queryTrace ->
+            ["kind" .= String "QueryService"]
+              <> case queryTrace of
+                TraceRpcQueryParamsSpan s ->
+                  [ "queryName" .= String "ReadParams"
+                  , spanToObject s
+                  ]
+                TraceRpcQueryReadUtxosSpan s ->
+                  [ "queryName" .= String "ReadUtxos"
+                  , spanToObject s
+                  ]
+          TraceRpcSubmit submitTrace ->
+            ["kind" .= String "SubmitService"]
+              <> case submitTrace of
+                TraceRpcSubmitTxDecodingFailure i _ -> ["txIndex" .= show i]
+                TraceRpcSubmitN2cConnectionError _ -> []
+                TraceRpcSubmitTxValidationError i _ -> ["txIndex" .= show i]
+                TraceRpcSubmitSpan s -> [spanToObject s]
 
   forHuman = docToText . pretty
 
   asMetrics = \case
-    TraceRpcQuery (TraceRpcQueryParamsSpan SpanBegin) -> [CounterM "rpc.request.query.count" Nothing]
+    -- query names here are taken from UTXORPC spec: https://utxorpc.org/query/intro/#operations
+    TraceRpcQuery (TraceRpcQueryParamsSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadParams" Nothing]
+    TraceRpcQuery (TraceRpcQueryReadUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadUtxos" Nothing]
+    TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
     _ -> []
 
 instance MetaTrace TraceRpc where
-  namespaceFor = Namespace [] . \case
-    TraceRpcFatalError _ -> ["FatalError"]
-    TraceRpcError _ -> ["Error"]
+  namespaceFor =
+    Namespace [] . \case
+      TraceRpcFatalError _ -> ["FatalError"]
+      TraceRpcError _ -> ["Error"]
+      TraceRpcQuery queryTrace ->
+        "QueryService"
+          : case queryTrace of
+            TraceRpcQueryParamsSpan _ -> ["ReadParams", "Span"]
+            TraceRpcQueryReadUtxosSpan _ -> ["ReadUtxos", "Span"]
+      TraceRpcSubmit submitTrace ->
+        "SubmitService"
+          : case submitTrace of
+            TraceRpcSubmitTxDecodingFailure _ _ -> ["TxDecodingFailure"]
+            TraceRpcSubmitN2cConnectionError _ -> ["N2cConnectionError"]
+            TraceRpcSubmitTxValidationError _ _ -> ["TxValidationError"]
+            TraceRpcSubmitSpan _ -> ["Span"]
 
-    TraceRpcQuery queryTrace ->
-      "Query" :
-        case queryTrace of
-          TraceRpcQueryParamsSpan _ -> ["ProtocolParameters", "Span"]
+  severityFor (Namespace _ nsInner) _ = case nsInner of
+    ["FatalError"] -> Just Critical
+    ["Error"] -> Just Error
+    ["QueryService", "ReadParams", "Span"] -> Just Info
+    ["QueryService", "ReadUtxos", "Span"] -> Just Info
+    ["SubmitService", "SubmitTx", "Span"] -> Just Info
+    ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
+    ["SubmitService", "TxDecodingFailure"] -> Just Info -- request error
+    ["SubmitService", "TxValidationError"] -> Just Info -- request error
+    _ -> Nothing
 
-    TraceRpcSubmit submitTrace ->
-      "Submit" :
-        case submitTrace of
-          TraceRpcSubmitTxDecodingFailure _ _ -> ["TxDecodingFailure"]
-          TraceRpcSubmitN2cConnectionError _ -> ["N2cConnectionError"]
-          TraceRpcSubmitTxValidationError _ _ -> ["TxValidationError"]
-          TraceRpcSubmitSpan _ -> ["Span"]
+  documentFor (Namespace _ nsInner) = case nsInner of
+    ["FatalError"] -> Just ""
+    ["Error"] -> Just ""
+    ["QueryService", "ReadParams", "Span"] -> Just ""
+    ["QueryService", "ReadUtxos", "Span"] -> Just ""
+    ["SubmitService", "SubmitTx", "Span"] -> Just ""
+    ["SubmitService", "N2cConnectionError"] -> Just ""
+    ["SubmitService", "TxDecodingFailure"] -> Just ""
+    ["SubmitService", "TxValidationError"] -> Just ""
+    _ -> Nothing
 
-  severityFor (Namespace _ ["FatalError"]) _ = Just Critical
-  severityFor (Namespace _ ["Error"]) _ = Just Error
-  severityFor (Namespace _ ["Query", "ProtocolParameters", "Span"]) _ = Just Info
-  severityFor (Namespace _ ["Submit", "Span"]) _ = Just Warning
-  severityFor (Namespace _ ["Submit", "TxDecodingFailure"]) _ = Just Warning
-  severityFor (Namespace _ ["Submit", "N2cConnectionError"]) _ = Just Warning
-  severityFor (Namespace _ ["Submit", "TxValidationError"]) _ = Just Warning
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace _ ["FatalError"]) = Just ""
-  documentFor (Namespace _ ["Error"]) = Just ""
-  documentFor (Namespace _ ["Query", "ProtocolParameters", "Span"]) = Just ""
-  documentFor (Namespace _ ["Submit", "Span"]) = Just ""
-  documentFor (Namespace _ ["Submit", "TxDecodingFailure"]) = Just ""
-  documentFor (Namespace _ ["Submit", "N2cConnectionError"]) = Just ""
-  documentFor (Namespace _ ["Submit", "TxValidationError"]) = Just ""
-  documentFor _ = Nothing
+  metricsDocFor (Namespace _ nsInner) = case nsInner of
+    ["QueryService", "ReadParams", "Span"] -> [("rpc.request.QueryService.ReadParams", "<some docstring; can be empty>")]
+    ["QueryService", "ReadUtxos", "Span"] -> [("rpc.request.QueryService.ReadUtxos", "<some docstring; can be empty>")]
+    ["SubmitService", "SubmitTx", "Span"] -> [("rpc.request.SubmitService.SubmitTx", "<some docstring; can be empty>")]
+    _ -> []
 
   allNamespaces =
-    [ Namespace [] ["FatalError"]
-    , Namespace [] ["Error"]
-    , Namespace [] ["Query", "ProtocolParameters", "Span"]
-    , Namespace [] ["Submit", "Span"]
-    , Namespace [] ["Submit", "TxDecodingFailure"]
-    , Namespace [] ["Submit", "N2cConnectionError"]
-    , Namespace [] ["Submit", "TxValidationError"]
-    ]
+    Namespace []
+      <$> [ ["FatalError"]
+          , ["Error"]
+          , ["QueryService", "ReadParams", "Span"]
+          , ["QueryService", "ReadParams", "Span"]
+          , ["SubmitService", "SubmitTx", "Span"]
+          , ["SubmitService", "TxDecodingFailure"]
+          , ["SubmitService", "N2cConnectionError"]
+          , ["SubmitService", "TxValidationError"]
+          ]
 
 -- helper functions
 
 spanToObject :: TraceSpanEvent -> Object
-spanToObject = \case
-  SpanBegin -> "span" .= String "begin"
-  SpanEnd -> "span" .= String "end"
-
-
+spanToObject =
+  mconcat . \case
+    SpanBegin spanId -> ["span" .= String "begin", "spanId" .= spanId]
+    SpanEnd spanId -> ["span" .= String "end", "spanId" .= spanId]

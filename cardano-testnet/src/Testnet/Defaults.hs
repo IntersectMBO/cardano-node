@@ -310,12 +310,21 @@ defaultYamlHardforkViaConfig sbe =
         [ "backends" .= Aeson.Array
           [ "EKGBackend"
           , "PrometheusSimple suffix 0.0.0.0 12798"
-          , "Stdout HumanFormatColoured"
+          , "Stdout MachineFormat"
+          -- , "Stdout HumanFormatColoured"
           ]
         , "detail" .= ("DNormal" :: Aeson.Value)
-        , "severity" .= ("Notice" :: Aeson.Value)
+        -- , "severity" .= ("Notice" :: Aeson.Value)
+        , "severity" .= ("Debug" :: Aeson.Value)
         ]
       ]
+  -- traceOptions = 
+  --   emptyTraceConfig
+  --     { tcOptions = Data.Map.fromList
+  --         [([], [ ConfSeverity (SeverityF (Just Info))
+  --               , ConfBackend [Stdout HumanFormatColoured, EKGBackend]])
+  --         ]
+  --     }
 
 defaultYamlConfig :: Aeson.KeyMap Aeson.Value
 defaultYamlConfig =
