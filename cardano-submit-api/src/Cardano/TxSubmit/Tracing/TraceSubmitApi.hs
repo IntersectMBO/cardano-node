@@ -54,7 +54,6 @@ renderTxCmdError (TxCmdTxSubmitValidationError e) =
       "transaction submit era mismatch" <> textShow eraMismatch
 
 instance LogFormatting TraceSubmitApi where
-  -- TODO (from: @russoul, to: @jutaro) why json object is required instead of, more flexible, arbitrary json value?
   forMachine _ ApplicationStopping = mempty
   forMachine _ (EndpointListeningOnPort addr) =
     singleton "addr" (toJSON (textShow addr))
@@ -148,7 +147,6 @@ instance MetaTrace TraceSubmitApi where
   severityFor (Namespace _ ["Metrics", "PortNotBound"]) _               = Just Error
   severityFor _ _                                                       = Nothing
 
-  -- TODO (@russoul) This seems to be necessary for metrics to work at all, why?
   metricsDocFor (Namespace _ ["Endpoint", "FailedToSubmitTransaction"]) = [ ("tx_submit_fail", "Number of failed tx submissions") ]
   metricsDocFor (Namespace _ ["Endpoint", "SubmittedTransaction"]) = [ ("tx_submit", "Number of successful tx submissions") ]
   metricsDocFor (Namespace _ ["Application", "InitializeMetrics"]) =

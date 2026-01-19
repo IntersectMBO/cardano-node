@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -61,7 +62,7 @@ mkTraceDispatcher config = do
   let registry = toPrometheusRegistry ekgStore (defaultOptions mempty) -- Convert EKG metrics store to prometheus metrics registry on-demand
   trEkg  <- ekgTracer config ekgStore
   configReflection <- emptyConfigReflection
-  tr <- mkCardanoTracer trBase mempty (Just trEkg) ["TxSubmitApi"]
+  !tr <- mkCardanoTracer trBase mempty (Just trEkg) ["TxSubmitApi"]
   configureTracers configReflection config [tr]
   traceWith tr ApplicationInitializeMetrics
   pure (tr, registry >>= sample)
