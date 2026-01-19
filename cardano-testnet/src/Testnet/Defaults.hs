@@ -98,6 +98,7 @@ import           Lens.Micro
 import           Numeric.Natural
 import           System.FilePath ((</>))
 import           System.IO.Unsafe
+import GHC.Exts (IsList(..))
 
 import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Start.Types
@@ -318,9 +319,9 @@ defaultYamlHardforkViaConfig sbe =
         , "severity" .= ("Debug" :: Aeson.Value)
         ]
       ]
-  -- traceOptions = 
+  -- traceOptions = toJSON $
   --   emptyTraceConfig
-  --     { tcOptions = Data.Map.fromList
+  --     { tcOptions = fromList
   --         [([], [ ConfSeverity (SeverityF (Just Info))
   --               , ConfBackend [Stdout HumanFormatColoured, EKGBackend]])
   --         ]
