@@ -2,6 +2,12 @@
 
 ## vNext
 
+## 10.2 -- Jan 2026
+
+* Replace the older tracing & metric system — `iohk-monitoring` with `trace-dispatcher`
+  * Change prometheus metric type from `gauge` to `counter`
+  * Use slightly different prometheus suffix for counters: `counter` instead of `count`
+
 ## 10.0 -- Oct 2024
 
 * Bump for Node 10.0

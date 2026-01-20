@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-submit-api
-version:                10.1.1
+version:                10.2.0
 synopsis:               A web server that allows transactions to be POSTed to the cardano chain
 description:            A web server that allows transactions to be POSTed to the cardano chain.
 homepage:               https://github.com/intersectmbo/cardano-node
@@ -43,22 +43,24 @@ library
                       , cardano-binary
                       , cardano-cli ^>= 10.13
                       , cardano-crypto-class ^>=2.2.3.2
+                      , containers
+                      , ekg-core
                       , http-media
-                      , iohk-monitoring
                       , mtl
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus-cardano
                       , ouroboros-network-protocols
                       , prometheus >= 2.2.4
+                      , ekg-prometheus-adapter
                       , safe-exceptions
                       , servant
                       , servant-server
                       , streaming-commons
                       , text
                       , transformers-except
+                      , trace-dispatcher
                       , warp
-                      , yaml
 
   hs-source-dirs:       src
 
@@ -66,12 +68,12 @@ library
 
   other-modules:        Cardano.TxSubmit.CLI.Parsers
                       , Cardano.TxSubmit.CLI.Types
-                      , Cardano.TxSubmit.Config
                       , Cardano.TxSubmit.Metrics
                       , Cardano.TxSubmit.Orphans
                       , Cardano.TxSubmit.Rest.Parsers
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
+                      , Cardano.TxSubmit.Tracing.TraceSubmitApi
                       , Cardano.TxSubmit.Types
                       , Cardano.TxSubmit.Util
                       , Cardano.TxSubmit.Web
