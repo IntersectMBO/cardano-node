@@ -47,6 +47,6 @@ profilesNoEraModel =
   in [
     model & P.name "model-secp-ecdsa-stepx2" . secp  . postPlomin . P.budgetBlockStepsDouble . V.datasetCurrent
   , model & P.name "model-secp-ecdsa"        . secp  . postPlomin                            . V.datasetCurrent
-  , model & P.name "model-value"             . value . postPlomin                            . V.datasetCurrent . P.analysisSizeFull
+  , model & P.name "model-value"             . value . postPlomin                            . V.datasetOct2021 . P.analysisSizeFull
   , model & P.name "model-value-test"        . value . postPlomin                            . V.datasetSmall   . P.analysisSizeFull
   ]
