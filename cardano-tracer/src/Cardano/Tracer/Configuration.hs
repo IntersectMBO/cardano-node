@@ -161,7 +161,7 @@ data TracerConfig = TracerConfig
   , logging           :: !(NonEmpty LoggingParams)  -- ^ Logging parameters.
   , rotation          :: !(Maybe RotationParams)    -- ^ Rotation parameters.
   , verbosity         :: !(Maybe Verbosity)         -- ^ Verbosity of the tracer itself.
-  , metricsNoSuffix   :: !(Maybe Bool)              -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similiarity with old system names - if desired; default: False
+  , metricsNoSuffix   :: !(Maybe Bool)              -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similarity with old system names - if desired; default: False
   , metricsHelp       :: !(Maybe FileOrMap)         -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
   , resourceFreq      :: !(Maybe Int)               -- ^ Frequency (1/millisecond) for gathering resource data.
   , ekgRequestFull    :: !(Maybe Bool)              -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False

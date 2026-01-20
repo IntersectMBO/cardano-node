@@ -97,7 +97,7 @@ readConfiguration fp =
     either throwIO pure . parseRepresentation =<< BS.readFile fp
 
 -- | Read a configuration file and returns the internal representation
--- Uses values which are not in the file fram the defaultConfig
+-- Uses values which are not in the file from the defaultConfig
 readConfigurationWithDefault :: FilePath -> TraceConfig -> IO TraceConfig
 readConfigurationWithDefault fp defaultConf = do
     fileConf <- either throwIO pure . parseRepresentation =<< BS.readFile fp
