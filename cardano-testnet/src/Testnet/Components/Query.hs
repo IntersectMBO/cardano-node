@@ -31,6 +31,7 @@ module Testnet.Components.Query
   , findAllUtxos
   , findUtxosWithAddress
   , findLargestUtxoWithAddress
+  , findLargestMultiAssetUtxoWithAddress
   , findLargestUtxoForPaymentKey
 
   , checkDRepsNumber
@@ -349,6 +350,27 @@ findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
   pure
     . listToMaybe
     $ sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
+
+-- | Retrieve the largest utxo with a multi-asset 
+findLargestMultiAssetUtxoWithAddress
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadIO m
+  => MonadTest m
+  => EpochStateView
+  -> ShelleyBasedEra era
+  -> Text -- ^ Address
+  -> m (Maybe (TxIn, TxOut CtxUTxO era))
+findLargestMultiAssetUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
+  utxos <- toList <$> findUtxosWithAddress epochStateView sbe address
+  let sortedUTxOs = sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
+      utxosWithMas = filter (\(_,TxOut _ txOutValue _ _) -> isMultiAssetPresent txOutValue) sortedUTxOs 
+  pure $ listToMaybe utxosWithMas
+
+isMultiAssetPresent :: TxOutValue era -> Bool 
+isMultiAssetPresent v = 
+  Map.size (valueToPolicyAssets $ txOutValueToValue v) > 0
+
 
 -- | Retrieve a largest UTxO for a payment key info - a convenience wrapper for
 -- 'findLargestUtxoWithAddress'.
