@@ -72,6 +72,7 @@ library
                       , aeson >= 2.1.0.0
                       , aeson-pretty
                       , async
+                      , autodocodec
                       , bytestring
                       , cborg
                       , cborg-json
