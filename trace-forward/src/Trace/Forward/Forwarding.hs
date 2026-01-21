@@ -16,7 +16,7 @@ module Trace.Forward.Forwarding
   ) where
 
 import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (runInLoop)
+import           Cardano.Logging.Utils (runInLoop, RunInLoopTermination(..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
@@ -208,6 +208,7 @@ launchForwarders iomgr forwarding
              sink
              initEKGStore
              dpStore)
+          TerminateNever
           (fromMaybe (const $ pure ()) initOnForwardInterruption)
           1
           maxReconnectDelay

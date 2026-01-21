@@ -2,11 +2,14 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 -- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Run
   ( doRunCardanoTracer
   , runCardanoTracer
+  , CardanoTracerHandle (..)
+  , cleanupCardanoTracer
   ) where
 
 import           Cardano.Logging.Resources
@@ -26,42 +29,48 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
-import           Control.Applicative
 import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.Async (async, link)
 import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO)
 #endif
 import           Control.Exception (SomeException, try)
-import           Control.Monad
 import           Data.Aeson (decodeFileStrict')
 import           Data.Foldable (for_)
-import           Data.Maybe (fromMaybe)
+import           Data.Kind (Type)
 import qualified Data.Map.Strict as M (Map, empty, filter, toList)
+import           Data.Maybe (fromMaybe)
 import           Data.Text as T (Text, null)
 import           Data.Text.Lazy.Builder as TB (Builder, fromText)
 
+type    CardanoTracerHandle :: Type -> Type
+newtype CardanoTracerHandle user = CardanoTracerHandle
+  { inChan :: InChan (CardanoTracerMessage user)
+  }
+
+cleanupCardanoTracer :: CardanoTracerHandle user -> IO ()
+cleanupCardanoTracer handle =
+  writeChan handle.inChan Shutdown
 
 -- | Top-level run function, called by 'cardano-tracer' app.
-runCardanoTracer :: TracerParams -> IO ()
-runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
-  tr <- mkTracerTracer $ SeverityF $ logSeverity <|> Just Info          -- default severity filter to Info
-  traceWith tr TracerBuildInfo
+runCardanoTracer :: Trace IO TracerTrace -> TracerParams -> IO (CardanoTracerHandle ())
+runCardanoTracer tracer TracerParams{tracerConfig, stateDir, logSeverity} = do
+  traceWith tracer TracerBuildInfo
 #if RTVIEW
-    { ttBuiltWithRTView = True
+    { ttBuiltWithRTView = True }
 #else
-    { ttBuiltWithRTView = False
+    { ttBuiltWithRTView = False }
 #endif
-    }
-  traceWith tr TracerParamsAre
+  traceWith tracer TracerParamsAre
     { ttConfigPath     = tracerConfig
     , ttStateDir       = stateDir
     , ttMinLogSeverity = logSeverity
     }
 
   config <- readTracerConfig tracerConfig
-  traceWith tr TracerConfigIs
+  traceWith tracer TracerConfigIs
     { ttConfig            = config
 #if RTVIEW
     , ttWarnRTViewMissing = False
@@ -70,18 +79,11 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
 #endif
     }
 
-  for_ (resourceFreq config) \msInterval -> do
-    threadId <- async do
-      forever do
-        mbrs <- readResourceStats
-        for_ mbrs \resourceStat ->
-          traceWith tr (TracerResource resourceStat)
-        threadDelay (1_000 * msInterval) -- Delay in seconds, given milliseconds
-    link threadId
-
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  doRunCardanoTracer config stateDir tr brake dpRequestors
+  cardanoTracerHandle@CardanoTracerHandle{inChan} <- doRunCardanoTracer config stateDir tracer brake dpRequestors
+  traceResourceStats inChan tracer (resourceFreq config)
+  pure cardanoTracerHandle
 
 -- | Runs all internal services of the tracer.
 doRunCardanoTracer
@@ -90,12 +92,12 @@ doRunCardanoTracer
   -> Trace IO TracerTrace
   -> ProtocolsBrake      -- ^ The flag we use to stop all the protocols.
   -> DataPointRequestors -- ^ The DataPointRequestors to ask 'DataPoint's.
-  -> IO ()
-doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
-  traceWith tr TracerInitStarted
+  -> IO (CardanoTracerHandle ())
+doRunCardanoTracer config rtViewStateDir tracer protocolsBrake dpRequestors = do
+  traceWith tracer TracerInitStarted
   connectedNodes      <- initConnectedNodes
   connectedNodesNames <- initConnectedNodesNames
-  acceptedMetrics <- initAcceptedMetrics
+  acceptedMetrics     <- initAcceptedMetrics
   mHelp               <- loadMetricsHelp $ metricsHelp config
 
 #if RTVIEW
@@ -109,15 +111,17 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
   currentLogLock <- newLock
   currentDPLock  <- newLock
 
-  traceWith tr TracerInitEventQueues
+  traceWith tracer TracerInitEventQueues
 #if RTVIEW
-  eventsQueues   <- initEventsQueues tr rtViewStateDir connectedNodesNames dpRequestors currentDPLock
+  eventsQueues     <- initEventsQueues tracer rtViewStateDir connectedNodesNames dpRequestors currentDPLock
   rtViewPageOpened <- newTVarIO False
 #endif
 
-  (reforwardTraceObject,_trDataPoint) <- initReForwarder config tr
+  (reforwardTraceObject, _trDataPoint) <- initReForwarder config tracer
 
   registry <- newRegistry
+
+  (inChan, _outChan) <- newChan
 
   -- Environment for all following functions.
   let tracerEnv :: TracerEnv
@@ -130,11 +134,12 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
         , teCurrentDPLock         = currentDPLock
         , teDPRequestors          = dpRequestors
         , teProtocolsBrake        = protocolsBrake
-        , teTracer                = tr
+        , teTracer                = tracer
         , teReforwardTraceObjects = reforwardTraceObject
         , teRegistry              = registry
         , teStateDir              = rtViewStateDir
         , teMetricsHelp           = mHelp
+        , teInChan                = inChan
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -150,24 +155,31 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 #endif
 
   -- Specify what should be done before 'cardano-tracer' stops.
-  beforeProgramStops $ do
-    traceWith tr TracerShutdownInitiated
+  beforeProgramStops do
+    traceWith tracer TracerShutdownInitiated
 #if RTVIEW
     backupAllHistory tracerEnv tracerEnvRTView
-    traceWith tr TracerShutdownHistBackup
+    traceWith tracer TracerShutdownHistBackup
 #endif
     applyBrake (teProtocolsBrake tracerEnv)
-    traceWith tr TracerShutdownComplete
+    traceWith tracer TracerShutdownComplete
 
-  traceWith tr TracerInitDone
-  sequenceConcurrently_
-    [ runLogsRotator    tracerEnv
-    , runMetricsServers tracerEnv
-    , runAcceptors      tracerEnv tracerEnvRTView
+  traceWith tracer TracerInitDone
+
+  let runs :: [IO ()]
+      runs =
+        [ runLogsRotator    tracerEnv
+        , runMetricsServers tracerEnv
+        , runAcceptors      tracerEnv tracerEnvRTView
 #if RTVIEW
-    , runRTView         tracerEnv tracerEnvRTView
+        , runRTView         tracerEnv tracerEnvRTView
 #endif
-    ]
+        ]
+  sequenceConcurrently_ runs
+
+  pure CardanoTracerHandle
+    { inChan
+    }
 
 -- NB. this fails silently if there's any read or decode error when an external JSON file is provided
 loadMetricsHelp :: Maybe FileOrMap -> IO [(Text, Builder)]
@@ -181,3 +193,15 @@ loadMetricsHelp (Just (FOM x)) = do
     Right object ->
       pure object
   pure $ (M.toList . fmap TB.fromText . M.filter (not . T.null)) result
+
+traceResourceStats :: InChan (CardanoTracerMessage ()) -> Trace IO TracerTrace -> Maybe Int -> IO ()
+traceResourceStats inChan tracer freq =
+  for_ @Maybe freq \msInterval -> do
+    outChan <- dupChan inChan
+    asyncId <- async do
+      forever'tilShutdown handleNoop outChan do
+        mbrs <- readResourceStats
+        for_ @Maybe mbrs \resourceStat -> do
+          traceWith tracer (TracerResource resourceStat)
+        threadDelay (1_000 * msInterval) -- Delay in seconds, given milliseconds
+    link asyncId

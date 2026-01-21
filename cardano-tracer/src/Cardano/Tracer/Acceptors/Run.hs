@@ -6,13 +6,14 @@ module Cardano.Tracer.Acceptors.Run
   ) where
 
 import           Cardano.Logging.Types (TraceObject)
-import           Cardano.Logging.Utils (runInLoop)
+import           Cardano.Logging.Utils (runInLoop, RunInLoopTermination(..))
 import           Cardano.Tracer.Acceptors.Client
 import           Cardano.Tracer.Acceptors.Server
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.MetaTrace
 
+import           Control.Concurrent.Chan.Unagi (dupChan)
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Exception (SomeException (..))
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
@@ -33,20 +34,24 @@ import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
 --   1. Server mode, when the tracer accepts connections from any number of nodes.
 --   2. Client mode, when the tracer initiates connections to specified number of nodes.
 runAcceptors :: TracerEnv -> TracerEnvRTView -> IO ()
-runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
+runAcceptors tracerEnv@TracerEnv{teTracer, teInChan = inChan} tracerEnvRTView = do
   traceWith teTracer $ TracerStartedAcceptors network
   case network of
-    AcceptAt howToConnect ->
+    AcceptAt howToConnect -> let
       -- Run one server that accepts connections from the nodes.
-      runInLoop
-        (runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (show howToConnect))
-        (handleOnInterruption howToConnect) initialPauseInSec 10
+      action :: IO ()
+      action = do
+        dieOnShutdown =<< dupChan inChan
+        runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (show howToConnect)
+      in runInLoop action TerminateNever (handleOnInterruption howToConnect) initialPauseInSec 10
     ConnectTo localSocks ->
       -- Run N clients that initiate connections to the nodes.
-      forConcurrently_ (NE.nub localSocks) \howToConnect ->
-        runInLoop
-          (runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (show howToConnect))
-          (handleOnInterruption howToConnect) initialPauseInSec 30
+      forConcurrently_ (NE.nub localSocks) \howToConnect -> let
+        action :: IO ()
+        action = do
+          dieOnShutdown =<< dupChan inChan
+          runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (show howToConnect)
+        in runInLoop action TerminateNever (handleOnInterruption howToConnect) initialPauseInSec 30
  where
   handleOnInterruption howToConnect (SomeException e)
     | verbosity == Just Minimum = pure ()
