@@ -112,9 +112,9 @@ prop_connect f n = do
       pure $ (s, c) == (n, foldr ($) 0 (replicate n f))
 
 prop_channel
-  :: ( MonadST    m
-     , MonadAsync m
-     , MonadCatch m
+  :: ( MonadST       m
+     , MonadAsync    m
+     , MonadEvaluate m
      )
   => (Int -> Int)
   -> Int
