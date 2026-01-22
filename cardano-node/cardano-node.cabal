@@ -136,6 +136,7 @@ library
   build-depends:        base
                       , aeson >= 2.1.0.0
                       , async
+                      , autodocodec
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 10.19

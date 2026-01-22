@@ -82,6 +82,10 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+import           Autodocodec (HasObjectCodec(..), JSONObjectCodec,
+                   bimapCodec, eitherCodec, literalTextValueCodec, requiredField,
+                   requiredFieldWith)
+import qualified Autodocodec as AC
 
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
@@ -726,14 +730,50 @@ instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
     : map nsCast (allNamespaces :: [Namespace (FetchDecision [Point header])])
 
 instance LogFormatting (FetchDecision [Point header]) where
-  forMachine _dtal (Left decline) =
-    mconcat [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (showT decline)
-             ]
-  forMachine _dtal (Right results) =
-    mconcat [ "kind" .= String "FetchDecision results"
-             , "length" .= String (showT $ length results)
-             ]
+  forMachine = forMachineViaCodec
+  -- forMachine _dtal (Left decline) =
+  --   mconcat [ "kind" .= String "FetchDecision declined"
+  --            , "declined" .= String (showT decline)
+  --            ]
+  -- forMachine _dtal (Right results) =
+  --   mconcat [ "kind" .= String "FetchDecision results"
+  --            , "length" .= String (showT $ length results)
+  --            ]
+
+instance HasObjectCodec (FetchDecision [lp]) where
+  objectCodec =
+    eitherCodec fetchDeclineObj fetchResultsObj
+    where
+      -- Decoding is lossy: the log format only stores text/length.
+      fetchDeclineObj :: JSONObjectCodec FetchDecline
+      fetchDeclineObj =
+        bimapCodec
+          (const (Left []))
+          (\decline -> ((), showT decline))
+          ( (,)
+              <$> requiredFieldWith "kind"
+                    (literalTextValueCodec () "FetchDecision declined")
+                    "Decision kind."
+                  AC..= fst
+              <*> requiredField "declined" "Decline reason."
+                  AC..= snd
+          )
+
+      fetchResultsObj :: JSONObjectCodec [lp]
+      fetchResultsObj =
+        bimapCodec
+          (const (Right []))
+          (\results -> ((), showT (length results)))
+          ( (,)
+              <$> requiredFieldWith "kind"
+                    (literalTextValueCodec () "FetchDecision results")
+                    "Decision kind."
+                  AC..= fst
+              <*> requiredField "length" "Number of results."
+                  AC..= snd
+          )
+
+instance LogFormattingCodec (FetchDecision [lp])
 
 instance MetaTrace (FetchDecision [Point header]) where
     namespaceFor (Left _) = Namespace [] ["Decline"]
