@@ -198,7 +198,7 @@ library
                       , ouroboros-consensus-diffusion ^>= 0.23
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.14.2
-                      , ouroboros-network ^>= 0.21.5
+                      , ouroboros-network ^>= 0.21.6
                       , ouroboros-network-framework ^>= 0.18
                       , ouroboros-network-protocols ^>= 0.14
                       , prettyprinter

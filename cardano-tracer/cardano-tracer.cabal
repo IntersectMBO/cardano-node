@@ -183,7 +183,7 @@ library
                       , mime-mail
                       , network-mux >= 0.8
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.21.5
+                      , ouroboros-network ^>= 0.21.6
                       , ouroboros-network-api ^>= 0.14.2
                       , ouroboros-network-framework
                       , signal
@@ -411,7 +411,7 @@ test-suite cardano-tracer-test-ext
                       , Glob
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network ^>= 0.21.5
+                      , ouroboros-network ^>= 0.21.6
                       , ouroboros-network-api ^>= 0.14.2
                       , ouroboros-network-framework
                       , process
