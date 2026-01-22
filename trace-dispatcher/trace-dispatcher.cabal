@@ -50,6 +50,7 @@ library
                       Cardano.Logging.DocuGenerator.Tree
                       Cardano.Logging.Formatter
                       Cardano.Logging.FrequencyLimiter
+                      Cardano.Logging.LogFormattingCodec
                       Cardano.Logging.Prometheus.Exposition
                       Cardano.Logging.Prometheus.NetworkRun
                       Cardano.Logging.Prometheus.TCPServer
@@ -68,11 +69,13 @@ library
                       Control.Tracer.Arrow
                       Control.Tracer
 
+
   build-depends:        base >=4.12 && <5
                       , aeson >= 2.1.0.0
                       , aeson-pretty
                       , async
                       , autodocodec
+                      , autodocodec-schema
                       , bytestring
                       , cborg
                       , cborg-json

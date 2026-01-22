@@ -2,81 +2,79 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-orphans  #-}
+
 module Cardano.Logging.LogFormattingCodec
   ( LogFormattingCodec(..)
   , forMachineViaCodec
   , getSchema
   ) where
 
-import Data.Aeson (Value(..))
 import qualified Data.Aeson as AE
-import qualified Data.Aeson.Key as Key
-import qualified Data.Aeson.KeyMap as KM
+-- import qualified Data.Aeson.Key as Key
+-- import qualified Data.Aeson.KeyMap as KM
 import Data.Proxy (Proxy(..))
+-- import qualified Data.Aeson.Types as AET (parseEither)
 import Cardano.Logging.Types
+import Cardano.Logging.Types.TraceMessage
 
 -- From autodocodec:
-import Autodocodec (HasCodec(..), JSONCodec, object, requiredField, toJSONVia, (.=))
+import Autodocodec
+import Autodocodec.Schema(jsonObjectSchemaVia, ObjectSchema)
+
+
+instance HasCodec SeverityS where
+  codec = codecViaAeson "SeverityS"
 
 -- | Every message needs this to define how to represent itself
-class (LogFormatting a, HasCodec a) => LogFormattingCodec a where
+class HasObjectCodec a => LogFormattingCodec a where
 
-  extraCodecMinimal :: Maybe Codec
+  extraCodecMinimal :: Maybe (JSONObjectCodec a)
   extraCodecMinimal = Nothing
 
-  extraCodecDetailed :: Maybe Codec
+  extraCodecDetailed :: Maybe (JSONObjectCodec a)
   extraCodecDetailed = Nothing
 
-  extraCodecMaximal :: Maybe Codec
+  extraCodecMaximal :: Maybe (JSONObjectCodec a)
   extraCodecMaximal = Nothing
-
-  forMachine :: DetailLevel -> a -> AE.Object
-  forMachine = forMachineViaCodec
-
 
 -- | Emit an Aeson object for machine consumption (JSON logs, forwarder, etc.)
 --   The default uses the codec-based JSON encoding, and optionally reshapes
 --   it by detail level.
-forMachineViaCodec :: (LogFormattingCodec a) => DetailLevel -> a -> AE.Object
+forMachineViaCodec :: LogFormattingCodec a => DetailLevel -> a -> AE.Object
 forMachineViaCodec dl a =
-    let codec = getCodec dl
-        res = toJSONVia codec a in
-    case res of
-        AE.Object o -> o
-        other       -> KM.singleton (Key.fromString "data") other
+    let payloadCodec = getPayloadCodecFor dl a
+        res = toJSONObjectVia payloadCodec a in
+    res
 
--- | Produce a JSON Schema for the type.
---   You can choose a Schema representation your codebase already uses.
-getSchema :: (LogFormattingCodec a) => DetailLevel -> Proxy a -> Schema
-getSchema dl p =
-    let codec = getCodec dl
-        res = toJSONVia codec a in
+getSchema :: forall a . LogFormattingCodec a => DetailLevel -> Proxy a -> ObjectSchema
+getSchema dl _ =
+  let payloadCodec = getPayloadCodecFor dl (undefined :: a)
+  in jsonObjectSchemaVia payloadCodec
 
-getCodec ::  => (LogFormattingCodec a) => DetailLevel -> a -> Codec
-getCodec a dl = commonCardanoCodec <> getPayloadCodecFor a dl
+getPayloadCodecFor :: LogFormattingCodec a => DetailLevel -> a -> JSONObjectCodec a
+getPayloadCodecFor DMinimal _ =
+    case extraCodecMinimal of
+        Nothing -> objectCodec
+        Just c -> c
+getPayloadCodecFor DNormal _ = objectCodec
+getPayloadCodecFor DDetailed _ =
+    case extraCodecDetailed of
+        Nothing -> objectCodec
+        Just c -> c
+getPayloadCodecFor DMaximum _ =
+    case extraCodecMaximal of
+        Nothing -> objectCodec
+        Just c -> c
 
-getPayloadCodecFor :: (LogFormattingCodec a) => DetailLevel -> a -> Codec
-getPayloadCodecFor _ DMinimal =
-case extraCodecMinimal of
-    Nothing -> codec
-    Just c -> c
-getPayloadCodecFor _ DNormal = codec
-getPayloadCodecFor _ DDetailed =
-case extraCodecDetailed of
-    Nothing -> codec
-    Just c -> c
-getPayloadCodecFor _ DMaximum =
-case extraCodecMaximal of
-    Nothing -> codec
-    Just c -> c
-
-commonCardanoCodec :: JSONCodec TraceMessage
-commonCardanoCodec =
+_commonCardanoCodec :: JSONCodec AE.Object -> JSONCodec TraceMessage
+_commonCardanoCodec inner =
   object "TraceMessage" $
     TraceMessage
       <$> requiredField "at" "Timestamp." .= tmsgAt
       <*> requiredField "ns" "Namespace." .= tmsgNS
-      <*> requiredField "data" "Payload object." .= tmsgData
+      <*> requiredFieldWith "data" inner "Payload object." .= tmsgData
       <*> requiredField "sev" "Severity." .= tmsgSev
       <*> requiredField "thread" "Thread id." .= tmsgThread
       <*> requiredField "host" "Hostname." .= tmsgHost
+
