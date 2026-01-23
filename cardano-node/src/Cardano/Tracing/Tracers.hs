@@ -21,11 +21,11 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9
-#if __GLASGOW_HASKELL__ < 904
--- Pattern synonym record fields with GHC-8.10 is issuing the `-Wname-shadowing`
--- warning.
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-#endif
+
+
+
+
+
 
 
 module Cardano.Tracing.Tracers
@@ -603,7 +603,7 @@ teeTraceChainTip
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.SelectView (BlockProtocol blk))
      )
   => BlockConfig blk
   -> ForgingStats
@@ -627,7 +627,7 @@ teeTraceChainTipElide
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.SelectView (BlockProtocol blk))
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -782,7 +782,7 @@ mkConsensusTracers
      , ToObject (GenTx blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
-     , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
      , HasKESMetricsData blk
@@ -1126,7 +1126,7 @@ teeForge ::
      , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
-     , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
      )
   => ForgeTracers
@@ -1156,6 +1156,7 @@ teeForge ft tverb tr = Tracer $
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
       Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
       Consensus.TraceAdoptionThreadDied{} -> teeForge' (ftTraceAdoptionThreadDied ft)
+      Consensus.TraceForgedEndorserBlock{} -> teeForge' (ftForged ft)
   case event of
     Consensus.TraceStartLeadershipCheck _slot -> pure ()
     _ -> traceWith (toLogObject' tverb tr) ev
@@ -1206,6 +1207,8 @@ teeForge' tr =
           LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceAdoptionThreadDied slot _ ->
           LogValue "adoptionThreadDied" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgedEndorserBlock ->
+          LogValue "forgedEndorserBlock" $ PureI 0
 
 forgeTracer
   :: forall blk.
@@ -1213,7 +1216,7 @@ forgeTracer
      , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
-     , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
      , HasKESInfo blk
      )

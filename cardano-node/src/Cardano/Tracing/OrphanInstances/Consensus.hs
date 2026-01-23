@@ -323,6 +323,7 @@ instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceForgedInvalidBlock {}     = Error
   getSeverityAnnotation TraceAdoptedBlock {}           = Info
   getSeverityAnnotation TraceAdoptionThreadDied {}     = Error
+  getSeverityAnnotation TraceForgedEndorserBlock {}     = Info
 
 
 instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
@@ -493,6 +494,7 @@ instance ( tx ~ GenTx blk
       "Adoption Thread died in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
+    TraceForgedEndorserBlock -> const "Forged Endorser Block" -- TODO(bladyjoker)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
@@ -1748,6 +1750,10 @@ instance ( RunNode blk
           verb
           (blockHash blk)
       , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
+      ]
+  toObject _verb TraceForgedEndorserBlock =
+    mconcat
+      [ "kind" .= String "TraceForgedEndorserBlock"
       ]
 
 

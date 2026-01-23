@@ -1583,6 +1583,10 @@ instance ( tx ~ GenTx blk
           (blockHash blk)
       , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
       ]
+  forMachine _dtal TraceForgedEndorserBlock =
+    mconcat
+      [ "kind" .= String "TraceForgedEndorserBlock"
+      ]
 
   forHuman (TraceStartLeadershipCheck slotNo) =
       "Checking for leadership in slot " <> showT (unSlotNo slotNo)
@@ -1658,6 +1662,7 @@ instance ( tx ~ GenTx blk
       "Adoption thread died in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
+  forHuman TraceForgedEndorserBlock = "Forged an Endorser Block"
 
   asMetrics (TraceForgeStateUpdateError slot reason) =
     IntM "Forge.StateUpdateError" (fromIntegral $ unSlotNo slot) :
@@ -1711,6 +1716,8 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.adopted" Nothing]
   asMetrics (TraceAdoptionThreadDied _slot _) =
     [CounterM "Forge.adoption-thread-died" Nothing]
+  asMetrics TraceForgedEndorserBlock =
+    []
 
 instance MetaTrace (TraceForgeEvent blk) where
   namespaceFor TraceStartLeadershipCheck {} =
@@ -1751,6 +1758,8 @@ instance MetaTrace (TraceForgeEvent blk) where
     Namespace [] ["AdoptedBlock"]
   namespaceFor TraceAdoptionThreadDied {} =
     Namespace [] ["AdoptionThreadDied"]
+  namespaceFor TraceForgedEndorserBlock {} =
+    Namespace [] ["ForgedEndorserBlock"]
 
   severityFor (Namespace _ ["StartLeadershipCheck"]) _ = Just Info
   severityFor (Namespace _ ["SlotIsImmutable"]) _ = Just Error
