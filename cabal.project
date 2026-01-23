@@ -16,9 +16,6 @@ index-state:
   , hackage.haskell.org 2026-01-23T16:01:56Z
   , cardano-haskell-packages 2026-01-20T18:32:46Z
 
-constraints:
-  any.cuddle == 1.0.0.0
-
 -- BEGIN SRP STANZAS MANAGED BY STANZAMAN --
 
 source-repository-package
