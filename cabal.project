@@ -23,84 +23,47 @@ constraints:
 
 source-repository-package
   type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: 89b1a5d06cc0f17443e45b5ecc592c695d059f99
+  subdir: cardano-cli
+  --sha256: 0m4wf588irhdwwbiknin9988drfzb8yv3g8bfp0i7b68kb671hnl
+
+source-repository-package
+  type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: fd376a6e63e32362bfb7dda88f30506990c7d807
+  tag: bf92f58c70d1b794dcdd630f52201130b2d076f1
   subdir: ouroboros-consensus
-  --sha256: 0qy93jp0nkmjxy5mvcvjbqlp0can18pgn8lpasczq30q4w8sanal
+  --sha256: 0233dfw76wl220k83a6ly60061jz6q082lpj7z0nzhck64lgkzn4
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: d152521b1a5a773247459a4e6adbf702aa2a39b0
+  tag: c7b22699dc87e9efed6b6654ef91788bf609d43a
   subdir: cardano-api
-  --sha256: 1jd842nyz0dlqc6pvcnsxwll2pcda0d00p49065wzia2qccbr7aq
+  --sha256: 1hbfwbdz9by7wqn323mk4611n9vnjjz946ds456z5lpa2l8djzg9
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: fd376a6e63e32362bfb7dda88f30506990c7d807
+  tag: bf92f58c70d1b794dcdd630f52201130b2d076f1
   subdir: ouroboros-consensus-diffusion
-  --sha256: 0qy93jp0nkmjxy5mvcvjbqlp0can18pgn8lpasczq30q4w8sanal
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 980d4c3ac7feac573c1aa0550f259a95a60c5e70
-  subdir: cardano-cli
-  --sha256: 1ldnmcl1vna2hiycdrq4zzbz39cwddx9iplc0634ig7mlnmm1jsb
+  --sha256: 0233dfw76wl220k83a6ly60061jz6q082lpj7z0nzhck64lgkzn4
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: fd376a6e63e32362bfb7dda88f30506990c7d807
+  tag: bf92f58c70d1b794dcdd630f52201130b2d076f1
   subdir: ouroboros-consensus-cardano
-  --sha256: 0qy93jp0nkmjxy5mvcvjbqlp0can18pgn8lpasczq30q4w8sanal
+  --sha256: 0233dfw76wl220k83a6ly60061jz6q082lpj7z0nzhck64lgkzn4
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: bf92f58c70d1b794dcdd630f52201130b2d076f1
+  subdir: ouroboros-consensus-protocol
+  --sha256: 0233dfw76wl220k83a6ly60061jz6q082lpj7z0nzhck64lgkzn4
 
 -- END SRP STANZAS MANAGED BY STANZAMAN --
-
--- BEGIN of stanzas copied from `ouroboros-consensus`
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger
-  tag: fb09078fa55015c881303a2ddb609c024cec258f
-  --sha256: sha256-9Y9CRiyMn0AWD+C4aNVMaJgrj3FDAYfCX4VrLvtoMaI=
-  subdir:
-    eras/allegra/impl
-    eras/alonzo/impl
-    eras/alonzo/test-suite
-    eras/babbage/impl
-    eras/conway/impl
-    eras/dijkstra/impl
-    eras/mary/impl
-    eras/shelley/impl
-    eras/shelley/test-suite
-    eras/shelley-ma/test-suite
-    libs/cardano-ledger-api
-    libs/cardano-ledger-core
-    libs/cardano-ledger-binary
-    libs/cardano-protocol-tpraos
-    libs/non-integral
-    libs/small-steps
-    libs/cardano-data
-    libs/set-algebra
-    libs/vector-map
-    eras/byron/chain/executable-spec
-    eras/byron/ledger/executable-spec
-    eras/byron/ledger/impl
-    eras/byron/crypto
-
--- Backported version of https://github.com/IntersectMBO/ouroboros-network/pull/5161
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-network
-  tag: dfcb1f9c578ec8cd5114fea9696e7be6c9001323
-  --sha256: sha256-omXPdi/T/f3gq9rOH20zX+x3WvaxlB704g07RF/13Nk=
-  subdir:
-    ouroboros-network-api
-    ouroboros-network
-
--- END of stanzas copied from ouroboros-consensus
 
 packages:
   cardano-node
