@@ -48,7 +48,6 @@ import           Prelude
 import qualified Codec.CBOR.Term as CBOR
 import qualified Control.Concurrent.Async as Async (Async)
 import qualified Control.Concurrent.STM as STM (TVar)
-import           Data.Text
 import           Data.Time.Clock (DiffTime, NominalDiffTime)
 import           GHC.Generics
 import qualified Network.Mux as Mux

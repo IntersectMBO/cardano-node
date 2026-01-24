@@ -24,7 +24,6 @@ import           Data.DList (DList)
 import qualified Data.DList as DL
 import           Data.Functor ((<&>))
 import           Data.Maybe
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
 data CompileError where

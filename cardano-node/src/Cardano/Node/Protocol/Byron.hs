@@ -39,7 +39,6 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Control.Exception
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text)
 
 
 ------------------------------------------------------------------------------

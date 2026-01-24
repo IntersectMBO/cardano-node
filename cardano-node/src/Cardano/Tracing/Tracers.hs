@@ -1140,7 +1140,7 @@ teeForge' tr =
           LogValue "forgeTickedLedgerState" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgingMempoolSnapshot slot _prevPt _mpHash _mpSlotNo ->
           LogValue "forgingMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceForgedBlock slot _ _ _ ->
+        Consensus.TraceForgedBlock slot _ _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceDidntAdoptBlock slot _ ->
           LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
@@ -1264,7 +1264,7 @@ mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
       (_n, tot_m) = case mempoolEvent of
                     TraceMempoolAddedTx     _tx0 _ tot0 -> (1, Just tot0)
-                    TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, Just tot0)
+                    TraceMempoolRejectedTx  _tx0 _ _ tot0 -> (1, Just tot0)
                     TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, Just tot0)
                     TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, Just tot0)
                     TraceMempoolSynced _ -> (0, Nothing)
