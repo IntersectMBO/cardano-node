@@ -466,6 +466,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , rnTraceNTN       = nodeToNodeTracers tracers
           , rnTraceNTC       = nodeToClientTracers tracers
           , rnProtocolInfo   = pInfo
+          , rnMempoolTimeoutConfig = Nothing -- read from config and use defaults if not provided
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
               blockForging <- snd (Api.protocolInfo runP) (Consensus.kesAgentTracer $ consensusTracers tracers)
