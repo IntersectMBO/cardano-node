@@ -1,6 +1,9 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- HLINT ignore "Use map" -}
 {- HLINT ignore "Use map with tuple-section" -}
@@ -29,6 +32,7 @@ import           Cardano.Logging.DocuGenerator.Tree
 import           Cardano.Logging.DocuGenerator.Result (DocuResult (..))
 import qualified Cardano.Logging.DocuGenerator.Result as DocuResult
 import           Cardano.Logging.Types
+import           Autodocodec.Schema (ObjectSchema)
 
 import           Prelude hiding (lines, unlines)
 
@@ -41,6 +45,7 @@ import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (find, groupBy, intersperse, isPrefixOf, nub, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromJust, fromMaybe, mapMaybe)
+import           Data.Proxy (Proxy (..))
 import           Data.Text (split)
 import           Data.Text as T (Text, empty, intercalate, lines, pack, stripPrefix, toLower,
                    unlines)
@@ -59,6 +64,7 @@ utf16CircledS = "\x24E2"
 utf16CircledM :: Text
 utf16CircledM = "\x24DC"
 
+
 -- | Convenience function for adding a namespace prefix to a documented
 addDocumentedNamespace  :: [Text] -> Documented a -> Documented a
 addDocumentedNamespace  out (Documented list) =
@@ -71,6 +77,7 @@ data DocTracer = DocTracer {
     , dtSilent      :: [[Text]]
     , dtNoMetrics   :: [[Text]]
     , dtBuilderList :: [([Text], DocuResult)]
+    , dtSchemas     :: [Maybe ObjectSchema]
     , dtWarnings    :: [InconsistencyWarning]
 } deriving (Show)
 
@@ -80,10 +87,11 @@ instance Semigroup DocTracer where
                  (dtSilent dtl <> dtSilent dtr)
                  (dtNoMetrics dtl <> dtNoMetrics dtr)
                  (dtBuilderList dtl <> dtBuilderList dtr)
+                 (dtSchemas dtl <> dtSchemas dtr)
                  (dtWarnings dtl <> dtWarnings dtr)
 
 documentTracer' :: forall a a1.
-     MetaTrace a
+     (MetaTrace a)
   => (Trace IO a1 -> IO (Trace IO a))
   -> Trace IO a1
   -> IO DocTracer
@@ -112,10 +120,13 @@ documentTracer tracer = do
                                           (prn, _pon) : _  -> prn
                                           []               -> []
                       []             -> []
+        schema = case sortedItems of
+                      ((_i, ld) : _) -> ldSchema ld
+                      []             -> Nothing
         silent = case sortedItems of
                       ((_i, ld) : _) -> ldSilent ld
                       [] -> False
-        hasNoMetrics = null metricsItems
+        hasNoMetrics = Prelude.null metricsItems
         warnings = concatMap (\(i, ld) -> case ldNamespace ld of
                                             (_,_): _       -> warningItem (i, ld)
                                             []             -> (pack "No ns for " <> ldDoc ld) :
@@ -125,6 +136,7 @@ documentTracer tracer = do
             [tracerName | silent]
             [tracerName | hasNoMetrics]
             (messageDocs ++ metricsDocs)
+            [schema]
             warnings
 
   where
@@ -302,6 +314,7 @@ documentTracersRun tracers = do
             let condDoc = documentFor ns
                 doc = fromMaybe mempty condDoc
 
+            let schema = schemaFor (Proxy :: Proxy a)
             modifyIORef docRef
                         (Map.insert
                           idx
@@ -311,6 +324,7 @@ documentTracersRun tracers = do
                             { ldSeverityCoded = severityFor ns Nothing
                             , ldPrivacyCoded  = privacyFor ns Nothing
                             , ldDetailsCoded  = detailsFor ns Nothing
+                            , ldSchema        = schema
                           }))
             TR.traceWith tr (emptyLoggingContext {lcNSInner = nsInner ns},
                             Left (TCDocument idx dc)))
@@ -445,8 +459,19 @@ docuResultsToText dt@DocTracer {..} configuration =
                     (map fst datapointBuilders)
 
       header2  = fromText "\n## Trace Messages\n\n"
-      contentT = mconcat $ intersperse (fromText "\n\n")
-                              (map (DocuResult.unpackDocu . snd) traceBuilders)
+      schemaToBuilder Nothing = Nothing
+      schemaToBuilder (Just schema) =
+        Just $
+          fromText "Schema:\n```\n"
+          <> AE.encodePrettyToTextBuilder schema
+          <> fromText "\n```\n"
+      schemaBuilders = mapMaybe schemaToBuilder dtSchemas
+      schemaBlocks = mconcat $ intersperse (fromText "\n\n") schemaBuilders
+      traceBlocks = mconcat $ intersperse (fromText "\n\n")
+                      (map (DocuResult.unpackDocu . snd) traceBuilders)
+      contentT = if Prelude.null schemaBuilders
+                   then traceBlocks
+                   else mconcat [traceBlocks, fromText "\n\n", schemaBlocks]
       header3  = fromText "\n## Metrics\n\n"
       contentM = mconcat $ intersperse (fromText "\n\n")
                               (map (DocuResult.unpackDocu . snd) metricsBuilders)
@@ -518,7 +543,7 @@ generateTOC DocTracer {..} traces metrics datapoints =
       let that = reverse (x : ns)
           -- List of all nested tracers that we shall render
           nestedTrimmed = mapMaybe (trim (x : ns)) nested in
-      mfilter (\_ -> not (null nestedTrimmed) || isTracerSymbol that) (Just (Node x nestedTrimmed))
+      mfilter (\_ -> not (Prelude.null nestedTrimmed) || isTracerSymbol that) (Just (Node x nestedTrimmed))
 
     namespaceToToc ::
          [[Text]]

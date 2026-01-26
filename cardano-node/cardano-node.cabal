@@ -169,6 +169,7 @@ library
                       , formatting
                       , generic-data
                       , hashable
+                      , unordered-containers
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} >= 1.5
                       , iohk-monitoring ^>= 0.2

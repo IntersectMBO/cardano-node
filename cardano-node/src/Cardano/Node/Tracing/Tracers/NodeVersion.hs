@@ -14,19 +14,25 @@ module Cardano.Node.Tracing.Tracers.NodeVersion
  where
 
 import           Data.Aeson (toJSON, (.=))
+import           Data.Proxy (Proxy(..))
 import           Data.Text (Text, pack)
 import           Data.Version (Version (..), showVersion)
+import           Debug.Trace (trace)
 #if MIN_VERSION_base(4,15,0)
-import           System.Info (arch, compilerName, fullCompilerVersion, os)
+import           System.Info (arch, fullCompilerVersion, os)
 #else
-import           System.Info (arch, compilerName, compilerVersion, os)
+import           System.Info (arch, compilerVersion, os)
 #endif
+import qualified System.Info as SI
+
 
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging
 
 import           Paths_cardano_node (version)
-
+import           Autodocodec (HasObjectCodec(..), codecViaAeson, requiredField,
+                   requiredFieldWith)
+import qualified Autodocodec as AC
 
 
 -- | Node version information
@@ -56,7 +62,7 @@ getNodeVersion =
       applicationVersion = version
       osName = pack os
       architecture = pack arch
-      compilerName = pack System.Info.compilerName
+      compilerName = pack SI.compilerName
       compilerVersion = getComplierVersion
       gitRevision = $(gitRev)
   in NodeVersionTrace {..}
@@ -86,7 +92,31 @@ instance MetaTrace NodeVersionTrace where
     ]
   metricsDocFor _ = []
 
+  schemaFor _ = Just $ getSchema (DNormal) (Proxy :: Proxy NodeVersionTrace)
+
   allNamespaces = [Namespace [] ["NodeVersion"]]
+
+instance HasObjectCodec NodeVersionTrace where
+  objectCodec =
+    NodeVersionTrace
+      <$> requiredField "applicationName" "Application name."
+          AC..= applicationName
+      <*> requiredFieldWith "applicationVersion" (codecViaAeson "Version")
+          "Application version."
+          AC..= applicationVersion
+      <*> requiredField "osName" "Operating system name."
+          AC..= osName
+      <*> requiredField "architecture" "CPU architecture."
+          AC..= architecture
+      <*> requiredField "compilerName" "Compiler name."
+          AC..= compilerName
+      <*> requiredFieldWith "compilerVersion" (codecViaAeson "Version")
+          "Compiler version."
+          AC..= compilerVersion
+      <*> requiredField "gitRevision" "Git revision."
+          AC..= gitRevision
+
+instance LogFormattingCodec NodeVersionTrace
 
 instance LogFormatting NodeVersionTrace where
   forHuman NodeVersionTrace {..} = mconcat
@@ -96,16 +126,22 @@ instance LogFormatting NodeVersionTrace where
     , " - ", compilerName, "-", pack (showVersion compilerVersion)
     ]
 
-  forMachine _dtal NodeVersionTrace {..} = mconcat
-
-    [ "applicationName" .= applicationName
-    , "applicationVersion" .= toJSON applicationVersion
-    , "gitRevision" .= gitRevision
-    , "osName" .= osName
-    , "architecture" .= architecture
-    , "compilerName" .= compilerName
-    , "compilerVersion" .= toJSON compilerVersion
-    ]
+  forMachine dl t@NodeVersionTrace{..} =
+    let codecObj = forMachineViaCodec dl t
+        manualObj =
+          mconcat
+            [ "applicationName" .= applicationName
+            , "applicationVersion" .= toJSON applicationVersion
+            , "gitRevision" .= gitRevision
+            , "osName" .= osName
+            , "architecture" .= architecture
+            , "compilerName" .= compilerName
+            , "compilerVersion" .= toJSON compilerVersion
+            ]
+    in if codecObj == manualObj
+         then codecObj
+         else trace ("NodeVersionTrace: codec/manual mismatch in forMachine manual: " ++
+          show manualObj ++ " codec: " ++ show codecObj) codecObj
 
   asMetrics nvt@NodeVersionTrace {..} =
     [ IntM "cardano_version_major" (fromIntegral (getMajor applicationVersion))
@@ -148,6 +184,4 @@ getMinor _ = 0
 getPatch :: Version -> Int
 getPatch (Version (_:_:x:_) _) = x
 getPatch _ = 0
-
-
 

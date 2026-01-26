@@ -748,7 +748,7 @@ instance HasObjectCodec (FetchDecision [lp]) where
       fetchDeclineObj :: JSONObjectCodec FetchDecline
       fetchDeclineObj =
         bimapCodec
-          (const (Left []))
+          (const (Right FetchDeclineChainNotPlausible))
           (\decline -> ((), showT decline))
           ( (,)
               <$> requiredFieldWith "kind"

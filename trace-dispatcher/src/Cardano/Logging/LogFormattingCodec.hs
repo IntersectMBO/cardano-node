@@ -11,10 +11,7 @@ module Cardano.Logging.LogFormattingCodec
   ) where
 
 import qualified Data.Aeson as AE
--- import qualified Data.Aeson.Key as Key
--- import qualified Data.Aeson.KeyMap as KM
 import Data.Proxy (Proxy(..))
--- import qualified Data.Aeson.Types as AET (parseEither)
 import Cardano.Logging.Types
 import Cardano.Logging.Types.TraceMessage
 

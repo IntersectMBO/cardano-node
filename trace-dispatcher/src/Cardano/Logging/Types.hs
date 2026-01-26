@@ -64,6 +64,7 @@ import           Control.Applicative ((<|>))
 import           Control.DeepSeq (NFData)
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
+import           Autodocodec.Schema (ObjectSchema)
 import qualified Data.Aeson.Types as AE (Parser)
 import           Data.Bool (bool)
 import           Data.ByteString (ByteString)
@@ -74,6 +75,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Proxy (Proxy (..))
 import           Data.Text as T (Text, breakOnEnd, intercalate, null, pack, singleton, unpack,
                    unsnoc, words)
 import           Data.Text.Read as T (decimal)
@@ -180,6 +182,8 @@ class MetaTrace a where
   documentFor   :: Namespace a -> Maybe Text
   metricsDocFor :: Namespace a -> [(Text,Text)]
   metricsDocFor _ = []
+  schemaFor     :: Proxy a -> Maybe ObjectSchema
+  schemaFor _   = Nothing
   allNamespaces :: [Namespace a]
 
 data Metric
@@ -585,11 +589,12 @@ data LogDoc = LogDoc {
   , ldBackends        :: ![BackendConfig]
   , ldFiltered        :: ![SeverityF]
   , ldLimiter         :: ![(Text, Double)]
+  , ldSchema          :: !(Maybe ObjectSchema)
   , ldSilent          :: Bool
 } deriving stock (Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
-emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] [] False
+emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] [] Nothing False
 
 -- | Type for the function foldTraceM from module Cardano/Logging/Trace
 newtype Folding a b = Folding b
