@@ -99,7 +99,6 @@ project.shellFor {
      (with pkgs; [
        cairo
        dyff
-       em # Performance report generation
        git
        graphviz
        hlint
