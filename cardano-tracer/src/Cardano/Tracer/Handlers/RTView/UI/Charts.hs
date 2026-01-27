@@ -320,6 +320,8 @@ dataNameToChartId dataName =
     TxsProcessedNumData       -> TxsProcessedNumChart
     MempoolBytesData          -> MempoolBytesChart
     TxsInMempoolData          -> TxsInMempoolChart
+    TxsMempoolTimeoutSoftData -> TxsMempoolTimeoutSoftChart
+    TxsMempoolTimeoutHardData -> TxsMempoolTimeoutHardChart
 
 getSavedColorForNode
   :: TracerEnv
