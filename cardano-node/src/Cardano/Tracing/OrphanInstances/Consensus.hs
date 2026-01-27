@@ -31,8 +31,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader (..),
-                   Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, pointHash,
-                   realPointHash, realPointSlot, withOriginToMaybe)
+                   Header, RealPoint, blockPoint, getHeader, pointHash, realPointHash,
+                   realPointSlot, withOriginToMaybe)
 import           Ouroboros.Consensus.Block.SupportsSanityCheck
 import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
                    TraceGDDEvent (..))
@@ -58,6 +58,7 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Observe.ConsensusJson (ConsensusJson (toConsensusJson))
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
@@ -323,7 +324,6 @@ instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceForgedInvalidBlock {}     = Error
   getSeverityAnnotation TraceAdoptedBlock {}           = Info
   getSeverityAnnotation TraceAdoptionThreadDied {}     = Error
-  getSeverityAnnotation TraceForgedEndorserBlock {}     = Info
 
 
 instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
@@ -403,6 +403,7 @@ instance ( tx ~ GenTx blk
          , ToObject (ValidationErr (BlockProtocol blk))
          , ToObject (CannotForge blk)
          , ToObject (ForgeStateUpdateError blk)
+         , ConsensusJson (Consensus.ForgedBlock blk)
          , LedgerSupportsMempool blk)
       => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer = trStructuredText
@@ -477,7 +478,7 @@ instance ( tx ~ GenTx blk
         <> renderChainHash (Text.decodeLatin1 . toRawHash (Proxy @blk)) mpHash
         <> " ticked to slot "
         <> showT (unSlotNo mpSlot)
-    TraceForgedBlock slotNo _ _ _ -> const $
+    TraceForgedBlock slotNo _forgedBlock -> const $
       "Forged block in slot " <> showT (unSlotNo slotNo)
     TraceDidntAdoptBlock slotNo _ -> const $
       "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
@@ -494,7 +495,6 @@ instance ( tx ~ GenTx blk
       "Adoption Thread died in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
-    TraceForgedEndorserBlock -> const "Forged Endorser Block" -- TODO(bladyjoker)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
@@ -1618,7 +1618,9 @@ instance ( RunNode blk
          , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk))
          , ToObject (CannotForge blk)
-         , ToObject (ForgeStateUpdateError blk))
+         , ToObject (ForgeStateUpdateError blk)
+         , ConsensusJson (Consensus.ForgedBlock blk)
+         )
       => ToObject (TraceForgeEvent blk) where
   toObject _verb (TraceStartLeadershipCheck slotNo) =
     mconcat
@@ -1701,13 +1703,11 @@ instance ( RunNode blk
       , "mempoolHash" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash)
       , "mempoolSlot" .= toJSON (unSlotNo mpSlot)
       ]
-  toObject _verb (TraceForgedBlock slotNo _ blk _) =
+  toObject _verb (TraceForgedBlock slotNo forgedBlock) =
     mconcat
       [ "kind"      .= String "TraceForgedBlock"
       , "slot"      .= toJSON (unSlotNo slotNo)
-      , "block"     .= String (renderHeaderHash (Proxy @blk) $ blockHash blk)
-      , "blockNo"   .= toJSON (unBlockNo $ blockNo blk)
-      , "blockPrev" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) $ blockPrevHash blk)
+      , "forgedBlock"     .= toConsensusJson forgedBlock
       ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =
     mconcat
@@ -1750,10 +1750,6 @@ instance ( RunNode blk
           verb
           (blockHash blk)
       , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
-      ]
-  toObject _verb TraceForgedEndorserBlock =
-    mconcat
-      [ "kind" .= String "TraceForgedEndorserBlock"
       ]
 
 
