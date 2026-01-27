@@ -8,9 +8,12 @@ module Cardano.Logging.LogFormattingCodec
   ( LogFormattingCodec(..)
   , forMachineViaCodec
   , getSchema
+  , discriminatedUnionCodec'
   ) where
 
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.Key as K
+import qualified Data.Aeson.KeyMap as KM
 import Data.Proxy (Proxy(..))
 import Cardano.Logging.Types
 import Cardano.Logging.Types.TraceMessage
@@ -40,9 +43,12 @@ class HasObjectCodec a => LogFormattingCodec a where
 --   it by detail level.
 forMachineViaCodec :: LogFormattingCodec a => DetailLevel -> a -> AE.Object
 forMachineViaCodec dl a =
-    let payloadCodec = getPayloadCodecFor dl a
-        res = toJSONObjectVia payloadCodec a in
-    res
+  let payloadCodec = getPayloadCodecFor dl a
+      o            = toJSONObjectVia payloadCodec a
+  in KM.delete (K.fromString "__ns__") o
+
+discriminatedUnionCodec' :: (a -> (Discriminator, ObjectCodec a ())) -> ObjectCodec a a
+discriminatedUnionCodec' encode = discriminatedUnionCodec "ns" encode mempty
 
 getSchema :: forall a . LogFormattingCodec a => DetailLevel -> Proxy a -> ObjectSchema
 getSchema dl _ =
@@ -74,4 +80,3 @@ _commonCardanoCodec inner =
       <*> requiredField "sev" "Severity." .= tmsgSev
       <*> requiredField "thread" "Thread id." .= tmsgThread
       <*> requiredField "host" "Hostname." .= tmsgHost
-

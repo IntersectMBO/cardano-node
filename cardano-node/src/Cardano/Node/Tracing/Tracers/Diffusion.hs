@@ -23,7 +23,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..)
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 
 import           Data.Aeson (Value (String), (.=), Object)
-import           Autodocodec (HasObjectCodec (..), discriminatedUnionCodec, requiredFieldWith,
+import           Autodocodec (HasObjectCodec (..), requiredFieldWith,
                    textCodec)
 import qualified Autodocodec as AC
 import qualified Data.List as List
@@ -591,109 +591,91 @@ instance MetaTrace (AnyMessage (HS.Handshake a b)) where
 instance (Show ntnAddr, Show ntcAddr) =>
   HasObjectCodec (Diff.DiffusionTracer ntnAddr ntcAddr) where
   objectCodec =
-    discriminatedUnionCodec "kind" encode decode
+    discriminatedUnionCodec' encode
     where
-      showText :: Show a => a -> Text
-      showText = pack . show
-      decode = mempty
       encode tracer = case tracer of
         Diff.RunServer sockAddr ->
           ( "RunServer"
-          , pure ()
-              <* requiredFieldWith "socketAddress" textCodec "Socket address."
-                  AC..= const (showText sockAddr)
+          , () <$ requiredFieldWith "socketAddress" textCodec "Socket address."
+                  AC..= \_ -> (showT sockAddr)
           )
         Diff.RunLocalServer localAddress ->
           ( "RunLocalServer"
-          , pure ()
-              <* requiredFieldWith "localAddress" textCodec "Local address."
-                  AC..= const (showText localAddress)
+          , () <$ requiredFieldWith "localAddress" textCodec "Local address."
+                  AC..= \_ -> (showT localAddress)
           )
         Diff.UsingSystemdSocket localAddress ->
           ( "UsingSystemdSocket"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText localAddress)
+          , () <$ requiredFieldWith "path" textCodec "Socket path."
+                  AC..= \_ -> (showT localAddress)
           )
         Diff.CreateSystemdSocketForSnocketPath localAddress ->
           ( "CreateSystemdSocketForSnocketPath"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText localAddress)
+          , () <$ requiredFieldWith "path" textCodec "Socket path."
+                  AC..= \_ -> (showT localAddress)
           )
         Diff.CreatedLocalSocket localAddress ->
           ( "CreatedLocalSocket"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText localAddress)
+          , () <$ requiredFieldWith "path" textCodec "Socket path."
+                  AC..= \_ -> (showT localAddress)
           )
         Diff.ConfiguringLocalSocket localAddress socket ->
           ( "ConfiguringLocalSocket"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText localAddress)
+          , () <$ (requiredFieldWith "path" textCodec "Socket path."
+                    AC..= \_ -> (showT localAddress))
               <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= const (showText socket)
+                  AC..= \_ -> (showT socket)
           )
         Diff.ListeningLocalSocket localAddress socket ->
           ( "ListeningLocalSocket"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText localAddress)
+          , () <$ (requiredFieldWith "path" textCodec "Socket path."
+                    AC..= \_ -> (showT localAddress))
               <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= const (showText socket)
+                  AC..= \_ -> (showT socket)
           )
         Diff.LocalSocketUp localAddress fd ->
           ( "LocalSocketUp"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText localAddress)
+          , () <$ (requiredFieldWith "path" textCodec "Socket path."
+                    AC..= \_ -> (showT localAddress))
               <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= const (showText fd)
+                  AC..= \_ -> (showT fd)
           )
         Diff.CreatingServerSocket socket ->
           ( "CreatingServerSocket"
-          , pure ()
-              <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= const (showText socket)
+          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
+                  AC..= \_ -> (showT socket)
           )
         Diff.ListeningServerSocket socket ->
           ( "ListeningServerSocket"
-          , pure ()
-              <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= const (showText socket)
+          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
+                  AC..= \_ -> (showT socket)
           )
         Diff.ServerSocketUp socket ->
           ( "ServerSocketUp"
-          , pure ()
-              <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= const (showText socket)
+          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
+                  AC..= \_ -> (showT socket)
           )
         Diff.ConfiguringServerSocket socket ->
           ( "ConfiguringServerSocket"
-          , pure ()
-              <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= const (showText socket)
+          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
+                  AC..= \_ -> (showT socket)
           )
         Diff.UnsupportedLocalSystemdSocket path ->
           ( "UnsupportedLocalSystemdSocket"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText path)
+          , () <$ requiredFieldWith "path" textCodec "Socket path."
+                  AC..= \_ -> (showT path)
           )
         Diff.UnsupportedReadySocketCase ->
           ("UnsupportedReadySocketCase", pure ())
         Diff.DiffusionErrored exception ->
           ( "DiffusionErrored"
-          , pure ()
-              <* requiredFieldWith "error" textCodec "Error."
-                  AC..= const (showText exception)
+          , () <$ requiredFieldWith "error" textCodec "Error."
+                  AC..= \_ -> (showT exception)
           )
         Diff.SystemdSocketConfiguration config ->
           ( "SystemdSocketConfiguration"
-          , pure ()
-              <* requiredFieldWith "path" textCodec "Socket path."
-                  AC..= const (showText config)
+          , () <$ requiredFieldWith "path" textCodec "Socket path."
+                  AC..= \_ -> (showT config)
           )
 
 instance  (Show ntnAddr, Show ntcAddr) => LogFormattingCodec (Diff.DiffusionTracer ntnAddr ntcAddr)
@@ -712,71 +694,71 @@ instance (Show ntnAddr, Show ntcAddr) =>
 forMachineDiffusionTracer' :: (Show ntnAddr, Show ntcAddr) =>
   DetailLevel -> Diff.DiffusionTracer ntnAddr ntcAddr -> Object
 forMachineDiffusionTracer' _dtal (Diff.RunServer sockAddr) = mconcat
-  [ "kind" .= String "RunServer"
+  [ "ns" .= String "RunServer"
   , "socketAddress" .= String (pack (show sockAddr))
   ]
 
 forMachineDiffusionTracer' _dtal (Diff.RunLocalServer localAddress) = mconcat
-  [ "kind" .= String "RunLocalServer"
+  [ "ns" .= String "RunLocalServer"
   , "localAddress" .= String (pack (show localAddress))
   ]
 forMachineDiffusionTracer' _dtal (Diff.UsingSystemdSocket localAddress) = mconcat
-  [ "kind" .= String "UsingSystemdSocket"
+  [ "ns" .= String "UsingSystemdSocket"
   , "path" .= String (pack . show $ localAddress)
   ]
 
 forMachineDiffusionTracer' _dtal (Diff.CreateSystemdSocketForSnocketPath localAddress) = mconcat
-  [ "kind" .= String "CreateSystemdSocketForSnocketPath"
+  [ "ns" .= String "CreateSystemdSocketForSnocketPath"
   , "path" .= String (pack . show $ localAddress)
   ]
 forMachineDiffusionTracer' _dtal (Diff.CreatedLocalSocket localAddress) = mconcat
-  [ "kind" .= String "CreatedLocalSocket"
+  [ "ns" .= String "CreatedLocalSocket"
   , "path" .= String (pack . show $ localAddress)
   ]
 forMachineDiffusionTracer' _dtal (Diff.ConfiguringLocalSocket localAddress socket) = mconcat
-  [ "kind" .= String "ConfiguringLocalSocket"
+  [ "ns" .= String "ConfiguringLocalSocket"
   , "path" .= String (pack . show $ localAddress)
   , "socket" .= String (pack (show socket))
   ]
 forMachineDiffusionTracer' _dtal (Diff.ListeningLocalSocket localAddress socket) = mconcat
-  [ "kind" .= String "ListeningLocalSocket"
+  [ "ns" .= String "ListeningLocalSocket"
   , "path" .=  String (pack . show $ localAddress)
   , "socket" .= String (pack (show socket))
   ]
 forMachineDiffusionTracer' _dtal (Diff.LocalSocketUp localAddress fd) = mconcat
-  [ "kind" .= String "LocalSocketUp"
+  [ "ns" .= String "LocalSocketUp"
   , "path" .= String (pack . show $ localAddress)
   , "socket" .= String (pack (show fd))
   ]
 forMachineDiffusionTracer' _dtal (Diff.CreatingServerSocket socket) = mconcat
-  [ "kind" .= String "CreatingServerSocket"
+  [ "ns" .= String "CreatingServerSocket"
   , "socket" .= String (pack (show socket))
   ]
 forMachineDiffusionTracer' _dtal (Diff.ListeningServerSocket socket) = mconcat
-  [ "kind" .= String "ListeningServerSocket"
+  [ "ns" .= String "ListeningServerSocket"
   , "socket" .= String (pack (show socket))
   ]
 forMachineDiffusionTracer' _dtal (Diff.ServerSocketUp socket) = mconcat
-  [ "kind" .= String "ServerSocketUp"
+  [ "ns" .= String "ServerSocketUp"
   , "socket" .= String (pack (show socket))
   ]
 forMachineDiffusionTracer' _dtal (Diff.ConfiguringServerSocket socket) = mconcat
-  [ "kind" .= String "ConfiguringServerSocket"
+  [ "ns" .= String "ConfiguringServerSocket"
   , "socket" .= String (pack (show socket))
   ]
 forMachineDiffusionTracer' _dtal (Diff.UnsupportedLocalSystemdSocket path) = mconcat
-  [ "kind" .= String "UnsupportedLocalSystemdSocket"
+  [ "ns" .= String "UnsupportedLocalSystemdSocket"
   , "path" .= String (pack (show path))
   ]
 forMachineDiffusionTracer' _dtal Diff.UnsupportedReadySocketCase = mconcat
-  [ "kind" .= String "UnsupportedReadySocketCase"
+  [ "ns" .= String "UnsupportedReadySocketCase"
   ]
 forMachineDiffusionTracer' _dtal (Diff.DiffusionErrored exception) = mconcat
-  [ "kind" .= String "DiffusionErrored"
+  [ "ns" .= String "DiffusionErrored"
   , "error" .= String (pack (show exception))
   ]
 forMachineDiffusionTracer' _dtal (Diff.SystemdSocketConfiguration config) = mconcat
-  [ "kind" .= String "SystemdSocketConfiguration"
+  [ "ns" .= String "SystemdSocketConfiguration"
   , "path" .= String (pack (show config))
   ]
 

@@ -97,6 +97,7 @@ library
                       , unliftio
                       , unliftio-core
                       , unordered-containers
+                      , vector
                       , yaml
 
   if os(windows)
