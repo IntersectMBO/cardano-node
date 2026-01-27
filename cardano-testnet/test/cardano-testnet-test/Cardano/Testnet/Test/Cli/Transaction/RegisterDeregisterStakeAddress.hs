@@ -36,6 +36,7 @@ import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
+
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/register deregister stake address in transaction build/"'@
 hprop_tx_register_deregister_stake_address :: Property

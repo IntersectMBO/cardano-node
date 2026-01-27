@@ -109,8 +109,8 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
     , "--change-address", utxoAddr
     , "--tx-in", T.unpack $ renderTxIn txin1
     , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
+    , "--tx-out-return-collateral", collateralValue
     , "--witness-override", show @Int 2
-    , "--tx-out", collateralValue
     , "--tx-out", fundScriptValue 
     , "--tx-out-datum-hash-value", "0"
     , "--mint", mintValue
