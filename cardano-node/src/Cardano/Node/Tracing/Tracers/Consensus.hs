@@ -18,6 +18,8 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , calculateBlockFetchClientMetrics
   , servedBlockLatest
   , ClientMetrics
+  , txsMempoolTimeoutSoftCounterName
+  , impliesMempoolTimeoutSoft
   ) where
 
 
@@ -1241,6 +1243,17 @@ instance MetaTrace (TraceLocalTxSubmissionServerEvent blk) where
 -- Mempool Tracer
 --------------------------------------------------------------------------------
 
+txsMempoolTimeoutSoftCounterName :: Text.Text
+txsMempoolTimeoutSoftCounterName = "txsMempoolTimeoutSoft"
+
+impliesMempoolTimeoutSoft ::
+  LedgerSupportsMempool blk => TraceEventMempool blk -> Bool
+impliesMempoolTimeoutSoft = \case
+  TraceMempoolRejectedTx _tx txApplyErr _ _mpSz ->
+    -- TODO export a proper predicate from Consensus
+    "ApplyTxError (ConwayMempoolFailure" `List.isPrefixOf` show txApplyErr
+  _ -> False
+
 instance
   ( LogFormatting (ApplyTxErr blk)
   , LogFormatting (GenTx blk)
@@ -1311,9 +1324,13 @@ instance
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-  asMetrics (TraceMempoolRejectedTx _tx _txApplyErr _ mpSz) =
+  asMetrics ev@(TraceMempoolRejectedTx _tx _txApplyErr _ mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
+    ]
+    ++
+    [ CounterM txsMempoolTimeoutSoftCounterName Nothing
+    | impliesMempoolTimeoutSoft ev
     ]
   asMetrics (TraceMempoolRemoveTxs txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -1370,6 +1387,7 @@ instance MetaTrace (TraceEventMempool blk) where
     metricsDocFor (Namespace _ ["RejectedTx"]) =
       [ ("txsInMempool","Transactions in mempool")
       , ("mempoolBytes", "Byte size of the mempool")
+      , (txsMempoolTimeoutSoftCounterName, "Transactions that soft timed out in mempool")
       ]
     metricsDocFor (Namespace _ ["RemoveTxs"]) =
       [ ("txsInMempool","Transactions in mempool")
