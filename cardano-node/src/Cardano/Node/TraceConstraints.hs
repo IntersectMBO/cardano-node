@@ -12,6 +12,7 @@ import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
+import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
 import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
@@ -72,4 +73,6 @@ type TraceConstraints blk =
     , LogFormatting (ForgeStateUpdateError blk)
     , LogFormatting (Set (Credential 'Staking))
     , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking))
+
+    , ConsensusTracers.MempoolTimeoutSoftPredicate blk
     )
