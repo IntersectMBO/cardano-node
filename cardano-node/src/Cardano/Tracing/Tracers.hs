@@ -758,6 +758,7 @@ mkConsensusTracers
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
+     , ConsensusTracers.MempoolTimeoutSoftPredicate blk
      , HasKESMetricsData blk
      , HasKESInfo blk
      )
@@ -1272,7 +1273,7 @@ notifyBlockForging fStats tr = Tracer $ \case
 --------------------------------------------------------------------------------
 
 notifyTxsMempoolTimeoutSoft ::
-     LedgerSupportsMempool blk
+     ConsensusTracers.MempoolTimeoutSoftPredicate blk
   => Maybe EKGDirect
   -> Tracer IO (TraceEventMempool blk)
 notifyTxsMempoolTimeoutSoft mbEKGDirect = case mbEKGDirect of
@@ -1323,6 +1324,7 @@ mempoolTracer
      , ToObject (ApplyTxErr blk)
      , ToObject (GenTx blk)
      , LedgerSupportsMempool blk
+     , ConsensusTracers.MempoolTimeoutSoftPredicate blk
      , ConvertRawHash blk
      )
   => Maybe EKGDirect
