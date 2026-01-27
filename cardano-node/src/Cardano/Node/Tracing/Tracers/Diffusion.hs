@@ -3,20 +3,26 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Tracing.Tracers.Diffusion
-  () where
+  ( txsMempoolTimeoutHardCounterName
+  , impliesMempoolTimeoutHard
+  ) where
 
 
 import           Cardano.Logging
 import           Cardano.Node.Configuration.TopologyP2P ()
+import           Control.Exception (fromException)
+import           Ouroboros.Consensus.Mempool.API (ExnMempoolTimeout)
 import qualified Ouroboros.Network.Diffusion.Types as Diff
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
                    TraceLedgerPeers (..))
@@ -356,6 +362,16 @@ instance MetaTrace Mux.ChannelTrace where
       , Namespace [] ["ChannelSendEnd"]
       ]
 
+txsMempoolTimeoutHardCounterName :: Text
+txsMempoolTimeoutHardCounterName = "txsMempoolTimeoutHard"
+
+impliesMempoolTimeoutHard :: Mux.Trace -> Bool
+impliesMempoolTimeoutHard = \case
+  Mux.TraceExceptionExit _mid _dir e
+    | Just _ <- fromException @ExnMempoolTimeout e
+      -> True
+  _ -> False
+
 instance LogFormatting Mux.Trace where
     forMachine _dtal (Mux.TraceState new) = mconcat
       [ "kind" .= String "Mux.TraceState"
@@ -435,6 +451,24 @@ instance LogFormatting Mux.Trace where
     forHuman Mux.TraceStopping = "Mux stopping"
     forHuman Mux.TraceStopped  = "Mux stoppped"
 
+    asMetrics = \case
+      Mux.TraceState{} -> []
+      Mux.TraceCleanExit{} -> []
+      ev@Mux.TraceExceptionExit{} ->
+        -- Somewhat awkward to "catch" this Consensus exception here, but
+        -- Diffusion Layer is indeed the ultimate manager of the per-peer
+        -- threads.
+        [ CounterM txsMempoolTimeoutHardCounterName Nothing
+        | impliesMempoolTimeoutHard ev
+        ]
+      Mux.TraceStartEagerly{} -> []
+      Mux.TraceStartOnDemand{} -> []
+      Mux.TraceStartOnDemandAny{} -> []
+      Mux.TraceStartedOnDemand{} -> []
+      Mux.TraceTerminating{} -> []
+      Mux.TraceStopping{} -> []
+      Mux.TraceStopped{} -> []
+
 instance MetaTrace Mux.Trace where
     namespaceFor Mux.TraceState {}                 =
       Namespace [] ["State"]
@@ -490,6 +524,20 @@ instance MetaTrace Mux.Trace where
     documentFor (Namespace _ ["Stopped"])              = Just
       "Mux shutdown."
     documentFor _ = Nothing
+
+    metricsDocFor (Namespace _ ["State"])               = []
+    metricsDocFor (Namespace _ ["CleanExit"])           = []
+    metricsDocFor (Namespace _ ["ExceptionExit"])       =
+      [ (txsMempoolTimeoutHardCounterName, "Transactions that hard timed out in mempool")
+      ]
+    metricsDocFor (Namespace _ ["StartEagerly"])        = []
+    metricsDocFor (Namespace _ ["StartOnDemand"])       = []
+    metricsDocFor (Namespace _ ["StartedOnDemand"])     = []
+    metricsDocFor (Namespace _ ["StartOnDemandAny"])    = []
+    metricsDocFor (Namespace _ ["Terminating"])         = []
+    metricsDocFor (Namespace _ ["Stopping"])            = []
+    metricsDocFor (Namespace _ ["Stopped"])             = []
+    metricsDocFor _                                     = []
 
     allNamespaces = [
         Namespace [] ["State"]

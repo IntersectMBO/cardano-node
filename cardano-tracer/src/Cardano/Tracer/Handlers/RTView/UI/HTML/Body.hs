@@ -53,6 +53,11 @@ mkPageBody tracerEnv tracerEnvRTView networkConfig dsIxs = do
   mempoolBytesChart    <- mkChart mempoolBytesTimer    MempoolBytesData    MempoolBytesChart    "Mempool size"
   txsInMempoolChart    <- mkChart txsInMempoolTimer    TxsInMempoolData    TxsInMempoolChart    "Txs in mempool"
 
+  txsMempoolTimeoutSoftTimer <- mkChartTimer tracerEnv tHistory dsIxs TxsMempoolTimeoutSoftData TxsMempoolTimeoutSoftChart
+  txsMempoolTimeoutHardTimer <- mkChartTimer tracerEnv tHistory dsIxs TxsMempoolTimeoutHardData TxsMempoolTimeoutHardChart
+  txsMempoolTimeoutSoftChart <- mkChart txsMempoolTimeoutSoftTimer    TxsMempoolTimeoutSoftData TxsMempoolTimeoutSoftChart "Txs that soft timed out in mempool"
+  txsMempoolTimeoutHardChart <- mkChart txsMempoolTimeoutHardTimer    TxsMempoolTimeoutHardData TxsMempoolTimeoutHardChart "Txs that hard timed out in mempool"
+
   -- Resources charts.
   cpuTimer          <- mkChartTimer tracerEnv rHistory dsIxs CPUData          CPUChart
   memoryTimer       <- mkChartTimer tracerEnv rHistory dsIxs MemoryData       MemoryChart
@@ -298,6 +303,8 @@ mkPageBody tracerEnv tracerEnvRTView networkConfig dsIxs = do
                           ]
                       , UI.div #. "column" #+
                           [ element txsInMempoolChart
+                          , element txsMempoolTimeoutSoftChart
+                          , element txsMempoolTimeoutHardChart
                           ]
                       ]
                   -- Resources charts.
@@ -336,9 +343,11 @@ mkPageBody tracerEnv tracerEnvRTView networkConfig dsIxs = do
 
   Chart.prepareChartsJS
 
-  Chart.newTimeChartJS TxsProcessedNumChart ""
-  Chart.newTimeChartJS MempoolBytesChart    "MB"
-  Chart.newTimeChartJS TxsInMempoolChart    ""
+  Chart.newTimeChartJS TxsProcessedNumChart       ""
+  Chart.newTimeChartJS MempoolBytesChart          "MB"
+  Chart.newTimeChartJS TxsInMempoolChart          ""
+  Chart.newTimeChartJS TxsMempoolTimeoutSoftChart ""
+  Chart.newTimeChartJS TxsMempoolTimeoutHardChart ""
 
   Chart.newTimeChartJS CPUChart          "Percent"
   Chart.newTimeChartJS MemoryChart       "MB"
@@ -370,6 +379,8 @@ mkPageBody tracerEnv tracerEnvRTView networkConfig dsIxs = do
   UI.start txsProcessedNumTimer
   UI.start mempoolBytesTimer
   UI.start txsInMempoolTimer
+  UI.start txsMempoolTimeoutSoftTimer
+  UI.start txsMempoolTimeoutHardTimer
 
   UI.start cpuTimer
   UI.start memoryTimer
@@ -400,6 +411,8 @@ mkPageBody tracerEnv tracerEnvRTView networkConfig dsIxs = do
     UI.stop txsProcessedNumTimer
     UI.stop mempoolBytesTimer
     UI.stop txsInMempoolTimer
+    UI.stop txsMempoolTimeoutSoftTimer
+    UI.stop txsMempoolTimeoutHardTimer
 
     UI.stop cpuTimer
     UI.stop memoryTimer
