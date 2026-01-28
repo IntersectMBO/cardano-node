@@ -83,6 +83,7 @@ import           Network.TypedProtocol.Core
 
 import           LeiosDemoTypes (TraceLeiosKernel, TraceLeiosPeer, traceLeiosKernelToObject, traceLeiosPeerToObject)
 import Ouroboros.Consensus.Observe.ConsensusJson (ConsensusJson(toConsensusJson))
+import Ouroboros.Consensus.Mempool.TxSeq (TxSeqMeasure(mCount, mSize))
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
@@ -1705,21 +1706,25 @@ instance ( tx ~ GenTx blk
       -- NOTE(bladyjoker): New!!!
       , CounterM "Forge.ranking-block.total-count" Nothing
 
-      , CounterM "Forge.ranking-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . fbNewBlockSize $ fb)
-      , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . fbNewEndorserBlockSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . fbMempoolRestSize $ fb)
+      , CounterM "Forge.ranking-block.total-tx-count" (Just . fromInteger . toInteger . mCount . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-count" (Just . fromInteger . toInteger . mCount . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-count" (Just . fromInteger . toInteger . mCount . fbMempoolRestSize $ fb)
 
-      , CounterM "Forge.ranking-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . fbNewBlockSize $ fb)
-      , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . fbNewEndorserBlockSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . fbMempoolRestSize $ fb)
+      , CounterM "Forge.ranking-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbMempoolRestSize $ fb)
 
-      , CounterM "Forge.ranking-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . fbNewBlockSize $ fb)
-      , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . fbNewEndorserBlockSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . fbMempoolRestSize $ fb)
+      , CounterM "Forge.ranking-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbMempoolRestSize $ fb)
 
-      , CounterM "Forge.ranking-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . fbNewBlockSize $ fb)
-      , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . fbNewEndorserBlockSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . fbMempoolRestSize $ fb)
+      , CounterM "Forge.ranking-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbMempoolRestSize $ fb)
+
+      , CounterM "Forge.ranking-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbMempoolRestSize $ fb)
       ] ++ case fbMaybeNewEndorserBlock fb of
              Nothing -> []
              Just _ -> [
