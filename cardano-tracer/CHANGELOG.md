@@ -1,5 +1,8 @@
 # ChangeLog
 
+## NEXT
+* RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed since Node 10.6.2; fixes the RTView-enabled build.
+
 ## 0.3.6 (November 2025)
 * Implement Prometheus HTTP service discovery (SD) under the URL `/targets`
 * Add optional config field `"prometheusLabels": { "<labelname>": "<labelvalue>", ... }` for custom labels to be attached with Prometheus SD

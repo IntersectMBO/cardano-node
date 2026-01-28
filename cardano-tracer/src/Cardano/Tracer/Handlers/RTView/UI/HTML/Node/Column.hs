@@ -8,7 +8,6 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
@@ -45,14 +44,6 @@ addNodeColumn tracerEnv loggingConfig nodeId@(NodeId anId) = do
   kes <- nodeKES id'
   opCert <- nodeOpCert id'
 
-  peersTable <- mkPeersTable id'
-  peersDetailsButton <- UI.button ## (id' <> "__node-peers-details-button")
-                                  #. "button is-info"
-                                  # set UI.enabled False
-                                  # set text "Details"
-  on_ UI.click peersDetailsButton do
-    fadeInModal peersTable
-
   ekgMetricsWindow <- mkEKGMetricsWindow id'
   ekgMetricsButton <- UI.button ## (id' <> "__node-ekg-metrics-button")
                                 #. "button is-info"
@@ -86,14 +77,6 @@ addNodeColumn tracerEnv loggingConfig nodeId@(NodeId anId) = do
   addNodeCell "start-time" st
   addNodeCell "uptime" ut
   addNodeCell "logs" ls
-  addNodeCell "peers" [ UI.div #. "buttons has-addons" #+
-                          [ UI.button ## (id' <> "__node-peers-num")
-                                      #. "button is-static"
-                                      # set text "—"
-                          , element peersDetailsButton
-                          ]
-                      , element peersTable
-                      ]
   addNodeCell "leadership" leadership
   addNodeCell "kes" kes
   addNodeCell "op-cert" opCert

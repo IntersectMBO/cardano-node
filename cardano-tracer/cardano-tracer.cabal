@@ -73,13 +73,11 @@ library
                         Cardano.Tracer.Handlers.RTView.State.EraSettings
                         Cardano.Tracer.Handlers.RTView.State.Historical
                         Cardano.Tracer.Handlers.RTView.State.Last
-                        Cardano.Tracer.Handlers.RTView.State.Peers
 
                         Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
                         Cardano.Tracer.Handlers.RTView.UI.CSS.Own
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
                         Cardano.Tracer.Handlers.RTView.UI.HTML.About
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Body
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Logs
@@ -107,7 +105,6 @@ library
                         Cardano.Tracer.Handlers.RTView.Update.NodeInfo
                         Cardano.Tracer.Handlers.RTView.Update.NodeState
                         Cardano.Tracer.Handlers.RTView.Update.Nodes
-                        Cardano.Tracer.Handlers.RTView.Update.Peers
                         Cardano.Tracer.Handlers.RTView.Update.Reload
                         Cardano.Tracer.Handlers.RTView.Update.Resources
                         Cardano.Tracer.Handlers.RTView.Update.Transactions
