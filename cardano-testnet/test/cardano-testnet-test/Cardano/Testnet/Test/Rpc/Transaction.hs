@@ -82,7 +82,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) req
 
     utxos' <- do
-      let req = def & #cardanoAddresses . #items .~ [T.encodeUtf8 addrTxt0]
+      let req = def -- & #keys .~ [T.encodeUtf8 addrTxt0]
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) req
     pure (pparams', utxos')
 
@@ -91,8 +91,8 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
   txOut0 : _ <- H.noteShow $ utxosResponse ^. #items
   txIn0 <- txoRefToTxIn $ txOut0 ^. #txoRef
 
-  let outputCoin = txOut0 ^. #cardano . #coin . to fromIntegral
-      amount = 200_000_000
+  outputCoin <- H.leftFail $ txOut0 ^. #cardano . #coin . to utxoRpcBigIntToInteger
+  let amount = 200_000_000
       fee = 500
       change = outputCoin - amount - fee
       txOut = TxOut addr1 (lovelaceToTxOutValue sbe $ L.Coin amount) TxOutDatumNone ReferenceScriptNone
@@ -114,7 +114,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
   (utxos, submitResponse) <- H.noteShowM . H.evalIO . Rpc.withConnection def rpcServer $ \conn -> do
     submitResponse <-
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.SubmitService "submitTx")) $
-        def & #tx .~ [def & #raw .~ serialiseToCBOR signedTx]
+        def & #tx .~ (def & #raw .~ serialiseToCBOR signedTx)
 
     fix $ \loop -> do
       resp <- Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) def
@@ -127,30 +127,20 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
         loop
 
     utxos <-
-      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) $
-        def & #cardanoAddresses . #items .~ [T.encodeUtf8 addrTxt1]
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) def -- & #keys .~ [T.encodeUtf8 addrTxt1]
     pure (utxos, submitResponse)
 
-  submittedTxIds <- forM (submitResponse ^. #results) $ \res -> do
-    let mErr = res ^. #maybe'errorMessage
-        mTxId = res ^. #maybe'ref
-    case (mErr, mTxId) of
-      (Just err, Nothing) -> H.noteShow_ err >> H.failure
-      (Nothing, Just txId'') ->
-        H.leftFail $ deserialiseFromRawBytes AsTxId txId''
-      _ -> do
-        H.note_ $ "Protocol error: " <> show res
-        H.failure
+  submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. #ref
 
   H.note_ "Ensure that submitted transaction ID is in the submitted transactions list"
-  [txId'] === submittedTxIds
+  txId' === submittedTxId
 
   H.note_ $ "Enxure that there are 2 UTXOs in the address " <> show addrTxt1
   2 === length (utxos ^. #items)
 
   let outputsAmounts = map (^. #cardano . #coin) $ utxos ^. #items
   H.note_ $ "Ensure that the output sent is one of the utxos for the address " <> show addrTxt1
-  H.assertWith outputsAmounts $ elem (fromIntegral amount)
+  H.assertWith outputsAmounts $ elem (inject amount)
 
 txoRefToTxIn :: (HasCallStack, MonadTest m) => Proto UtxoRpc.TxoRef -> m TxIn
 txoRefToTxIn r = withFrozenCallStack $ do
