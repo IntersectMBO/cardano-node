@@ -27,10 +27,6 @@ updateTransactionsHistory nodeId (TXHistory tHistory) metricName metricValue now
     | "txsProcessedNum" `isInfixOf` metricName -> updateTxsProcessedNum
     | "mempoolBytes" `isInfixOf` metricName    -> updateMempoolBytes
     | "txsInMempool" `isInfixOf` metricName    -> updateTxsInMempool
-    | "txsMempoolTimeoutSoft" `isInfixOf` metricName
-                                               -> updateTxsMempoolTimeoutSoft
-    | "txsMempoolTimeoutHard" `isInfixOf` metricName
-                                               -> updateTxsMempoolTimeoutHard
     | otherwise                                -> return ()
  where
   updateTxsProcessedNum =
@@ -45,9 +41,3 @@ updateTransactionsHistory nodeId (TXHistory tHistory) metricName metricValue now
       Right (mempoolBytes :: Int, _) -> do
         let !mempoolInMB = fromIntegral mempoolBytes / 1024 / 1024 :: Double
         addHistoricalData tHistory nodeId now MempoolBytesData $ ValueD mempoolInMB
-
-  updateTxsMempoolTimeoutSoft =
-    readValueI metricValue $ addHistoricalData tHistory nodeId now TxsMempoolTimeoutSoftData
-
-  updateTxsMempoolTimeoutHard =
-    readValueI metricValue $ addHistoricalData tHistory nodeId now TxsMempoolTimeoutHardData
