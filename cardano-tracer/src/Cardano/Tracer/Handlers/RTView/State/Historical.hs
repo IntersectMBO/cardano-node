@@ -124,8 +124,6 @@ data DataName
   | TxsProcessedNumData
   | MempoolBytesData
   | TxsInMempoolData
-  | TxsMempoolTimeoutSoftData
-  | TxsMempoolTimeoutHardData
   deriving (Eq, Ord, Read, Show)
 
 type HistoricalData = Map DataName HistoricalPoints
