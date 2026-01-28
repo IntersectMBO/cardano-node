@@ -8,7 +8,6 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
-import           Cardano.Tracer.Handlers.RTView.State.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
 import           Cardano.Tracer.Handlers.RTView.UI.CSS.Own
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
@@ -22,7 +21,6 @@ import           Cardano.Tracer.Handlers.RTView.Update.KES
 import           Cardano.Tracer.Handlers.RTView.Update.Logs
 import           Cardano.Tracer.Handlers.RTView.Update.NodeState
 import           Cardano.Tracer.Handlers.RTView.Update.Nodes
-import           Cardano.Tracer.Handlers.RTView.Update.Peers
 import           Cardano.Tracer.Handlers.RTView.Update.Reload
 import           Cardano.Tracer.Handlers.State.TraceObjects
 import           Cardano.Tracer.Handlers.Utils
@@ -67,7 +65,6 @@ mkMainPage tracerEnv tracerEnvRTView displayedElements nodesEraSettings reloadFl
 
   colors <- initColors
   datasetIndices <- initDatasetsIndices
-  peers <- liftIO initPeers
 
   webPageIsOpened tracerEnvRTView
 
@@ -139,7 +136,6 @@ mkMainPage tracerEnv tracerEnvRTView displayedElements nodesEraSettings reloadFl
   uiPeersTimer <- UI.timer # set UI.interval 4000
   on_ UI.tick uiPeersTimer do
     askNSetNodeState tracerEnv displayedElements
-    updateNodesPeers tracerEnv peers
     updateKESInfo tracerEnv nodesEraSettings displayedElements
 
   UI.start uiLogsLiveViewTimer
