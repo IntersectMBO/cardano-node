@@ -758,7 +758,6 @@ mkConsensusTracers
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
-     , ConsensusTracers.MempoolTimeoutSoftPredicate blk
      , HasKESMetricsData blk
      , HasKESInfo blk
      )
@@ -1273,8 +1272,7 @@ notifyBlockForging fStats tr = Tracer $ \case
 --------------------------------------------------------------------------------
 
 notifyTxsMempoolTimeoutSoft ::
-     ConsensusTracers.MempoolTimeoutSoftPredicate blk
-  => Maybe EKGDirect
+     Maybe EKGDirect
   -> Tracer IO (TraceEventMempool blk)
 notifyTxsMempoolTimeoutSoft mbEKGDirect = case mbEKGDirect of
   Nothing -> nullTracer
@@ -1302,9 +1300,9 @@ mempoolMetricsTraceTransformer :: Trace IO a -> Tracer IO (TraceEventMempool blk
 mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
       (_n, tot_m) = case mempoolEvent of
-                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, Just tot0)
+                    TraceMempoolAddedTx     _tx0 _   tot0 -> (1, Just tot0)
                     TraceMempoolRejectedTx  _tx0 _ _ tot0 -> (1, Just tot0)
-                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, Just tot0)
+                    TraceMempoolRemoveTxs   txs0     tot0 -> (length txs0, Just tot0)
                     TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, Just tot0)
                     TraceMempoolSynced _ -> (0, Nothing)
                     _ -> (0, Nothing)
@@ -1324,7 +1322,6 @@ mempoolTracer
      , ToObject (ApplyTxErr blk)
      , ToObject (GenTx blk)
      , LedgerSupportsMempool blk
-     , ConsensusTracers.MempoolTimeoutSoftPredicate blk
      , ConvertRawHash blk
      )
   => Maybe EKGDirect

@@ -74,6 +74,4 @@ type TraceConstraints blk =
     , LogFormatting (ForgeStateUpdateError blk)
     , LogFormatting (Set (Credential 'Staking))
     , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking))
-
-    , ConsensusTracers.MempoolTimeoutSoftPredicate blk
     )

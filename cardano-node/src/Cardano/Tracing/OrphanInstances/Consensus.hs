@@ -44,7 +44,8 @@ import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTx,
                    GenTxId, HasTxId, LedgerSupportsMempool, TxId, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..),
+                   jsonMempoolRejectionDetails)
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
@@ -1543,14 +1544,15 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       , "tx" .= toObject verb (txForgetValidated tx)
       , "mempoolSize" .= toObject verb mpSzAfter
       ]
-  toObject verb (TraceMempoolRejectedTx tx txApplyErr _ mpSz) =
+  toObject verb (TraceMempoolRejectedTx tx txApplyErr details mpSz) =
     mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSz
       ] <>
+      if verb /= MaximalVerbosity then [] else
       [ "err" .= toObject verb txApplyErr
-      | verb == MaximalVerbosity
+      , "errdetails" .= jsonMempoolRejectionDetails details
       ]
   toObject verb (TraceMempoolRemoveTxs txs mpSz) =
     mconcat

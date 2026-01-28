@@ -20,8 +20,6 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , servedBlockLatest
   , ClientMetrics
   , txsMempoolTimeoutSoftCounterName
-  , MempoolTimeoutSoftPredicate (..)
-  , EraMempoolTimeoutSoftPredicate (..)
   , impliesMempoolTimeoutSoft
   ) where
 
@@ -48,7 +46,8 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpd
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
                    HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
-import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool (MempoolRejectionDetails (..), MempoolSize (..),
+                   TraceEventMempool (..), jsonMempoolRejectionDetails)
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
@@ -83,22 +82,10 @@ import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
 import qualified Data.List as List
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
-
-
--- all for MempoolTimeoutSoftPredicate
-import qualified Cardano.Ledger.Conway.Rules as Conway
-import qualified Cardano.Ledger.Core as SL (EraRule)
-import qualified Cardano.Ledger.Shelley.API as SL (ApplyTxError (..))
-import qualified Data.SOP as SOP
-import           Ouroboros.Consensus.Byron.Ledger.Block as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator as Consensus
-import           Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
-import           Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
@@ -1260,48 +1247,13 @@ instance MetaTrace (TraceLocalTxSubmissionServerEvent blk) where
 txsMempoolTimeoutSoftCounterName :: Text.Text
 txsMempoolTimeoutSoftCounterName = "txsMempoolTimeoutSoft"
 
-impliesMempoolTimeoutSoft ::
-  forall blk. MempoolTimeoutSoftPredicate blk => TraceEventMempool blk -> Bool
+impliesMempoolTimeoutSoft :: TraceEventMempool blk -> Bool
 impliesMempoolTimeoutSoft = \case
-  TraceMempoolRejectedTx _tx txApplyErr _ _mpSz ->
-    errImpliesMempoolTimeoutSoft (Proxy @blk) txApplyErr
+  TraceMempoolRejectedTx _tx _txApplyErr details _mpSz ->
+    case details of
+      MempoolRejectedByTimeoutSoft{} -> True
+      MempoolRejectedByLedger -> False
   _ -> False
-
-class MempoolTimeoutSoftPredicate blk where
-  -- | Does the error indicate a mempool timeout
-  errImpliesMempoolTimeoutSoft :: proxy blk -> ApplyTxErr blk -> Bool
-
-instance SOP.All MempoolTimeoutSoftPredicate xs => MempoolTimeoutSoftPredicate (Consensus.HardForkBlock xs) where
-  errImpliesMempoolTimeoutSoft _prx = \case
-    Consensus.HardForkApplyTxErrWrongEra{} -> False
-    Consensus.HardForkApplyTxErrFromEra (Consensus.OneEraApplyTxErr ns) ->
-      SOP.hcollapse $ SOP.hcmap (Proxy @MempoolTimeoutSoftPredicate) f ns
-    where
-      f :: forall x. MempoolTimeoutSoftPredicate x => Consensus.WrapApplyTxErr x -> SOP.K Bool x
-      f (Consensus.WrapApplyTxErr err) = SOP.K $ errImpliesMempoolTimeoutSoft (Proxy @x) err
-
-instance MempoolTimeoutSoftPredicate Consensus.ByronBlock where
-  errImpliesMempoolTimeoutSoft = \_prx _err -> False
-
-instance EraMempoolTimeoutSoftPredicate era => MempoolTimeoutSoftPredicate (Consensus.ShelleyBlock proto era) where
-  errImpliesMempoolTimeoutSoft _prx = \case
-    SL.ApplyTxError (err NE.:| errs) ->
-      null errs && eraImpliesMempoolTimeoutSoft (Proxy @era) err
-
-class EraMempoolTimeoutSoftPredicate era where
-  -- | Does the error indicate a mempool timeout
-  eraImpliesMempoolTimeoutSoft :: proxy era -> Conway.PredicateFailure (SL.EraRule "LEDGER" era) -> Bool
-
-instance EraMempoolTimeoutSoftPredicate ShelleyEra  where eraImpliesMempoolTimeoutSoft _prx _err = False
-instance EraMempoolTimeoutSoftPredicate AllegraEra  where eraImpliesMempoolTimeoutSoft _prx _err = False
-instance EraMempoolTimeoutSoftPredicate MaryEra     where eraImpliesMempoolTimeoutSoft _prx _err = False
-instance EraMempoolTimeoutSoftPredicate AlonzoEra   where eraImpliesMempoolTimeoutSoft _prx _err = False
-instance EraMempoolTimeoutSoftPredicate BabbageEra  where eraImpliesMempoolTimeoutSoft _prx _err = False
-instance EraMempoolTimeoutSoftPredicate ConwayEra   where
-  eraImpliesMempoolTimeoutSoft _prx = \case
-    Conway.ConwayMempoolFailure txt -> Text.pack "MempoolTxTooSlow" `Text.isPrefixOf` txt
-    _ -> False
-instance EraMempoolTimeoutSoftPredicate DijkstraEra where eraImpliesMempoolTimeoutSoft _prx _err = False
 
 instance
   ( LogFormatting (ApplyTxErr blk)
@@ -1309,7 +1261,6 @@ instance
   , ToJSON (GenTxId blk)
   , LedgerSupportsMempool blk
   , ConvertRawHash blk
-  , MempoolTimeoutSoftPredicate blk
   ) => LogFormatting (TraceEventMempool blk) where
   forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mconcat
@@ -1317,14 +1268,15 @@ instance
       , "tx" .= forMachine dtal (txForgetValidated tx)
       , "mempoolSize" .= forMachine dtal mpSzAfter
       ]
-  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr _ mpSz) =
+  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr details mpSz) =
     mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "tx" .= forMachine dtal tx
       , "mempoolSize" .= forMachine dtal mpSz
       ] <>
+      if dtal < DDetailed then [] else
       [ "err" .= forMachine dtal txApplyErr
-      | dtal >= DDetailed
+      , "errdetails" .= jsonMempoolRejectionDetails details
       ]
   forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
     mconcat
@@ -1374,7 +1326,7 @@ instance
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-  asMetrics ev@(TraceMempoolRejectedTx _tx _txApplyErr _ mpSz) =
+  asMetrics ev@(TraceMempoolRejectedTx _tx _txApplyErr _details mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
