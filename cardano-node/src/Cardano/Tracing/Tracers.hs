@@ -1140,7 +1140,7 @@ teeForge' tr =
           LogValue "forgeTickedLedgerState" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgingMempoolSnapshot slot _prevPt _mpHash _mpSlotNo ->
           LogValue "forgingMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceForgedBlock slot _ _ _ ->
+        Consensus.TraceForgedBlock slot _ _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceDidntAdoptBlock slot _ ->
           LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot

@@ -1520,7 +1520,7 @@ instance ( tx ~ GenTx blk
       , "mempoolHash" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash)
       , "mempoolSlot" .= toJSON (unSlotNo mpSlot)
       ]
-  forMachine _dtal (TraceForgedBlock slotNo _ blk _) =
+  forMachine _dtal (TraceForgedBlock slotNo _ blk _ _) =
     mconcat
       [ "kind" .= String "TraceForgedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
@@ -1632,7 +1632,7 @@ instance ( tx ~ GenTx blk
         <> renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash
         <> " ticked to slot "
         <> showT (unSlotNo mpSlot)
-  forHuman (TraceForgedBlock slotNo _ _ _) =
+  forHuman (TraceForgedBlock slotNo _ _ _ _) =
       "Forged block in slot " <> showT (unSlotNo slotNo)
   forHuman (TraceDidntAdoptBlock slotNo _) =
       "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
@@ -1690,7 +1690,7 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.node-is-leader" Nothing]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
-  asMetrics (TraceForgedBlock slot _ _ _) =
+  asMetrics (TraceForgedBlock slot _ _ _ _) =
     [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot),
      CounterM "Forge.forged" Nothing]
   asMetrics (TraceDidntAdoptBlock _slot _) =

@@ -479,7 +479,7 @@ instance ( tx ~ GenTx blk
         <> renderChainHash (Text.decodeLatin1 . toRawHash (Proxy @blk)) mpHash
         <> " ticked to slot "
         <> showT (unSlotNo mpSlot)
-    TraceForgedBlock slotNo _ _ _ -> const $
+    TraceForgedBlock slotNo _ _ _ _ -> const $
       "Forged block in slot " <> showT (unSlotNo slotNo)
     TraceDidntAdoptBlock slotNo _ -> const $
       "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
@@ -1698,7 +1698,7 @@ instance ( RunNode blk
       , "mempoolHash" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash)
       , "mempoolSlot" .= toJSON (unSlotNo mpSlot)
       ]
-  toObject _verb (TraceForgedBlock slotNo _ blk _) =
+  toObject _verb (TraceForgedBlock slotNo _ blk _ _) =
     mconcat
       [ "kind"      .= String "TraceForgedBlock"
       , "slot"      .= toJSON (unSlotNo slotNo)
