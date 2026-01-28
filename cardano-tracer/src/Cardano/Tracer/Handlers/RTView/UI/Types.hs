@@ -50,8 +50,6 @@ data ChartId
   | TxsProcessedNumChart
   | MempoolBytesChart
   | TxsInMempoolChart
-  | TxsMempoolTimeoutSoftChart
-  | TxsMempoolTimeoutHardChart
   deriving (Bounded, Enum, Generic, FromJSON, ToJSON, Show)
 
 data ChartSelectId
