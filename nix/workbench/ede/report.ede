@@ -18,6 +18,11 @@
 #+BEGIN_COMMENT
 Hints:
 
+Preliminary: The customized =em= Emacs bundle which is able to process the
+commands below is no longer part of the performance workbench. If required,
+please perform a local install from:
+https://github.com/mgmeier/em/
+
 1. C-c C-x C-x :: recompute & redraw everything: tables & Gnuplot charts
 2. C-c C-x x   :: rerun a single Gnuplot script & redraw its chart
 2. C-c C-e l o :: export to PDF, and open the result.

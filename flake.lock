@@ -157,22 +157,6 @@
         "type": "github"
       }
     },
-    "em": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1750940090,
-        "narHash": "sha256-DmDtgq8ipHCm2/Hq6e9xeJ2u8WLQFN1gXYSWM1bZNCU=",
-        "owner": "mgmeier",
-        "repo": "em",
-        "rev": "e3dde1952fcbe550055fb065590fdffd6f6f9710",
-        "type": "github"
-      },
-      "original": {
-        "owner": "mgmeier",
-        "repo": "em",
-        "type": "github"
-      }
-    },
     "empty-flake": {
       "locked": {
         "lastModified": 1630400035,
@@ -801,7 +785,6 @@
         "CHaP": "CHaP",
         "cardano-automation": "cardano-automation",
         "customConfig": "customConfig",
-        "em": "em",
         "empty-flake": "empty-flake",
         "flake-compat": "flake-compat",
         "hackageNix": "hackageNix_2",

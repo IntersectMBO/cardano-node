@@ -27,11 +27,6 @@
       flake = false;
     };
 
-    em = {
-      url = "github:mgmeier/em";
-      flake = false;
-    };
-
     empty-flake.url = "github:input-output-hk/empty-flake";
 
     flake-compat = {
@@ -65,7 +60,6 @@
   outputs = {
     cardano-automation,
     CHaP,
-    em,
     haskellNix,
     incl,
     iohkNix,
@@ -105,11 +99,6 @@
       (final: prev: {
         inherit customConfig;
         bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
-        em = import em {
-          inherit (final) system;
-          nixpkgsSrcs = nixpkgs.outPath;
-          nixpkgsRev = nixpkgs.rev;
-        };
         gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
         commonLib =
           lib

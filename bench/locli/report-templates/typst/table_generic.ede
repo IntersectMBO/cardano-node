@@ -1,0 +1,14 @@
+
+#align(center)[
+#table(
+  columns: {{ table.header | length }},
+
+  table.header(
+    {% for col in table.header %}{{ col.value.cont | justifyRight(col.value.width) }},  {% endfor %}
+  ),
+
+{% for row in table.rows %}
+    {% for col in row.value %}{{ col.value.cont | justifyRight(col.value.width) }},  {% endfor %}
+{% endfor %}
+)
+]

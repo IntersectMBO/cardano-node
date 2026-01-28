@@ -1,0 +1,159 @@
+// To load CDF data for plotting from other run directories, you need to make
+// the root for compiling the document somewhat more permissive:
+//
+// $ typst c --root ../.. {{ typstFile }}
+
+
+// The suggested file name for the report PDF; you can query this by using
+// $ typst query --root ../.. --one --field value {{ typstFile }} '<export_file_name>'
+//
+#metadata("{{ report.tag }}.{{ base.fileInfix }}.pdf") <export_file_name>
+
+
+// START PREAMBLE
+
+// This requires version typst >= 0.14
+//
+#import "@preview/neoplot:0.0.4" as gnuplot
+
+
+// Document Styling
+//
+#set page(paper: "a4", margin: 1.5cm)
+#set text(size: 10pt)
+#set par(leading: 0.6em, spacing: 0.8em, first-line-indent: 1.8em, justify: true)
+#show heading: set block(above: 1.5em, below: 1.2em)
+#show figure.caption: emph
+
+
+// Table styling
+// No strokes inside table body; left alignment for row descriptions only; slightly smaller row descriptions
+//
+#let frame(stroke) = (x, y) => (
+  left: if x > 0 { 0pt } else { stroke },
+  right: stroke,
+  top: if y < 2 { stroke } else { 0pt },
+  bottom: stroke,
+)
+#set table(
+  stroke: frame(0.5pt),
+  align:  (x, _) => if x == 0 { left } else { right },
+)
+#show table: set text(size: 0.96em)
+#show table.cell.where(x: 0): set text(size: 0.9em)
+
+
+// Table cell coloring
+// The function names have to be in sync with Cardano.Report.colorCode in package locli
+//
+#let gr(body) = table.cell(fill: green.lighten(60%))[#body]
+#let rd(body) = table.cell(fill: red.lighten(60%))[#body]
+
+// END PREAMBLE
+
+
+#align(center + horizon)[
+  #text(size: 24pt)[
+  {{ report.target }} against {{ base.ver }}
+  ]
+
+  #text(size: 16pt)[
+  {{ base.workload }} workload \
+  #pad(top: 50%,[
+    {{ report.author }}, Cardano Performance & Tracing \
+    {{ report.date }}
+  ])
+  ]
+]
+
+#pagebreak()
+
+
+#set page(numbering: "1")
+#counter(page).update(1)
+
+#outline()
+
+#pagebreak()
+
+= Manifest
+
+#pad(bottom: 10pt,[
+We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}`{{ run.value.ver }}` ({{ run.value.meta.era | toTitle }}){% endfor %} relative to `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload.
+])
+
+#pagebreak()
+
+{% include "table_generic.ede" with table = summary %}
+
+#pagebreak()
+
+= Analysis
+
+{% for section in analyses %}
+== {{ section.value.title }}
+
+{% include "table_generic.ede" with table = section.value %}
+{% if section.value.title == "Anomaly control" %}
+#pagebreak()
+{% else %}
+#pad(top: 2em)[]
+{% endif %}
+
+{% endfor %}
+
+#pagebreak()
+
+
+= Observations
+
+== Resources
+
++ ...
+
+== Forging
+
++ ...
+
+== Peer propagation
+
++ ...
+
+== End-to-end propagation
+
++ ...
+
+
+#pagebreak()
+
+= Appendix A: charts
+
+== Cluster performance charts
+
+{% for c in charts %}
+{%include "report_gnuplot.ede" with chart = c.value %}
+{% endfor %}
+
+#pagebreak()
+
+
+#set par(
+    first-line-indent: (amount: 0pt, all: true),
+    spacing: 1.35em
+)
+
+= Appendix B: data dictionary
+
+== Block propagation metrics
+
+{% for m in dictionary.dBlockProp %}
+*{{ m.value.deShortDesc }}* (_{{ m.value.deField }}_) -- {{ m.value.deDescription }}
+
+{% endfor %}
+
+== Cluster performance metrics
+
+{% for m in dictionary.dClusterPerf %}
+*{{ m.value.deShortDesc }}* (_{{ m.value.deField }}_) -- {{ m.value.deDescription }}
+
+{% endfor %}
