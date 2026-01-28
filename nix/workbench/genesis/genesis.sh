@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-global_genesis_format_version=October-13-2026
+global_genesis_format_version=October-13-2025
 
 usage_genesis() {
   usage "genesis" "Genesis" <<EOF
