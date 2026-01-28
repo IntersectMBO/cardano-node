@@ -21,7 +21,7 @@ let
     {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault "ghc967";
+      compiler-nix-name = lib.mkDefault "ghc912";
       # Extra-compilers
       # flake.variants = lib.genAttrs ["ghc$VERSION"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
@@ -57,9 +57,13 @@ let
           nix-prefetch-git
           pkg-config
           hlint
-          ghcid
           haskell-language-server
-          cabal
+          # TODO: for some reason it tries to build very old cabal-install and ghcid from source,
+          #       probably because haskell.nix is pinned
+          # cabal
+          # ghcid
+          # use cabal-install from nixpkgs instead for now:
+          cabal-install
           actionlint
           shellcheck
           stylish-haskell
@@ -123,7 +127,7 @@ let
       modules =
         [
           ({ lib, pkgs, ... }: {
-            packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
+            # packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
             package-keys = ["plutus-tx-plugin"];
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
 
@@ -218,30 +222,30 @@ let
               # split data output for ekg to reduce closure size
               package-keys = ["ekg"];
               packages.ekg.components.library.enableSeparateDataOutput = true;
-              packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
-                lib.mkForce [
-                  pkgs.lsof
-                  config.hsPkgs.cardano-node.components.exes.cardano-node
-                  config.hsPkgs.cardano-cli.components.exes.cardano-cli
-                  config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman
-                ];
-              # cardano-node-chairman depends on cardano-node and cardano-cli, and some config files
-              packages.cardano-node-chairman.preCheck =
-                let
-                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
-                in
-                # work around 104 chars socket path limit by using a different temporary directory
-                ''
-                  ${exportCliPath}
-                  ${exportNodePath}
-                  ${exportChairmanPath}
-                  export CARDANO_NODE_SRC=${filteredProjectBase}
-                  # unset TMPDIR, otherwise mktemp will use that as a base
-                  unset TMPDIR
-                  export TMPDIR=$(mktemp -d)
-                  export TMP=$TMPDIR
-                '';
+              # packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
+              #   lib.mkForce [
+              #     pkgs.lsof
+              #     config.hsPkgs.cardano-node.components.exes.cardano-node
+              #     config.hsPkgs.cardano-cli.components.exes.cardano-cli
+              #     config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman
+              #   ];
+              # # cardano-node-chairman depends on cardano-node and cardano-cli, and some config files
+              # packages.cardano-node-chairman.preCheck =
+              #   let
+              #     # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+              #     filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
+              #   in
+              #   # work around 104 chars socket path limit by using a different temporary directory
+              #   ''
+              #     ${exportCliPath}
+              #     ${exportNodePath}
+              #     ${exportChairmanPath}
+              #     export CARDANO_NODE_SRC=${filteredProjectBase}
+              #     # unset TMPDIR, otherwise mktemp will use that as a base
+              #     unset TMPDIR
+              #     export TMPDIR=$(mktemp -d)
+              #     export TMP=$TMPDIR
+              #   '';
               # cardano-testnet depends on cardano-node, cardano-cli, cardano-submit-api and some config files
               packages.cardano-node.components.tests.cardano-node-test.preCheck =
                 let
