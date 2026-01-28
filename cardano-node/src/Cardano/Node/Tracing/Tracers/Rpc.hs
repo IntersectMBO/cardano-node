@@ -41,9 +41,7 @@ instance LogFormatting TraceRpc where
           TraceRpcSubmit submitTrace ->
             ["kind" .= String "SubmitService"]
               <> case submitTrace of
-                TraceRpcSubmitTxDecodingFailure i _ -> ["txIndex" .= show i]
                 TraceRpcSubmitN2cConnectionError _ -> []
-                TraceRpcSubmitTxValidationError i _ -> ["txIndex" .= show i]
                 TraceRpcSubmitSpan s -> [spanToObject s]
 
   forHuman = docToText . pretty
@@ -68,9 +66,7 @@ instance MetaTrace TraceRpc where
       TraceRpcSubmit submitTrace ->
         "SubmitService"
           : case submitTrace of
-            TraceRpcSubmitTxDecodingFailure _ _ -> ["TxDecodingFailure"]
             TraceRpcSubmitN2cConnectionError _ -> ["N2cConnectionError"]
-            TraceRpcSubmitTxValidationError _ _ -> ["TxValidationError"]
             TraceRpcSubmitSpan _ -> ["Span"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
@@ -80,7 +76,6 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadUtxos", "Span"] -> Just Info
     ["SubmitService", "SubmitTx", "Span"] -> Just Info
     ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
-    ["SubmitService", "TxDecodingFailure"] -> Just Info -- request error
     ["SubmitService", "TxValidationError"] -> Just Info -- request error
     _ -> Nothing
 
@@ -92,7 +87,6 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "SubmitTx", "Span"] -> Just ""
     ["SubmitService", "N2cConnectionError"] -> Just ""
     ["SubmitService", "TxDecodingFailure"] -> Just ""
-    ["SubmitService", "TxValidationError"] -> Just ""
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -108,9 +102,7 @@ instance MetaTrace TraceRpc where
           , ["QueryService", "ReadParams", "Span"]
           , ["QueryService", "ReadParams", "Span"]
           , ["SubmitService", "SubmitTx", "Span"]
-          , ["SubmitService", "TxDecodingFailure"]
           , ["SubmitService", "N2cConnectionError"]
-          , ["SubmitService", "TxValidationError"]
           ]
 
 -- helper functions
