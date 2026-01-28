@@ -101,19 +101,23 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a571776defab2aff8e1e0a9e62646494a1a8af08
-  --sha256: sha256-eucib6kUGFbiIM09nNHC+XR+gUSjiAtpKxcuKO/Kl1Q=
+  tag: 86cc78704115007dc6c75185ae83decaa8e89348
+  --sha256: sha256-K/q+sxmDrCaNEjAicoDYZwLc8gSw+Kw4mO0qbM8MujU=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
     ouroboros-consensus-diffusion
+    ouroboros-consensus-observe
+    sop-extras
+    strict-sop-core
 
--- Points to ouroboros-network/nfrisby/leios-202511-demo
+-- Points to ouroboros-network/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 479f0d0d82413162c8444b912394dd74c052831f
-  --sha256: sha256-Up+Zh3+nHuwlHmpXgH0nNIvQ/yHm/Hxb9ZYQHibrDLc=
+  tag: fb5f16f48af84950db0c2ecefd8cbda532c77d1a
+  --sha256: sha256-0LWD1zwOzhdcPJtBuw7pRDVcBd9CKJOFjm9o4BvsIMM=
   subdir:
     cardano-ping
     monoidal-synchronisation

@@ -40,7 +40,7 @@ import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDe
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
-                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
+                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId, TxMeasureMetrics (txMeasureMetricTxSizeBytes, txMeasureMetricExUnitsMemory, txMeasureMetricExUnitsSteps, txMeasureMetricRefScriptsSizeBytes), TxLimits (TxMeasure))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -82,6 +82,8 @@ import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
 import           LeiosDemoTypes (TraceLeiosKernel, TraceLeiosPeer, traceLeiosKernelToObject, traceLeiosPeerToObject)
+import Ouroboros.Consensus.Observe.ConsensusJson (ConsensusJson(toConsensusJson))
+import Ouroboros.Consensus.Mempool.TxSeq (TxSeqMeasure(mCount, mSize))
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
@@ -1447,7 +1449,10 @@ instance ( tx ~ GenTx blk
          , Show (TxId (GenTx blk))
          , LogFormatting (CannotForge blk)
          , LogFormatting (ExtValidationError blk)
-         , LogFormatting (ForgeStateUpdateError blk))
+         , LogFormatting (ForgeStateUpdateError blk)
+         , ConsensusJson (HeaderHash blk)
+         , ConsensusJson (TxMeasure blk)
+         )
       => LogFormatting (TraceForgeEvent blk) where
   forMachine _dtal (TraceStartLeadershipCheck slotNo) =
     mconcat
@@ -1530,16 +1535,11 @@ instance ( tx ~ GenTx blk
       , "mempoolHash" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash)
       , "mempoolSlot" .= toJSON (unSlotNo mpSlot)
       ]
-  forMachine _dtal (TraceForgedBlock slotNo _ blk _) =
+  forMachine _dtal (TraceForgedBlock slotNo fb) =
     mconcat
       [ "kind" .= String "TraceForgedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
-      , "block"     .= String (renderHeaderHash (Proxy @blk) $ blockHash blk)
-      , "blockNo"   .= toJSON (unBlockNo $ blockNo blk)
-      , "blockPrev" .= String (renderChainHash
-                                @blk
-                                (renderHeaderHash (Proxy @blk))
-                                $ blockPrevHash blk)
+      , "forgedBlock"     .= toConsensusJson fb
       ]
   forMachine _dtal (TraceDidntAdoptBlock slotNo _) =
     mconcat
@@ -1642,7 +1642,7 @@ instance ( tx ~ GenTx blk
         <> renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash
         <> " ticked to slot "
         <> showT (unSlotNo mpSlot)
-  forHuman (TraceForgedBlock slotNo _ _ _) =
+  forHuman (TraceForgedBlock slotNo _) =
       "Forged block in slot " <> showT (unSlotNo slotNo)
   forHuman (TraceDidntAdoptBlock slotNo _) =
       "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
@@ -1700,9 +1700,36 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.node-is-leader" Nothing]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
-  asMetrics (TraceForgedBlock slot _ _ _) =
-    [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot),
-     CounterM "Forge.forged" Nothing]
+  asMetrics (TraceForgedBlock slot fb) =
+      [ IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot)
+      , CounterM "Forge.forged" Nothing
+      -- NOTE(bladyjoker): New!!!
+      , CounterM "Forge.ranking-block.total-count" Nothing
+
+      , CounterM "Forge.ranking-block.total-tx-count" (Just . fromInteger . toInteger . mCount . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-count" (Just . fromInteger . toInteger . mCount . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-count" (Just . fromInteger . toInteger . mCount . fbMempoolRestSize $ fb)
+
+      , CounterM "Forge.ranking-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbMempoolRestSize $ fb)
+
+      , CounterM "Forge.ranking-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbMempoolRestSize $ fb)
+
+      , CounterM "Forge.ranking-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbMempoolRestSize $ fb)
+
+      , CounterM "Forge.ranking-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbNewBlockSize $ fb)
+      , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbNewEndorserBlockSize $ fb)
+      , CounterM "Forge.rest-in-mempool.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbMempoolRestSize $ fb)
+      ] ++ case fbMaybeNewEndorserBlock fb of
+             Nothing -> []
+             Just _ -> [
+               CounterM "Forge.endorser-block.total-count" Nothing
+               ]
   asMetrics (TraceDidntAdoptBlock _slot _) =
     [CounterM "Forge.didnt-adopt" Nothing]
   asMetrics (TraceForgedInvalidBlock _slot _ _) =
