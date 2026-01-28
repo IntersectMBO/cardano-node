@@ -36,6 +36,7 @@ import qualified PlutusTx.AssocMap as AssocMap (empty)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Types (TxGenError (..), TxGenPlutusResolvedTo (..))
 import           Control.Exception (SomeException (..), try, displayException)
+import           RIO (runRIO)
 import           System.FilePath ((<.>), (</>))
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)

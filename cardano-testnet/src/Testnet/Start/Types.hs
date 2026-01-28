@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -176,6 +177,8 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
+  , cardanoEnableRpc :: Bool
+  -- ^ True to enable gRPC endpoints in all testnet nodes
   } deriving (Eq, Show)
 
 -- | Path to the configuration file of the node, specified by the user
@@ -211,6 +214,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
     , cardanoOutputDir = def
+    , cardanoEnableRpc = False
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
@@ -257,11 +261,20 @@ isRelayNodeOptions RelayNodeOptions{} = True
 cardanoDefaultTestnetNodeOptions :: [NodeOption]
 cardanoDefaultTestnetNodeOptions =
   [ SpoNodeOptions []
-  , RelayNodeOptions []
-  , RelayNodeOptions []
+  -- TODO: uncomment relays, because they were causing conflicts for prometheus ports
+  -- , RelayNodeOptions []
+  -- , RelayNodeOptions []
   ]
 
-data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
+data NodeLoggingFormat
+  = NodeLoggingFormatAsJson
+  | NodeLoggingFormatAsText
+  deriving (Eq, Show)
+
+instance Pretty NodeLoggingFormat where
+  pretty = \case
+    NodeLoggingFormatAsJson -> "json"
+    NodeLoggingFormatAsText -> "text"
 
 data NodeConfiguration
 
@@ -276,7 +289,7 @@ data Conf = Conf
   , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- |  Same as mkConfig except that it renders the path 
+-- |  Same as mkConfig except that it renders the path
 -- when failing in a property test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
@@ -286,7 +299,7 @@ mkConf tempAbsPath' = withFrozenCallStack $ do
 -- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
 -- and updating time stamps disabled.
 mkConfig :: FilePath -> Conf
-mkConfig tempAbsPath' = 
+mkConfig tempAbsPath' =
   Conf
     { genesisHashesPolicy = WithHashes
     , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
@@ -296,10 +309,10 @@ mkConfig tempAbsPath' =
 -- | Create a 'Conf' from an absolute path, with Genesis Hashes enabled
 -- and updating time stamps disabled.
 mkConfigAbs :: FilePath -> IO Conf
-mkConfigAbs userOutputDir = do 
+mkConfigAbs userOutputDir = do
   absUserOutputDir <-  makeAbsolute userOutputDir
   dirExists <- doesDirectoryExist absUserOutputDir
-  let conf = mkConfig absUserOutputDir 
+  let conf = mkConfig absUserOutputDir
   unless dirExists $
     createDirectory absUserOutputDir
   pure conf
