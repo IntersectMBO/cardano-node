@@ -23,11 +23,13 @@ import qualified Cardano.Ledger.Plutus as L
 import qualified Cardano.Rpc.Client as Rpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Query ()
-import           Cardano.Rpc.Server.Internal.UtxoRpc.Type (anyUtxoDataUtxoRpcToUtxo)
+import           Cardano.Rpc.Server.Internal.UtxoRpc.Type (anyUtxoDataUtxoRpcToUtxo,
+                   utxoRpcBigIntToInteger)
 import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Exception
 import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
 import qualified Data.Map.Strict as M
@@ -92,9 +94,9 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) req
     pure (pparams', utxos')
 
-  ------------------------
+  ---------------------------
   -- Test readParams response
-  ------------------------
+  ---------------------------
   pparamsResponse ^. #ledgerTip . #slot === slot
   pparamsResponse ^. #ledgerTip . #hash === blockHash
   pparamsResponse ^. #ledgerTip . #height === blockNo
@@ -104,20 +106,20 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   let chainParams = pparamsResponse ^. #values . #cardano
   babbageEraOnwardsConstraints (convert ceo) $ do
     pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.unCoin
-      === chainParams ^. #coinsPerUtxoByte . to fromIntegral
+      ===^ chainParams ^. #coinsPerUtxoByte . to utxoRpcBigIntToInteger
     pparams ^. L.ppMaxTxSizeL === chainParams ^. #maxTxSize . to fromIntegral
-    pparams ^. L.ppMinFeeBL === chainParams ^. #minFeeCoefficient . to fromIntegral
-    pparams ^. L.ppMinFeeAL === chainParams ^. #minFeeConstant . to fromIntegral
+    pparams ^. L.ppMinFeeBL ===^ chainParams ^. #minFeeCoefficient . to (fmap L.Coin . utxoRpcBigIntToInteger)
+    pparams ^. L.ppMinFeeAL ===^ chainParams ^. #minFeeConstant . to (fmap L.Coin . utxoRpcBigIntToInteger)
     pparams ^. L.ppMaxBBSizeL === chainParams ^. #maxBlockBodySize . to fromIntegral
     pparams ^. L.ppMaxBHSizeL === chainParams ^. #maxBlockHeaderSize . to fromIntegral
-    pparams ^. L.ppKeyDepositL === chainParams ^. #stakeKeyDeposit . to fromIntegral
-    pparams ^. L.ppPoolDepositL === chainParams ^. #poolDeposit . to fromIntegral
+    pparams ^. L.ppKeyDepositL ===^ chainParams ^. #stakeKeyDeposit . to (fmap L.Coin . utxoRpcBigIntToInteger)
+    pparams ^. L.ppPoolDepositL ===^ chainParams ^. #poolDeposit . to (fmap L.Coin . utxoRpcBigIntToInteger)
     pparams ^. L.ppEMaxL . to L.unEpochInterval === chainParams ^. #poolRetirementEpochBound . to fromIntegral
     pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools . to fromIntegral
     pparams ^. L.ppA0L . to L.unboundRational === chainParams ^. #poolInfluence . to inject
     pparams ^. L.ppNOptL === chainParams ^. #desiredNumberOfPools . to fromIntegral
     pparams ^. L.ppRhoL . to L.unboundRational === chainParams ^. #monetaryExpansion . to inject
-    pparams ^. L.ppMinPoolCostL === chainParams ^. #minPoolCost . to fromIntegral
+    pparams ^. L.ppMinPoolCostL ===^ chainParams ^. #minPoolCost . to (fmap L.Coin . utxoRpcBigIntToInteger)
     ( pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
       , pparams ^. L.ppProtocolVersionL . to L.pvMinor
       )
@@ -173,8 +175,8 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
       === chainParams ^. #committeeTermLimit . to fromIntegral
     pparams ^. L.ppGovActionLifetimeL . to L.unEpochInterval
       === chainParams ^. #governanceActionValidityPeriod . to fromIntegral
-    pparams ^. L.ppGovActionDepositL === chainParams ^. #governanceActionDeposit . to fromIntegral
-    pparams ^. L.ppDRepDepositL === chainParams ^. #drepDeposit . to fromIntegral
+    pparams ^. L.ppGovActionDepositL ===^ chainParams ^. #governanceActionDeposit . to (fmap L.Coin . utxoRpcBigIntToInteger)
+    pparams ^. L.ppDRepDepositL ===^ chainParams ^. #drepDeposit . to (fmap L.Coin . utxoRpcBigIntToInteger)
     pparams ^. L.ppDRepActivityL . to L.unEpochInterval === chainParams ^. #drepInactivityPeriod . to fromIntegral
 
   --------------------------
@@ -187,3 +189,11 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   H.threadDelay 90000000
 
   H.failure
+
+
+(===^) :: (Eq a, Show a, H.MonadTest m) => a -> Either SomeException a -> m ()
+expected ===^ actual = do
+  v <- H.leftFail actual
+  expected === v
+
+infix 4 ===^
