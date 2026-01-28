@@ -14,7 +14,13 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-10-17T00:26:22Z
-  , cardano-haskell-packages 2025-11-20T19:55:27Z
+  , cardano-haskell-packages 2026-01-29T01:19:14Z
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: c13540fb92a1552731d7d0fc771820c1d1219dd7
+  subdir: cardano-cli
 
 packages:
   cardano-node

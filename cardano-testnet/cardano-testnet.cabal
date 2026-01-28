@@ -41,8 +41,8 @@ library
                       , annotated-exception
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 10.19
-                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.13
+                      , cardano-api ^>= 10.23
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.14
                       , cardano-crypto-class ^>=2.2.3.2
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
