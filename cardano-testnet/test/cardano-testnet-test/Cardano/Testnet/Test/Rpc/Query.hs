@@ -186,11 +186,6 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   utxoFromUtxoRpc <- H.leftFail $ utxosResponse ^. #items . to (anyUtxoDataUtxoRpcToUtxo $ convert ceo)
   utxos === utxoFromUtxoRpc
 
-  H.threadDelay 90000000
-
-  H.failure
-
-
 (===^) :: (Eq a, Show a, H.MonadTest m) => a -> Either SomeException a -> m ()
 expected ===^ actual = do
   v <- H.leftFail actual
