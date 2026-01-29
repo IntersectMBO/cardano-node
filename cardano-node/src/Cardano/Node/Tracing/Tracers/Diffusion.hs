@@ -23,10 +23,11 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..)
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 
 import           Data.Aeson (Value (String), (.=), Object)
-import           Autodocodec (HasObjectCodec (..), requiredFieldWith,
-                   textCodec)
-import qualified Autodocodec as AC
+import           Autodocodec (HasObjectCodec (..), ObjectCodec, bimapCodec, discriminatedUnionCodec,
+                   mapToDecoder, mapToEncoder, requiredFieldWith, textCodec)
+import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
+import           Data.Maybe (listToMaybe, mapMaybe)
 import           Data.Text (Text, pack)
 import           Data.Typeable
 import           Formatting
@@ -591,92 +592,82 @@ instance MetaTrace (AnyMessage (HS.Handshake a b)) where
 instance (Show ntnAddr, Show ntcAddr) =>
   HasObjectCodec (Diff.DiffusionTracer ntnAddr ntcAddr) where
   objectCodec =
-    discriminatedUnionCodec' encode
+    discriminatedUnionCodec "ns" encode decodeMap
     where
-      encode tracer = case tracer of
-        Diff.RunServer sockAddr ->
-          ( "RunServer"
-          , () <$ requiredFieldWith "socketAddress" textCodec "Socket address."
-                  AC..= \_ -> (showT sockAddr)
-          )
-        Diff.RunLocalServer localAddress ->
-          ( "RunLocalServer"
-          , () <$ requiredFieldWith "localAddress" textCodec "Local address."
-                  AC..= \_ -> (showT localAddress)
-          )
-        Diff.UsingSystemdSocket localAddress ->
-          ( "UsingSystemdSocket"
-          , () <$ requiredFieldWith "path" textCodec "Socket path."
-                  AC..= \_ -> (showT localAddress)
-          )
-        Diff.CreateSystemdSocketForSnocketPath localAddress ->
-          ( "CreateSystemdSocketForSnocketPath"
-          , () <$ requiredFieldWith "path" textCodec "Socket path."
-                  AC..= \_ -> (showT localAddress)
-          )
-        Diff.CreatedLocalSocket localAddress ->
-          ( "CreatedLocalSocket"
-          , () <$ requiredFieldWith "path" textCodec "Socket path."
-                  AC..= \_ -> (showT localAddress)
-          )
-        Diff.ConfiguringLocalSocket localAddress socket ->
-          ( "ConfiguringLocalSocket"
-          , () <$ (requiredFieldWith "path" textCodec "Socket path."
-                    AC..= \_ -> (showT localAddress))
-              <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= \_ -> (showT socket)
-          )
-        Diff.ListeningLocalSocket localAddress socket ->
-          ( "ListeningLocalSocket"
-          , () <$ (requiredFieldWith "path" textCodec "Socket path."
-                    AC..= \_ -> (showT localAddress))
-              <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= \_ -> (showT socket)
-          )
-        Diff.LocalSocketUp localAddress fd ->
-          ( "LocalSocketUp"
-          , () <$ (requiredFieldWith "path" textCodec "Socket path."
-                    AC..= \_ -> (showT localAddress))
-              <* requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= \_ -> (showT fd)
-          )
-        Diff.CreatingServerSocket socket ->
-          ( "CreatingServerSocket"
-          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= \_ -> (showT socket)
-          )
-        Diff.ListeningServerSocket socket ->
-          ( "ListeningServerSocket"
-          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= \_ -> (showT socket)
-          )
-        Diff.ServerSocketUp socket ->
-          ( "ServerSocketUp"
-          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= \_ -> (showT socket)
-          )
-        Diff.ConfiguringServerSocket socket ->
-          ( "ConfiguringServerSocket"
-          , () <$ requiredFieldWith "socket" textCodec "Socket descriptor."
-                  AC..= \_ -> (showT socket)
-          )
-        Diff.UnsupportedLocalSystemdSocket path ->
-          ( "UnsupportedLocalSystemdSocket"
-          , () <$ requiredFieldWith "path" textCodec "Socket path."
-                  AC..= \_ -> (showT path)
-          )
-        Diff.UnsupportedReadySocketCase ->
-          ("UnsupportedReadySocketCase", pure ())
-        Diff.DiffusionErrored exception ->
-          ( "DiffusionErrored"
-          , () <$ requiredFieldWith "error" textCodec "Error."
-                  AC..= \_ -> (showT exception)
-          )
-        Diff.SystemdSocketConfiguration config ->
-          ( "SystemdSocketConfiguration"
-          , () <$ requiredFieldWith "path" textCodec "Socket path."
-                  AC..= \_ -> (showT config)
-          )
+      placeholder = Diff.UnsupportedReadySocketCase
+
+      data Payload
+        = PText !Text
+        | PPair !Text !Text
+        | PUnit
+
+      encode tracer =
+        case firstPayloadMatch tracer of
+          Just (tag, payload, codec) -> (tag, mapToEncoder payload codec)
+          Nothing -> ("UnsupportedReadySocketCase", mapToEncoder PUnit (pure PUnit))
+
+      decodeMap =
+        HM.map (\(desc, codec) -> (desc, mapToDecoder (const placeholder) codec)) payloadMap
+
+      payloadMap :: HM.HashMap Text (Text, ObjectCodec Payload Payload)
+      payloadMap = HM.fromList (map payloadEntry payloadEntries)
+
+      payloadEntries :: [(Text, Diff.DiffusionTracer ntnAddr ntcAddr -> Maybe Payload, ObjectCodec Payload Payload)]
+      payloadEntries =
+        [ ("RunServer", \case Diff.RunServer sockAddr -> Just (PText (showT sockAddr)); _ -> Nothing
+          , payloadTextCodec "socketAddress" "Socket address.")
+        , ("RunLocalServer", \case Diff.RunLocalServer localAddress -> Just (PText (showT localAddress)); _ -> Nothing
+          , payloadTextCodec "localAddress" "Local address.")
+        , ("UsingSystemdSocket", \case Diff.UsingSystemdSocket localAddress -> Just (PText (showT localAddress)); _ -> Nothing
+          , payloadTextCodec "path" "Socket path.")
+        , ("CreateSystemdSocketForSnocketPath", \case Diff.CreateSystemdSocketForSnocketPath localAddress -> Just (PText (showT localAddress)); _ -> Nothing
+          , payloadTextCodec "path" "Socket path.")
+        , ("CreatedLocalSocket", \case Diff.CreatedLocalSocket localAddress -> Just (PText (showT localAddress)); _ -> Nothing
+          , payloadTextCodec "path" "Socket path.")
+        , ("ConfiguringLocalSocket", \case Diff.ConfiguringLocalSocket localAddress socket -> Just (PPair (showT localAddress) (showT socket)); _ -> Nothing
+          , payloadPairCodec "path" "Socket path." "socket" "Socket descriptor.")
+        , ("ListeningLocalSocket", \case Diff.ListeningLocalSocket localAddress socket -> Just (PPair (showT localAddress) (showT socket)); _ -> Nothing
+          , payloadPairCodec "path" "Socket path." "socket" "Socket descriptor.")
+        , ("LocalSocketUp", \case Diff.LocalSocketUp localAddress fd -> Just (PPair (showT localAddress) (showT fd)); _ -> Nothing
+          , payloadPairCodec "path" "Socket path." "socket" "Socket descriptor.")
+        , ("CreatingServerSocket", \case Diff.CreatingServerSocket socket -> Just (PText (showT socket)); _ -> Nothing
+          , payloadTextCodec "socket" "Socket descriptor.")
+        , ("ListeningServerSocket", \case Diff.ListeningServerSocket socket -> Just (PText (showT socket)); _ -> Nothing
+          , payloadTextCodec "socket" "Socket descriptor.")
+        , ("ServerSocketUp", \case Diff.ServerSocketUp socket -> Just (PText (showT socket)); _ -> Nothing
+          , payloadTextCodec "socket" "Socket descriptor.")
+        , ("ConfiguringServerSocket", \case Diff.ConfiguringServerSocket socket -> Just (PText (showT socket)); _ -> Nothing
+          , payloadTextCodec "socket" "Socket descriptor.")
+        , ("UnsupportedLocalSystemdSocket", \case Diff.UnsupportedLocalSystemdSocket path -> Just (PText (showT path)); _ -> Nothing
+          , payloadTextCodec "path" "Socket path.")
+        , ("UnsupportedReadySocketCase", \case Diff.UnsupportedReadySocketCase -> Just PUnit; _ -> Nothing
+          , pure PUnit)
+        , ("DiffusionErrored", \case Diff.DiffusionErrored exception -> Just (PText (showT exception)); _ -> Nothing
+          , payloadTextCodec "error" "Error.")
+        , ("SystemdSocketConfiguration", \case Diff.SystemdSocketConfiguration config -> Just (PText (showT config)); _ -> Nothing
+          , payloadTextCodec "path" "Socket path.")
+        ]
+
+      payloadEntry (tag, _match, codec) = (tag, (tag, codec))
+
+      firstPayloadMatch tracer =
+        let pick (tag, matchFn, codec) =
+              fmap (\p -> (tag, p, codec)) (matchFn tracer)
+        in listToMaybe (mapMaybe pick payloadEntries)
+
+      payloadTextCodec field desc =
+        bimapCodec
+          (Right . PText)
+          (\case PText t -> t; _ -> "")
+          (requiredFieldWith field textCodec desc)
+
+      payloadPairCodec field1 desc1 field2 desc2 =
+        bimapCodec
+          (Right . uncurry PPair)
+          (\case PPair a b -> (a, b); _ -> ("", ""))
+          ((,)
+            <$> requiredFieldWith field1 textCodec desc1
+            <*> requiredFieldWith field2 textCodec desc2)
 
 instance  (Show ntnAddr, Show ntcAddr) => LogFormattingCodec (Diff.DiffusionTracer ntnAddr ntcAddr)
 

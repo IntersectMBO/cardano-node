@@ -459,19 +459,35 @@ docuResultsToText dt@DocTracer {..} configuration =
                     (map fst datapointBuilders)
 
       header2  = fromText "\n## Trace Messages\n\n"
-      schemaToBuilder Nothing = Nothing
-      schemaToBuilder (Just schema) =
-        Just $
-          fromText "Schema:\n```\n"
-          <> AE.encodePrettyToTextBuilder schema
-          <> fromText "\n```\n"
-      schemaBuilders = mapMaybe schemaToBuilder dtSchemas
-      schemaBlocks = mconcat $ intersperse (fromText "\n\n") schemaBuilders
-      traceBlocks = mconcat $ intersperse (fromText "\n\n")
-                      (map (DocuResult.unpackDocu . snd) traceBuilders)
-      contentT = if Prelude.null schemaBuilders
-                   then traceBlocks
-                   else mconcat [traceBlocks, fromText "\n\n", schemaBlocks]
+      tracerKeyFor ns =
+        let pickLonger a b = if length b > length a then b else a
+            matches = filter (`isPrefixOf` ns) dtTracerNames
+        in foldl pickLonger [] matches
+      schemaForNamespace ns =
+        let pairs = [ (tn, s) | (tn, Just s) <- zip dtTracerNames dtSchemas ]
+            matches = filter (\(tn, _) -> tn `isPrefixOf` ns) pairs
+            pickLonger a@(_, _) b@(tb, _) =
+              if length tb > length (fst a) then b else a
+        in case matches of
+             [] -> Nothing
+             (x:xs) -> Just (snd (foldl pickLonger x xs))
+      traceGroups = groupBy
+                      (\(l, _) (r, _) -> tracerKeyFor l == tracerKeyFor r)
+                      traceBuilders
+      groupToBuilder grp =
+        let traceBlock = mconcat $ intersperse (fromText "\n\n")
+              (map (DocuResult.unpackDocu . snd) grp)
+            schemaBlock = case grp of
+              ((ns, _) : _) ->
+                case schemaForNamespace ns of
+                  Nothing -> mempty
+                  Just schema ->
+                    fromText "\n\nSchema:\n```\n"
+                    <> AE.encodePrettyToTextBuilder schema
+                    <> fromText "\n```\n"
+              _ -> mempty
+        in traceBlock <> schemaBlock
+      contentT = mconcat $ intersperse (fromText "\n\n") (map groupToBuilder traceGroups)
       header3  = fromText "\n## Metrics\n\n"
       contentM = mconcat $ intersperse (fromText "\n\n")
                               (map (DocuResult.unpackDocu . snd) metricsBuilders)
