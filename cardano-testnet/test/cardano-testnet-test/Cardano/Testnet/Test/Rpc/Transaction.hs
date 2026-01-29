@@ -40,7 +40,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
-import           RIO (threadDelay)
+import           RIO (ByteString, threadDelay)
 
 hprop_rpc_transaction :: Property
 hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
@@ -49,6 +49,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
         (conwayBasedEra, asType) :: era ~ ConwayEra => (ConwayEraOnwards era, AsType era)
       sbe = convert ceo
       options = def{cardanoNodeEra = AnyShelleyBasedEra sbe, cardanoEnableRpc = True}
+      addrInEra = AsAddressInEra eraProxy
 
   TestnetRuntime
     { testnetNodes = node0 : _
@@ -60,10 +61,10 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
 
   -- prepare tx inputs and output address
   H.noteShow_ addrTxt0
-  addr0 <- H.nothingFail $ deserialiseAddress (AsAddressInEra eraProxy) addrTxt0
+  addr0 <- H.nothingFail $ deserialiseAddress addrInEra addrTxt0
 
   H.noteShow_ addrTxt1
-  addr1 <- H.nothingFail $ deserialiseAddress (AsAddressInEra eraProxy) addrTxt1
+  addr1 <- H.nothingFail $ deserialiseAddress addrInEra addrTxt1
 
   -- read key witnesses
   wit0 :: ShelleyWitnessSigningKey <-
@@ -88,7 +89,9 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
 
   pparams <- H.leftFail $ utxoRpcPParamsToProtocolParams (convert ceo) $ pparamsResponse ^. #values . #cardano
 
-  txOut0 : _ <- H.noteShow $ utxosResponse ^. #items
+  txOut0 : _ <- H.noteShowM . flip filterM (utxosResponse ^. #items) $ \utxo -> do
+    utxoAddress <- deserialiseAddressBs addrInEra $ utxo ^. #cardano . #address
+    pure $ addr0 == utxoAddress
   txIn0 <- txoRefToTxIn $ txOut0 ^. #txoRef
 
   outputCoin <- H.leftFail $ txOut0 ^. #cardano . #coin . to utxoRpcBigIntToInteger
@@ -136,7 +139,10 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
   txId' === submittedTxId
 
   H.note_ $ "Enxure that there are 2 UTXOs in the address " <> show addrTxt1
-  2 === length (utxos ^. #items)
+  utxosForAddress <- H.noteShowM . flip filterM (utxos ^. #items) $ \utxo -> do
+    utxoAddress <- deserialiseAddressBs addrInEra $ utxo ^. #cardano . #address
+    pure $ addr1 == utxoAddress
+  2 === length utxosForAddress
 
   let outputsAmounts = map (^. #cardano . #coin) $ utxos ^. #items
   H.note_ $ "Ensure that the output sent is one of the utxos for the address " <> show addrTxt1
@@ -146,3 +152,6 @@ txoRefToTxIn :: (HasCallStack, MonadTest m) => Proto UtxoRpc.TxoRef -> m TxIn
 txoRefToTxIn r = withFrozenCallStack $ do
   txId' <- H.leftFail $ deserialiseFromRawBytes AsTxId $ r ^. #hash
   pure $ TxIn txId' (TxIx . fromIntegral $ r ^. #index)
+
+deserialiseAddressBs :: (MonadTest m, SerialiseAddress c) => AsType c -> ByteString -> m c
+deserialiseAddressBs addrInEra = H.nothingFail . deserialiseAddress addrInEra <=< H.leftFail . T.decodeUtf8'

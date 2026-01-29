@@ -2,10 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -42,11 +40,14 @@ instance LogFormatting TraceRpc where
             ["kind" .= String "SubmitService"]
               <> case submitTrace of
                 TraceRpcSubmitN2cConnectionError _ -> []
+                TraceRpcSubmitTxDecodingError _ -> []
+                TraceRpcSubmitTxValidationError _ -> []
                 TraceRpcSubmitSpan s -> [spanToObject s]
 
   forHuman = docToText . pretty
 
   asMetrics = \case
+    -- metrics for each rpc request
     -- query names here are taken from UTXORPC spec: https://utxorpc.org/query/intro/#operations
     TraceRpcQuery (TraceRpcQueryParamsSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadParams" Nothing]
     TraceRpcQuery (TraceRpcQueryReadUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadUtxos" Nothing]
@@ -67,16 +68,19 @@ instance MetaTrace TraceRpc where
         "SubmitService"
           : case submitTrace of
             TraceRpcSubmitN2cConnectionError _ -> ["N2cConnectionError"]
+            TraceRpcSubmitTxDecodingError _ -> ["TxDecodingError"]
+            TraceRpcSubmitTxValidationError _ -> ["TxValidationError"]
             TraceRpcSubmitSpan _ -> ["Span"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
-    ["FatalError"] -> Just Critical
-    ["Error"] -> Just Error
-    ["QueryService", "ReadParams", "Span"] -> Just Info
-    ["QueryService", "ReadUtxos", "Span"] -> Just Info
-    ["SubmitService", "SubmitTx", "Span"] -> Just Info
+    ["FatalError"] -> Just Error -- RPC server startup errors
+    ["Error"] -> Just Debug -- those are normal operation errors, like request errors, hide them by default
+    ["QueryService", "ReadParams", "Span"] -> Just Debug
+    ["QueryService", "ReadUtxos", "Span"] -> Just Debug
+    ["SubmitService", "SubmitTx", "Span"] -> Just Debug
     ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
-    ["SubmitService", "TxValidationError"] -> Just Info -- request error
+    ["SubmitService", "TxDecodingError"] -> Just Debug -- request error
+    ["SubmitService", "TxValidationError"] -> Just Debug -- request error
     _ -> Nothing
 
   documentFor (Namespace _ nsInner) = case nsInner of
@@ -86,7 +90,8 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadUtxos", "Span"] -> Just ""
     ["SubmitService", "SubmitTx", "Span"] -> Just ""
     ["SubmitService", "N2cConnectionError"] -> Just ""
-    ["SubmitService", "TxDecodingFailure"] -> Just ""
+    ["SubmitService", "TxDecodingError"] -> Just ""
+    ["SubmitService", "TxValidationError"] -> Just ""
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -103,6 +108,8 @@ instance MetaTrace TraceRpc where
           , ["QueryService", "ReadParams", "Span"]
           , ["SubmitService", "SubmitTx", "Span"]
           , ["SubmitService", "N2cConnectionError"]
+          , ["SubmitService", "TxDecodingError"]
+          , ["SubmitService", "TxValidationError"]
           ]
 
 -- helper functions
