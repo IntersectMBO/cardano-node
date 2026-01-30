@@ -49,6 +49,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (HostName)
 import           System.Metrics as EKG
+import           System.Remote.Monitoring
 
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject (writeToSink)
