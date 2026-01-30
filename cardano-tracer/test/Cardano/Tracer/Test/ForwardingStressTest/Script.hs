@@ -84,7 +84,7 @@ runScriptForwarding TestSetup{..} msgCountersRef msgsRef tracerGetter = do
 
       let numMsg = sum (fmap (\ (Script sc) -> length sc) scripts''')
       if numMsg > 0 then do
-        -- TODO mutiple files
+        -- TODO multiple files
         let logfileGlobPattern = unI tsWorkDir <> "/logs/*sock@*/node-*.json"
         logs <- glob logfileGlobPattern
         logFile <- case logs of
