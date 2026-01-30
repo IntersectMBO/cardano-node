@@ -38,6 +38,7 @@ import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import           Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Hashes as Hashes
@@ -237,13 +238,13 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "error" .= String "Refund mismatch"
       ]
 
-instance ToObject (Set (Credential 'Staking)) where
+instance ToObject (Set (Credential Staking)) where
   toObject _verb creds =
     mconcat [ "kind" .= String "StakeCreds"
              , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
 
-instance ToObject (NonEmpty.NonEmpty (KeyHash 'Staking)) where
+instance ToObject (NonEmpty.NonEmpty (KeyHash Staking)) where
   toObject _verb keyHashes =
     mconcat [ "kind" .= String "StakeKeyHashes"
              , "stakeKeyHashes" .= toJSON keyHashes
@@ -327,6 +328,9 @@ instance
   ) => ToObject (ShelleyLedgerPredFailure ledgerera) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
+  toObject _verb (ShelleyWithdrawalsMissingAccounts _withdrawals) = undefined -- TODO(geo2a)
+  toObject _verb (ShelleyIncompleteWithdrawals _payload) = undefined -- TODO(geo2a)
+
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
@@ -334,6 +338,14 @@ instance
   , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
+  toObject _ (Conway.ConwayWithdrawalsMissingAccounts missingWithdrawals) =
+    mconcat [ "kind" .= String "ConwayWithdrawalsMissingAccounts"
+            , "withdrawals" .= unWithdrawals missingWithdrawals
+            ]
+  toObject _ (Conway.ConwayIncompleteWithdrawals _incompleteWithdrawals) =
+    mconcat [ "kind" .= String "ConwayIncompleteWithdrawals"
+            -- , "withdrawals" .= undefined -- TODO(geo2a)
+            ]
   toObject _    (Conway.ConwayTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
             , "actual" .= mismatchSupplied
@@ -450,6 +462,37 @@ instance
       mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS" , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals ]
     Conway.CertFailure f -> toObject verb f
 
+instance
+  ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraGovPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
+  toObject _verb = undefined -- TODO(geo2a)
 
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
@@ -709,10 +752,6 @@ instance
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
     mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool
-             ]
-  toObject _verb (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals
              ]
   toObject verb (DelplFailure f) = toObject verb f
 
