@@ -2,6 +2,8 @@
 
 ## Next version
 
+* Added EKG metrics for soft and hard timeouts and included defensive mempool
+
 * Improved `cardano-node --help` output by making it the same as the one shown when calling `cardano-node` without arguments.
 
 * Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
