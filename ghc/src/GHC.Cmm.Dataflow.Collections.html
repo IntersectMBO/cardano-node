@@ -1,0 +1,970 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveTraversable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">GHC.Cmm.Dataflow.Collections</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsSet"><span class="hs-identifier">IsSet</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setInsertList"><span class="hs-identifier">setInsertList</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setDeleteList"><span class="hs-identifier">setDeleteList</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setUnions"><span class="hs-identifier">setUnions</span></a></span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsMap"><span class="hs-identifier">IsMap</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapInsertList"><span class="hs-identifier">mapInsertList</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapDeleteList"><span class="hs-identifier">mapDeleteList</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapUnions"><span class="hs-identifier">mapUnions</span></a></span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueMap"><span class="hs-identifier">UniqueMap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueSet"><span class="hs-identifier">UniqueSet</span></a></span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="GHC.Data.Word64Map.Strict.html"><span class="hs-identifier">GHC.Data.Word64Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="GHC.Data.Word64Set.html"><span class="hs-identifier">GHC.Data.Word64Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/Data.List.html#/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.List.html#foldl1%27/GHC.List.html#foldl1%27"><span class="hs-identifier">foldl1'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/Data.Word.html#/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Word.html#Word64/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">class</span><span> </span><span id="IsSet"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsSet"><span class="hs-identifier hs-var">IsSet</span></a></span></span><span> </span><span id="local-6989586621681534251"><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ElemOf"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-var">ElemOf</span></a></span></span><span> </span><span id="local-6989586621681534251"><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span id="setNull"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setNull"><span class="hs-identifier hs-type">setNull</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-25"></span><span>  </span><span id="setSize"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setSize"><span class="hs-identifier hs-type">setSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-26"></span><span>  </span><span id="setMember"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setMember"><span class="hs-identifier hs-type">setMember</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span id="setEmpty"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setEmpty"><span class="hs-identifier hs-type">setEmpty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span id="setSingleton"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setSingleton"><span class="hs-identifier hs-type">setSingleton</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span id="setInsert"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setInsert"><span class="hs-identifier hs-type">setInsert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span id="setDelete"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setDelete"><span class="hs-identifier hs-type">setDelete</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="setUnion"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setUnion"><span class="hs-identifier hs-type">setUnion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span id="setDifference"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setDifference"><span class="hs-identifier hs-type">setDifference</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span id="setIntersection"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setIntersection"><span class="hs-identifier hs-type">setIntersection</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span id="setIsSubsetOf"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setIsSubsetOf"><span class="hs-identifier hs-type">setIsSubsetOf</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-37"></span><span>  </span><span id="setFilter"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setFilter"><span class="hs-identifier hs-type">setFilter</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>  </span><span id="setFoldl"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setFoldl"><span class="hs-identifier hs-type">setFoldl</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534293"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534293"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534293"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534293"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534293"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span id="setFoldr"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setFoldr"><span class="hs-identifier hs-type">setFoldr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534294"><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534294"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534294"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534294"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534294"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="setElems"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setElems"><span class="hs-identifier hs-type">setElems</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span>  </span><span id="setFromList"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setFromList"><span class="hs-identifier hs-type">setFromList</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534251"><span class="hs-identifier hs-type">set</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Helper functions for IsSet class</span><span>
+</span><span id="line-46"></span><span id="local-6989586621681534241"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setInsertList"><span class="hs-identifier hs-type">setInsertList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsSet"><span class="hs-identifier hs-type">IsSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534241"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534241"><span class="hs-identifier hs-type">set</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534241"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534241"><span class="hs-identifier hs-type">set</span></a></span></span><span>
+</span><span id="line-47"></span><span id="setInsertList"><span class="annot"><span class="annottext">setInsertList :: forall set. IsSet set =&gt; [ElemOf set] -&gt; set -&gt; set
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setInsertList"><span class="hs-identifier hs-var hs-var">setInsertList</span></a></span></span><span> </span><span id="local-6989586621681534511"><span class="annot"><span class="annottext">[ElemOf set]
+</span><a href="#local-6989586621681534511"><span class="hs-identifier hs-var">keys</span></a></span></span><span> </span><span id="local-6989586621681534512"><span class="annot"><span class="annottext">set
+</span><a href="#local-6989586621681534512"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(set -&gt; ElemOf set -&gt; set) -&gt; set -&gt; [ElemOf set] -&gt; set
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../base-4.18.3.0/src/Data.Foldable.html#foldl%27/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ElemOf set -&gt; set -&gt; set) -&gt; set -&gt; ElemOf set -&gt; set
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">ElemOf set -&gt; set -&gt; set
+forall set. IsSet set =&gt; ElemOf set -&gt; set -&gt; set
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setInsert"><span class="hs-identifier hs-var">setInsert</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">set
+</span><a href="#local-6989586621681534512"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">[ElemOf set]
+</span><a href="#local-6989586621681534511"><span class="hs-identifier hs-var">keys</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span id="local-6989586621681534515"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setDeleteList"><span class="hs-identifier hs-type">setDeleteList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsSet"><span class="hs-identifier hs-type">IsSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534515"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-type">ElemOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534515"><span class="hs-identifier hs-type">set</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534515"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534515"><span class="hs-identifier hs-type">set</span></a></span></span><span>
+</span><span id="line-50"></span><span id="setDeleteList"><span class="annot"><span class="annottext">setDeleteList :: forall set. IsSet set =&gt; [ElemOf set] -&gt; set -&gt; set
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setDeleteList"><span class="hs-identifier hs-var hs-var">setDeleteList</span></a></span></span><span> </span><span id="local-6989586621681534519"><span class="annot"><span class="annottext">[ElemOf set]
+</span><a href="#local-6989586621681534519"><span class="hs-identifier hs-var">keys</span></a></span></span><span> </span><span id="local-6989586621681534520"><span class="annot"><span class="annottext">set
+</span><a href="#local-6989586621681534520"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(set -&gt; ElemOf set -&gt; set) -&gt; set -&gt; [ElemOf set] -&gt; set
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../base-4.18.3.0/src/Data.Foldable.html#foldl%27/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ElemOf set -&gt; set -&gt; set) -&gt; set -&gt; ElemOf set -&gt; set
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">ElemOf set -&gt; set -&gt; set
+forall set. IsSet set =&gt; ElemOf set -&gt; set -&gt; set
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setDelete"><span class="hs-identifier hs-var">setDelete</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">set
+</span><a href="#local-6989586621681534520"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">[ElemOf set]
+</span><a href="#local-6989586621681534519"><span class="hs-identifier hs-var">keys</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span id="local-6989586621681534253"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setUnions"><span class="hs-identifier hs-type">setUnions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsSet"><span class="hs-identifier hs-type">IsSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534253"><span class="hs-identifier hs-type">set</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621681534253"><span class="hs-identifier hs-type">set</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534253"><span class="hs-identifier hs-type">set</span></a></span></span><span>
+</span><span id="line-53"></span><span id="setUnions"><span class="annot"><span class="annottext">setUnions :: forall set. IsSet set =&gt; [set] -&gt; set
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setUnions"><span class="hs-identifier hs-var hs-var">setUnions</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">set
+forall set. IsSet set =&gt; set
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setEmpty"><span class="hs-identifier hs-var">setEmpty</span></a></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#setUnions"><span class="hs-identifier hs-var">setUnions</span></a></span><span> </span><span id="local-6989586621681534526"><span class="annot"><span class="annottext">[set]
+</span><a href="#local-6989586621681534526"><span class="hs-identifier hs-var">sets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(set -&gt; set -&gt; set) -&gt; [set] -&gt; set
+forall a. HasCallStack =&gt; (a -&gt; a -&gt; a) -&gt; [a] -&gt; a
+</span><a href="../../base-4.18.3.0/src/GHC.List.html#foldl1%27/GHC.List.html#foldl1%27"><span class="hs-identifier hs-var">foldl1'</span></a></span><span> </span><span class="annot"><span class="annottext">set -&gt; set -&gt; set
+forall set. IsSet set =&gt; set -&gt; set -&gt; set
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setUnion"><span class="hs-identifier hs-var">setUnion</span></a></span><span> </span><span class="annot"><span class="annottext">[set]
+</span><a href="#local-6989586621681534526"><span class="hs-identifier hs-var">sets</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">class</span><span> </span><span id="IsMap"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsMap"><span class="hs-identifier hs-var">IsMap</span></a></span></span><span> </span><span id="local-6989586621681534267"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="KeyOf"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-var">KeyOf</span></a></span></span><span> </span><span id="local-6989586621681534267"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>  </span><span id="mapNull"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapNull"><span class="hs-identifier hs-type">mapNull</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534401"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534401"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-61"></span><span>  </span><span id="mapSize"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapSize"><span class="hs-identifier hs-type">mapSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534402"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534402"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span></span><span>
+</span><span id="line-62"></span><span>  </span><span id="mapMember"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapMember"><span class="hs-identifier hs-type">mapMember</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534381"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534381"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-63"></span><span>  </span><span id="mapLookup"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapLookup"><span class="hs-identifier hs-type">mapLookup</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534382"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534382"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534382"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span id="mapFindWithDefault"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFindWithDefault"><span class="hs-identifier hs-type">mapFindWithDefault</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534383"><span class="annot"><a href="#local-6989586621681534383"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534383"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534383"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>  </span><span id="mapEmpty"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapEmpty"><span class="hs-identifier hs-type">mapEmpty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534277"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534277"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-67"></span><span>  </span><span id="mapSingleton"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapSingleton"><span class="hs-identifier hs-type">mapSingleton</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534384"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534384"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534384"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-68"></span><span>  </span><span id="mapInsert"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapInsert"><span class="hs-identifier hs-type">mapInsert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534266"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534266"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534266"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534266"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-69"></span><span>  </span><span id="mapInsertWith"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapInsertWith"><span class="hs-identifier hs-type">mapInsertWith</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534385"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534385"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534385"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534385"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534385"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534385"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534385"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-70"></span><span>  </span><span id="mapDelete"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapDelete"><span class="hs-identifier hs-type">mapDelete</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534272"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534272"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534272"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-71"></span><span>  </span><span id="mapAlter"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapAlter"><span class="hs-identifier hs-type">mapAlter</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534386"><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534386"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Maybe.html#Maybe/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534386"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534386"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534386"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span id="mapAdjust"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapAdjust"><span class="hs-identifier hs-type">mapAdjust</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534387"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534387"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534387"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534387"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534387"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>  </span><span id="mapUnion"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapUnion"><span class="hs-identifier hs-type">mapUnion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534278"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534278"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534278"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534278"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-75"></span><span>  </span><span id="mapUnionWithKey"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapUnionWithKey"><span class="hs-identifier hs-type">mapUnionWithKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534388"><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534388"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534388"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534388"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534388"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534388"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534388"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-76"></span><span>  </span><span id="mapDifference"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapDifference"><span class="hs-identifier hs-type">mapDifference</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534542"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534542"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534542"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534542"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-77"></span><span>  </span><span id="mapIntersection"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapIntersection"><span class="hs-identifier hs-type">mapIntersection</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534544"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534544"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534544"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534544"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-78"></span><span>  </span><span id="mapIsSubmapOf"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapIsSubmapOf"><span class="hs-identifier hs-type">mapIsSubmapOf</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534403"><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621681534403"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534403"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534403"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span id="mapMap"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapMap"><span class="hs-identifier hs-type">mapMap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534404"><span id="local-6989586621681534405"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534404"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534405"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534404"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534405"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-81"></span><span>  </span><span id="mapMapWithKey"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapMapWithKey"><span class="hs-identifier hs-type">mapMapWithKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534389"><span id="local-6989586621681534390"><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534389"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534390"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534389"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534390"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-82"></span><span>  </span><span id="mapFoldl"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldl"><span class="hs-identifier hs-type">mapFoldl</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534406"><span id="local-6989586621681534407"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534406"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534407"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534406"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534406"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534407"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534406"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-83"></span><span>  </span><span id="mapFoldr"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldr"><span class="hs-identifier hs-type">mapFoldr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534408"><span id="local-6989586621681534409"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534408"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534409"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534409"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534409"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534408"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534409"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-84"></span><span>  </span><span id="mapFoldlWithKey"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldlWithKey"><span class="hs-identifier hs-type">mapFoldlWithKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534391"><span id="local-6989586621681534392"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534391"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534392"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534391"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534391"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534392"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534391"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-85"></span><span>  </span><span id="mapFoldMapWithKey"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldMapWithKey"><span class="hs-identifier hs-type">mapFoldMapWithKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534393"><span id="local-6989586621681534394"><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534393"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534394"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534393"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534394"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534393"><span class="hs-identifier hs-type">m</span></a></span></span></span><span>
+</span><span id="line-86"></span><span>  </span><span id="mapFilter"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFilter"><span class="hs-identifier hs-type">mapFilter</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534395"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534395"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534395"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534395"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-87"></span><span>  </span><span id="mapFilterWithKey"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFilterWithKey"><span class="hs-identifier hs-type">mapFilterWithKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534396"><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534396"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534396"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534396"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span>  </span><span id="mapElems"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapElems"><span class="hs-identifier hs-type">mapElems</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534410"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534410"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621681534410"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-91"></span><span>  </span><span id="mapKeys"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapKeys"><span class="hs-identifier hs-type">mapKeys</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534397"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534397"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-92"></span><span>  </span><span id="mapToList"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapToList"><span class="hs-identifier hs-type">mapToList</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534398"><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534398"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681534398"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-93"></span><span>  </span><span id="mapFromList"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFromList"><span class="hs-identifier hs-type">mapFromList</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534399"><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681534399"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534399"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-94"></span><span>  </span><span id="mapFromListWith"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFromListWith"><span class="hs-identifier hs-type">mapFromListWith</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681534400"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681534400"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534400"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534400"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621681534400"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534267"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534400"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- Helper functions for IsMap class</span><span>
+</span><span id="line-97"></span><span id="local-6989586621681534257"><span id="local-6989586621681534260"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapInsertList"><span class="hs-identifier hs-type">mapInsertList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsMap"><span class="hs-identifier hs-type">IsMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534257"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534257"><span class="hs-identifier hs-type">map</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681534260"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534257"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534260"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534257"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534260"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-98"></span><span id="mapInsertList"><span class="annot"><span class="annottext">mapInsertList :: forall (map :: * -&gt; *) a.
+IsMap map =&gt;
+[(KeyOf map, a)] -&gt; map a -&gt; map a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapInsertList"><span class="hs-identifier hs-var hs-var">mapInsertList</span></a></span></span><span> </span><span id="local-6989586621681534562"><span class="annot"><span class="annottext">[(KeyOf map, a)]
+</span><a href="#local-6989586621681534562"><span class="hs-identifier hs-var">assocs</span></a></span></span><span> </span><span id="local-6989586621681534563"><span class="annot"><span class="annottext">map a
+</span><a href="#local-6989586621681534563"><span class="hs-identifier hs-var">map</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(map a -&gt; (KeyOf map, a) -&gt; map a)
+-&gt; map a -&gt; [(KeyOf map, a)] -&gt; map a
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../base-4.18.3.0/src/Data.Foldable.html#foldl%27/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((KeyOf map, a) -&gt; map a -&gt; map a)
+-&gt; map a -&gt; (KeyOf map, a) -&gt; map a
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(KeyOf map -&gt; a -&gt; map a -&gt; map a)
+-&gt; (KeyOf map, a) -&gt; map a -&gt; map a
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="../../base-4.18.3.0/src/Data.Tuple.html#uncurry/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyOf map -&gt; a -&gt; map a -&gt; map a
+forall a. KeyOf map -&gt; a -&gt; map a -&gt; map a
+forall (map :: * -&gt; *) a.
+IsMap map =&gt;
+KeyOf map -&gt; a -&gt; map a -&gt; map a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapInsert"><span class="hs-identifier hs-var">mapInsert</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">map a
+</span><a href="#local-6989586621681534563"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">[(KeyOf map, a)]
+</span><a href="#local-6989586621681534562"><span class="hs-identifier hs-var">assocs</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span id="local-6989586621681534268"><span id="local-6989586621681534269"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapDeleteList"><span class="hs-identifier hs-type">mapDeleteList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsMap"><span class="hs-identifier hs-type">IsMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534268"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-type">KeyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534268"><span class="hs-identifier hs-type">map</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534268"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534269"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534268"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534269"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-101"></span><span id="mapDeleteList"><span class="annot"><span class="annottext">mapDeleteList :: forall (map :: * -&gt; *) a.
+IsMap map =&gt;
+[KeyOf map] -&gt; map a -&gt; map a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapDeleteList"><span class="hs-identifier hs-var hs-var">mapDeleteList</span></a></span></span><span> </span><span id="local-6989586621681534568"><span class="annot"><span class="annottext">[KeyOf map]
+</span><a href="#local-6989586621681534568"><span class="hs-identifier hs-var">keys</span></a></span></span><span> </span><span id="local-6989586621681534569"><span class="annot"><span class="annottext">map a
+</span><a href="#local-6989586621681534569"><span class="hs-identifier hs-var">map</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(map a -&gt; KeyOf map -&gt; map a) -&gt; map a -&gt; [KeyOf map] -&gt; map a
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../base-4.18.3.0/src/Data.Foldable.html#foldl%27/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(KeyOf map -&gt; map a -&gt; map a) -&gt; map a -&gt; KeyOf map -&gt; map a
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#flip/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">KeyOf map -&gt; map a -&gt; map a
+forall a. KeyOf map -&gt; map a -&gt; map a
+forall (map :: * -&gt; *) a. IsMap map =&gt; KeyOf map -&gt; map a -&gt; map a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapDelete"><span class="hs-identifier hs-var">mapDelete</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">map a
+</span><a href="#local-6989586621681534569"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">[KeyOf map]
+</span><a href="#local-6989586621681534568"><span class="hs-identifier hs-var">keys</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span id="local-6989586621681534273"><span id="local-6989586621681534274"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapUnions"><span class="hs-identifier hs-type">mapUnions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsMap"><span class="hs-identifier hs-type">IsMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534273"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621681534273"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534274"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681534273"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534274"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-104"></span><span id="mapUnions"><span class="annot"><span class="annottext">mapUnions :: forall (map :: * -&gt; *) a. IsMap map =&gt; [map a] -&gt; map a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapUnions"><span class="hs-identifier hs-var hs-var">mapUnions</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">map a
+forall a. map a
+forall (map :: * -&gt; *) a. IsMap map =&gt; map a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapEmpty"><span class="hs-identifier hs-var">mapEmpty</span></a></span><span>
+</span><span id="line-105"></span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapUnions"><span class="hs-identifier hs-var">mapUnions</span></a></span><span> </span><span id="local-6989586621681534575"><span class="annot"><span class="annottext">[map a]
+</span><a href="#local-6989586621681534575"><span class="hs-identifier hs-var">maps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(map a -&gt; map a -&gt; map a) -&gt; [map a] -&gt; map a
+forall a. HasCallStack =&gt; (a -&gt; a -&gt; a) -&gt; [a] -&gt; a
+</span><a href="../../base-4.18.3.0/src/GHC.List.html#foldl1%27/GHC.List.html#foldl1%27"><span class="hs-identifier hs-var">foldl1'</span></a></span><span> </span><span class="annot"><span class="annottext">map a -&gt; map a -&gt; map a
+forall a. map a -&gt; map a -&gt; map a
+forall (map :: * -&gt; *) a. IsMap map =&gt; map a -&gt; map a -&gt; map a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapUnion"><span class="hs-identifier hs-var">mapUnion</span></a></span><span> </span><span class="annot"><span class="annottext">[map a]
+</span><a href="#local-6989586621681534575"><span class="hs-identifier hs-var">maps</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- Basic instances</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">newtype</span><span> </span><span id="UniqueSet"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueSet"><span class="hs-identifier hs-var">UniqueSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="US"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span></span><span> </span><span class="annot"><a href="GHC.Data.Word64Set.Internal.html#Word64Set"><span class="hs-identifier hs-type">S.Word64Set</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681534578"><span id="local-6989586621681534583"><span class="annot"><span class="annottext">UniqueSet -&gt; UniqueSet -&gt; Bool
+(UniqueSet -&gt; UniqueSet -&gt; Bool)
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; Bool) -&gt; Eq UniqueSet
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UniqueSet -&gt; UniqueSet -&gt; Bool
+== :: UniqueSet -&gt; UniqueSet -&gt; Bool
+$c/= :: UniqueSet -&gt; UniqueSet -&gt; Bool
+/= :: UniqueSet -&gt; UniqueSet -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534591"><span id="local-6989586621681534596"><span id="local-6989586621681534600"><span id="local-6989586621681534604"><span id="local-6989586621681534608"><span id="local-6989586621681534612"><span id="local-6989586621681534616"><span class="annot"><span class="annottext">Eq UniqueSet
+Eq UniqueSet =&gt;
+(UniqueSet -&gt; UniqueSet -&gt; Ordering)
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; Bool)
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; Bool)
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; Bool)
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; Bool)
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; UniqueSet)
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; UniqueSet)
+-&gt; Ord UniqueSet
+UniqueSet -&gt; UniqueSet -&gt; Bool
+UniqueSet -&gt; UniqueSet -&gt; Ordering
+UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: UniqueSet -&gt; UniqueSet -&gt; Ordering
+compare :: UniqueSet -&gt; UniqueSet -&gt; Ordering
+$c&lt; :: UniqueSet -&gt; UniqueSet -&gt; Bool
+&lt; :: UniqueSet -&gt; UniqueSet -&gt; Bool
+$c&lt;= :: UniqueSet -&gt; UniqueSet -&gt; Bool
+&lt;= :: UniqueSet -&gt; UniqueSet -&gt; Bool
+$c&gt; :: UniqueSet -&gt; UniqueSet -&gt; Bool
+&gt; :: UniqueSet -&gt; UniqueSet -&gt; Bool
+$c&gt;= :: UniqueSet -&gt; UniqueSet -&gt; Bool
+&gt;= :: UniqueSet -&gt; UniqueSet -&gt; Bool
+$cmax :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+max :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+$cmin :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+min :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534622"><span id="local-6989586621681534628"><span id="local-6989586621681534632"><span class="annot"><span class="annottext">Int -&gt; UniqueSet -&gt; ShowS
+[UniqueSet] -&gt; ShowS
+UniqueSet -&gt; String
+(Int -&gt; UniqueSet -&gt; ShowS)
+-&gt; (UniqueSet -&gt; String)
+-&gt; ([UniqueSet] -&gt; ShowS)
+-&gt; Show UniqueSet
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UniqueSet -&gt; ShowS
+showsPrec :: Int -&gt; UniqueSet -&gt; ShowS
+$cshow :: UniqueSet -&gt; String
+show :: UniqueSet -&gt; String
+$cshowList :: [UniqueSet] -&gt; ShowS
+showList :: [UniqueSet] -&gt; ShowS
+</span><a href="../../base-4.18.3.0/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534636"><span id="local-6989586621681534641"><span id="local-6989586621681534647"><span class="annot"><span class="annottext">NonEmpty UniqueSet -&gt; UniqueSet
+UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+(UniqueSet -&gt; UniqueSet -&gt; UniqueSet)
+-&gt; (NonEmpty UniqueSet -&gt; UniqueSet)
+-&gt; (forall b. Integral b =&gt; b -&gt; UniqueSet -&gt; UniqueSet)
+-&gt; Semigroup UniqueSet
+forall b. Integral b =&gt; b -&gt; UniqueSet -&gt; UniqueSet
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+&lt;&gt; :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+$csconcat :: NonEmpty UniqueSet -&gt; UniqueSet
+sconcat :: NonEmpty UniqueSet -&gt; UniqueSet
+$cstimes :: forall b. Integral b =&gt; b -&gt; UniqueSet -&gt; UniqueSet
+stimes :: forall b. Integral b =&gt; b -&gt; UniqueSet -&gt; UniqueSet
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534657"><span id="local-6989586621681534662"><span id="local-6989586621681534666"><span class="annot"><span class="annottext">Semigroup UniqueSet
+UniqueSet
+Semigroup UniqueSet =&gt;
+UniqueSet
+-&gt; (UniqueSet -&gt; UniqueSet -&gt; UniqueSet)
+-&gt; ([UniqueSet] -&gt; UniqueSet)
+-&gt; Monoid UniqueSet
+[UniqueSet] -&gt; UniqueSet
+UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+$cmempty :: UniqueSet
+mempty :: UniqueSet
+$cmappend :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+mappend :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+$cmconcat :: [UniqueSet] -&gt; UniqueSet
+mconcat :: [UniqueSet] -&gt; UniqueSet
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsSet"><span class="hs-identifier hs-type">IsSet</span></a></span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueSet"><span class="hs-identifier hs-type">UniqueSet</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ElemOf"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#ElemOf"><span class="hs-identifier hs-var">ElemOf</span></a></span></span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueSet"><span class="hs-identifier hs-type">UniqueSet</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Word.html#Word64/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621681534689"><span class="annot"><span class="annottext">setNull :: UniqueSet -&gt; Bool
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setNull"><span class="hs-identifier hs-var hs-var hs-var hs-var">setNull</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534690"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534690"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; Bool
+</span><a href="GHC.Data.Word64Set.Internal.html#null"><span class="hs-identifier hs-var">S.null</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534690"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621681534692"><span class="annot"><span class="annottext">setSize :: UniqueSet -&gt; Int
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setSize"><span class="hs-identifier hs-var hs-var hs-var hs-var">setSize</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534693"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534693"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; Int
+</span><a href="GHC.Data.Word64Set.Internal.html#size"><span class="hs-identifier hs-var">S.size</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534693"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621681534695"><span class="annot"><span class="annottext">setMember :: ElemOf UniqueSet -&gt; UniqueSet -&gt; Bool
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setMember"><span class="hs-identifier hs-var hs-var hs-var hs-var">setMember</span></a></span></span><span> </span><span id="local-6989586621681534696"><span class="annot"><span class="annottext">ElemOf UniqueSet
+</span><a href="#local-6989586621681534696"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534697"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534697"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Key -&gt; Word64Set -&gt; Bool
+</span><a href="GHC.Data.Word64Set.Internal.html#member"><span class="hs-identifier hs-var">S.member</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+ElemOf UniqueSet
+</span><a href="#local-6989586621681534696"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534697"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span>  </span><span id="local-6989586621681534699"><span class="annot"><span class="annottext">setEmpty :: UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setEmpty"><span class="hs-identifier hs-var hs-var hs-var hs-var">setEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#empty"><span class="hs-identifier hs-var">S.empty</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621681534701"><span class="annot"><span class="annottext">setSingleton :: ElemOf UniqueSet -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setSingleton"><span class="hs-identifier hs-var hs-var hs-var hs-var">setSingleton</span></a></span></span><span> </span><span id="local-6989586621681534702"><span class="annot"><span class="annottext">ElemOf UniqueSet
+</span><a href="#local-6989586621681534702"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#singleton"><span class="hs-identifier hs-var">S.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+ElemOf UniqueSet
+</span><a href="#local-6989586621681534702"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621681534704"><span class="annot"><span class="annottext">setInsert :: ElemOf UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setInsert"><span class="hs-identifier hs-var hs-var hs-var hs-var">setInsert</span></a></span></span><span> </span><span id="local-6989586621681534705"><span class="annot"><span class="annottext">ElemOf UniqueSet
+</span><a href="#local-6989586621681534705"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534706"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534706"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key -&gt; Word64Set -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#insert"><span class="hs-identifier hs-var">S.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+ElemOf UniqueSet
+</span><a href="#local-6989586621681534705"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621681534708"><span class="annot"><span class="annottext">setDelete :: ElemOf UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setDelete"><span class="hs-identifier hs-var hs-var hs-var hs-var">setDelete</span></a></span></span><span> </span><span id="local-6989586621681534709"><span class="annot"><span class="annottext">ElemOf UniqueSet
+</span><a href="#local-6989586621681534709"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534710"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534710"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key -&gt; Word64Set -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#delete"><span class="hs-identifier hs-var">S.delete</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+ElemOf UniqueSet
+</span><a href="#local-6989586621681534709"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534710"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span>  </span><span id="local-6989586621681534712"><span class="annot"><span class="annottext">setUnion :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setUnion"><span class="hs-identifier hs-var hs-var hs-var hs-var">setUnion</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534713"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534713"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534714"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534714"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64Set -&gt; Word64Set -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#union"><span class="hs-identifier hs-var">S.union</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534713"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534714"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621681534716"><span class="annot"><span class="annottext">setDifference :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setDifference"><span class="hs-identifier hs-var hs-var hs-var hs-var">setDifference</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534717"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534717"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534718"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534718"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64Set -&gt; Word64Set -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#difference"><span class="hs-identifier hs-var">S.difference</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534717"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534718"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621681534720"><span class="annot"><span class="annottext">setIntersection :: UniqueSet -&gt; UniqueSet -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setIntersection"><span class="hs-identifier hs-var hs-var hs-var hs-var">setIntersection</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534721"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534721"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534722"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534722"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64Set -&gt; Word64Set -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#intersection"><span class="hs-identifier hs-var">S.intersection</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534721"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534722"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621681534724"><span class="annot"><span class="annottext">setIsSubsetOf :: UniqueSet -&gt; UniqueSet -&gt; Bool
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setIsSubsetOf"><span class="hs-identifier hs-var hs-var hs-var hs-var">setIsSubsetOf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534725"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534725"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534726"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534726"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; Word64Set -&gt; Bool
+</span><a href="GHC.Data.Word64Set.Internal.html#isSubsetOf"><span class="hs-identifier hs-var">S.isSubsetOf</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534725"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534726"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621681534728"><span class="annot"><span class="annottext">setFilter :: (ElemOf UniqueSet -&gt; Bool) -&gt; UniqueSet -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setFilter"><span class="hs-identifier hs-var hs-var hs-var hs-var">setFilter</span></a></span></span><span> </span><span id="local-6989586621681534729"><span class="annot"><span class="annottext">ElemOf UniqueSet -&gt; Bool
+</span><a href="#local-6989586621681534729"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534730"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534730"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Key -&gt; Bool) -&gt; Word64Set -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#filter"><span class="hs-identifier hs-var">S.filter</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Bool
+ElemOf UniqueSet -&gt; Bool
+</span><a href="#local-6989586621681534729"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534730"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621681534732"><span class="annot"><span class="annottext">setFoldl :: forall b. (b -&gt; ElemOf UniqueSet -&gt; b) -&gt; b -&gt; UniqueSet -&gt; b
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setFoldl"><span class="hs-identifier hs-var hs-var hs-var hs-var">setFoldl</span></a></span></span><span> </span><span id="local-6989586621681534733"><span class="annot"><span class="annottext">b -&gt; ElemOf UniqueSet -&gt; b
+</span><a href="#local-6989586621681534733"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681534734"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681534734"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534735"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534735"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; Key -&gt; b) -&gt; b -&gt; Word64Set -&gt; b
+forall a. (a -&gt; Key -&gt; a) -&gt; a -&gt; Word64Set -&gt; a
+</span><a href="GHC.Data.Word64Set.Internal.html#foldl%27"><span class="hs-identifier hs-var">S.foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; Key -&gt; b
+b -&gt; ElemOf UniqueSet -&gt; b
+</span><a href="#local-6989586621681534733"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681534734"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534735"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621681534737"><span class="annot"><span class="annottext">setFoldr :: forall b. (ElemOf UniqueSet -&gt; b -&gt; b) -&gt; b -&gt; UniqueSet -&gt; b
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setFoldr"><span class="hs-identifier hs-var hs-var hs-var hs-var">setFoldr</span></a></span></span><span> </span><span id="local-6989586621681534738"><span class="annot"><span class="annottext">ElemOf UniqueSet -&gt; b -&gt; b
+</span><a href="#local-6989586621681534738"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681534739"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681534739"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534740"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534740"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Key -&gt; b -&gt; b) -&gt; b -&gt; Word64Set -&gt; b
+forall b. (Key -&gt; b -&gt; b) -&gt; b -&gt; Word64Set -&gt; b
+</span><a href="GHC.Data.Word64Set.Internal.html#foldr"><span class="hs-identifier hs-var">S.foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; b -&gt; b
+ElemOf UniqueSet -&gt; b -&gt; b
+</span><a href="#local-6989586621681534738"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681534739"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534740"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621681534742"><span class="annot"><span class="annottext">setElems :: UniqueSet -&gt; [ElemOf UniqueSet]
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setElems"><span class="hs-identifier hs-var hs-var hs-var hs-var">setElems</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-type">US</span></a></span><span> </span><span id="local-6989586621681534743"><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534743"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; [Key]
+</span><a href="GHC.Data.Word64Set.Internal.html#elems"><span class="hs-identifier hs-var">S.elems</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Set
+</span><a href="#local-6989586621681534743"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621681534745"><span class="annot"><span class="annottext">setFromList :: [ElemOf UniqueSet] -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#setFromList"><span class="hs-identifier hs-var hs-var hs-var hs-var">setFromList</span></a></span></span><span> </span><span id="local-6989586621681534746"><span class="annot"><span class="annottext">[ElemOf UniqueSet]
+</span><a href="#local-6989586621681534746"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Set -&gt; UniqueSet
+</span><a href="GHC.Cmm.Dataflow.Collections.html#US"><span class="hs-identifier hs-var">US</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Key] -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#fromList"><span class="hs-identifier hs-var">S.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Key]
+[ElemOf UniqueSet]
+</span><a href="#local-6989586621681534746"><span class="hs-identifier hs-var">ks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-keyword">newtype</span><span> </span><span id="UniqueMap"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueMap"><span class="hs-identifier hs-var">UniqueMap</span></a></span></span><span> </span><span id="local-6989586621681534422"><span class="annot"><a href="#local-6989586621681534422"><span class="hs-identifier hs-type">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UM"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Word64Map.Internal.html#Word64Map"><span class="hs-identifier hs-type">M.Word64Map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681534422"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681534751"><span id="local-6989586621681534756"><span class="annot"><span class="annottext">UniqueMap v -&gt; UniqueMap v -&gt; Bool
+(UniqueMap v -&gt; UniqueMap v -&gt; Bool)
+-&gt; (UniqueMap v -&gt; UniqueMap v -&gt; Bool) -&gt; Eq (UniqueMap v)
+forall v. Eq v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall v. Eq v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+== :: UniqueMap v -&gt; UniqueMap v -&gt; Bool
+$c/= :: forall v. Eq v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+/= :: UniqueMap v -&gt; UniqueMap v -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534765"><span id="local-6989586621681534770"><span id="local-6989586621681534774"><span id="local-6989586621681534778"><span id="local-6989586621681534782"><span id="local-6989586621681534786"><span id="local-6989586621681534790"><span class="annot"><span class="annottext">Eq (UniqueMap v)
+Eq (UniqueMap v) =&gt;
+(UniqueMap v -&gt; UniqueMap v -&gt; Ordering)
+-&gt; (UniqueMap v -&gt; UniqueMap v -&gt; Bool)
+-&gt; (UniqueMap v -&gt; UniqueMap v -&gt; Bool)
+-&gt; (UniqueMap v -&gt; UniqueMap v -&gt; Bool)
+-&gt; (UniqueMap v -&gt; UniqueMap v -&gt; Bool)
+-&gt; (UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v)
+-&gt; (UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v)
+-&gt; Ord (UniqueMap v)
+UniqueMap v -&gt; UniqueMap v -&gt; Bool
+UniqueMap v -&gt; UniqueMap v -&gt; Ordering
+UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall v. Ord v =&gt; Eq (UniqueMap v)
+forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Ordering
+forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v
+$ccompare :: forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Ordering
+compare :: UniqueMap v -&gt; UniqueMap v -&gt; Ordering
+$c&lt; :: forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+&lt; :: UniqueMap v -&gt; UniqueMap v -&gt; Bool
+$c&lt;= :: forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+&lt;= :: UniqueMap v -&gt; UniqueMap v -&gt; Bool
+$c&gt; :: forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+&gt; :: UniqueMap v -&gt; UniqueMap v -&gt; Bool
+$c&gt;= :: forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+&gt;= :: UniqueMap v -&gt; UniqueMap v -&gt; Bool
+$cmax :: forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v
+max :: UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v
+$cmin :: forall v. Ord v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v
+min :: UniqueMap v -&gt; UniqueMap v -&gt; UniqueMap v
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534797"><span id="local-6989586621681534802"><span id="local-6989586621681534806"><span class="annot"><span class="annottext">Int -&gt; UniqueMap v -&gt; ShowS
+[UniqueMap v] -&gt; ShowS
+UniqueMap v -&gt; String
+(Int -&gt; UniqueMap v -&gt; ShowS)
+-&gt; (UniqueMap v -&gt; String)
+-&gt; ([UniqueMap v] -&gt; ShowS)
+-&gt; Show (UniqueMap v)
+forall v. Show v =&gt; Int -&gt; UniqueMap v -&gt; ShowS
+forall v. Show v =&gt; [UniqueMap v] -&gt; ShowS
+forall v. Show v =&gt; UniqueMap v -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall v. Show v =&gt; Int -&gt; UniqueMap v -&gt; ShowS
+showsPrec :: Int -&gt; UniqueMap v -&gt; ShowS
+$cshow :: forall v. Show v =&gt; UniqueMap v -&gt; String
+show :: UniqueMap v -&gt; String
+$cshowList :: forall v. Show v =&gt; [UniqueMap v] -&gt; ShowS
+showList :: [UniqueMap v] -&gt; ShowS
+</span><a href="../../base-4.18.3.0/src/GHC.Show.html#Show/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534809"><span id="local-6989586621681534814"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; UniqueMap a -&gt; UniqueMap b)
+-&gt; (forall a b. a -&gt; UniqueMap b -&gt; UniqueMap a)
+-&gt; Functor UniqueMap
+forall a b. a -&gt; UniqueMap b -&gt; UniqueMap a
+forall a b. (a -&gt; b) -&gt; UniqueMap a -&gt; UniqueMap b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; UniqueMap a -&gt; UniqueMap b
+fmap :: forall a b. (a -&gt; b) -&gt; UniqueMap a -&gt; UniqueMap b
+$c&lt;$ :: forall a b. a -&gt; UniqueMap b -&gt; UniqueMap a
+&lt;$ :: forall a b. a -&gt; UniqueMap b -&gt; UniqueMap a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534822"><span id="local-6989586621681534831"><span id="local-6989586621681534839"><span id="local-6989586621681534845"><span id="local-6989586621681534849"><span id="local-6989586621681534853"><span id="local-6989586621681534857"><span id="local-6989586621681534861"><span id="local-6989586621681534865"><span id="local-6989586621681534869"><span id="local-6989586621681534873"><span id="local-6989586621681534877"><span id="local-6989586621681534883"><span id="local-6989586621681534891"><span id="local-6989586621681534899"><span id="local-6989586621681534907"><span id="local-6989586621681534915"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; UniqueMap m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; UniqueMap a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; UniqueMap a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; UniqueMap a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; UniqueMap a -&gt; a)
+-&gt; (forall a. UniqueMap a -&gt; [a])
+-&gt; (forall a. UniqueMap a -&gt; Bool)
+-&gt; (forall a. UniqueMap a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; UniqueMap a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; UniqueMap a -&gt; a)
+-&gt; (forall a. Ord a =&gt; UniqueMap a -&gt; a)
+-&gt; (forall a. Num a =&gt; UniqueMap a -&gt; a)
+-&gt; (forall a. Num a =&gt; UniqueMap a -&gt; a)
+-&gt; Foldable UniqueMap
+forall a. Eq a =&gt; a -&gt; UniqueMap a -&gt; Bool
+forall a. Num a =&gt; UniqueMap a -&gt; a
+forall a. Ord a =&gt; UniqueMap a -&gt; a
+forall m. Monoid m =&gt; UniqueMap m -&gt; m
+forall a. UniqueMap a -&gt; Bool
+forall a. UniqueMap a -&gt; Int
+forall a. UniqueMap a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; UniqueMap a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; UniqueMap a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; UniqueMap m -&gt; m
+fold :: forall m. Monoid m =&gt; UniqueMap m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; UniqueMap a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; UniqueMap a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; UniqueMap a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; UniqueMap a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; UniqueMap a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; UniqueMap a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; UniqueMap a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; UniqueMap a -&gt; a
+$ctoList :: forall a. UniqueMap a -&gt; [a]
+toList :: forall a. UniqueMap a -&gt; [a]
+$cnull :: forall a. UniqueMap a -&gt; Bool
+null :: forall a. UniqueMap a -&gt; Bool
+$clength :: forall a. UniqueMap a -&gt; Int
+length :: forall a. UniqueMap a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; UniqueMap a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; UniqueMap a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; UniqueMap a -&gt; a
+maximum :: forall a. Ord a =&gt; UniqueMap a -&gt; a
+$cminimum :: forall a. Ord a =&gt; UniqueMap a -&gt; a
+minimum :: forall a. Ord a =&gt; UniqueMap a -&gt; a
+$csum :: forall a. Num a =&gt; UniqueMap a -&gt; a
+sum :: forall a. Num a =&gt; UniqueMap a -&gt; a
+$cproduct :: forall a. Num a =&gt; UniqueMap a -&gt; a
+product :: forall a. Num a =&gt; UniqueMap a -&gt; a
+</span><a href="../../base-4.18.3.0/src/Data.Foldable.html#Foldable/Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681534927"><span id="local-6989586621681534935"><span id="local-6989586621681534941"><span id="local-6989586621681534946"><span class="annot"><span class="annottext">Functor UniqueMap
+Foldable UniqueMap
+(Functor UniqueMap, Foldable UniqueMap) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; UniqueMap a -&gt; f (UniqueMap b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    UniqueMap (f a) -&gt; f (UniqueMap a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; UniqueMap a -&gt; m (UniqueMap b))
+-&gt; (forall (m :: * -&gt; *) a.
+    Monad m =&gt;
+    UniqueMap (m a) -&gt; m (UniqueMap a))
+-&gt; Traversable UniqueMap
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+UniqueMap (m a) -&gt; m (UniqueMap a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+UniqueMap (f a) -&gt; f (UniqueMap a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; UniqueMap a -&gt; m (UniqueMap b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; UniqueMap a -&gt; f (UniqueMap b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; UniqueMap a -&gt; f (UniqueMap b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; UniqueMap a -&gt; f (UniqueMap b)
+$csequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+UniqueMap (f a) -&gt; f (UniqueMap a)
+sequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+UniqueMap (f a) -&gt; f (UniqueMap a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; UniqueMap a -&gt; m (UniqueMap b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; UniqueMap a -&gt; m (UniqueMap b)
+$csequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+UniqueMap (m a) -&gt; m (UniqueMap a)
+sequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+UniqueMap (m a) -&gt; m (UniqueMap a)
+</span><a href="../../base-4.18.3.0/src/Data.Traversable.html#Traversable/Data.Traversable.html#Traversable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#IsMap"><span class="hs-identifier hs-type">IsMap</span></a></span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueMap"><span class="hs-identifier hs-type">UniqueMap</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="KeyOf"><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#KeyOf"><span class="hs-identifier hs-var">KeyOf</span></a></span></span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UniqueMap"><span class="hs-identifier hs-type">UniqueMap</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Word.html#Word64/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621681534984"><span class="annot"><span class="annottext">mapNull :: forall a. UniqueMap a -&gt; Bool
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapNull"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapNull</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681534985"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534985"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; Bool
+forall a. Word64Map a -&gt; Bool
+</span><a href="GHC.Data.Word64Map.Internal.html#null"><span class="hs-identifier hs-var">M.null</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534985"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621681534987"><span class="annot"><span class="annottext">mapSize :: forall a. UniqueMap a -&gt; Int
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapSize"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapSize</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681534988"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534988"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; Int
+forall a. Word64Map a -&gt; Int
+</span><a href="GHC.Data.Word64Map.Internal.html#size"><span class="hs-identifier hs-var">M.size</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534988"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span id="local-6989586621681534990"><span class="annot"><span class="annottext">mapMember :: forall a. KeyOf UniqueMap -&gt; UniqueMap a -&gt; Bool
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapMember"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapMember</span></a></span></span><span> </span><span id="local-6989586621681534991"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681534991"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681534992"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534992"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Key -&gt; Word64Map a -&gt; Bool
+forall a. Key -&gt; Word64Map a -&gt; Bool
+</span><a href="GHC.Data.Word64Map.Internal.html#member"><span class="hs-identifier hs-var">M.member</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681534991"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534992"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621681534994"><span class="annot"><span class="annottext">mapLookup :: forall a. KeyOf UniqueMap -&gt; UniqueMap a -&gt; Maybe a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapLookup"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapLookup</span></a></span></span><span> </span><span id="local-6989586621681534995"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681534995"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681534996"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534996"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Key -&gt; Word64Map a -&gt; Maybe a
+forall a. Key -&gt; Word64Map a -&gt; Maybe a
+</span><a href="GHC.Data.Word64Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681534995"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681534996"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span id="local-6989586621681534998"><span class="annot"><span class="annottext">mapFindWithDefault :: forall a. a -&gt; KeyOf UniqueMap -&gt; UniqueMap a -&gt; a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFindWithDefault"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFindWithDefault</span></a></span></span><span> </span><span id="local-6989586621681534999"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681534999"><span class="hs-identifier hs-var">def</span></a></span></span><span> </span><span id="local-6989586621681535000"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681535000"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535001"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535001"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Key -&gt; Word64Map a -&gt; a
+forall a. a -&gt; Key -&gt; Word64Map a -&gt; a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#findWithDefault"><span class="hs-identifier hs-var">M.findWithDefault</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681534999"><span class="hs-identifier hs-var">def</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681535000"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535001"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621681535003"><span class="annot"><span class="annottext">mapEmpty :: forall a. UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapEmpty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+forall a. Word64Map a
+</span><a href="GHC.Data.Word64Map.Internal.html#empty"><span class="hs-identifier hs-var">M.empty</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621681535005"><span class="annot"><span class="annottext">mapSingleton :: forall a. KeyOf UniqueMap -&gt; a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapSingleton"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapSingleton</span></a></span></span><span> </span><span id="local-6989586621681535006"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681535006"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681535007"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681535007"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key -&gt; a -&gt; Word64Map a
+forall a. Key -&gt; a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#singleton"><span class="hs-identifier hs-var">M.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681535006"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681535007"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621681535009"><span class="annot"><span class="annottext">mapInsert :: forall a. KeyOf UniqueMap -&gt; a -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapInsert"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapInsert</span></a></span></span><span> </span><span id="local-6989586621681535010"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681535010"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681535011"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681535011"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535012"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535012"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key -&gt; a -&gt; Word64Map a -&gt; Word64Map a
+forall a. Key -&gt; a -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681535010"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681535011"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535012"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621681535014"><span class="annot"><span class="annottext">mapInsertWith :: forall a.
+(a -&gt; a -&gt; a) -&gt; KeyOf UniqueMap -&gt; a -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapInsertWith"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapInsertWith</span></a></span></span><span> </span><span id="local-6989586621681535015"><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621681535015"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621681535016"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681535016"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681535017"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681535017"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535018"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535018"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; a -&gt; a) -&gt; Key -&gt; a -&gt; Word64Map a -&gt; Word64Map a
+forall a. (a -&gt; a -&gt; a) -&gt; Key -&gt; a -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#insertWith"><span class="hs-identifier hs-var">M.insertWith</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621681535015"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681535016"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681535017"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535018"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621681535020"><span class="annot"><span class="annottext">mapDelete :: forall a. KeyOf UniqueMap -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapDelete"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapDelete</span></a></span></span><span> </span><span id="local-6989586621681535021"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681535021"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535022"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535022"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key -&gt; Word64Map a -&gt; Word64Map a
+forall a. Key -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Internal.html#delete"><span class="hs-identifier hs-var">M.delete</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681535021"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535022"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>  </span><span id="local-6989586621681535024"><span class="annot"><span class="annottext">mapAlter :: forall a.
+(Maybe a -&gt; Maybe a)
+-&gt; KeyOf UniqueMap -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapAlter"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapAlter</span></a></span></span><span> </span><span id="local-6989586621681535025"><span class="annot"><span class="annottext">Maybe a -&gt; Maybe a
+</span><a href="#local-6989586621681535025"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621681535026"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681535026"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535027"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535027"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Maybe a -&gt; Maybe a) -&gt; Key -&gt; Word64Map a -&gt; Word64Map a
+forall a. (Maybe a -&gt; Maybe a) -&gt; Key -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#alter"><span class="hs-identifier hs-var">M.alter</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; Maybe a
+</span><a href="#local-6989586621681535025"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681535026"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535027"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621681535029"><span class="annot"><span class="annottext">mapAdjust :: forall a. (a -&gt; a) -&gt; KeyOf UniqueMap -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapAdjust"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapAdjust</span></a></span></span><span> </span><span id="local-6989586621681535030"><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621681535030"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621681535031"><span class="annot"><span class="annottext">KeyOf UniqueMap
+</span><a href="#local-6989586621681535031"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535032"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535032"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; Key -&gt; Word64Map a -&gt; Word64Map a
+forall a. (a -&gt; a) -&gt; Key -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#adjust"><span class="hs-identifier hs-var">M.adjust</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621681535030"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+KeyOf UniqueMap
+</span><a href="#local-6989586621681535031"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535032"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span>  </span><span id="local-6989586621681535034"><span class="annot"><span class="annottext">mapUnion :: forall a. UniqueMap a -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapUnion"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapUnion</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535035"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535035"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535036"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535036"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64Map a -&gt; Word64Map a -&gt; Word64Map a
+forall a. Word64Map a -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Internal.html#union"><span class="hs-identifier hs-var">M.union</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535035"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535036"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>  </span><span id="local-6989586621681535038"><span class="annot"><span class="annottext">mapUnionWithKey :: forall a.
+(KeyOf UniqueMap -&gt; a -&gt; a -&gt; a)
+-&gt; UniqueMap a -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapUnionWithKey"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapUnionWithKey</span></a></span></span><span> </span><span id="local-6989586621681535039"><span class="annot"><span class="annottext">KeyOf UniqueMap -&gt; a -&gt; a -&gt; a
+</span><a href="#local-6989586621681535039"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535040"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535040"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535041"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535041"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Key -&gt; a -&gt; a -&gt; a) -&gt; Word64Map a -&gt; Word64Map a -&gt; Word64Map a
+forall a.
+(Key -&gt; a -&gt; a -&gt; a) -&gt; Word64Map a -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#unionWithKey"><span class="hs-identifier hs-var">M.unionWithKey</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; a -&gt; a -&gt; a
+KeyOf UniqueMap -&gt; a -&gt; a -&gt; a
+</span><a href="#local-6989586621681535039"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535040"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535041"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621681535043"><span class="annot"><span class="annottext">mapDifference :: forall a. UniqueMap a -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapDifference"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapDifference</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535044"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535044"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535045"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535045"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64Map a -&gt; Word64Map a -&gt; Word64Map a
+forall a b. Word64Map a -&gt; Word64Map b -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Internal.html#difference"><span class="hs-identifier hs-var">M.difference</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535044"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535045"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>  </span><span id="local-6989586621681535047"><span class="annot"><span class="annottext">mapIntersection :: forall a. UniqueMap a -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapIntersection"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapIntersection</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535048"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535048"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535049"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535049"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64Map a -&gt; Word64Map a -&gt; Word64Map a
+forall a b. Word64Map a -&gt; Word64Map b -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Internal.html#intersection"><span class="hs-identifier hs-var">M.intersection</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535048"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535049"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>  </span><span id="local-6989586621681535053"><span class="annot"><span class="annottext">mapIsSubmapOf :: forall v. Eq v =&gt; UniqueMap v -&gt; UniqueMap v -&gt; Bool
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapIsSubmapOf"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapIsSubmapOf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535054"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535054"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535055"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535055"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; Word64Map a -&gt; Bool
+forall a. Eq a =&gt; Word64Map a -&gt; Word64Map a -&gt; Bool
+</span><a href="GHC.Data.Word64Map.Internal.html#isSubmapOf"><span class="hs-identifier hs-var">M.isSubmapOf</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535054"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535055"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621681535057"><span class="annot"><span class="annottext">mapMap :: forall a b. (a -&gt; b) -&gt; UniqueMap a -&gt; UniqueMap b
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapMap"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapMap</span></a></span></span><span> </span><span id="local-6989586621681535058"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621681535058"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535059"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535059"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map b -&gt; UniqueMap b
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Word64Map a -&gt; Word64Map b
+forall a b. (a -&gt; b) -&gt; Word64Map a -&gt; Word64Map b
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#map"><span class="hs-identifier hs-var">M.map</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621681535058"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535059"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>  </span><span id="local-6989586621681535061"><span class="annot"><span class="annottext">mapMapWithKey :: forall a b.
+(KeyOf UniqueMap -&gt; a -&gt; b) -&gt; UniqueMap a -&gt; UniqueMap b
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapMapWithKey"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapMapWithKey</span></a></span></span><span> </span><span id="local-6989586621681535062"><span class="annot"><span class="annottext">KeyOf UniqueMap -&gt; a -&gt; b
+</span><a href="#local-6989586621681535062"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535063"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535063"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map b -&gt; UniqueMap b
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Key -&gt; a -&gt; b) -&gt; Word64Map a -&gt; Word64Map b
+forall a b. (Key -&gt; a -&gt; b) -&gt; Word64Map a -&gt; Word64Map b
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#mapWithKey"><span class="hs-identifier hs-var">M.mapWithKey</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; a -&gt; b
+KeyOf UniqueMap -&gt; a -&gt; b
+</span><a href="#local-6989586621681535062"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535063"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621681535065"><span class="annot"><span class="annottext">mapFoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldl"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFoldl</span></a></span></span><span> </span><span id="local-6989586621681535066"><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621681535066"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681535067"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681535067"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535068"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535068"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; a -&gt; b) -&gt; b -&gt; Word64Map a -&gt; b
+forall a b. (a -&gt; b -&gt; a) -&gt; a -&gt; Word64Map b -&gt; a
+</span><a href="GHC.Data.Word64Map.Internal.html#foldl%27"><span class="hs-identifier hs-var">M.foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621681535066"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681535067"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535068"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span id="local-6989586621681535070"><span class="annot"><span class="annottext">mapFoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldr"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFoldr</span></a></span></span><span> </span><span id="local-6989586621681535071"><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621681535071"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681535072"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681535072"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535073"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535073"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; b) -&gt; b -&gt; Word64Map a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Word64Map a -&gt; b
+</span><a href="GHC.Data.Word64Map.Internal.html#foldr"><span class="hs-identifier hs-var">M.foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621681535071"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681535072"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535073"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span id="local-6989586621681535075"><span class="annot"><span class="annottext">mapFoldlWithKey :: forall b a.
+(b -&gt; KeyOf UniqueMap -&gt; a -&gt; b) -&gt; b -&gt; UniqueMap a -&gt; b
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldlWithKey"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFoldlWithKey</span></a></span></span><span> </span><span id="local-6989586621681535076"><span class="annot"><span class="annottext">b -&gt; KeyOf UniqueMap -&gt; a -&gt; b
+</span><a href="#local-6989586621681535076"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621681535077"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681535077"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535078"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535078"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; Key -&gt; a -&gt; b) -&gt; b -&gt; Word64Map a -&gt; b
+forall a b. (a -&gt; Key -&gt; b -&gt; a) -&gt; a -&gt; Word64Map b -&gt; a
+</span><a href="GHC.Data.Word64Map.Internal.html#foldlWithKey%27"><span class="hs-identifier hs-var">M.foldlWithKey'</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; Key -&gt; a -&gt; b
+b -&gt; KeyOf UniqueMap -&gt; a -&gt; b
+</span><a href="#local-6989586621681535076"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681535077"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535078"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-168"></span><span>  </span><span id="local-6989586621681535082"><span class="annot"><span class="annottext">mapFoldMapWithKey :: forall m a.
+Monoid m =&gt;
+(KeyOf UniqueMap -&gt; a -&gt; m) -&gt; UniqueMap a -&gt; m
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFoldMapWithKey"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFoldMapWithKey</span></a></span></span><span> </span><span id="local-6989586621681535083"><span class="annot"><span class="annottext">KeyOf UniqueMap -&gt; a -&gt; m
+</span><a href="#local-6989586621681535083"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535084"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535084"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Key -&gt; a -&gt; m) -&gt; Word64Map a -&gt; m
+forall m a. Monoid m =&gt; (Key -&gt; a -&gt; m) -&gt; Word64Map a -&gt; m
+</span><a href="GHC.Data.Word64Map.Internal.html#foldMapWithKey"><span class="hs-identifier hs-var">M.foldMapWithKey</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; a -&gt; m
+KeyOf UniqueMap -&gt; a -&gt; m
+</span><a href="#local-6989586621681535083"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535084"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFilter"><span class="hs-pragma hs-type">mapFilter</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-170"></span><span>  </span><span id="local-6989586621681535086"><span class="annot"><span class="annottext">mapFilter :: forall a. (a -&gt; Bool) -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFilter"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFilter</span></a></span></span><span> </span><span id="local-6989586621681535087"><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621681535087"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535088"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535088"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; Bool) -&gt; Word64Map a -&gt; Word64Map a
+forall a. (a -&gt; Bool) -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Internal.html#filter"><span class="hs-identifier hs-var">M.filter</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621681535087"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535088"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapFilterWithKey"><span class="hs-pragma hs-type">mapFilterWithKey</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-172"></span><span>  </span><span id="local-6989586621681535090"><span class="annot"><span class="annottext">mapFilterWithKey :: forall a.
+(KeyOf UniqueMap -&gt; a -&gt; Bool) -&gt; UniqueMap a -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFilterWithKey"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFilterWithKey</span></a></span></span><span> </span><span id="local-6989586621681535091"><span class="annot"><span class="annottext">KeyOf UniqueMap -&gt; a -&gt; Bool
+</span><a href="#local-6989586621681535091"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535092"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535092"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Key -&gt; a -&gt; Bool) -&gt; Word64Map a -&gt; Word64Map a
+forall a. (Key -&gt; a -&gt; Bool) -&gt; Word64Map a -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Internal.html#filterWithKey"><span class="hs-identifier hs-var">M.filterWithKey</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; a -&gt; Bool
+KeyOf UniqueMap -&gt; a -&gt; Bool
+</span><a href="#local-6989586621681535091"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535092"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621681535094"><span class="annot"><span class="annottext">mapElems :: forall a. UniqueMap a -&gt; [a]
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapElems"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapElems</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535095"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535095"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; [a]
+forall a. Word64Map a -&gt; [a]
+</span><a href="GHC.Data.Word64Map.Internal.html#elems"><span class="hs-identifier hs-var">M.elems</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535095"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span id="local-6989586621681535097"><span class="annot"><span class="annottext">mapKeys :: forall a. UniqueMap a -&gt; [KeyOf UniqueMap]
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapKeys"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapKeys</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535098"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535098"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; [Key]
+forall a. Word64Map a -&gt; [Key]
+</span><a href="GHC.Data.Word64Map.Internal.html#keys"><span class="hs-identifier hs-var">M.keys</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535098"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#mapToList"><span class="hs-pragma hs-type">mapToList</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-177"></span><span>  </span><span id="local-6989586621681535100"><span class="annot"><span class="annottext">mapToList :: forall a. UniqueMap a -&gt; [(KeyOf UniqueMap, a)]
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapToList"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapToList</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-type">UM</span></a></span><span> </span><span id="local-6989586621681535101"><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535101"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; [(Key, a)]
+forall a. Word64Map a -&gt; [(Key, a)]
+</span><a href="GHC.Data.Word64Map.Internal.html#toList"><span class="hs-identifier hs-var">M.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Word64Map a
+</span><a href="#local-6989586621681535101"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span id="local-6989586621681535103"><span class="annot"><span class="annottext">mapFromList :: forall a. [(KeyOf UniqueMap, a)] -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFromList"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFromList</span></a></span></span><span> </span><span id="local-6989586621681535104"><span class="annot"><span class="annottext">[(KeyOf UniqueMap, a)]
+</span><a href="#local-6989586621681535104"><span class="hs-identifier hs-var">assocs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Key, a)] -&gt; Word64Map a
+forall a. [(Key, a)] -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">M.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[(Key, a)]
+[(KeyOf UniqueMap, a)]
+</span><a href="#local-6989586621681535104"><span class="hs-identifier hs-var">assocs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>  </span><span id="local-6989586621681535106"><span class="annot"><span class="annottext">mapFromListWith :: forall a. (a -&gt; a -&gt; a) -&gt; [(KeyOf UniqueMap, a)] -&gt; UniqueMap a
+</span><a href="GHC.Cmm.Dataflow.Collections.html#mapFromListWith"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapFromListWith</span></a></span></span><span> </span><span id="local-6989586621681535107"><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621681535107"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621681535108"><span class="annot"><span class="annottext">[(KeyOf UniqueMap, a)]
+</span><a href="#local-6989586621681535108"><span class="hs-identifier hs-var">assocs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64Map a -&gt; UniqueMap a
+forall v. Word64Map v -&gt; UniqueMap v
+</span><a href="GHC.Cmm.Dataflow.Collections.html#UM"><span class="hs-identifier hs-var">UM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; a -&gt; a) -&gt; [(Key, a)] -&gt; Word64Map a
+forall a. (a -&gt; a -&gt; a) -&gt; [(Key, a)] -&gt; Word64Map a
+</span><a href="GHC.Data.Word64Map.Strict.Internal.html#fromListWith"><span class="hs-identifier hs-var">M.fromListWith</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621681535107"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[(Key, a)]
+[(KeyOf UniqueMap, a)]
+</span><a href="#local-6989586621681535108"><span class="hs-identifier hs-var">assocs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span></pre></body></html>
