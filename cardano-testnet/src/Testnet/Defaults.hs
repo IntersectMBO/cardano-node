@@ -37,9 +37,11 @@ module Testnet.Defaults
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
   , defaultUtxoKeys
+  , plutusV2Script
   , plutusV3Script
   , plutusV3SupplementalDatumScript
   , plutusV2StakeScript
+  , simpleScript
   ) where
 
 import           Cardano.Api (AnyShelleyBasedEra (..), CardanoEra (..), File (..),
@@ -591,6 +593,17 @@ defaultUtxoKeys n =
     { verificationKey = File $ "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
     , signingKey = File $ "utxo-keys" </> "utxo" <> show n </> "utxo.skey"
     }
+
+
+simpleScript :: Text -> Text
+simpleScript signerRequired = 
+  "{ \"scripts\": [ { \"keyHash\": \"" <> signerRequired <> "\", \"type\": \"sig\" } ], \"type\": \"all\" }"
+  
+
+plutusV2Script :: Text
+plutusV2Script =
+  "{ \"type\": \"PlutusScriptV2\", \"description\": \"\", \"cborHex\": \"5822582001000022325333573466e1ccde5251333792945200000100111200116375a005\" }"
+
 
 -- | Default plutus script that always succeeds
 plutusV3Script :: Text
