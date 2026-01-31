@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -18,6 +19,8 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , calculateBlockFetchClientMetrics
   , servedBlockLatest
   , ClientMetrics
+  , txsMempoolTimeoutSoftCounterName
+  , impliesMempoolTimeoutSoft
   ) where
 
 
@@ -43,7 +46,8 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpd
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
                    HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
-import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool (MempoolRejectionDetails (..), MempoolSize (..),
+                   TraceEventMempool (..), jsonMempoolRejectionDetails)
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
@@ -82,7 +86,6 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
-
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
@@ -1241,6 +1244,17 @@ instance MetaTrace (TraceLocalTxSubmissionServerEvent blk) where
 -- Mempool Tracer
 --------------------------------------------------------------------------------
 
+txsMempoolTimeoutSoftCounterName :: Text.Text
+txsMempoolTimeoutSoftCounterName = "txsMempoolTimeoutSoft"
+
+impliesMempoolTimeoutSoft :: TraceEventMempool blk -> Bool
+impliesMempoolTimeoutSoft = \case
+  TraceMempoolRejectedTx _tx _txApplyErr details _mpSz ->
+    case details of
+      MempoolRejectedByTimeoutSoft{} -> True
+      MempoolRejectedByLedger -> False
+  _ -> False
+
 instance
   ( LogFormatting (ApplyTxErr blk)
   , LogFormatting (GenTx blk)
@@ -1254,14 +1268,15 @@ instance
       , "tx" .= forMachine dtal (txForgetValidated tx)
       , "mempoolSize" .= forMachine dtal mpSzAfter
       ]
-  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr _ mpSz) =
+  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr details mpSz) =
     mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "tx" .= forMachine dtal tx
       , "mempoolSize" .= forMachine dtal mpSz
       ] <>
+      if dtal < DDetailed then [] else
       [ "err" .= forMachine dtal txApplyErr
-      | dtal >= DDetailed
+      , "errdetails" .= jsonMempoolRejectionDetails details
       ]
   forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
     mconcat
@@ -1311,9 +1326,13 @@ instance
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-  asMetrics (TraceMempoolRejectedTx _tx _txApplyErr _ mpSz) =
+  asMetrics ev@(TraceMempoolRejectedTx _tx _txApplyErr _details mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
+    ]
+    ++
+    [ CounterM txsMempoolTimeoutSoftCounterName Nothing
+    | impliesMempoolTimeoutSoft ev
     ]
   asMetrics (TraceMempoolRemoveTxs txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -1370,6 +1389,7 @@ instance MetaTrace (TraceEventMempool blk) where
     metricsDocFor (Namespace _ ["RejectedTx"]) =
       [ ("txsInMempool","Transactions in mempool")
       , ("mempoolBytes", "Byte size of the mempool")
+      , (txsMempoolTimeoutSoftCounterName, "Transactions that soft timed out in mempool")
       ]
     metricsDocFor (Namespace _ ["RemoveTxs"]) =
       [ ("txsInMempool","Transactions in mempool")
