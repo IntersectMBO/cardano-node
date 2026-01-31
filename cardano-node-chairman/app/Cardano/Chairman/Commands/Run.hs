@@ -26,7 +26,6 @@ import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Control.Monad.Class.MonadTime.SI (DiffTime)
 import           Control.Tracer (Tracer (..), stdoutTracer)
 import           Data.Monoid (Last (..))
-import           Data.Text (Text)
 import qualified Data.Time.Clock as DTC
 import           Options.Applicative
 import qualified Options.Applicative as Opt

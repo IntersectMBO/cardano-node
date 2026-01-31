@@ -140,6 +140,28 @@ data NodeConfiguration
          -- 'Ouroboros.Network.Protocol.ChainSync.Codec.ChainSyncTimeout'
        , ncChainSyncIdleTimeout :: TimeoutOverride
 
+         -- Mempool timeout configurations:
+         -- These configuration control a lightweight "defensive programming"
+         -- feature in the Mempool.
+         -- See documentation in @Ouroboros.Consensus.Mempool.API@ for more info
+
+         -- | If the mempool takes longer than this to validate a tx, then it
+         -- discards the tx instead of adding it.
+       , ncMempoolTimeoutSoft :: DiffTime
+
+         -- | If the mempool takes longer than this to validate a tx, then it
+         -- disconnects from the peer.
+         --
+         -- WARNING: if this is less than 'mempoolTimeoutSoft', then
+         -- 'mempoolTimeoutSoft' is irrelevant. If it's equal or just barely larger,
+         -- then the soft/hard distinction will likely be unreliable.
+       , ncMempoolTimeoutHard :: DiffTime
+
+          -- | If the mempool takes longer than this cumulatively to
+          -- validate when each entered the mempool, then the mempool is at
+          -- capacity, ie it's full, ie no tx can be added.
+       , ncMempoolTimeoutCapacity :: DiffTime
+
          -- | Node AcceptedConnectionsLimit
        , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
 
@@ -236,6 +258,11 @@ data PartialNodeConfiguration
        , pncEgressPollInterval    :: !(Last DiffTime)
 
        , pncChainSyncIdleTimeout      :: !(Last DiffTime)
+
+       -- Mempool timeout configurations:
+       , pncMempoolTimeoutSoft :: !(Last DiffTime)
+       , pncMempoolTimeoutHard :: !(Last DiffTime)
+       , pncMempoolTimeoutCapacity :: !(Last DiffTime)
 
          -- AcceptedConnectionsLimit
        , pncAcceptedConnectionsLimit :: !(Last AcceptedConnectionsLimit)
@@ -370,6 +397,10 @@ instance FromJSON PartialNodeConfiguration where
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
+      pncMempoolTimeoutSoft <- Last <$> v .:? "MempoolTimeoutSoft"
+      pncMempoolTimeoutHard <- Last <$> v .:? "MempoolTimeoutHard"
+      pncMempoolTimeoutCapacity <- Last <$> v .:? "MempoolTimeoutCapacity"
+
       -- Peer Sharing
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
@@ -404,6 +435,9 @@ instance FromJSON PartialNodeConfiguration where
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
            , pncChainSyncIdleTimeout
+           , pncMempoolTimeoutSoft
+           , pncMempoolTimeoutHard
+           , pncMempoolTimeoutCapacity
            , pncEgressPollInterval
            , pncAcceptedConnectionsLimit
            , pncDeadlineTargetOfRootPeers
@@ -658,6 +692,9 @@ defaultPartialNodeConfiguration =
     , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
     , pncChainSyncIdleTimeout     = mempty
+    , pncMempoolTimeoutSoft       = mempty
+    , pncMempoolTimeoutHard       = mempty
+    , pncMempoolTimeoutCapacity   = mempty
 
     -- these targets are set properly in makeNodeConfiguration below
     , pncDeadlineTargetOfRootPeers                 = mempty
@@ -780,6 +817,16 @@ makeNodeConfiguration pnc = do
     $ getLast
     $ pncChainSyncIdleTimeout pnc
 
+  let mempoolTimeouts = ( getLast (pncMempoolTimeoutSoft pnc)
+                        , getLast (pncMempoolTimeoutHard pnc)
+                        , getLast (pncMempoolTimeoutCapacity pnc)
+                        )
+  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <- 
+    case mempoolTimeouts of
+      (Just s, Just h, Just c) -> pure (s, h, c)
+      (Nothing, Nothing, Nothing) -> pure (1, 1.5, 5)
+      _ -> Left "Mempool timeouts must be either all set or all unset"
+
   let ncPeerSharing =
         case pncPeerSharing pnc of
           Last Nothing ->
@@ -851,6 +898,9 @@ makeNodeConfiguration pnc = do
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
              , ncChainSyncIdleTimeout
+             , ncMempoolTimeoutSoft
+             , ncMempoolTimeoutHard
+             , ncMempoolTimeoutCapacity
              , ncEgressPollInterval
              , ncAcceptedConnectionsLimit
              , ncDeadlineTargetOfRootPeers

@@ -55,7 +55,6 @@ import           Data.ByteString (ByteString)
 import           Data.Maybe (isJust)
 import           Data.Monoid (Last (..))
 import           Data.String (IsString)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Typeable
 import           Data.Word (Word16, Word8)

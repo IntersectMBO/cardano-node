@@ -30,7 +30,6 @@ import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.Trans.Control (MonadBaseControl)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Typeable (Typeable)
 import           Data.Word (Word16)

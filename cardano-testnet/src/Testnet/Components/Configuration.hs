@@ -41,7 +41,6 @@ import           Data.Aeson.Key hiding (fromString)
 import           Data.Aeson.KeyMap hiding (map)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           Data.Word (Word64)

@@ -33,9 +33,9 @@ import           Data.Char
 import           Data.Function (on, (&))
 import           Data.List (nub, sort, transpose)
 import           Data.List.Extra (split)
+
 import           Data.Map.Strict as Map (Map, empty, fromList, union)
 import           Data.Maybe
-import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Numeric

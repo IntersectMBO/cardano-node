@@ -40,7 +40,6 @@ import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
 import           Data.String (IsString (fromString))
-import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL

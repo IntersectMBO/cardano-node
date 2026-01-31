@@ -69,7 +69,6 @@ import           Data.Map.Strict (Map)
 import           Data.Maybe
 import           Data.Ord (Down (..))
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
 import           Data.Word (Word64)

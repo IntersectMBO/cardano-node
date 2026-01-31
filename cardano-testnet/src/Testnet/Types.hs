@@ -60,7 +60,6 @@ import qualified Data.Aeson as A
 import           Data.List (intercalate)
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
-import           Data.Text (Text)
 import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
