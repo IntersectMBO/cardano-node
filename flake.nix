@@ -48,7 +48,7 @@
     incl.url = "github:divnix/incl";
 
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/jl/dijkstra";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
