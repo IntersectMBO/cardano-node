@@ -80,7 +80,7 @@ runMonitoringServer tracerEnv endpoint computeRoutes_autoUpdate = do
           <- tlsCertificate
         , let 
           theChain :: [FilePath]
-          theChain = fold certificateChain 
+          theChain = fold @Maybe @[FilePath] certificateChain 
 
           tls_settings :: TLSSettings
           tls_settings = tlsSettingsChain certificateFile theChain certificateKeyFile

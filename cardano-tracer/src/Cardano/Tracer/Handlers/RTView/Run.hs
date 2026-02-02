@@ -76,23 +76,25 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
     theConfig :: UI.Config
     theConfig =  
       UI.defaultConfig
-        { UI.jsAddr    = Just (fromString host)
-        , UI.jsPort    = Just port
-        , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
+        { UI.jsAddr                     = Just (fromString host)
+        , UI.jsPort                     = Just port
+        , UI.jsLog                      = const $ return () -- To hide 'threepenny-gui' internal messages.
         , UI.jsWindowReloadOnDisconnect = False
-        , UI.jsUseSSL = Just theConfigSSL
+        , UI.jsUseSSL                   = useSSL
         }
 
-    theConfigSSL :: UI.ConfigSSL
-    theConfigSSL 
+    useSSL :: Maybe UI.ConfigSSL
+    useSSL 
       | Just True <- forceSSL
       , Just Certificate{certificateFile, certificateKeyFile, certificateChain} 
         <- tlsCertificate
-      = UI.ConfigSSL
+      = Just 
+        { UI.jsUseSSL = Just UI.ConfigSSL
           { UI.jsSSLCert      = certificateFile
           , UI.jsSSLKey       = certificateKeyFile
           , UI.jsSSLChainCert = isJust certificateChain 
           }
+        }
       | otherwise
-      = theConfig
+      = Nothing
 

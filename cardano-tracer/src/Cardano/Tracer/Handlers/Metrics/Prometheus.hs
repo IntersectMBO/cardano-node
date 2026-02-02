@@ -19,6 +19,7 @@ import           Cardano.Tracer.MetaTrace
 import           Prelude hiding (head)
 
 import           Control.Applicative ((<|>))
+import           Data.Foldable (fold)
 import           Data.Aeson (ToJSON (..), encode, pairs, (.=))
 import qualified Data.ByteString as ByteString
 import           Data.Functor ((<&>))
@@ -117,7 +118,7 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
           <- tlsCertificate
         , let 
           theChain :: [FilePath]
-          theChain = fold certificateChain 
+          theChain = fold @Maybe @[FilePath] certificateChain 
         , let 
           tls_settings :: TLSSettings
           tls_settings = tlsSettingsChain certificateFile theChain certificateKeyFile
