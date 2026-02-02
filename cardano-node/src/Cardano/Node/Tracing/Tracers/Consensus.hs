@@ -2293,12 +2293,11 @@ instance LogFormatting TraceLeiosKernel where
 
   asMetrics (TraceLeiosBlockForged{eb, ebMeasure}) =
       [ CounterM "Forge.endorser-block.total-count" Nothing
-      ,
-        CounterM "Forge.endorser-block.total-tx-count" (Just . fromIntegral . length $ leiosEbTxs eb)
-        , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes $ ebMeasure)
-        , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory $ ebMeasure)
-        , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps $ ebMeasure)
-        , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes $ ebMeasure)
+      , CounterM "Forge.endorser-block.total-tx-count" (Just . fromIntegral . length $ leiosEbTxs eb)
+      , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes $ ebMeasure)
+      , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory $ ebMeasure)
+      , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps $ ebMeasure)
+      , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes $ ebMeasure)
       ]
   asMetrics _ = []
 

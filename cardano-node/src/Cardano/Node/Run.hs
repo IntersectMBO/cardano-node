@@ -169,7 +169,7 @@ import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
 
-import           LeiosDemoTypes (demoNewLeiosDbConnectionIO)
+import           LeiosDemoDb (demoNewLeiosDbConnectionIO)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
