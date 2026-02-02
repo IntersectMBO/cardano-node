@@ -43,6 +43,8 @@ import           Cardano.Node.Startup
 import qualified Cardano.Node.STM as STM
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
+import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
+import qualified Cardano.Node.Tracing.Tracers.Diffusion as DiffusionTracers
 import           Cardano.Node.Tracing.Tracers.NodeVersion
 import           Cardano.Network.Diffusion (CardanoPeerSelectionCounters)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -79,6 +81,8 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
+
+import qualified Network.Mux as Mux
 
 import qualified Cardano.Network.Diffusion.Types as Cardano.Diffusion
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
@@ -388,7 +392,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
 
    diffusionTracers :: Cardano.Diffusion.CardanoTracers IO
    diffusionTracers = Cardano.Diffusion.Tracers
-     { Diffusion.dtMuxTracer            = muxTracer
+     { Diffusion.dtMuxTracer            = muxTracer ekgDirect trSel tr
      , Diffusion.dtChannelTracer        = channelTracer
      , Diffusion.dtBearerTracer         = bearerTracer
      , Diffusion.dtHandshakeTracer      = handshakeTracer
@@ -464,8 +468,6 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
      }
    verb :: TracingVerbosity
    verb = traceVerbosity trSel
-   muxTracer =
-     tracerOnOff (traceMux trSel) verb "Mux" tr
    channelTracer =
      tracerOnOff (traceMux trSel) verb "MuxChannel" tr
    bearerTracer =
@@ -536,6 +538,32 @@ mkTracers _ _ _ _ _ =
     , resourcesTracer = nullTracer
     , ledgerMetricsTracer = nullTracer
     }
+
+--------------------------------------------------------------------------------
+-- Diffusion Layer Tracers
+--------------------------------------------------------------------------------
+
+notifyTxsMempoolTimeoutHard :: Maybe EKGDirect -> Tracer IO Mux.Trace
+notifyTxsMempoolTimeoutHard mbEKGDirect = case mbEKGDirect of
+  Nothing -> nullTracer
+  Just ekgDirect -> Tracer $ \ev -> do
+    when (DiffusionTracers.impliesMempoolTimeoutHard ev) $ do
+      sendEKGDirectCounter ekgDirect DiffusionTracers.txsMempoolTimeoutHardCounterName
+
+muxTracer
+  :: Maybe EKGDirect
+  -> TraceSelection
+  -> Trace IO Text
+  -> Tracer IO (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)
+muxTracer mbEKGDirect trSel tracer = Tracer $ \ev -> do
+  -- Update the EKG metric even when this tracer is turned off.
+  flip traceWith (Mux.wbEvent ev) $
+    notifyTxsMempoolTimeoutHard mbEKGDirect
+  whenOn (traceMux trSel) $ do
+    flip traceWith ev $
+      annotateSeverity $
+        toLogObject' (traceVerbosity trSel) $
+          appendName "Mux" tracer
 
 --------------------------------------------------------------------------------
 -- Chain DB Tracers
@@ -796,7 +824,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
-    , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr fStats
+    , Consensus.mempoolTracer = mempoolTracer mbEKGDirect trSel tr fStats
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
         Tracer $ \tlcev@Consensus.TraceLabelCreds{} -> do
           traceWith (annotateSeverity
@@ -1243,6 +1271,15 @@ notifyBlockForging fStats tr = Tracer $ \case
 -- Mempool Tracers
 --------------------------------------------------------------------------------
 
+notifyTxsMempoolTimeoutSoft ::
+     Maybe EKGDirect
+  -> Tracer IO (TraceEventMempool blk)
+notifyTxsMempoolTimeoutSoft mbEKGDirect = case mbEKGDirect of
+  Nothing -> nullTracer
+  Just ekgDirect -> Tracer $ \ev -> do
+    when (ConsensusTracers.impliesMempoolTimeoutSoft ev) $ do
+      sendEKGDirectCounter ekgDirect ConsensusTracers.txsMempoolTimeoutSoftCounterName
+
 notifyTxsProcessed :: ForgingStats -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
 notifyTxsProcessed fStats tr = Tracer $ \case
   TraceMempoolRemoveTxs [] _ -> return ()
@@ -1263,9 +1300,9 @@ mempoolMetricsTraceTransformer :: Trace IO a -> Tracer IO (TraceEventMempool blk
 mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
       (_n, tot_m) = case mempoolEvent of
-                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, Just tot0)
+                    TraceMempoolAddedTx     _tx0 _   tot0 -> (1, Just tot0)
                     TraceMempoolRejectedTx  _tx0 _ _ tot0 -> (1, Just tot0)
-                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, Just tot0)
+                    TraceMempoolRemoveTxs   txs0     tot0 -> (length txs0, Just tot0)
                     TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, Just tot0)
                     TraceMempoolSynced _ -> (0, Nothing)
                     _ -> (0, Nothing)
@@ -1287,15 +1324,19 @@ mempoolTracer
      , LedgerSupportsMempool blk
      , ConvertRawHash blk
      )
-  => TraceSelection
+  => Maybe EKGDirect
+  -> TraceSelection
   -> Trace IO Text
   -> ForgingStats
   -> Tracer IO (TraceEventMempool blk)
-mempoolTracer tc tracer fStats = Tracer $ \ev -> do
-    traceWith (mempoolMetricsTraceTransformer tracer) ev
-    traceWith (notifyTxsProcessed fStats tracer) ev
-    let tr = appendName "Mempool" tracer
-    traceWith (mpTracer tc tr) ev
+mempoolTracer mbEKGDirect tc tracer fStats = Tracer $ \ev -> do
+    -- Update the EKG metric even when this tracer is turned off.
+    traceWith (notifyTxsMempoolTimeoutSoft mbEKGDirect) ev
+    whenOn (traceMempool tc) $ do
+      traceWith (mempoolMetricsTraceTransformer tracer) ev
+      traceWith (notifyTxsProcessed fStats tracer) ev
+      let tr = appendName "Mempool" tracer
+      traceWith (mpTracer tc tr) ev
 
 mpTracer :: ( ToJSON (GenTxId blk)
             , ToObject (ApplyTxErr blk)
@@ -1787,6 +1828,9 @@ tracerOnOff'
   :: OnOff b -> Tracer IO a -> Tracer IO a
 tracerOnOff' (OnOff False) _ = nullTracer
 tracerOnOff' (OnOff True) tr = tr
+
+whenOn :: Monad m => OnOff b -> m () -> m ()
+whenOn (OnOff b) = when b
 
 instance Show a => Show (WithSeverity a) where
   show (WithSeverity _sev a) = show a
