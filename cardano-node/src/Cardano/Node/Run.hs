@@ -166,6 +166,7 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
+import Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -466,6 +467,11 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , rnTraceNTN       = nodeToNodeTracers tracers
           , rnTraceNTC       = nodeToClientTracers tracers
           , rnProtocolInfo   = pInfo
+          , rnMempoolTimeoutConfig = Just $ MempoolTimeoutConfig
+              { mempoolTimeoutSoft     = ncMempoolTimeoutSoft nc
+              , mempoolTimeoutHard     = ncMempoolTimeoutHard nc
+              , mempoolTimeoutCapacity = ncMempoolTimeoutCapacity nc
+              }
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
               blockForging <- snd (Api.protocolInfo runP) (Consensus.kesAgentTracer $ consensusTracers tracers)

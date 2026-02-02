@@ -18,7 +18,6 @@ import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Types
 
 import           Data.Maybe (fromJust)
-import           Data.Text (Text)
 import           GHC.Stack
 
 

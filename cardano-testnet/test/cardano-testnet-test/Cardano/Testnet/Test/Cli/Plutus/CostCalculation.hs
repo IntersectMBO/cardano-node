@@ -27,7 +27,6 @@ import           Data.Aeson.Types (Value (..), object)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import           Data.Default.Class (Default (def))
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeLatin1)
 import qualified Data.Vector as Vector

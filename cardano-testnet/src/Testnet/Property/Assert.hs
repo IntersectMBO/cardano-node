@@ -34,7 +34,6 @@ import           Data.Maybe (mapMaybe)
 import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import qualified Data.Time.Clock as DTC
 import           Data.Type.Equality
 import           Data.Word (Word8)

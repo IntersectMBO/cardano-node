@@ -31,7 +31,6 @@ import qualified Data.IP as IP
 import           Data.List ((\\))
 import qualified Data.List as L
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import qualified GHC.Stack as GHC

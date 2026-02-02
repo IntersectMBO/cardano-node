@@ -24,7 +24,6 @@ import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS (lines)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Text (Text)
 import qualified Data.Yaml as Yaml (encode)
 import           GHC.Generics (Generic)
 import           System.Exit
