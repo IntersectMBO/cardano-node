@@ -8,7 +8,6 @@ module Cardano.Tracer.Handlers.System
   , getPathToLogsLiveViewFontConfig
   , getPathToThemeConfig
   , getPathsToNotificationsSettings
-  , getPathsToSSLCerts
   ) where
 
 import qualified System.Directory as D
@@ -27,15 +26,6 @@ getPathToConfig :: FilePath -> TracerEnv -> IO FilePath
 getPathToConfig configName TracerEnv{teStateDir} = do
   configDir <- getPathToConfigDir teStateDir
   return $ configDir </> configName
-
-getPathsToSSLCerts :: TracerEnv -> IO (FilePath, FilePath)
-getPathsToSSLCerts TracerEnv{teStateDir} = do
-  configDir <- getPathToConfigDir teStateDir
-  let pathToSSLSubDir = configDir </> "ssl"
-  D.createDirectoryIfMissing True pathToSSLSubDir
-  return ( pathToSSLSubDir </> "cert.pem"
-         , pathToSSLSubDir </> "key.pem"
-         )
 
 getPathsToNotificationsSettings :: Maybe FilePath -> IO (FilePath, FilePath)
 getPathsToNotificationsSettings rtvSD = do

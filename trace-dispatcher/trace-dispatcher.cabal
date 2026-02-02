@@ -64,6 +64,7 @@ library
                       Cardano.Logging.Types.TraceMessage
                       Cardano.Logging.Types.NodeInfo
                       Cardano.Logging.Types.NodeStartupInfo
+                      Cardano.Logging.Types.NodePeers
                       Cardano.Logging.Utils
                       Control.Tracer.Arrow
                       Control.Tracer

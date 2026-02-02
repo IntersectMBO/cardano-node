@@ -11,6 +11,7 @@
 
 module Cardano.Tracer.Configuration
   ( Address
+  , Certificate (..)
   , Net.HowToConnect (..)
   , Endpoint (..)
   , setEndpoint
@@ -61,7 +62,15 @@ data Endpoint = Endpoint
   -- ^ `Nothing' (absent field) and `Just False' (present `True'
   -- value) both disable SSL.
   }
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data Certificate = Certificate 
+  { certificateFile    :: !FilePath
+  , certificateKeyFile :: !FilePath
+  , certificateChain   :: !(Maybe [FilePath])
+  }
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 -- | Endpoint {host, port} acting on Settings: setting host and port.
@@ -148,27 +157,28 @@ instance FromJSON FileOrMap where
 
 -- | Tracer configuration.
 data TracerConfig = TracerConfig
-  { networkMagic   :: !Word32                       -- ^ Network magic from genesis the node is launched with.
-  , network        :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
-  , loRequestNum   :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
-  , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
-  , hasEKG         :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
-  , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
-  , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  { networkMagic     :: !Word32                       -- ^ Network magic from genesis the node is launched with.
+  , network          :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
+  , loRequestNum     :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
+  , ekgRequestFreq   :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
+  , hasEKG           :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
+  , hasPrometheus    :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
+  , hasRTView        :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  , tlsCertificate   :: !(Maybe Certificate)
     -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
     -- Third member of the triplet is the forwarder config.
-  , hasForwarding  :: !(Maybe ( Network
-                              , Maybe [[Text]]
-                              , Log.TraceOptionForwarder
-                              ))
-  , logging           :: !(NonEmpty LoggingParams)  -- ^ Logging parameters.
-  , rotation          :: !(Maybe RotationParams)    -- ^ Rotation parameters.
-  , verbosity         :: !(Maybe Verbosity)         -- ^ Verbosity of the tracer itself.
-  , metricsNoSuffix   :: !(Maybe Bool)              -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similiarity with old system names - if desired; default: False
-  , metricsHelp       :: !(Maybe FileOrMap)         -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
-  , resourceFreq      :: !(Maybe Int)               -- ^ Frequency (1/millisecond) for gathering resource data.
-  , ekgRequestFull    :: !(Maybe Bool)              -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False
-  , prometheusLabels  :: !(Maybe (Map Text Text))   -- ^ A common label set for all Prometheus scrape targets (only used in Prometheus HTTP service discovery)
+  , hasForwarding    :: !(Maybe ( Network
+                               , Maybe [[Text]]
+                               , Log.TraceOptionForwarder
+                               ))
+  , logging          :: !(NonEmpty LoggingParams)  -- ^ Logging parameters.
+  , rotation         :: !(Maybe RotationParams)    -- ^ Rotation parameters.
+  , verbosity        :: !(Maybe Verbosity)         -- ^ Verbosity of the tracer itself.
+  , metricsNoSuffix  :: !(Maybe Bool)              -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similiarity with old system names - if desired; default: False
+  , metricsHelp      :: !(Maybe FileOrMap)         -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
+  , resourceFreq     :: !(Maybe Int)               -- ^ Frequency (1/millisecond) for gathering resource data.
+  , ekgRequestFull   :: !(Maybe Bool)              -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False
+  , prometheusLabels :: !(Maybe (Map Text Text))   -- ^ A common label set for all Prometheus scrape targets (only used in Prometheus HTTP service discovery)
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -176,7 +186,7 @@ data TracerConfig = TracerConfig
 -- | Read the tracer's configuration file.
 readTracerConfig :: FilePath -> IO TracerConfig
 readTracerConfig pathToConfig =
-  decodeFileEither pathToConfig >>= \case
+  decodeFileEither @TracerConfig pathToConfig >>= \case
     Left e -> die $ "Invalid tracer's configuration: " <> show e
     Right (config :: TracerConfig) ->
       case wellFormed config of

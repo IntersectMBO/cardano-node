@@ -102,23 +102,24 @@ launchAcceptorsSimple mode localSock dpName = do
     ]
  where
   mkConfig = TracerConfig
-    { networkMagic   = 764824073
-    , network        = case mode of
-                         Initiator -> ConnectTo $ NE.fromList [Net.LocalPipe localSock]
-                         Responder -> AcceptAt (Net.LocalPipe localSock)
-    , loRequestNum   = Just 1
-    , ekgRequestFreq = Just 1.0
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , logging        = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
-    , rotation       = Nothing
-    , verbosity      = Just Minimum
-    , metricsNoSuffix = Nothing
-    , metricsHelp    = Nothing
-    , hasForwarding  = Nothing
-    , resourceFreq   = Nothing
-    , ekgRequestFull = Nothing
+    { networkMagic     = 764824073
+    , network          = case mode of
+                           Initiator -> ConnectTo $ NE.fromList [Net.LocalPipe localSock]
+                           Responder -> AcceptAt (Net.LocalPipe localSock)
+    , loRequestNum     = Just 1
+    , ekgRequestFreq   = Just 1.0
+    , hasEKG           = Nothing
+    , hasPrometheus    = Nothing
+    , hasRTView        = Nothing
+    , tlsCertificate   = Nothing
+    , logging          = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
+    , rotation         = Nothing
+    , verbosity        = Just Minimum
+    , metricsNoSuffix  = Nothing
+    , metricsHelp      = Nothing
+    , hasForwarding    = Nothing
+    , resourceFreq     = Nothing
+    , ekgRequestFull   = Nothing
     , prometheusLabels = Nothing
     }
 

@@ -36,8 +36,7 @@ import           System.Metrics as EKG (Store, sampleAll)
 import           System.Time.Extra (sleep)
 
 -- BALDUR
-import Cardano.Tracer.Handlers.System (getPathsToSSLCerts)
-import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings, TLSSettings)
+import Network.Wai.Handler.WarpTLS (runTLS, tlsSettingsChain, TLSSettings)
 
 -- | Runs a simple HTTP server that listens on @endpoint@.
 --
@@ -87,6 +86,10 @@ runPrometheusServer
   -> IO RouteDictionary
   -> IO ()
 runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
+  let TracerEnv
+       { teConfig = TracerConfig { tlsCertificate }
+       } = tracerEnv
+
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.1
   -- If everything is okay, the function 'simpleHttpServe' never returns.
@@ -95,21 +98,35 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   traceWith teTracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
-  -- (cert, key) <- getPathsToSSLCerts tracerEnv
-  -- let tls_settings :: TLSSettings
-  --     tls_settings = tlsSettings cert key
   let 
     settings     :: Settings
-    tls_settings :: TLSSettings
     settings     = setEndpoint endpoint defaultSettings
-    tls_settings = tlsSettings "/home/baldur/certificate.pem" "/home/baldur/key.pem"
+    -- tls_settings :: TLSSettings
+    -- tls_settings = tlsSettings "/home/baldur/certificate.pem" "/home/baldur/key.pem"
 
     application :: Application
     application = renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
 
     run :: IO ()
     run | Just True <- epForceSSL endpoint 
+        , Just Certificate 
+            { certificateFile
+            , certificateKeyFile
+            , certificateChain
+            } 
+          <- tlsCertificate
+        , let 
+          theChain :: [FilePath]
+          theChain = fold certificateChain 
+        , let 
+          tls_settings :: TLSSettings
+          tls_settings = tlsSettingsChain certificateFile theChain certificateKeyFile
         = runTLS tls_settings settings application
+        -- Trace, if we expect SSL without getting certificates.
+        | Just True <- epForceSSL endpoint 
+        = do traceWith teTracer TracerMissingCertificate
+               { ttMissingCertificateEndpoint = endpoint }
+             runSettings settings application
         | otherwise
         = runSettings settings application
   run

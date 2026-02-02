@@ -1,0 +1,15 @@
+{ "wall_clock_s": 0.63
+, "user_cpu_s": 0.50
+, "sys_cpu_s": 0.11
+, "avg_cpu_pct": "98%"
+, "rss_peak_kb": 189128
+, "signals_received": 0
+, "ctxsw_involuntary": 148
+, "ctxsw_volunt_waits": 107
+, "pageflt_major": 0
+, "pageflt_minor": 40387
+, "swaps": 0
+, "io_fs_reads": 0
+, "io_fs_writes": 120
+, "cmdline": "cabal -v0 run exe:cardano-node -- +RTS --info"
+, "exit_code": 0 }

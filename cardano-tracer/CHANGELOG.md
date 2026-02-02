@@ -1,5 +1,12 @@
 # ChangeLog
 
+## FUTURE (Jan 2026)
+* SSL/TLS support for `cardano-tracer`, enabled by a new port `epForceSSL` in the
+  tracer configuration, per-endpoint.
+  The specified port will either speak HTTP or HTTPS depending on the flag.
+      "hasEKG":        {"epHost": "127.0.0.1", "epPort": 3100, "epForceSSL": true}
+      "hasPrometheus": {"epHost": "127.0.0.1", "epPort": 3200, "epForceSSL": true}
+* TODO: How to pass certificates in the config file. (Will apply to all endpoints)
 ## 0.3.6 (November 2025)
 * Implement Prometheus HTTP service discovery (SD) under the URL `/targets`
 * Add optional config field `"prometheusLabels": { "<labelname>": "<labelvalue>", ... }` for custom labels to be attached with Prometheus SD

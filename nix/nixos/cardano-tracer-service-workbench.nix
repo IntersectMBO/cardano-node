@@ -40,8 +40,9 @@ let serviceConfigToJSON =
         hasEKG = {
           epHost     = "127.0.0.1";
           epPort     = cfg.ekgPortBase;
-          epForceSSL = false;
+          epForceSSL = true;
         };
+
         ekgRequestFreq = 1;
         hasPrometheus = {
           epHost     = "127.0.0.1";

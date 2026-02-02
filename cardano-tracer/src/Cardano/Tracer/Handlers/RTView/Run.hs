@@ -19,6 +19,7 @@ import           Cardano.Tracer.Handlers.State.TraceObjects
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (sequenceConcurrently_)
 
+import           Data.Maybe (isJust)
 import           Control.Monad.Extra (whenJust)
 import           Data.ByteString.UTF8 (fromString)
 import           Network.Wai.Handler.Warp (Port)
@@ -36,7 +37,7 @@ import qualified Graphics.UI.Threepenny as UI
 
 runRTView :: TracerEnv -> TracerEnvRTView -> IO ()
 runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
-  whenJust hasRTView \(Endpoint host port) -> do
+  whenJust hasRTView \endpoint -> do
     traceWith teTracer TracerStartedRTView
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
@@ -52,7 +53,7 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
     eraSettings   <- initErasSettings
 
     sequenceConcurrently_
-      [ UI.startGUI (config host port) $
+      [ UI.startGUI (config endpoint) $
           mkMainPage
             tracerEnv
             tracerEnvRTView
@@ -66,15 +67,32 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
       , runEraSettingsUpdater tracerEnv eraSettings
       ]
  where
-  TracerConfig{network, logging, hasRTView} = teConfig tracerEnv
+  TracerConfig{network, logging, hasRTView, tlsCertificate} = teConfig tracerEnv
 
   -- RTView's web page is available via 'https://' url only.
-  config :: String -> Port -> UI.Config
-  config host port =
-    UI.defaultConfig
-      { UI.jsAddr    = Just (fromString host)
-      , UI.jsPort    = Just port
-      , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
-      , UI.jsWindowReloadOnDisconnect = False
-      , UI.jsUseSSL = Nothing
-      }
+  config :: Endpoint -> UI.Config
+  config (Endpoint host port forceSSL) = theConfig where
+
+    theConfig :: UI.Config
+    theConfig =  
+      UI.defaultConfig
+        { UI.jsAddr    = Just (fromString host)
+        , UI.jsPort    = Just port
+        , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
+        , UI.jsWindowReloadOnDisconnect = False
+        , UI.jsUseSSL = Just theConfigSSL
+        }
+
+    theConfigSSL :: UI.ConfigSSL
+    theConfigSSL 
+      | Just True <- forceSSL
+      , Just Certificate{certificateFile, certificateKeyFile, certificateChain} 
+        <- tlsCertificate
+      = UI.ConfigSSL
+          { UI.jsSSLCert      = certificateFile
+          , UI.jsSSLKey       = certificateKeyFile
+          , UI.jsSSLChainCert = isJust certificateChain 
+          }
+      | otherwise
+      = theConfig
+

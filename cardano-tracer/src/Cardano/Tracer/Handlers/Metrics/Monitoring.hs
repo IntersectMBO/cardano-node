@@ -5,9 +5,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Tracer.Handlers.Metrics.Monitoring
-  ( runMonitoringServer
-  ) where
+module Cardano.Tracer.Handlers.Metrics.Monitoring where
+-- BALDUR
+  -- ( runMonitoringServer
+  -- ) where
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
@@ -19,6 +20,7 @@ import           Prelude hiding (head)
 
 import           Data.ByteString as ByteString (ByteString, isInfixOf)
 import           Data.ByteString.Builder (stringUtf8)
+import           Data.Foldable (fold)
 import qualified Data.Text as T
 import           Network.HTTP.Types
 import           Network.Wai
@@ -28,8 +30,7 @@ import           System.Remote.Monitoring.Wai
 import           System.Time.Extra (sleep)
 
 -- BALDUR
-import Cardano.Tracer.Handlers.System (getPathsToSSLCerts)
-import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings, TLSSettings)
+import Network.Wai.Handler.WarpTLS (runTLS, tlsSettingsChain, TLSSettings)
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
 --   for particular EKG.Store. Since 'cardano-tracer' can be connected to any number
@@ -46,7 +47,12 @@ runMonitoringServer
   -> Endpoint -- ^ (web page with list of connected nodes, EKG web page).
   -> IO RouteDictionary
   -> IO ()
-runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
+runMonitoringServer tracerEnv endpoint computeRoutes_autoUpdate = do
+  let TracerEnv 
+        { teConfig = TracerConfig{ tlsCertificate }
+        , teTracer
+        } = tracerEnv
+
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.2
   traceWith teTracer TracerStartedMonitoring
@@ -55,22 +61,39 @@ runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
     }
   dummyStore <- EKG.newStore
 
-  -- (cert, key) <- getPathsToSSLCerts tracerEnv
-  -- let tls_settings :: TLSSettings
-  --     tls_settings = tlsSettings cert key
-  let settings     :: Settings
-      tls_settings :: TLSSettings
-      tls_settings = tlsSettings "/home/baldur/certificate.pem" "/home/baldur/key.pem"
-      settings = setEndpoint endpoint defaultSettings
+  let 
+    settings     :: Settings
+    settings = setEndpoint endpoint defaultSettings
+    -- tls_settings :: TLSSettings
+    -- tls_settings = tlsSettings "/home/baldur/certificate.pem" "/home/baldur/key.pem"
 
-      application :: Application
-      application = renderEkg dummyStore computeRoutes_autoUpdate
+    application :: Application
+    application = renderEkg dummyStore computeRoutes_autoUpdate
 
-      run :: IO ()
-      run | Just True <- epForceSSL endpoint 
-          = runTLS tls_settings settings application
-          | otherwise
-          = runSettings settings application
+    run :: IO ()
+    run | Just True <- epForceSSL endpoint 
+        , Just Certificate 
+            { certificateFile
+            , certificateKeyFile
+            , certificateChain
+            } 
+          <- tlsCertificate
+        , let 
+          theChain :: [FilePath]
+          theChain = fold certificateChain 
+
+          tls_settings :: TLSSettings
+          tls_settings = tlsSettingsChain certificateFile theChain certificateKeyFile
+          -- tls_settings :: TLSSettings
+          -- tls_settings = tlsSettings certificateFile certificateKeyFile
+        = runTLS tls_settings settings application
+        | Just True <- epForceSSL endpoint 
+        -- Trace, if we expect SSL without getting certificates.
+        = do traceWith teTracer TracerMissingCertificate 
+               { ttMissingCertificateEndpoint = endpoint }
+             runSettings settings application
+        | otherwise
+        = runSettings settings application
   run
 
 renderEkg :: EKG.Store -> IO RouteDictionary -> Application

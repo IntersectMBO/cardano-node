@@ -87,20 +87,21 @@ mkConfig
   -> FilePath
   -> TracerConfig
 mkConfig TestSetup{..} rootDir p = TracerConfig
-  { networkMagic   = fromIntegral . unNetworkMagic $ unI tsNetworkMagic
-  , network        = AcceptAt (Net.LocalPipe p)
-  , loRequestNum   = Just 1
-  , ekgRequestFreq = Just 1.0
-  , hasEKG         = Nothing
-  , hasPrometheus  = Nothing
-  , hasRTView      = Nothing
-  , logging        = NE.fromList [LoggingParams rootDir FileMode ForMachine]
-  , rotation       = Nothing
-  , verbosity      = Just Minimum
-  , metricsNoSuffix = Nothing
-  , metricsHelp    = Nothing
-  , hasForwarding  = Nothing
-  , resourceFreq   = Nothing
-  , ekgRequestFull = Nothing
+  { networkMagic     = fromIntegral . unNetworkMagic $ unI tsNetworkMagic
+  , network          = AcceptAt (Net.LocalPipe p)
+  , loRequestNum     = Just 1
+  , ekgRequestFreq   = Just 1.0
+  , hasEKG           = Nothing
+  , hasPrometheus    = Nothing
+  , hasRTView        = Nothing
+  , tlsCertificate   = Nothing
+  , logging          = NE.fromList [LoggingParams rootDir FileMode ForMachine]
+  , rotation         = Nothing
+  , verbosity        = Just Minimum
+  , metricsNoSuffix  = Nothing
+  , metricsHelp      = Nothing
+  , hasForwarding    = Nothing
+  , resourceFreq     = Nothing
+  , ekgRequestFull   = Nothing
   , prometheusLabels = Nothing
   }
