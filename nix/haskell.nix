@@ -21,7 +21,7 @@ let
     {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault "ghc967";
+      compiler-nix-name = lib.mkDefault (if pkgs.stdenv.hostPlatform.isWindows then "ghc9122" else "ghc967");
       # Extra-compilers
       # flake.variants = lib.genAttrs ["ghc$VERSION"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
