@@ -55,7 +55,7 @@
     incl.url = "github:divnix/incl";
 
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/cardano-node-release/10.5.4";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

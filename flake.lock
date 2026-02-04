@@ -582,15 +582,16 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1750025513,
-        "narHash": "sha256-WUNoYIZvU9moc5ccwJcF22r+bUJXO5dWoRyLPs8bJic=",
+        "lastModified": 1769466714,
+        "narHash": "sha256-BORSlRJKEmYWHaNqEEUeM8b6pgNVzknFELMKM3rjyE8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "f63aa2a49720526900fb5943db4123b5b8dcc534",
+        "rev": "f3ecc51c92ab72658c9b3b7289cfcc8a820a6316",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "cardano-node-release/10.5.4",
         "repo": "iohk-nix",
         "type": "github"
       }
