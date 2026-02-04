@@ -1,5 +1,9 @@
 # Revision history for trace-dispatcher
 
+## 2.11.2 -- Feb 2026
+
+* Setting the `TRACE_DISPATCHER_LOGGING_HOSTNAME` environment variable will override the system hostname in trace messages.
+
 ## 2.11.1 -- Jan 2026
 
 * Add strict `contramap'` (infix alias `>!$!<`) to the API, capturing a common pattern to avoid unintentional space leaks when composing tracers
