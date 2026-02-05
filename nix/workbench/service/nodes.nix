@@ -290,6 +290,8 @@ let
         ''
         #!${pkgs.stdenv.shell}
 
+        export TRACE_DISPATCHER_LOGGING_HOSTNAME=${name}
+
         ${service.script}
         ''
       ;

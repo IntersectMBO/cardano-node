@@ -39,14 +39,20 @@ import           Data.Text.Lazy.Builder as TB
 import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import           Network.HostName
+import           System.Environment (lookupEnv)
 import           System.IO.Unsafe (unsafePerformIO)
 
 
--- If the hostname in the logs should be anything different from the system reported hostname,
--- a new field would need to be added to PreFormatted to carry a new hostname argument to preFormatted.
+-- | If the @TRACE_DISPATCHER_LOGGING_HOSTNAME@ environment variable is set,
+--   it overrides the system hostname in the trace message. This is useful when
+--   multiple instances of a service or application on the same host.
 hostname :: Text
 {-# NOINLINE hostname #-}
-hostname = unsafePerformIO $ T.pack <$> getHostName
+hostname = unsafePerformIO $
+  lookupEnv "TRACE_DISPATCHER_LOGGING_HOSTNAME" >>= maybe hostNameOnly (pure . T.pack)
+  where
+    -- disregard FQDNs
+    hostNameOnly = T.pack . takeWhile (/= '.') <$> getHostName
 
 
 -- | Format this trace as metrics
