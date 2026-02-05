@@ -1,13 +1,10 @@
 # Revision history for trace-dispatcher
 
-## 2.11.2 -- Feb 2026
-
-* Setting the `TRACE_DISPATCHER_LOGGING_HOSTNAME` environment variable will override the system hostname in trace messages.
-
-## 2.11.1 -- Jan 2026
+## 2.11.1 -- Feb 2026
 
 * Add strict `contramap'` (infix alias `>!$!<`) to the API, capturing a common pattern to avoid unintentional space leaks when composing tracers
 * Increase `PrometheusSimple` robustness by restarting the backend upon crash, adding start/stop traces and more eagerly reaping of dangling sockets
+* Setting the `TRACE_DISPATCHER_LOGGING_HOSTNAME` environment variable will override the system hostname in trace messages.
 * Increased strictness when storing traced `DataPoints`
 * Drastically reduced fallback value for forwarding queue capacity to minimize impact of forwarding service interruption on heap size and retention
 * Removed `TraceConfig.tcPeerFrequency` and hence `TraceOptionPeerFrequency` from config representation
