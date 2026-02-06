@@ -65,7 +65,7 @@ import           Testnet.Filepath
 import           Testnet.Handlers (interruptNodesOnSigINT)
 import           Testnet.Orphans ()
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
-import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
+import           Testnet.Property.Assert (assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
 import           Testnet.Start.Types
 import           Testnet.Types as TR hiding (shelleyGenesis)
@@ -74,8 +74,9 @@ import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import           Hedgehog.Internal.Property (failException)
 
-import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString)
+import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString, timeout)
 import           RIO.Orphans (ResourceMap)
+import           RIO.State (put)
 import           UnliftIO.Async
 import           UnliftIO.Exception (stringException)
 
@@ -226,9 +227,9 @@ cardanoTestnet
     , updateTimestamps
     } = do
   let CardanoTestnetOptions
-        { cardanoNodeLoggingFormat=nodeLoggingFormat
-        , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
+        { cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
+        , cardanoEnableRpc
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
       nodeConfigFile = tmpAbsPath </> "configuration.yaml"
@@ -282,7 +283,7 @@ cardanoTestnet
     liftIOAnnotated $ writeFile (nodeDataDir </> "port") (show portNumber)
     let topologyPath = tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json"
     tBytes <- liftIOAnnotated $ LBS.readFile topologyPath
-    case eitherDecode tBytes of 
+    case eitherDecode tBytes of
       Right (abstractTopology :: P2P.NetworkTopology NodeId) -> do
         topology <- mapM idToRemoteAddressP2P abstractTopology
         liftIOAnnotated $ LBS.writeFile topologyPath $ encode topology
@@ -339,7 +340,7 @@ cardanoTestnet
         ]
         <> spoNodeCliArgs
         <> extraCliArgs nodeOptions
-
+        <> ["--grpc-enable" | cardanoEnableRpc]
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
   let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
@@ -349,11 +350,8 @@ cardanoTestnet
   -- Interrupt cardano nodes when the main process is interrupted
   liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
 
-  -- FIXME: use foldEpochState waiting for chain extensions
-  now <- liftIOAnnotated DTC.getCurrentTime
-  let deadline = DTC.addUTCTime 45 now
-  forM_ testnetNodes' $ \nodeStdoutFile -> do
-    assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
+  -- Make sure that all nodes are healthy by waiting for a chain extension
+  mapConcurrently_ (waitForBlockThrow 45 (File nodeConfigFile)) testnetNodes'
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
@@ -397,6 +395,37 @@ cardanoTestnet
     mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
     mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
 
+    -- wait for new blocks or throw an exception if there are none in the timeout period
+    waitForBlockThrow :: MonadUnliftIO m
+                      => MonadCatch m
+                      => Int -- ^ timeout in seconds
+                      -> NodeConfigFile 'In
+                      -> TestnetNode
+                      -> m ()
+    waitForBlockThrow timeoutSeconds nodeConfigFile node@TestnetNode{nodeName} = do
+      result <- timeout (timeoutSeconds * 1_000_000) $
+        runExceptT . foldEpochState
+          nodeConfigFile
+          (nodeSocketPath node)
+          QuickValidation
+          (EpochNo maxBound)
+          minBound
+          $ \_ slotNo blockNo -> do
+            put slotNo
+            pure $ if blockNo >= 1
+               then ConditionMet -- we got one block
+               else ConditionNotMet
+
+      case result of
+        Just (Right (ConditionMet, _)) -> pure ()
+        Just (Right (ConditionNotMet, slotNo)) ->
+          throwString $ nodeName <> " was unable to produce any blocks. Reached slot " <> show slotNo
+        Just (Left err) ->
+          throwString $ "foldBlocks on " <> nodeName <> " encountered an error while waiting for new blocks: " <> show (prettyError err)
+        _ ->
+          throwString $ nodeName <> " was unable to produce any blocks for " <> show timeoutSeconds <> "s"
+
+
 -- | A convenience wrapper around `createTestnetEnv` and `cardanoTestnet`
 createAndRunTestnet :: ()
   => HasCallStack
@@ -420,8 +449,8 @@ retryOnAddressInUseError
 retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTimeout
   where
     go :: HasCallStack => NominalDiffTime -> NominalDiffTime -> ExceptT NodeStartFailure m a
-    go timeout interval
-      | timeout <= 0 = withFrozenCallStack $ do
+    go timeout' interval
+      | timeout' <= 0 = withFrozenCallStack $ do
         act
       | otherwise = withFrozenCallStack $ do
         !time <- liftIOAnnotated DTC.getCurrentTime
@@ -430,7 +459,7 @@ retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTime
             liftIOAnnotated $ threadDelay (round $ interval * 1_000_000)
             !time' <- liftIOAnnotated DTC.getCurrentTime
             let elapsedTime = time' `diffUTCTime` time
-                newTimeout = timeout - elapsedTime
+                newTimeout = timeout' - elapsedTime
             go newTimeout interval
           e -> throwError e
 
