@@ -51,10 +51,8 @@ executable cardano-node-chairman
                       , contra-tracer
                       , io-classes:{io-classes, strict-stm, si-timers} ^>= 1.8
                       , optparse-applicative
-                      , ouroboros-consensus
-                      , ouroboros-consensus-cardano
-                      , ouroboros-network-api
-                      , ouroboros-network-protocols
+                      , ouroboros-consensus:{ouroboros-consensus, cardano}
+                      , ouroboros-network:{api, protocols}
                       , text
                       , time
 
