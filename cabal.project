@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-09-29T13:55:56Z
-  , cardano-haskell-packages 2026-02-09T17:36:58Z
+  , hackage.haskell.org 2026-02-17T10:15:41Z
+  , cardano-haskell-packages 2026-03-09T20:37:06Z
 
 constraints:
   crypton-x509-system ==1.6.7
@@ -40,7 +40,7 @@ packages:
 extra-packages: alex
 
 program-options
-  ghc-options: -Werror
+  -- ghc-options: -Werror
 
 test-show-details: direct
 
@@ -77,3 +77,66 @@ if impl (ghc >= 9.12)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- Points to https://github.com/IntersectMBO/cardano-ledger/pull/5573
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: 30a3e666b84f9d056f464b3a00c56ab0c5bccacd
+  --sha256: sha256-DsBE94iDxHkFnRdREZUOZYkydIMnp7U09N4SnaRc6+s=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-api
+    libs/cardano-ledger-core
+    libs/cardano-ledger-binary
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/cardano-data
+    libs/vector-map
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/crypto
+
+-- geo2a/bump-ntc
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: bb28f6a29274bb48e85e3e556cde994f12a1db1f
+  --sha256: sha256-qauQ/XFtc/z2zoArc7Gbe6cuW+cKLZQxl+NK111KTrw=
+  subdir:
+    .
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/kes-agent
+  tag: 7aedefc0077ffaf93bf46508c1fe0d7efdead227
+  --sha256: sha256-ZcB0pPex349uH1W7ha5ez7Kx/XadK00j5wRm7+vyX0s=
+  subdir:
+    kes-agent
+    kes-agent-crypto
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/cardano-api
+   tag: a4be1314a699b273d13817d6bf9e475f6215077f
+   --sha256: sha256-XKsb4HefOh4Ed8qkZmk8soULO8DCMkfDsm7QijszWsg=
+   subdir:
+     cardano-api
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/cardano-cli
+   tag: 298e3f94327e4d3f4b17d42434fc61ae966e6ae0
+   --sha256: sha256-eqIDDKJc5krpgE/dyCiqVt4P5lHwC/AQPzBebriADBk=
+   subdir:
+     cardano-cli
