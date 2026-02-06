@@ -53,8 +53,7 @@ executable cardano-node-chairman
                       , optparse-applicative
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
-                      , ouroboros-network-api
-                      , ouroboros-network-protocols
+                      , ouroboros-network:{api, protocols}
                       , text
                       , time
 
