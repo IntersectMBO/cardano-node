@@ -34,6 +34,7 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
+  timeseries-io
 
 -- Needed when cross compiling
 extra-packages: alex
