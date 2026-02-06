@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-02-06T20:27:32Z
-  , cardano-haskell-packages 2026-03-11T22:13:22Z
+  , hackage.haskell.org 2026-02-17T10:15:41Z
+  , cardano-haskell-packages 2026-03-23T18:21:55Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -100,4 +100,3 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
-
