@@ -68,11 +68,10 @@ library
                       , io-classes
                       , network
                       , network-mux
-                      , ouroboros-network-api
+                      , ouroboros-network:{api, framework} ^>= 0.24
                       , ekg-core
                       , ekg-forward  >= 1.0
                       , singletons ^>= 3.0
-                      , ouroboros-network-framework ^>= 0.19.2
                       , serialise
                       , stm
                       , text
@@ -104,8 +103,7 @@ test-suite test
                       , contra-tracer
                       , io-classes
                       , io-sim
-                      , ouroboros-network-api
-                      , ouroboros-network-framework
+                      , ouroboros-network:{api, framework}
                       , trace-forward
                       , QuickCheck
                       , serialise
