@@ -79,8 +79,8 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 71ec2758703b75b5a6187438a08eb3386773850e
-  --sha256: sha256-elIA+esNslfejQEuoYszrG7MkKJVc1AulUBDSIIEUEo=
+  tag: 324efe565237061615ec10e7f47e08699cace660
+  --sha256: sha256-Tu5TlPwJgVpEfTui+zbaUJIOMoexCwFTQ5M/n2DP2/I=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -109,8 +109,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: c6c00805ea5b450e16efdfe22a3b3b6f3a360c82
-  --sha256: sha256-DtiaTJI5uAt4CZEv/OBsv8SSv9/OwK1wm2mMPn56XJE=
+  tag: 0106df607184099af6770d0f49557e8f8ae93de4
+  --sha256: sha256-NpyTScEwSUz2zr1DtxUVJSGT2LaDBD8wtRj6NObBOuc=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -119,31 +119,28 @@ source-repository-package
     strict-sop-core
     sop-extras
 
--- Backported version of https://github.com/IntersectMBO/ouroboros-network/pull/5161
 source-repository-package
    type: git
    location: https://github.com/IntersectMBO/ouroboros-network
-   tag: 5f647704cfe1eaa0867af0bf283c817286eeb48d
-   --sha256: sha256-1qOwV8aGIDI1El7ttDfKv3nrFNh+lR8J5Nq/0WBXsV0=
+   tag: 228bb2045784a9c180651dedeea9af9396140f47
+   --sha256: sha256-q/93M6+TtnqWiguOiwuUSJljA7nrICOsu+5SLl6jiCc=
    subdir:
-     ouroboros-network-api
      ouroboros-network
-     ouroboros-network-framework
-     ouroboros-network-mock
-     ouroboros-network-protocols
+     cardano-diffusion
+     network-mux
 
 source-repository-package
    type: git
    location: https://github.com/IntersectMBO/cardano-api
-   tag: d4bb20eab0c4408990fb7443f7d61cada1b2c5d2
-   --sha256: sha256-ig7sf+U7rzeDSrmLPhp+FDGVZl2idd+PUbdbDYJgBtE=
+   tag: 88149e968d0536ac2110abe32a69f221d4b1ea8c
+   --sha256: sha256-/0oaPmSjsN0H3O/bCLSpimIzT7+Kloof1LBcDOahu5Y=
    subdir:
      cardano-api
 
 source-repository-package
    type: git
    location: https://github.com/IntersectMBO/cardano-cli
-   tag: 4125ec7ef9fa1e0f5b86e0ea5d17d2423f6c9ef1
-   --sha256: sha256-5aY5qvTJX8rJIRpvRaCZ4LF644o+/WvGnaBcHSqaUTA=
+   tag: f381e592738aae15c16f0a1a6b66d94fc92be668
+   --sha256: sha256-9ouUsPFfP+QZcdNI7FzrbUVLGi9e2YsYlm53CNRYaiA=
    subdir:
      cardano-cli
