@@ -57,7 +57,7 @@ library
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.9
+                      , cardano-ping ^>= 0.10
                       , cardano-prelude
                       , contra-tracer
                       , containers
@@ -84,8 +84,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.22.6
-                      , ouroboros-network-api
+                      , ouroboros-network:{api, ouroboros-network} ^>= 0.24
                       , prettyprinter
                       , process
                       , resourcet
