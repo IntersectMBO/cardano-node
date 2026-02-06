@@ -189,10 +189,10 @@ library
                       , ouroboros-consensus-cardano ^>= 0.26
                       , ouroboros-consensus-diffusion ^>= 0.25
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.16
-                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.4
-                      , ouroboros-network-framework ^>= 0.19.2
-                      , ouroboros-network-protocols ^>= 0.15
+                      , ouroboros-network:{api, ouroboros-network, cardano-diffusion, orphan-instances, framework, protocols} ^>= 0.24
+
+
+
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -267,7 +267,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
                       , ouroboros-network:{ouroboros-network, cardano-diffusion}
-                      , ouroboros-network-api
+                      , ouroboros-network:{api}
                       , strict-sop-core
                       , text
                       , trace-dispatcher

@@ -50,7 +50,7 @@ library
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus-cardano
-                      , ouroboros-network-protocols
+                      , ouroboros-network:{protocols}
                       , prometheus >= 2.2.4
                       , ekg-prometheus-adapter
                       , safe-exceptions
