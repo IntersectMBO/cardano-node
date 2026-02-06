@@ -208,8 +208,7 @@ renderScriptPurpose =
       Api.AlonzoEraOnwardsAlonzo -> renderAlonzoPlutusPurpose
       Api.AlonzoEraOnwardsBabbage -> renderAlonzoPlutusPurpose
       Api.AlonzoEraOnwardsConway -> renderConwayPlutusPurpose
-      -- TODO: fix
-      Api.AlonzoEraOnwardsDijkstra -> undefined
+      Api.AlonzoEraOnwardsDijkstra -> renderConwayPlutusPurpose
     )
 
 renderAlonzoPlutusPurpose :: ()
