@@ -169,9 +169,9 @@ library
                       , generic-data
                       , hashable
                       , hostname
-                      , io-classes:{io-classes,strict-stm,si-timers} >= 1.5
+                      , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8
                       , iohk-monitoring ^>= 0.2
-                      , kes-agent ^>=0.2
+                      , kes-agent ^>=1.1
                       , microlens
                       , mmap
                       , network-mux
@@ -185,14 +185,12 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus ^>= 0.30
+                      , ouroboros-consensus:{ouroboros-consensus, ouroboros-consensus-lmdb, ouroboros-consensus-lsm} ^>= 0.28
                       , ouroboros-consensus-cardano ^>= 0.26
-                      , ouroboros-consensus-diffusion ^>= 0.25
+                      , ouroboros-consensus-diffusion ^>= 0.24
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.16
-                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.4
-                      , ouroboros-network-framework ^>= 0.19.2
-                      , ouroboros-network-protocols ^>= 0.15
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols} ^>= 0.24
+                      , cardano-diffusion:{api, cardano-diffusion, protocols} ^>=0.1
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -214,7 +212,7 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols:{typed-protocols, stateful} >= 1.0
+                      , typed-protocols:{typed-protocols, stateful} >= 1.1
                       , yaml
 
 executable cardano-node
@@ -267,7 +265,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
                       , ouroboros-network:{ouroboros-network, cardano-diffusion}
-                      , ouroboros-network-api
+                      , ouroboros-network:{api}
                       , strict-sop-core
                       , text
                       , trace-dispatcher

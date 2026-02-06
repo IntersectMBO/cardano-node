@@ -19,7 +19,7 @@ import           Cardano.Logging
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
-                   ForgeStateUpdateError)
+                   ForgeStateUpdateError, PerasWeight (..))
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
@@ -36,7 +36,8 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, TiebreakerView, SelectView(..))
+import           Ouroboros.Consensus.Peras.SelectView
+import           Ouroboros.Consensus.Protocol.Abstract (TiebreakerView, ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -352,10 +353,11 @@ instance LogFormatting (ForgeStateUpdateError blk) => LogFormatting (WrapForgeSt
 instance All (LogFormatting `Compose` WrapTiebreakerView) xs => LogFormatting (HardForkTiebreakerView xs) where
     forMachine dtal = forMachine dtal . getHardForkTiebreakerView
 
-instance LogFormatting (TiebreakerView protocol) => LogFormatting (SelectView protocol) where
+instance LogFormatting (TiebreakerView protocol) => LogFormatting (WeightedSelectView protocol) where
     forMachine dtal sv = mconcat
-        [ "blockNo"  .= svBlockNo sv
-        , forMachine dtal (svTiebreakerView sv)
+        [ "blockNo"  .= wsvBlockNo sv
+        , "weightBoost" .= unPerasWeight (wsvWeightBoost sv)
+        , forMachine dtal (wsvTiebreaker sv)
         ]
 
 instance All (LogFormatting `Compose` WrapTiebreakerView) xs => LogFormatting (OneEraTiebreakerView xs) where
