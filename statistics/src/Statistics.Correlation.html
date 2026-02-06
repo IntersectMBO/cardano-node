@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module      : Statistics.Correlation.Pearson</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Statistics.Correlation</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Pearson correlation</span></span><span>
+</span><span id="line-8"></span><span>      </span><span class="annot"><a href="Statistics.Correlation.html#pearson"><span class="hs-identifier">pearson</span></a></span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#pearson2"><span class="hs-identifier">pearson2</span></a></span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#pearsonMatByRow"><span class="hs-identifier">pearsonMatByRow</span></a></span><span>
+</span><span id="line-11"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Spearman correlation</span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#spearman"><span class="hs-identifier">spearman</span></a></span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#spearman2"><span class="hs-identifier">spearman2</span></a></span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#spearmanMatByRow"><span class="hs-identifier">spearmanMatByRow</span></a></span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Generic</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">G</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Statistics.Matrix</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Sample.html"><span class="hs-identifier">Statistics.Sample</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Test.Internal.html"><span class="hs-identifier">Statistics.Test.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Test.Internal.html#rankUnsorted"><span class="hs-identifier">rankUnsorted</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- Pearson</span><span>
+</span><span id="line-26"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Pearson correlation for sample of pairs. Exactly same as</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- 'Statistics.Sample.correlation'</span><span>
+</span><span id="line-30"></span><span id="local-6989586621679232270"><span class="annot"><a href="Statistics.Correlation.html#pearson"><span class="hs-identifier hs-type">pearson</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232270"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>        </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232270"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span></span><span>
+</span><span id="line-32"></span><span id="pearson"><span class="annot"><span class="annottext">pearson :: forall (v :: * -&gt; *).
+Vector v (Double, Double) =&gt;
+v (Double, Double) -&gt; Double
+</span><a href="Statistics.Correlation.html#pearson"><span class="hs-identifier hs-var hs-var">pearson</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v (Double, Double) -&gt; Double
+forall (v :: * -&gt; *).
+Vector v (Double, Double) =&gt;
+v (Double, Double) -&gt; Double
+</span><a href="Statistics.Sample.html#correlation"><span class="hs-identifier hs-var">correlation</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#pearson"><span class="hs-pragma hs-type">pearson</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Pearson correlation for sample of pairs. Exactly same as</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- 'Statistics.Sample.correlation'</span><span>
+</span><span id="line-37"></span><span id="local-6989586621679232272"><span class="annot"><a href="Statistics.Correlation.html#pearson2"><span class="hs-identifier hs-type">pearson2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232272"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>         </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232272"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232272"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span></span><span>
+</span><span id="line-39"></span><span id="pearson2"><span class="annot"><span class="annottext">pearson2 :: forall (v :: * -&gt; *).
+Vector v Double =&gt;
+v Double -&gt; v Double -&gt; Double
+</span><a href="Statistics.Correlation.html#pearson2"><span class="hs-identifier hs-var hs-var">pearson2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v Double -&gt; v Double -&gt; Double
+forall (v :: * -&gt; *).
+Vector v Double =&gt;
+v Double -&gt; v Double -&gt; Double
+</span><a href="Statistics.Sample.html#correlation2"><span class="hs-identifier hs-var">correlation2</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#pearson2"><span class="hs-pragma hs-type">pearson2</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><span class="hs-comment">-- | Compute pairwise Pearson correlation between rows of a matrix</span></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Statistics.Correlation.html#pearsonMatByRow"><span class="hs-identifier hs-type">pearsonMatByRow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Matrix</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Matrix</span></span><span>
+</span><span id="line-44"></span><span id="pearsonMatByRow"><span class="annot"><span class="annottext">pearsonMatByRow :: Matrix -&gt; Matrix
+</span><a href="Statistics.Correlation.html#pearsonMatByRow"><span class="hs-identifier hs-var hs-var">pearsonMatByRow</span></a></span></span><span> </span><span id="local-6989586621679232348"><span class="annot"><span class="annottext">Matrix
+</span><a href="#local-6989586621679232348"><span class="hs-identifier hs-var">m</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int -&gt; Int -&gt; Double) -&gt; Matrix
+</span><span class="hs-identifier hs-var">generateSym</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Matrix -&gt; Int
+</span><span class="hs-identifier hs-var">rows</span></span><span> </span><span class="annot"><span class="annottext">Matrix
+</span><a href="#local-6989586621679232348"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679232351"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679232351"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679232352"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679232352"><span class="hs-identifier hs-var">j</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Vector (Double, Double) -&gt; Double
+forall (v :: * -&gt; *).
+Vector v (Double, Double) =&gt;
+v (Double, Double) -&gt; Double
+</span><a href="Statistics.Correlation.html#pearson"><span class="hs-identifier hs-var">pearson</span></a></span><span> </span><span class="annot"><span class="annottext">(Vector (Double, Double) -&gt; Double)
+-&gt; Vector (Double, Double) -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Matrix -&gt; Int -&gt; Vector
+</span><span class="hs-identifier hs-var">row</span></span><span> </span><span class="annot"><span class="annottext">Matrix
+</span><a href="#local-6989586621679232348"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679232351"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Vector -&gt; Vector -&gt; Vector (Double, Double)
+forall a b.
+(Unbox a, Unbox b) =&gt;
+Vector a -&gt; Vector b -&gt; Vector (a, b)
+</span><span class="hs-operator hs-var">`U.zip`</span></span><span> </span><span class="annot"><span class="annottext">Matrix -&gt; Int -&gt; Vector
+</span><span class="hs-identifier hs-var">row</span></span><span> </span><span class="annot"><span class="annottext">Matrix
+</span><a href="#local-6989586621679232348"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679232352"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#pearsonMatByRow"><span class="hs-pragma hs-type">pearsonMatByRow</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- Spearman</span><span>
+</span><span id="line-53"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- | Compute Spearman correlation between two samples</span></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679232281"><span id="local-6989586621679232282"><span id="local-6989586621679232283"><span class="annot"><a href="Statistics.Correlation.html#spearman"><span class="hs-identifier hs-type">spearman</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232281"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-57"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232282"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-58"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232283"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232281"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-59"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232283"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232282"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-60"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232283"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679232281"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679232282"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232283"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-62"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232283"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679232281"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232283"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679232282"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>         </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232283"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679232281"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679232282"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span></span></span></span><span>
+</span><span id="line-67"></span><span id="spearman"><span class="annot"><span class="annottext">spearman :: forall a b (v :: * -&gt; *).
+(Ord a, Ord b, Vector v a, Vector v b, Vector v (a, b),
+ Vector v Int, Vector v (Int, a), Vector v (Int, b)) =&gt;
+v (a, b) -&gt; Double
+</span><a href="Statistics.Correlation.html#spearman"><span class="hs-identifier hs-var hs-var">spearman</span></a></span></span><span> </span><span id="local-6989586621679232379"><span class="annot"><span class="annottext">v (a, b)
+</span><a href="#local-6989586621679232379"><span class="hs-identifier hs-var">xy</span></a></span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector (Double, Double) -&gt; Double
+forall (v :: * -&gt; *).
+Vector v (Double, Double) =&gt;
+v (Double, Double) -&gt; Double
+</span><a href="Statistics.Correlation.html#pearson"><span class="hs-identifier hs-var">pearson</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">(Vector (Double, Double) -&gt; Double)
+-&gt; Vector (Double, Double) -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Vector -&gt; Vector -&gt; Vector (Double, Double)
+forall (v :: * -&gt; *) a b.
+(Vector v a, Vector v b, Vector v (a, b)) =&gt;
+v a -&gt; v b -&gt; v (a, b)
+</span><span class="hs-identifier hs-var">G.zip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">v a -&gt; Vector
+forall a (v :: * -&gt; *).
+(Ord a, Vector v a, Vector v Int, Vector v (Int, a)) =&gt;
+v a -&gt; Vector
+</span><a href="Statistics.Test.Internal.html#rankUnsorted"><span class="hs-identifier hs-var">rankUnsorted</span></a></span><span> </span><span class="annot"><span class="annottext">v a
+</span><a href="#local-6989586621679232381"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">v b -&gt; Vector
+forall a (v :: * -&gt; *).
+(Ord a, Vector v a, Vector v Int, Vector v (Int, a)) =&gt;
+v a -&gt; Vector
+</span><a href="Statistics.Test.Internal.html#rankUnsorted"><span class="hs-identifier hs-var">rankUnsorted</span></a></span><span> </span><span class="annot"><span class="annottext">v b
+</span><a href="#local-6989586621679232382"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679232381"><span class="annot"><span class="annottext">v a
+</span><a href="#local-6989586621679232381"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679232382"><span class="annot"><span class="annottext">v b
+</span><a href="#local-6989586621679232382"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v (a, b) -&gt; (v a, v b)
+forall (v :: * -&gt; *) a b.
+(Vector v a, Vector v b, Vector v (a, b)) =&gt;
+v (a, b) -&gt; (v a, v b)
+</span><span class="hs-identifier hs-var">G.unzip</span></span><span> </span><span class="annot"><span class="annottext">v (a, b)
+</span><a href="#local-6989586621679232379"><span class="hs-identifier hs-var">xy</span></a></span><span>
+</span><span id="line-72"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#spearman"><span class="hs-pragma hs-type">spearman</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Compute Spearman correlation between two samples. Samples must</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--   have same length.</span><span>
+</span><span id="line-76"></span><span id="local-6989586621679232299"><span id="local-6989586621679232300"><span id="local-6989586621679232301"><span class="annot"><a href="Statistics.Correlation.html#spearman2"><span class="hs-identifier hs-type">spearman2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232299"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232300"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232301"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232299"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-79"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232301"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232300"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232301"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-81"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232301"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679232299"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679232301"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679232300"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>         </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232301"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232299"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-85"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232301"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232300"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-86"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span></span></span></span><span>
+</span><span id="line-87"></span><span id="spearman2"><span class="annot"><span class="annottext">spearman2 :: forall a b (v :: * -&gt; *).
+(Ord a, Ord b, Vector v a, Vector v b, Vector v Int,
+ Vector v (Int, a), Vector v (Int, b)) =&gt;
+v a -&gt; v b -&gt; Double
+</span><a href="Statistics.Correlation.html#spearman2"><span class="hs-identifier hs-var hs-var">spearman2</span></a></span></span><span> </span><span id="local-6989586621679232415"><span class="annot"><span class="annottext">v a
+</span><a href="#local-6989586621679232415"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679232416"><span class="annot"><span class="annottext">v b
+</span><a href="#local-6989586621679232416"><span class="hs-identifier hs-var">ys</span></a></span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679232417"><span class="hs-identifier hs-var">nx</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679232419"><span class="hs-identifier hs-var">ny</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Double
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Statistics.Correlation.spearman2: samples must have same length&quot;</span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector (Double, Double) -&gt; Double
+forall (v :: * -&gt; *).
+Vector v (Double, Double) =&gt;
+v (Double, Double) -&gt; Double
+</span><a href="Statistics.Correlation.html#pearson"><span class="hs-identifier hs-var">pearson</span></a></span><span> </span><span class="annot"><span class="annottext">(Vector (Double, Double) -&gt; Double)
+-&gt; Vector (Double, Double) -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Vector -&gt; Vector -&gt; Vector (Double, Double)
+forall (v :: * -&gt; *) a b.
+(Vector v a, Vector v b, Vector v (a, b)) =&gt;
+v a -&gt; v b -&gt; v (a, b)
+</span><span class="hs-identifier hs-var">G.zip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">v a -&gt; Vector
+forall a (v :: * -&gt; *).
+(Ord a, Vector v a, Vector v Int, Vector v (Int, a)) =&gt;
+v a -&gt; Vector
+</span><a href="Statistics.Test.Internal.html#rankUnsorted"><span class="hs-identifier hs-var">rankUnsorted</span></a></span><span> </span><span class="annot"><span class="annottext">v a
+</span><a href="#local-6989586621679232415"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">v b -&gt; Vector
+forall a (v :: * -&gt; *).
+(Ord a, Vector v a, Vector v Int, Vector v (Int, a)) =&gt;
+v a -&gt; Vector
+</span><a href="Statistics.Test.Internal.html#rankUnsorted"><span class="hs-identifier hs-var">rankUnsorted</span></a></span><span> </span><span class="annot"><span class="annottext">v b
+</span><a href="#local-6989586621679232416"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679232417"><span class="annot"><span class="annottext">nx :: Int
+</span><a href="#local-6989586621679232417"><span class="hs-identifier hs-var hs-var">nx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v a -&gt; Int
+forall (v :: * -&gt; *) a. Vector v a =&gt; v a -&gt; Int
+</span><span class="hs-identifier hs-var">G.length</span></span><span> </span><span class="annot"><span class="annottext">v a
+</span><a href="#local-6989586621679232415"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679232419"><span class="annot"><span class="annottext">ny :: Int
+</span><a href="#local-6989586621679232419"><span class="hs-identifier hs-var hs-var">ny</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v b -&gt; Int
+forall (v :: * -&gt; *) a. Vector v a =&gt; v a -&gt; Int
+</span><span class="hs-identifier hs-var">G.length</span></span><span> </span><span class="annot"><span class="annottext">v b
+</span><a href="#local-6989586621679232416"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-93"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#spearman2"><span class="hs-pragma hs-type">spearman2</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><span class="hs-comment">-- | compute pairwise Spearman correlation between rows of a matrix</span></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Statistics.Correlation.html#spearmanMatByRow"><span class="hs-identifier hs-type">spearmanMatByRow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Matrix</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Matrix</span></span><span>
+</span><span id="line-97"></span><span id="spearmanMatByRow"><span class="annot"><span class="annottext">spearmanMatByRow :: Matrix -&gt; Matrix
+</span><a href="Statistics.Correlation.html#spearmanMatByRow"><span class="hs-identifier hs-var hs-var">spearmanMatByRow</span></a></span></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Matrix -&gt; Matrix
+</span><a href="Statistics.Correlation.html#pearsonMatByRow"><span class="hs-identifier hs-var">pearsonMatByRow</span></a></span><span> </span><span class="annot"><span class="annottext">(Matrix -&gt; Matrix) -&gt; (Matrix -&gt; Matrix) -&gt; Matrix -&gt; Matrix
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Vector] -&gt; Matrix
+</span><span class="hs-identifier hs-var">fromRows</span></span><span> </span><span class="annot"><span class="annottext">([Vector] -&gt; Matrix) -&gt; (Matrix -&gt; [Vector]) -&gt; Matrix -&gt; Matrix
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Vector -&gt; Vector) -&gt; [Vector] -&gt; [Vector]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Vector -&gt; Vector
+forall a (v :: * -&gt; *).
+(Ord a, Vector v a, Vector v Int, Vector v (Int, a)) =&gt;
+v a -&gt; Vector
+</span><a href="Statistics.Test.Internal.html#rankUnsorted"><span class="hs-identifier hs-var">rankUnsorted</span></a></span><span> </span><span class="annot"><span class="annottext">([Vector] -&gt; [Vector])
+-&gt; (Matrix -&gt; [Vector]) -&gt; Matrix -&gt; [Vector]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Matrix -&gt; [Vector]
+</span><span class="hs-identifier hs-var">toRows</span></span><span>
+</span><span id="line-99"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Statistics.Correlation.html#spearmanMatByRow"><span class="hs-pragma hs-type">spearmanMatByRow</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-100"></span></pre></body></html>

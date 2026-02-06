@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Chan.Unagi</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span class="annot"><span class="hs-comment">{- | General-purpose concurrent FIFO queue. If you are trying to send messages
+   of a primitive unboxed type, you may wish to use
+   &quot;Control.Concurrent.Chan.Unagi.Unboxed&quot; which should be slightly faster and
+   perform better when a queue grows very large. If you need a bounded queue,
+   see &quot;Control.Concurrent.Chan.Unagi.Bounded&quot;. And if your application doesn't
+   require blocking reads, or is single-producer or single-consumer, then
+   &quot;Control.Concurrent.Chan.Unagi.NoBlocking&quot; will offer lowest latency.
+ -}</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Creating channels</span></span><span>
+</span><span id="line-11"></span><span>      </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.html#newChan"><span class="hs-identifier">newChan</span></a></span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier">InChan</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier">OutChan</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Channel operations</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Reading</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChan"><span class="hs-identifier">readChan</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChanOnException"><span class="hs-identifier">readChanOnException</span></a></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#tryReadChan"><span class="hs-identifier">tryReadChan</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier">Element</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.html#getChanContents"><span class="hs-identifier">getChanContents</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Writing</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#writeChan"><span class="hs-identifier">writeChan</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.html#writeList2Chan"><span class="hs-identifier">writeList2Chan</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Broadcasting</span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#dupChan"><span class="hs-identifier">dupChan</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- TODO additonal functions:</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--   - write functions optimized for single-writer</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--   - faster write/read-many that increments counter by N</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html"><span class="hs-identifier">Control.Concurrent.Chan.Unagi.Internal</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html"><span class="hs-identifier">Control.Concurrent.Chan.Unagi.NoBlocking.Types</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- For 'writeList2Chan', as in vanilla Chan</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Unsafe.html"><span class="hs-identifier">System.IO.Unsafe</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Unsafe.html#unsafeInterleaveIO"><span class="hs-identifier">unsafeInterleaveIO</span></a></span><span> </span><span class="hs-special">)</span><span> </span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><span class="hs-comment">-- | Create a new channel, returning its write and read ends.</span></span><span>
+</span><span id="line-37"></span><span id="local-6989586621679053925"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.html#newChan"><span class="hs-identifier hs-type">newChan</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053925"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053925"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-38"></span><span id="newChan"><span class="annot"><span class="annottext">newChan :: forall a. IO (InChan a, OutChan a)
+</span><a href="Control.Concurrent.Chan.Unagi.html#newChan"><span class="hs-identifier hs-var hs-var">newChan</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO (InChan a, OutChan a)
+forall a. Int -&gt; IO (InChan a, OutChan a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#newChanStarting"><span class="hs-identifier hs-var">newChanStarting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- lets us test counter overflow in tests and normal course of operation</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Return a lazy infinite list representing the contents of the supplied</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- OutChan, much like System.IO.hGetContents.</span><span>
+</span><span id="line-43"></span><span id="local-6989586621679053932"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.html#getChanContents"><span class="hs-identifier hs-type">getChanContents</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053932"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679053932"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-44"></span><span id="getChanContents"><span class="annot"><span class="annottext">getChanContents :: forall a. OutChan a -&gt; IO [a]
+</span><a href="Control.Concurrent.Chan.Unagi.html#getChanContents"><span class="hs-identifier hs-var hs-var">getChanContents</span></a></span></span><span> </span><span id="local-6989586621679053974"><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679053974"><span class="hs-identifier hs-var">ch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO [a] -&gt; IO [a]
+forall a. IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Unsafe.html#unsafeInterleaveIO"><span class="hs-identifier hs-var">unsafeInterleaveIO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>                            </span><span id="local-6989586621679053975"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053975"><span class="hs-identifier hs-var">x</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Unsafe.html#unsafeInterleaveIO"><span class="hs-identifier hs-var">unsafeInterleaveIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan a -&gt; IO a
+forall a. OutChan a -&gt; IO a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChan"><span class="hs-identifier hs-var">readChan</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679053974"><span class="hs-identifier hs-var">ch</span></a></span><span>
+</span><span id="line-46"></span><span>                            </span><span id="local-6989586621679053976"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679053976"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OutChan a -&gt; IO [a]
+forall a. OutChan a -&gt; IO [a]
+</span><a href="Control.Concurrent.Chan.Unagi.html#getChanContents"><span class="hs-identifier hs-var">getChanContents</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679053974"><span class="hs-identifier hs-var">ch</span></a></span><span>
+</span><span id="line-47"></span><span>                            </span><span class="annot"><span class="annottext">[a] -&gt; IO [a]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053975"><span class="hs-identifier hs-var">x</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679053976"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>                        </span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | Write an entire list of items to a chan type. Writes here from multiple</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- threads may be interleaved, and infinite lists are supported.</span><span>
+</span><span id="line-52"></span><span id="local-6989586621679053942"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.html#writeList2Chan"><span class="hs-identifier hs-type">writeList2Chan</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053942"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679053942"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-53"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.html#writeList2Chan"><span class="hs-pragma hs-type">writeList2Chan</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-54"></span><span id="writeList2Chan"><span class="annot"><span class="annottext">writeList2Chan :: forall a. InChan a -&gt; [a] -&gt; IO ()
+</span><a href="Control.Concurrent.Chan.Unagi.html#writeList2Chan"><span class="hs-identifier hs-var hs-var">writeList2Chan</span></a></span></span><span> </span><span id="local-6989586621679053980"><span class="annot"><span class="annottext">InChan a
+</span><a href="#local-6989586621679053980"><span class="hs-identifier hs-var">ch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[IO ()] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Foldable t, Monad m) =&gt;
+t (m a) -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sequence_"><span class="hs-identifier hs-var">sequence_</span></a></span><span> </span><span class="annot"><span class="annottext">([IO ()] -&gt; IO ()) -&gt; ([a] -&gt; [IO ()]) -&gt; [a] -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; IO ()) -&gt; [a] -&gt; [IO ()]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InChan a -&gt; a -&gt; IO ()
+forall a. InChan a -&gt; a -&gt; IO ()
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#writeChan"><span class="hs-identifier hs-var">writeChan</span></a></span><span> </span><span class="annot"><span class="annottext">InChan a
+</span><a href="#local-6989586621679053980"><span class="hs-identifier hs-var">ch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span></pre></body></html>

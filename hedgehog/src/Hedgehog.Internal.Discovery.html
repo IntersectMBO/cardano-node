@@ -1,0 +1,1173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.Discovery</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#PropertySource"><span class="hs-identifier">PropertySource</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#readProperties"><span class="hs-identifier">readProperties</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#findProperties"><span class="hs-identifier">findProperties</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#readDeclaration"><span class="hs-identifier">readDeclaration</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier">Pos</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Position"><span class="hs-identifier">Position</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#IOException"><span class="hs-identifier">IOException</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#handle"><span class="hs-identifier">handle</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Char</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Ord.html"><span class="hs-identifier">Data.Ord</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ord</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Property.html"><span class="hs-identifier">Hedgehog.Internal.Property</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Property.html#PropertyName"><span class="hs-identifier">PropertyName</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Source.html"><span class="hs-identifier">Hedgehog.Internal.Source</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Source.html#LineNo"><span class="hs-identifier">LineNo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Source.html#ColumnNo"><span class="hs-identifier">ColumnNo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if __GLASGOW_HASKELL__ &lt; 808
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Semigroup</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Semigroup</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-32"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- Property Extraction</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">newtype</span><span> </span><span id="PropertySource"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#PropertySource"><span class="hs-identifier hs-var">PropertySource</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>  </span><span id="PropertySource"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#PropertySource"><span class="hs-identifier hs-var">PropertySource</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-37"></span><span>      </span><span id="propertySource"><span class="annot"><span class="annottext">PropertySource -&gt; Pos String
+</span><a href="Hedgehog.Internal.Discovery.html#propertySource"><span class="hs-identifier hs-var hs-var">propertySource</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679489238"><span id="local-6989586621679489244"><span class="annot"><span class="annottext">PropertySource -&gt; PropertySource -&gt; Bool
+(PropertySource -&gt; PropertySource -&gt; Bool)
+-&gt; (PropertySource -&gt; PropertySource -&gt; Bool) -&gt; Eq PropertySource
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PropertySource -&gt; PropertySource -&gt; Bool
+== :: PropertySource -&gt; PropertySource -&gt; Bool
+$c/= :: PropertySource -&gt; PropertySource -&gt; Bool
+/= :: PropertySource -&gt; PropertySource -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489254"><span id="local-6989586621679489259"><span id="local-6989586621679489263"><span id="local-6989586621679489267"><span id="local-6989586621679489271"><span id="local-6989586621679489275"><span id="local-6989586621679489279"><span class="annot"><span class="annottext">Eq PropertySource
+Eq PropertySource =&gt;
+(PropertySource -&gt; PropertySource -&gt; Ordering)
+-&gt; (PropertySource -&gt; PropertySource -&gt; Bool)
+-&gt; (PropertySource -&gt; PropertySource -&gt; Bool)
+-&gt; (PropertySource -&gt; PropertySource -&gt; Bool)
+-&gt; (PropertySource -&gt; PropertySource -&gt; Bool)
+-&gt; (PropertySource -&gt; PropertySource -&gt; PropertySource)
+-&gt; (PropertySource -&gt; PropertySource -&gt; PropertySource)
+-&gt; Ord PropertySource
+PropertySource -&gt; PropertySource -&gt; Bool
+PropertySource -&gt; PropertySource -&gt; Ordering
+PropertySource -&gt; PropertySource -&gt; PropertySource
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: PropertySource -&gt; PropertySource -&gt; Ordering
+compare :: PropertySource -&gt; PropertySource -&gt; Ordering
+$c&lt; :: PropertySource -&gt; PropertySource -&gt; Bool
+&lt; :: PropertySource -&gt; PropertySource -&gt; Bool
+$c&lt;= :: PropertySource -&gt; PropertySource -&gt; Bool
+&lt;= :: PropertySource -&gt; PropertySource -&gt; Bool
+$c&gt; :: PropertySource -&gt; PropertySource -&gt; Bool
+&gt; :: PropertySource -&gt; PropertySource -&gt; Bool
+$c&gt;= :: PropertySource -&gt; PropertySource -&gt; Bool
+&gt;= :: PropertySource -&gt; PropertySource -&gt; Bool
+$cmax :: PropertySource -&gt; PropertySource -&gt; PropertySource
+max :: PropertySource -&gt; PropertySource -&gt; PropertySource
+$cmin :: PropertySource -&gt; PropertySource -&gt; PropertySource
+min :: PropertySource -&gt; PropertySource -&gt; PropertySource
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489285"><span id="local-6989586621679489291"><span id="local-6989586621679489295"><span class="annot"><span class="annottext">Int -&gt; PropertySource -&gt; ShowS
+[PropertySource] -&gt; ShowS
+PropertySource -&gt; String
+(Int -&gt; PropertySource -&gt; ShowS)
+-&gt; (PropertySource -&gt; String)
+-&gt; ([PropertySource] -&gt; ShowS)
+-&gt; Show PropertySource
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PropertySource -&gt; ShowS
+showsPrec :: Int -&gt; PropertySource -&gt; ShowS
+$cshow :: PropertySource -&gt; String
+show :: PropertySource -&gt; String
+$cshowList :: [PropertySource] -&gt; ShowS
+showList :: [PropertySource] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span id="local-6989586621679489120"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#readProperties"><span class="hs-identifier hs-type">readProperties</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489120"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679489120"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#PropertyName"><span class="hs-identifier hs-type">PropertyName</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#PropertySource"><span class="hs-identifier hs-type">PropertySource</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-41"></span><span id="readProperties"><span class="annot"><span class="annottext">readProperties :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+String -&gt; String -&gt; m (Map PropertyName PropertySource)
+</span><a href="Hedgehog.Internal.Discovery.html#readProperties"><span class="hs-identifier hs-var hs-var">readProperties</span></a></span></span><span> </span><span id="local-6989586621679489311"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489311"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679489312"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489312"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String -&gt; Map PropertyName PropertySource
+</span><a href="Hedgehog.Internal.Discovery.html#findProperties"><span class="hs-identifier hs-var">findProperties</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489311"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489312"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Map PropertyName PropertySource)
+-&gt; m String -&gt; m (Map PropertyName PropertySource)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO String -&gt; m String
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; IO String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#readFile"><span class="hs-identifier hs-var">readFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489312"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span id="local-6989586621679489132"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#readDeclaration"><span class="hs-identifier hs-type">readDeclaration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489132"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Source.html#LineNo"><span class="hs-identifier hs-type">LineNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679489132"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-45"></span><span id="readDeclaration"><span class="annot"><span class="annottext">readDeclaration :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+String -&gt; LineNo -&gt; m (Maybe (String, Pos String))
+</span><a href="Hedgehog.Internal.Discovery.html#readDeclaration"><span class="hs-identifier hs-var hs-var">readDeclaration</span></a></span></span><span> </span><span id="local-6989586621679489331"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489331"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621679489332"><span class="annot"><span class="annottext">LineNo
+</span><a href="#local-6989586621679489332"><span class="hs-identifier hs-var">line</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679489333"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679489333"><span class="hs-identifier hs-var">mfile</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Maybe String) -&gt; m (Maybe String)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe String) -&gt; m (Maybe String))
+-&gt; IO (Maybe String) -&gt; m (Maybe String)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO (Maybe String)
+forall (m :: * -&gt; *). MonadIO m =&gt; String -&gt; m (Maybe String)
+</span><a href="Hedgehog.Internal.Discovery.html#readFileSafe"><span class="hs-identifier hs-var">readFileSafe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489331"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">Maybe (String, Pos String) -&gt; m (Maybe (String, Pos String))
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (String, Pos String) -&gt; m (Maybe (String, Pos String)))
+-&gt; Maybe (String, Pos String) -&gt; m (Maybe (String, Pos String))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621679489335"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489335"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679489333"><span class="hs-identifier hs-var">mfile</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">[(String, Pos String)] -&gt; Maybe (String, Pos String)
+forall a. [a] -&gt; Maybe a
+</span><a href="Hedgehog.Internal.Discovery.html#takeHead"><span class="hs-identifier hs-var">takeHead</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, Pos String)] -&gt; Maybe (String, Pos String))
+-&gt; ([(String, Pos String)] -&gt; [(String, Pos String)])
+-&gt; [(String, Pos String)]
+-&gt; Maybe (String, Pos String)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">((String, Pos String) -&gt; (String, Pos String) -&gt; Ordering)
+-&gt; [(String, Pos String)] -&gt; [(String, Pos String)]
+forall a. (a -&gt; a -&gt; Ordering) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#sortBy"><span class="hs-identifier hs-var">List.sortBy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((String, Pos String) -&gt; Down LineNo)
+-&gt; (String, Pos String) -&gt; (String, Pos String) -&gt; Ordering
+forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Ord.html#comparing"><span class="hs-identifier hs-var">Ord.comparing</span></a></span><span> </span><span class="annot"><span class="annottext">(((String, Pos String) -&gt; Down LineNo)
+ -&gt; (String, Pos String) -&gt; (String, Pos String) -&gt; Ordering)
+-&gt; ((String, Pos String) -&gt; Down LineNo)
+-&gt; (String, Pos String)
+-&gt; (String, Pos String)
+-&gt; Ordering
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo -&gt; Down LineNo
+forall a. a -&gt; Down a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Ord.html#Down"><span class="hs-identifier hs-var">Ord.Down</span></a></span><span> </span><span class="annot"><span class="annottext">(LineNo -&gt; Down LineNo)
+-&gt; ((String, Pos String) -&gt; LineNo)
+-&gt; (String, Pos String)
+-&gt; Down LineNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Position -&gt; LineNo
+</span><a href="Hedgehog.Internal.Discovery.html#posLine"><span class="hs-identifier hs-var">posLine</span></a></span><span> </span><span class="annot"><span class="annottext">(Position -&gt; LineNo)
+-&gt; ((String, Pos String) -&gt; Position)
+-&gt; (String, Pos String)
+-&gt; LineNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Pos String -&gt; Position
+forall a. Pos a -&gt; Position
+</span><a href="Hedgehog.Internal.Discovery.html#posPostion"><span class="hs-identifier hs-var">posPostion</span></a></span><span> </span><span class="annot"><span class="annottext">(Pos String -&gt; Position)
+-&gt; ((String, Pos String) -&gt; Pos String)
+-&gt; (String, Pos String)
+-&gt; Position
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(String, Pos String) -&gt; Pos String
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(String, Pos String)] -&gt; [(String, Pos String)])
+-&gt; ([(String, Pos String)] -&gt; [(String, Pos String)])
+-&gt; [(String, Pos String)]
+-&gt; [(String, Pos String)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">((String, Pos String) -&gt; Bool)
+-&gt; [(String, Pos String)] -&gt; [(String, Pos String)]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">LineNo -&gt; LineNo -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo
+</span><a href="#local-6989586621679489332"><span class="hs-identifier hs-var">line</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(LineNo -&gt; Bool)
+-&gt; ((String, Pos String) -&gt; LineNo) -&gt; (String, Pos String) -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Position -&gt; LineNo
+</span><a href="Hedgehog.Internal.Discovery.html#posLine"><span class="hs-identifier hs-var">posLine</span></a></span><span> </span><span class="annot"><span class="annottext">(Position -&gt; LineNo)
+-&gt; ((String, Pos String) -&gt; Position)
+-&gt; (String, Pos String)
+-&gt; LineNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Pos String -&gt; Position
+forall a. Pos a -&gt; Position
+</span><a href="Hedgehog.Internal.Discovery.html#posPostion"><span class="hs-identifier hs-var">posPostion</span></a></span><span> </span><span class="annot"><span class="annottext">(Pos String -&gt; Position)
+-&gt; ((String, Pos String) -&gt; Pos String)
+-&gt; (String, Pos String)
+-&gt; Position
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(String, Pos String) -&gt; Pos String
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(String, Pos String)] -&gt; Maybe (String, Pos String))
+-&gt; [(String, Pos String)] -&gt; Maybe (String, Pos String)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Map String (Pos String) -&gt; [(String, Pos String)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Map String (Pos String)
+</span><a href="Hedgehog.Internal.Discovery.html#findDeclarations"><span class="hs-identifier hs-var">findDeclarations</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489331"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489335"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span id="local-6989586621679489139"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#readFileSafe"><span class="hs-identifier hs-type">readFileSafe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489139"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679489139"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-55"></span><span id="readFileSafe"><span class="annot"><span class="annottext">readFileSafe :: forall (m :: * -&gt; *). MonadIO m =&gt; String -&gt; m (Maybe String)
+</span><a href="Hedgehog.Internal.Discovery.html#readFileSafe"><span class="hs-identifier hs-var hs-var">readFileSafe</span></a></span></span><span> </span><span id="local-6989586621679489355"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489355"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">IO (Maybe String) -&gt; m (Maybe String)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe String) -&gt; m (Maybe String))
+-&gt; IO (Maybe String) -&gt; m (Maybe String)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">(IOException -&gt; IO (Maybe String))
+-&gt; IO (Maybe String) -&gt; IO (Maybe String)
+forall e a. Exception e =&gt; (e -&gt; IO a) -&gt; IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#handle"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">IOException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#IOException"><span class="hs-identifier hs-type">IOException</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; IO (Maybe String)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Maybe String) -&gt; IO String -&gt; IO (Maybe String)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#readFile"><span class="hs-identifier hs-var">readFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489355"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span id="local-6989586621679489141"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#takeHead"><span class="hs-identifier hs-type">takeHead</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679489141"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489141"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-60"></span><span id="takeHead"><span class="annot"><span class="annottext">takeHead :: forall a. [a] -&gt; Maybe a
+</span><a href="Hedgehog.Internal.Discovery.html#takeHead"><span class="hs-identifier hs-var hs-var">takeHead</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679489356"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489356"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489356"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#findProperties"><span class="hs-identifier hs-type">findProperties</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#PropertyName"><span class="hs-identifier hs-type">PropertyName</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#PropertySource"><span class="hs-identifier hs-type">PropertySource</span></a></span><span>
+</span><span id="line-67"></span><span id="findProperties"><span class="annot"><span class="annottext">findProperties :: String -&gt; String -&gt; String -&gt; Map PropertyName PropertySource
+</span><a href="Hedgehog.Internal.Discovery.html#findProperties"><span class="hs-identifier hs-var hs-var">findProperties</span></a></span></span><span> </span><span id="local-6989586621679489357"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489357"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679489358"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489358"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">(Pos String -&gt; PropertySource)
+-&gt; Map PropertyName (Pos String) -&gt; Map PropertyName PropertySource
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#map"><span class="hs-identifier hs-var">Map.map</span></a></span><span> </span><span class="annot"><span class="annottext">Pos String -&gt; PropertySource
+</span><a href="Hedgehog.Internal.Discovery.html#PropertySource"><span class="hs-identifier hs-var">PropertySource</span></a></span><span> </span><span class="annot"><span class="annottext">(Map PropertyName (Pos String) -&gt; Map PropertyName PropertySource)
+-&gt; (String -&gt; Map PropertyName (Pos String))
+-&gt; String
+-&gt; Map PropertyName PropertySource
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; PropertyName)
+-&gt; Map String (Pos String) -&gt; Map PropertyName (Pos String)
+forall k1 k2 a. (k1 -&gt; k2) -&gt; Map k1 a -&gt; Map k2 a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#mapKeysMonotonic"><span class="hs-identifier hs-var">Map.mapKeysMonotonic</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; PropertyName
+</span><a href="Hedgehog.Internal.Property.html#PropertyName"><span class="hs-identifier hs-var">PropertyName</span></a></span><span> </span><span class="annot"><span class="annottext">(Map String (Pos String) -&gt; Map PropertyName (Pos String))
+-&gt; (String -&gt; Map String (Pos String))
+-&gt; String
+-&gt; Map PropertyName (Pos String)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; Pos String -&gt; Bool)
+-&gt; Map String (Pos String) -&gt; Map String (Pos String)
+forall k a. (k -&gt; a -&gt; Bool) -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#filterWithKey"><span class="hs-identifier hs-var">Map.filterWithKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679489363"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489363"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="annot"><span class="annottext">Pos String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#isPrefixOf"><span class="hs-identifier hs-var">List.isPrefixOf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489357"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489363"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Map String (Pos String) -&gt; Map String (Pos String))
+-&gt; (String -&gt; Map String (Pos String))
+-&gt; String
+-&gt; Map String (Pos String)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Map String (Pos String)
+</span><a href="Hedgehog.Internal.Discovery.html#findDeclarations"><span class="hs-identifier hs-var">findDeclarations</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489358"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#findDeclarations"><span class="hs-identifier hs-type">findDeclarations</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span id="findDeclarations"><span class="annot"><span class="annottext">findDeclarations :: String -&gt; String -&gt; Map String (Pos String)
+</span><a href="Hedgehog.Internal.Discovery.html#findDeclarations"><span class="hs-identifier hs-var hs-var">findDeclarations</span></a></span></span><span> </span><span id="local-6989586621679489365"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489365"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">[Classified (Pos Char)] -&gt; Map String (Pos String)
+</span><a href="Hedgehog.Internal.Discovery.html#declarations"><span class="hs-identifier hs-var">declarations</span></a></span><span> </span><span class="annot"><span class="annottext">([Classified (Pos Char)] -&gt; Map String (Pos String))
+-&gt; (String -&gt; [Classified (Pos Char)])
+-&gt; String
+-&gt; Map String (Pos String)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">[Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="Hedgehog.Internal.Discovery.html#classified"><span class="hs-identifier hs-var">classified</span></a></span><span> </span><span class="annot"><span class="annottext">([Pos Char] -&gt; [Classified (Pos Char)])
+-&gt; (String -&gt; [Pos Char]) -&gt; String -&gt; [Classified (Pos Char)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; String -&gt; [Pos Char]
+</span><a href="Hedgehog.Internal.Discovery.html#positioned"><span class="hs-identifier hs-var">positioned</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489365"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- Declaration Identification</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#declarations"><span class="hs-identifier hs-type">declarations</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span id="declarations"><span class="annot"><span class="annottext">declarations :: [Classified (Pos Char)] -&gt; Map String (Pos String)
+</span><a href="Hedgehog.Internal.Discovery.html#declarations"><span class="hs-identifier hs-var hs-var">declarations</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679489369"><span class="annot"><span class="annottext">loop :: [Classified (Pos Char)] -&gt; [(String, Pos String)]
+</span><a href="#local-6989586621679489369"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-88"></span><span>      </span><span id="local-6989586621679489370"><span class="annot"><span class="annottext">Classified (Pos Char)
+</span><a href="#local-6989586621679489370"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489371"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489371"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-keyword">let</span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621679489372"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489372"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489373"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489373"><span class="hs-identifier hs-var">zs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>            </span><span class="annot"><span class="annottext">(Classified (Pos Char) -&gt; Bool)
+-&gt; [Classified (Pos Char)]
+-&gt; ([Classified (Pos Char)], [Classified (Pos Char)])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#break"><span class="hs-identifier hs-var">break</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char) -&gt; Bool
+</span><a href="Hedgehog.Internal.Discovery.html#isDeclaration"><span class="hs-identifier hs-var">isDeclaration</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489371"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-keyword">in</span><span>
+</span><span id="line-93"></span><span>          </span><span class="annot"><span class="annottext">Pos String -&gt; (String, Pos String)
+</span><a href="Hedgehog.Internal.Discovery.html#tagWithName"><span class="hs-identifier hs-var">tagWithName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Classified (Pos Char) -&gt; [Classified (Pos Char)] -&gt; Pos String
+</span><a href="Hedgehog.Internal.Discovery.html#forget"><span class="hs-identifier hs-var">forget</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+</span><a href="#local-6989586621679489370"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">([Classified (Pos Char)] -&gt; Pos String)
+-&gt; [Classified (Pos Char)] -&gt; Pos String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+</span><a href="Hedgehog.Internal.Discovery.html#trimEnd"><span class="hs-identifier hs-var">trimEnd</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489372"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String, Pos String)
+-&gt; [(String, Pos String)] -&gt; [(String, Pos String)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)] -&gt; [(String, Pos String)]
+</span><a href="#local-6989586621679489369"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489373"><span class="hs-identifier hs-var">zs</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">(Pos String -&gt; Pos String -&gt; Pos String)
+-&gt; [(String, Pos String)] -&gt; Map String (Pos String)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#fromListWith"><span class="hs-identifier hs-var">Map.fromListWith</span></a></span><span> </span><span class="annot"><span class="annottext">Pos String -&gt; Pos String -&gt; Pos String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, Pos String)] -&gt; Map String (Pos String))
+-&gt; ([Classified (Pos Char)] -&gt; [(String, Pos String)])
+-&gt; [Classified (Pos Char)]
+-&gt; Map String (Pos String)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)] -&gt; [(String, Pos String)]
+</span><a href="#local-6989586621679489369"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">([Classified (Pos Char)] -&gt; [(String, Pos String)])
+-&gt; ([Classified (Pos Char)] -&gt; [Classified (Pos Char)])
+-&gt; [Classified (Pos Char)]
+-&gt; [(String, Pos String)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Classified (Pos Char) -&gt; Bool)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#dropWhile"><span class="hs-identifier hs-var">dropWhile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool)
+-&gt; (Classified (Pos Char) -&gt; Bool) -&gt; Classified (Pos Char) -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char) -&gt; Bool
+</span><a href="Hedgehog.Internal.Discovery.html#isDeclaration"><span class="hs-identifier hs-var">isDeclaration</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#trimEnd"><span class="hs-identifier hs-type">trimEnd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-98"></span><span id="trimEnd"><span class="annot"><span class="annottext">trimEnd :: [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+</span><a href="Hedgehog.Internal.Discovery.html#trimEnd"><span class="hs-identifier hs-var hs-var">trimEnd</span></a></span></span><span> </span><span id="local-6989586621679489382"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489382"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679489383"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489383"><span class="hs-identifier hs-var">space0</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489384"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489384"><span class="hs-identifier hs-var">code</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">(Classified (Pos Char) -&gt; Bool)
+-&gt; [Classified (Pos Char)]
+-&gt; ([Classified (Pos Char)], [Classified (Pos Char)])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#span"><span class="hs-identifier hs-var">span</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char) -&gt; Bool
+</span><a href="Hedgehog.Internal.Discovery.html#isWhitespace"><span class="hs-identifier hs-var">isWhitespace</span></a></span><span> </span><span class="annot"><span class="annottext">([Classified (Pos Char)]
+ -&gt; ([Classified (Pos Char)], [Classified (Pos Char)]))
+-&gt; [Classified (Pos Char)]
+-&gt; ([Classified (Pos Char)], [Classified (Pos Char)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489382"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679489389"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489389"><span class="hs-identifier hs-var">line_tail0</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489390"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489390"><span class="hs-identifier hs-var">space</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">(Classified (Pos Char) -&gt; Bool)
+-&gt; [Classified (Pos Char)]
+-&gt; ([Classified (Pos Char)], [Classified (Pos Char)])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#span"><span class="hs-identifier hs-var">span</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679489393"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489393"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489393"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Classified (Pos Char)]
+ -&gt; ([Classified (Pos Char)], [Classified (Pos Char)]))
+-&gt; [Classified (Pos Char)]
+-&gt; ([Classified (Pos Char)], [Classified (Pos Char)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">[Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489383"><span class="hs-identifier hs-var">space0</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679489395"><span class="annot"><span class="annottext">line_tail :: [Classified (Pos Char)]
+</span><a href="#local-6989586621679489395"><span class="hs-identifier hs-var hs-var">line_tail</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489390"><span class="hs-identifier hs-var">space</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>          </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489389"><span class="hs-identifier hs-var">line_tail0</span></a></span><span>
+</span><span id="line-111"></span><span>        </span><span id="local-6989586621679489396"><span class="annot"><span class="annottext">Classified (Pos Char)
+</span><a href="#local-6989586621679489396"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-112"></span><span>          </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489389"><span class="hs-identifier hs-var">line_tail0</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Classified (Pos Char)
+</span><a href="#local-6989586621679489396"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">[Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489384"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489395"><span class="hs-identifier hs-var">line_tail</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#isWhitespace"><span class="hs-identifier hs-type">isWhitespace</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-117"></span><span id="isWhitespace"><span class="annot"><span class="annottext">isWhitespace :: Classified (Pos Char) -&gt; Bool
+</span><a href="Hedgehog.Internal.Discovery.html#isWhitespace"><span class="hs-identifier hs-var hs-var">isWhitespace</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span id="local-6989586621679489397"><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621679489397"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679489398"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489398"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621679489397"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Class -&gt; Class -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><a href="Hedgehog.Internal.Discovery.html#Comment"><span class="hs-identifier hs-var">Comment</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isSpace"><span class="hs-identifier hs-var">Char.isSpace</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489398"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#tagWithName"><span class="hs-identifier hs-type">tagWithName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span id="tagWithName"><span class="annot"><span class="annottext">tagWithName :: Pos String -&gt; (String, Pos String)
+</span><a href="Hedgehog.Internal.Discovery.html#tagWithName"><span class="hs-identifier hs-var hs-var">tagWithName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span id="local-6989586621679489402"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489402"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679489403"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489403"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShowS
+</span><a href="Hedgehog.Internal.Discovery.html#takeName"><span class="hs-identifier hs-var">takeName</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489403"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Position -&gt; String -&gt; Pos String
+forall a. Position -&gt; a -&gt; Pos a
+</span><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489402"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489403"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#takeName"><span class="hs-identifier hs-type">takeName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-126"></span><span id="takeName"><span class="annot"><span class="annottext">takeName :: ShowS
+</span><a href="Hedgehog.Internal.Discovery.html#takeName"><span class="hs-identifier hs-var hs-var">takeName</span></a></span></span><span> </span><span id="local-6989586621679489405"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489405"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#words"><span class="hs-identifier hs-var">words</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489405"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679489407"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489407"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489407"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#forget"><span class="hs-identifier hs-type">forget</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-134"></span><span id="forget"><span class="annot"><span class="annottext">forget :: Classified (Pos Char) -&gt; [Classified (Pos Char)] -&gt; Pos String
+</span><a href="Hedgehog.Internal.Discovery.html#forget"><span class="hs-identifier hs-var hs-var">forget</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span id="local-6989586621679489408"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489408"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679489409"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489409"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679489410"><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489410"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><span class="annottext">Position -&gt; String -&gt; Pos String
+forall a. Position -&gt; a -&gt; Pos a
+</span><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489408"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Pos String) -&gt; String -&gt; Pos String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489409"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(Classified (Pos Char) -&gt; Char)
+-&gt; [Classified (Pos Char)] -&gt; String
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pos Char -&gt; Char
+forall a. Pos a -&gt; a
+</span><a href="Hedgehog.Internal.Discovery.html#posValue"><span class="hs-identifier hs-var">posValue</span></a></span><span> </span><span class="annot"><span class="annottext">(Pos Char -&gt; Char)
+-&gt; (Classified (Pos Char) -&gt; Pos Char)
+-&gt; Classified (Pos Char)
+-&gt; Char
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char) -&gt; Pos Char
+forall a. Classified a -&gt; a
+</span><a href="Hedgehog.Internal.Discovery.html#classifiedValue"><span class="hs-identifier hs-var">classifiedValue</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Classified (Pos Char)]
+</span><a href="#local-6989586621679489410"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#isDeclaration"><span class="hs-identifier hs-type">isDeclaration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-139"></span><span id="isDeclaration"><span class="annot"><span class="annottext">isDeclaration :: Classified (Pos Char) -&gt; Bool
+</span><a href="Hedgehog.Internal.Discovery.html#isDeclaration"><span class="hs-identifier hs-var hs-var">isDeclaration</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span id="local-6989586621679489413"><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621679489413"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span id="local-6989586621679489414"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489414"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679489415"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489415"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621679489413"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Class -&gt; Class -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><a href="Hedgehog.Internal.Discovery.html#NotComment"><span class="hs-identifier hs-var">NotComment</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><span class="annottext">Position -&gt; ColumnNo
+</span><a href="Hedgehog.Internal.Discovery.html#posColumn"><span class="hs-identifier hs-var">posColumn</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489414"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnNo -&gt; ColumnNo -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnNo
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isLower"><span class="hs-identifier hs-var">Char.isLower</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489415"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489415"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- Comment Classification</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-keyword">data</span><span> </span><span id="Class"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Class"><span class="hs-identifier hs-var">Class</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-148"></span><span>    </span><span id="NotComment"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#NotComment"><span class="hs-identifier hs-var">NotComment</span></a></span></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Comment"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Comment"><span class="hs-identifier hs-var">Comment</span></a></span></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679489421"><span id="local-6989586621679489423"><span class="annot"><span class="annottext">Class -&gt; Class -&gt; Bool
+(Class -&gt; Class -&gt; Bool) -&gt; (Class -&gt; Class -&gt; Bool) -&gt; Eq Class
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Class -&gt; Class -&gt; Bool
+== :: Class -&gt; Class -&gt; Bool
+$c/= :: Class -&gt; Class -&gt; Bool
+/= :: Class -&gt; Class -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489428"><span id="local-6989586621679489430"><span id="local-6989586621679489432"><span id="local-6989586621679489436"><span id="local-6989586621679489439"><span id="local-6989586621679489442"><span id="local-6989586621679489445"><span class="annot"><span class="annottext">Eq Class
+Eq Class =&gt;
+(Class -&gt; Class -&gt; Ordering)
+-&gt; (Class -&gt; Class -&gt; Bool)
+-&gt; (Class -&gt; Class -&gt; Bool)
+-&gt; (Class -&gt; Class -&gt; Bool)
+-&gt; (Class -&gt; Class -&gt; Bool)
+-&gt; (Class -&gt; Class -&gt; Class)
+-&gt; (Class -&gt; Class -&gt; Class)
+-&gt; Ord Class
+Class -&gt; Class -&gt; Bool
+Class -&gt; Class -&gt; Ordering
+Class -&gt; Class -&gt; Class
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Class -&gt; Class -&gt; Ordering
+compare :: Class -&gt; Class -&gt; Ordering
+$c&lt; :: Class -&gt; Class -&gt; Bool
+&lt; :: Class -&gt; Class -&gt; Bool
+$c&lt;= :: Class -&gt; Class -&gt; Bool
+&lt;= :: Class -&gt; Class -&gt; Bool
+$c&gt; :: Class -&gt; Class -&gt; Bool
+&gt; :: Class -&gt; Class -&gt; Bool
+$c&gt;= :: Class -&gt; Class -&gt; Bool
+&gt;= :: Class -&gt; Class -&gt; Bool
+$cmax :: Class -&gt; Class -&gt; Class
+max :: Class -&gt; Class -&gt; Class
+$cmin :: Class -&gt; Class -&gt; Class
+min :: Class -&gt; Class -&gt; Class
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489448"><span id="local-6989586621679489450"><span id="local-6989586621679489454"><span class="annot"><span class="annottext">Int -&gt; Class -&gt; ShowS
+[Class] -&gt; ShowS
+Class -&gt; String
+(Int -&gt; Class -&gt; ShowS)
+-&gt; (Class -&gt; String) -&gt; ([Class] -&gt; ShowS) -&gt; Show Class
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Class -&gt; ShowS
+showsPrec :: Int -&gt; Class -&gt; ShowS
+$cshow :: Class -&gt; String
+show :: Class -&gt; String
+$cshowList :: [Class] -&gt; ShowS
+showList :: [Class] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="hs-keyword">data</span><span> </span><span id="Classified"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-var">Classified</span></a></span></span><span> </span><span id="local-6989586621679489181"><span class="annot"><a href="#local-6989586621679489181"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-153"></span><span>  </span><span id="Classified"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-var">Classified</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-154"></span><span>      </span><span id="_classifiedClass"><span class="annot"><span class="annottext">forall a. Classified a -&gt; Class
+</span><a href="Hedgehog.Internal.Discovery.html#_classifiedClass"><span class="hs-identifier hs-var hs-var">_classifiedClass</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Class"><span class="hs-identifier hs-type">Class</span></a></span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="classifiedValue"><span class="annot"><span class="annottext">forall a. Classified a -&gt; a
+</span><a href="Hedgehog.Internal.Discovery.html#classifiedValue"><span class="hs-identifier hs-var hs-var">classifiedValue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679489181"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679489459"><span id="local-6989586621679489463"><span class="annot"><span class="annottext">Classified a -&gt; Classified a -&gt; Bool
+(Classified a -&gt; Classified a -&gt; Bool)
+-&gt; (Classified a -&gt; Classified a -&gt; Bool) -&gt; Eq (Classified a)
+forall a. Eq a =&gt; Classified a -&gt; Classified a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Classified a -&gt; Classified a -&gt; Bool
+== :: Classified a -&gt; Classified a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Classified a -&gt; Classified a -&gt; Bool
+/= :: Classified a -&gt; Classified a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489471"><span id="local-6989586621679489475"><span id="local-6989586621679489479"><span id="local-6989586621679489483"><span id="local-6989586621679489486"><span id="local-6989586621679489489"><span id="local-6989586621679489492"><span class="annot"><span class="annottext">Eq (Classified a)
+Eq (Classified a) =&gt;
+(Classified a -&gt; Classified a -&gt; Ordering)
+-&gt; (Classified a -&gt; Classified a -&gt; Bool)
+-&gt; (Classified a -&gt; Classified a -&gt; Bool)
+-&gt; (Classified a -&gt; Classified a -&gt; Bool)
+-&gt; (Classified a -&gt; Classified a -&gt; Bool)
+-&gt; (Classified a -&gt; Classified a -&gt; Classified a)
+-&gt; (Classified a -&gt; Classified a -&gt; Classified a)
+-&gt; Ord (Classified a)
+Classified a -&gt; Classified a -&gt; Bool
+Classified a -&gt; Classified a -&gt; Ordering
+Classified a -&gt; Classified a -&gt; Classified a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Classified a)
+forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Bool
+forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Ordering
+forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Classified a
+$ccompare :: forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Ordering
+compare :: Classified a -&gt; Classified a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Bool
+&lt; :: Classified a -&gt; Classified a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Bool
+&lt;= :: Classified a -&gt; Classified a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Bool
+&gt; :: Classified a -&gt; Classified a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Bool
+&gt;= :: Classified a -&gt; Classified a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Classified a
+max :: Classified a -&gt; Classified a -&gt; Classified a
+$cmin :: forall a. Ord a =&gt; Classified a -&gt; Classified a -&gt; Classified a
+min :: Classified a -&gt; Classified a -&gt; Classified a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489497"><span id="local-6989586621679489502"><span id="local-6989586621679489506"><span class="annot"><span class="annottext">Int -&gt; Classified a -&gt; ShowS
+[Classified a] -&gt; ShowS
+Classified a -&gt; String
+(Int -&gt; Classified a -&gt; ShowS)
+-&gt; (Classified a -&gt; String)
+-&gt; ([Classified a] -&gt; ShowS)
+-&gt; Show (Classified a)
+forall a. Show a =&gt; Int -&gt; Classified a -&gt; ShowS
+forall a. Show a =&gt; [Classified a] -&gt; ShowS
+forall a. Show a =&gt; Classified a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Classified a -&gt; ShowS
+showsPrec :: Int -&gt; Classified a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Classified a -&gt; String
+show :: Classified a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Classified a] -&gt; ShowS
+showList :: [Classified a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#classified"><span class="hs-identifier hs-type">classified</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-type">Classified</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-159"></span><span id="classified"><span class="annot"><span class="annottext">classified :: [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="Hedgehog.Internal.Discovery.html#classified"><span class="hs-identifier hs-var hs-var">classified</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-161"></span><span>    </span><span id="local-6989586621679489508"><span class="annot"><span class="annottext">ok :: a -&gt; Classified a
+</span><a href="#local-6989586621679489508"><span class="hs-identifier hs-var hs-var">ok</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-162"></span><span>      </span><span class="annot"><span class="annottext">Class -&gt; a -&gt; Classified a
+forall a. Class -&gt; a -&gt; Classified a
+</span><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-var">Classified</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><a href="Hedgehog.Internal.Discovery.html#NotComment"><span class="hs-identifier hs-var">NotComment</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span>    </span><span id="local-6989586621679489509"><span class="annot"><span class="annottext">ko :: a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var hs-var">ko</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-165"></span><span>      </span><span class="annot"><span class="annottext">Class -&gt; a -&gt; Classified a
+forall a. Class -&gt; a -&gt; Classified a
+</span><a href="Hedgehog.Internal.Discovery.html#Classified"><span class="hs-identifier hs-var">Classified</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><a href="Hedgehog.Internal.Discovery.html#Comment"><span class="hs-identifier hs-var">Comment</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span>    </span><span id="local-6989586621679489522"><span class="annot"><span class="annottext">loop :: a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span id="local-6989586621679489523"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span></span><span> </span><span id="local-6989586621679489524"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-168"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-169"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span>      </span><span id="local-6989586621679489525"><span class="annot"><span class="annottext">x :: Pos Char
+</span><a href="#local-6989586621679489525"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489526"><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489526"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-172"></span><span>        </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489508"><span class="hs-identifier hs-var">ok</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489525"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489526"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>      </span><span id="local-6989586621679489527"><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489527"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489528"><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489528"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-175"></span><span>        </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489527"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span><span> </span><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489528"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span>      </span><span id="local-6989586621679489529"><span class="annot"><span class="annottext">x :: Pos Char
+</span><a href="#local-6989586621679489529"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'{'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489530"><span class="annot"><span class="annottext">y :: Pos Char
+</span><a href="#local-6989586621679489530"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489531"><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489531"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-178"></span><span>        </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489529"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489530"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span><span> </span><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489531"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span>      </span><span id="local-6989586621679489533"><span class="annot"><span class="annottext">x :: Pos Char
+</span><a href="#local-6989586621679489533"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489534"><span class="annot"><span class="annottext">y :: Pos Char
+</span><a href="#local-6989586621679489534"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'}'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489535"><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489535"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-181"></span><span>        </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489533"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489534"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span><span> </span><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489535"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span>      </span><span id="local-6989586621679489537"><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489537"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489538"><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489538"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-184"></span><span>        </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489537"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span><span> </span><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489538"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>      </span><span class="hs-comment">-- FIXME This is not technically correct, we should allow arbitrary runs</span><span>
+</span><span id="line-187"></span><span>      </span><span class="hs-comment">-- FIXME of dashes followed by a symbol character. Here we have only</span><span>
+</span><span id="line-188"></span><span>      </span><span class="hs-comment">-- FIXME allowed two.</span><span>
+</span><span id="line-189"></span><span>      </span><span id="local-6989586621679489539"><span class="annot"><span class="annottext">x :: Pos Char
+</span><a href="#local-6989586621679489539"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489540"><span class="annot"><span class="annottext">y :: Pos Char
+</span><a href="#local-6989586621679489540"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489541"><span class="annot"><span class="annottext">z :: Pos Char
+</span><a href="#local-6989586621679489541"><span class="hs-identifier hs-var">z</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679489542"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489542"><span class="hs-identifier hs-var">zz</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489543"><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489543"><span class="hs-identifier hs-var">xs</span></a></span></span><span>
+</span><span id="line-190"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isSymbol"><span class="hs-identifier hs-var">Char.isSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489542"><span class="hs-identifier hs-var">zz</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>        </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-192"></span><span>          </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489539"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489509"><span class="hs-identifier hs-var">ko</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489540"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489541"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char -&gt; [Pos Char] -&gt; [Pos Char]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489543"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span>      </span><span id="local-6989586621679489545"><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489545"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489546"><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489546"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-195"></span><span>        </span><span class="annot"><span class="annottext">Pos Char -&gt; Classified (Pos Char)
+forall {a}. a -&gt; Classified a
+</span><a href="#local-6989586621679489508"><span class="hs-identifier hs-var">ok</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char
+</span><a href="#local-6989586621679489545"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Classified (Pos Char)
+-&gt; [Classified (Pos Char)] -&gt; [Classified (Pos Char)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489523"><span class="hs-identifier hs-var">nesting</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679489524"><span class="hs-identifier hs-var">in_line</span></a></span><span> </span><span class="annot"><span class="annottext">[Pos Char]
+</span><a href="#local-6989586621679489546"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-197"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+forall {a}.
+(Num a, Ord a) =&gt;
+a -&gt; Bool -&gt; [Pos Char] -&gt; [Classified (Pos Char)]
+</span><a href="#local-6989586621679489522"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- Character Positioning</span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="hs-keyword">data</span><span> </span><span id="Position"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Position"><span class="hs-identifier hs-var">Position</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-203"></span><span>  </span><span id="Position"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Position"><span class="hs-identifier hs-var">Position</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-204"></span><span>      </span><span id="_posPath"><span class="annot"><span class="annottext">Position -&gt; String
+</span><a href="Hedgehog.Internal.Discovery.html#_posPath"><span class="hs-identifier hs-var hs-var">_posPath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="posLine"><span class="annot"><span class="annottext">Position -&gt; LineNo
+</span><a href="Hedgehog.Internal.Discovery.html#posLine"><span class="hs-identifier hs-var hs-var">posLine</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Hedgehog.Internal.Source.html#LineNo"><span class="hs-identifier hs-type">LineNo</span></a></span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="posColumn"><span class="annot"><span class="annottext">Position -&gt; ColumnNo
+</span><a href="Hedgehog.Internal.Discovery.html#posColumn"><span class="hs-identifier hs-var hs-var">posColumn</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Hedgehog.Internal.Source.html#ColumnNo"><span class="hs-identifier hs-type">ColumnNo</span></a></span><span>
+</span><span id="line-207"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679489550"><span id="local-6989586621679489556"><span class="annot"><span class="annottext">Position -&gt; Position -&gt; Bool
+(Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool) -&gt; Eq Position
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Position -&gt; Position -&gt; Bool
+== :: Position -&gt; Position -&gt; Bool
+$c/= :: Position -&gt; Position -&gt; Bool
+/= :: Position -&gt; Position -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489562"><span id="local-6989586621679489568"><span id="local-6989586621679489573"><span id="local-6989586621679489577"><span id="local-6989586621679489580"><span id="local-6989586621679489583"><span id="local-6989586621679489586"><span class="annot"><span class="annottext">Eq Position
+Eq Position =&gt;
+(Position -&gt; Position -&gt; Ordering)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Bool)
+-&gt; (Position -&gt; Position -&gt; Position)
+-&gt; (Position -&gt; Position -&gt; Position)
+-&gt; Ord Position
+Position -&gt; Position -&gt; Bool
+Position -&gt; Position -&gt; Ordering
+Position -&gt; Position -&gt; Position
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Position -&gt; Position -&gt; Ordering
+compare :: Position -&gt; Position -&gt; Ordering
+$c&lt; :: Position -&gt; Position -&gt; Bool
+&lt; :: Position -&gt; Position -&gt; Bool
+$c&lt;= :: Position -&gt; Position -&gt; Bool
+&lt;= :: Position -&gt; Position -&gt; Bool
+$c&gt; :: Position -&gt; Position -&gt; Bool
+&gt; :: Position -&gt; Position -&gt; Bool
+$c&gt;= :: Position -&gt; Position -&gt; Bool
+&gt;= :: Position -&gt; Position -&gt; Bool
+$cmax :: Position -&gt; Position -&gt; Position
+max :: Position -&gt; Position -&gt; Position
+$cmin :: Position -&gt; Position -&gt; Position
+min :: Position -&gt; Position -&gt; Position
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489589"><span id="local-6989586621679489598"><span id="local-6989586621679489602"><span class="annot"><span class="annottext">Int -&gt; Position -&gt; ShowS
+[Position] -&gt; ShowS
+Position -&gt; String
+(Int -&gt; Position -&gt; ShowS)
+-&gt; (Position -&gt; String) -&gt; ([Position] -&gt; ShowS) -&gt; Show Position
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Position -&gt; ShowS
+showsPrec :: Int -&gt; Position -&gt; ShowS
+$cshow :: Position -&gt; String
+show :: Position -&gt; String
+$cshowList :: [Position] -&gt; ShowS
+showList :: [Position] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>
+</span><span id="line-209"></span><span class="hs-keyword">data</span><span> </span><span id="Pos"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span></span><span> </span><span id="local-6989586621679489150"><span class="annot"><a href="#local-6989586621679489150"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-210"></span><span>  </span><span id="Pos"><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-211"></span><span>      </span><span id="posPostion"><span class="annot"><span class="annottext">forall a. Pos a -&gt; Position
+</span><a href="Hedgehog.Internal.Discovery.html#posPostion"><span class="hs-identifier hs-var hs-var">posPostion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Position"><span class="hs-identifier hs-type">Position</span></a></span><span>
+</span><span id="line-212"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="posValue"><span class="annot"><span class="annottext">forall a. Pos a -&gt; a
+</span><a href="Hedgehog.Internal.Discovery.html#posValue"><span class="hs-identifier hs-var hs-var">posValue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679489150"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679489606"><span id="local-6989586621679489610"><span class="annot"><span class="annottext">Pos a -&gt; Pos a -&gt; Bool
+(Pos a -&gt; Pos a -&gt; Bool) -&gt; (Pos a -&gt; Pos a -&gt; Bool) -&gt; Eq (Pos a)
+forall a. Eq a =&gt; Pos a -&gt; Pos a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Pos a -&gt; Pos a -&gt; Bool
+== :: Pos a -&gt; Pos a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Pos a -&gt; Pos a -&gt; Bool
+/= :: Pos a -&gt; Pos a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489617"><span id="local-6989586621679489621"><span id="local-6989586621679489625"><span id="local-6989586621679489628"><span id="local-6989586621679489631"><span id="local-6989586621679489634"><span id="local-6989586621679489637"><span class="annot"><span class="annottext">Eq (Pos a)
+Eq (Pos a) =&gt;
+(Pos a -&gt; Pos a -&gt; Ordering)
+-&gt; (Pos a -&gt; Pos a -&gt; Bool)
+-&gt; (Pos a -&gt; Pos a -&gt; Bool)
+-&gt; (Pos a -&gt; Pos a -&gt; Bool)
+-&gt; (Pos a -&gt; Pos a -&gt; Bool)
+-&gt; (Pos a -&gt; Pos a -&gt; Pos a)
+-&gt; (Pos a -&gt; Pos a -&gt; Pos a)
+-&gt; Ord (Pos a)
+Pos a -&gt; Pos a -&gt; Bool
+Pos a -&gt; Pos a -&gt; Ordering
+Pos a -&gt; Pos a -&gt; Pos a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Pos a)
+forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Bool
+forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Ordering
+forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Pos a
+$ccompare :: forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Ordering
+compare :: Pos a -&gt; Pos a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Bool
+&lt; :: Pos a -&gt; Pos a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Bool
+&lt;= :: Pos a -&gt; Pos a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Bool
+&gt; :: Pos a -&gt; Pos a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Bool
+&gt;= :: Pos a -&gt; Pos a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Pos a
+max :: Pos a -&gt; Pos a -&gt; Pos a
+$cmin :: forall a. Ord a =&gt; Pos a -&gt; Pos a -&gt; Pos a
+min :: Pos a -&gt; Pos a -&gt; Pos a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489641"><span id="local-6989586621679489646"><span id="local-6989586621679489649"><span class="annot"><span class="annottext">Int -&gt; Pos a -&gt; ShowS
+[Pos a] -&gt; ShowS
+Pos a -&gt; String
+(Int -&gt; Pos a -&gt; ShowS)
+-&gt; (Pos a -&gt; String) -&gt; ([Pos a] -&gt; ShowS) -&gt; Show (Pos a)
+forall a. Show a =&gt; Int -&gt; Pos a -&gt; ShowS
+forall a. Show a =&gt; [Pos a] -&gt; ShowS
+forall a. Show a =&gt; Pos a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Pos a -&gt; ShowS
+showsPrec :: Int -&gt; Pos a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Pos a -&gt; String
+show :: Pos a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Pos a] -&gt; ShowS
+showList :: [Pos a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679489652"><span id="local-6989586621679489654"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Pos a -&gt; Pos b)
+-&gt; (forall a b. a -&gt; Pos b -&gt; Pos a) -&gt; Functor Pos
+forall a b. a -&gt; Pos b -&gt; Pos a
+forall a b. (a -&gt; b) -&gt; Pos a -&gt; Pos b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Pos a -&gt; Pos b
+fmap :: forall a b. (a -&gt; b) -&gt; Pos a -&gt; Pos b
+$c&lt;$ :: forall a b. a -&gt; Pos b -&gt; Pos a
+&lt;$ :: forall a b. a -&gt; Pos b -&gt; Pos a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679489106"><span id="local-6989586621679489660"><span id="local-6989586621679489663"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489106"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489106"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-216"></span><span>  </span><span id="local-6989586621679489671"><span class="annot"><span class="annottext">&lt;&gt; :: Pos a -&gt; Pos a -&gt; Pos a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span id="local-6989586621679489672"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489672"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679489673"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489673"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span id="local-6989586621679489674"><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489674"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679489675"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489675"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-217"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489672"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Position -&gt; Position -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489674"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-218"></span><span>      </span><span class="annot"><span class="annottext">Position -&gt; a -&gt; Pos a
+forall a. Position -&gt; a -&gt; Pos a
+</span><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489672"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489673"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489675"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-keyword">else</span><span>
+</span><span id="line-220"></span><span>      </span><span class="annot"><span class="annottext">Position -&gt; a -&gt; Pos a
+forall a. Position -&gt; a -&gt; Pos a
+</span><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span><span> </span><span class="annot"><span class="annottext">Position
+</span><a href="#local-6989586621679489674"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489675"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489673"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#positioned"><span class="hs-identifier hs-type">positioned</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-type">Pos</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-223"></span><span id="positioned"><span class="annot"><span class="annottext">positioned :: String -&gt; String -&gt; [Pos Char]
+</span><a href="Hedgehog.Internal.Discovery.html#positioned"><span class="hs-identifier hs-var hs-var">positioned</span></a></span></span><span> </span><span id="local-6989586621679489677"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489677"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-225"></span><span>    </span><span id="local-6989586621679489683"><span class="annot"><span class="annottext">loop :: LineNo -&gt; ColumnNo -&gt; String -&gt; [Pos Char]
+</span><a href="#local-6989586621679489683"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span id="local-6989586621679489684"><span class="annot"><span class="annottext">LineNo
+</span><a href="#local-6989586621679489684"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679489685"><span class="annot"><span class="annottext">ColumnNo
+</span><a href="#local-6989586621679489685"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-226"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-227"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span>      </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489686"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489686"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-230"></span><span>        </span><span class="annot"><span class="annottext">Position -&gt; Char -&gt; Pos Char
+forall a. Position -&gt; a -&gt; Pos a
+</span><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; LineNo -&gt; ColumnNo -&gt; Position
+</span><a href="Hedgehog.Internal.Discovery.html#Position"><span class="hs-identifier hs-var">Position</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489677"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo
+</span><a href="#local-6989586621679489684"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnNo
+</span><a href="#local-6989586621679489685"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span> </span><span class="annot"><span class="annottext">Pos Char -&gt; [Pos Char] -&gt; [Pos Char]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo -&gt; ColumnNo -&gt; String -&gt; [Pos Char]
+</span><a href="#local-6989586621679489683"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LineNo
+</span><a href="#local-6989586621679489684"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo -&gt; LineNo -&gt; LineNo
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ColumnNo
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489686"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span>      </span><span id="local-6989586621679489687"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489687"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679489688"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489688"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-233"></span><span>        </span><span class="annot"><span class="annottext">Position -&gt; Char -&gt; Pos Char
+forall a. Position -&gt; a -&gt; Pos a
+</span><a href="Hedgehog.Internal.Discovery.html#Pos"><span class="hs-identifier hs-var">Pos</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; LineNo -&gt; ColumnNo -&gt; Position
+</span><a href="Hedgehog.Internal.Discovery.html#Position"><span class="hs-identifier hs-var">Position</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489677"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo
+</span><a href="#local-6989586621679489684"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnNo
+</span><a href="#local-6989586621679489685"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679489687"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Pos Char -&gt; [Pos Char] -&gt; [Pos Char]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo -&gt; ColumnNo -&gt; String -&gt; [Pos Char]
+</span><a href="#local-6989586621679489683"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo
+</span><a href="#local-6989586621679489684"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ColumnNo
+</span><a href="#local-6989586621679489685"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnNo -&gt; ColumnNo -&gt; ColumnNo
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnNo
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489688"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-235"></span><span>    </span><span class="annot"><span class="annottext">LineNo -&gt; ColumnNo -&gt; String -&gt; [Pos Char]
+</span><a href="#local-6989586621679489683"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">LineNo
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">ColumnNo
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-236"></span></pre></body></html>

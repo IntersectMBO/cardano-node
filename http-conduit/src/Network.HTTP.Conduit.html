@@ -1,0 +1,593 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts  #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- = Simpler API</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- The API below is rather low-level. The &quot;Network.HTTP.Simple&quot; module provides</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- a higher-level API with built-in support for things like JSON request and</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- response bodies. For most users, this will be an easier place to start. You</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- can read the tutorial at:</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- &lt;https://haskell-lang.org/library/http-client&gt;</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- = Lower-level API</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- This module contains everything you need to initiate HTTP connections.  If</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- you want a simple interface based on URLs, you can use 'simpleHttp'. If you</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- want raw power, 'http' is the underlying workhorse of this package. Some</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- examples:</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- &gt; -- Just download an HTML document and print it.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- &gt; import Network.HTTP.Conduit</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- &gt; import qualified Data.ByteString.Lazy as L</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- &gt; main = simpleHttp &quot;http://www.haskell.org/&quot; &gt;&gt;= L.putStr</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- This example uses interleaved IO to write the response body to a file in</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- constant memory space.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- &gt; import Data.Conduit.Binary (sinkFile) -- Exported from the package conduit-extra</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- &gt; import Network.HTTP.Conduit</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- &gt; import Conduit (runConduit, (.|))</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- &gt; import Control.Monad.Trans.Resource (runResourceT)</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- &gt; main :: IO ()</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- &gt; main = do</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- &gt;      request &lt;- parseRequest &quot;http://google.com/&quot;</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- &gt;      manager &lt;- newManager tlsManagerSettings</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- &gt;      runResourceT $ do</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- &gt;          response &lt;- http request manager</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- &gt;          runConduit $ responseBody response .| sinkFile &quot;google.html&quot;</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- The following headers are automatically set by this module, and should not</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- be added to 'requestHeaders':</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- * Cookie</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- * Content-Length</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- * Transfer-Encoding</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- Note: In previous versions, the Host header would be set by this module in</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- all cases. Starting from 1.6.1, if a Host header is present in</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- @requestHeaders@, it will be used in place of the header this module would</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- have generated. This can be useful for calling a server which utilizes</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- virtual hosting.</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- Use `cookieJar` If you want to supply cookies with your request:</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- &gt; {-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- &gt; import Network.HTTP.Conduit</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- &gt; import Network</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- &gt; import Data.Time.Clock</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- &gt; import Data.Time.Calendar</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- &gt; import qualified Control.Exception as E</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- &gt; import Network.HTTP.Types.Status (statusCode)</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- &gt; past :: UTCTime</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- &gt; past = UTCTime (ModifiedJulianDay 56200) (secondsToDiffTime 0)</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- &gt; future :: UTCTime</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- &gt; future = UTCTime (ModifiedJulianDay 562000) (secondsToDiffTime 0)</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- &gt; cookie :: Cookie</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- &gt; cookie = Cookie { cookie_name = &quot;password_hash&quot;</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- &gt;                 , cookie_value = &quot;abf472c35f8297fbcabf2911230001234fd2&quot;</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- &gt;                 , cookie_expiry_time = future</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- &gt;                 , cookie_domain = &quot;example.com&quot;</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- &gt;                 , cookie_path = &quot;/&quot;</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- &gt;                 , cookie_creation_time = past</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- &gt;                 , cookie_last_access_time = past</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- &gt;                 , cookie_persistent = False</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- &gt;                 , cookie_host_only = False</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- &gt;                 , cookie_secure_only = False</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- &gt;                 , cookie_http_only = False</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- &gt;                 }</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- &gt; main = do</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- &gt;      request' &lt;- parseRequest &quot;http://example.com/secret-page&quot;</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- &gt;      manager &lt;- newManager tlsManagerSettings</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- &gt;      let request = request' { cookieJar = Just $ createCookieJar [cookie] }</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- &gt;      fmap Just (httpLbs request manager) `E.catch`</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- &gt;              (\ex -&gt; case ex of</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- &gt;                  HttpExceptionRequest _ (StatusCodeException res _) -&gt;</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- &gt;                      if statusCode (responseStatus res) == 403</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- &gt;                        then (putStrLn &quot;login failed&quot; &gt;&gt; return Nothing)</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- &gt;                        else return Nothing</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- &gt;                  _ -&gt; E.throw ex)</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Cookies are implemented according to RFC 6265.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- Note that by default, the functions in this package will throw exceptions</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- for non-2xx status codes. If you would like to avoid this, you should use</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- 'checkStatus', e.g.:</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- &gt; import Data.Conduit.Binary (sinkFile)</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- &gt; import Network.HTTP.Conduit</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- &gt; import qualified Data.Conduit as C</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- &gt; import Network</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- &gt; main :: IO ()</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- &gt; main = do</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- &gt;      request' &lt;- parseRequest &quot;http://www.yesodweb.com/does-not-exist&quot;</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- &gt;      let request = request' { checkStatus = \_ _ _ -&gt; Nothing }</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- &gt;      manager &lt;- newManager tlsManagerSettings</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- &gt;      res &lt;- httpLbs request manager</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- &gt;      print res</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- By default, when connecting to websites using HTTPS, functions in this</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- package will throw an exception if the TLS certificate doesn't validate. To</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- continue the HTTPS transaction even if the TLS cerficate validation fails,</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- you should use 'mkManagerSetttings' as follows:</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- &gt; import Network.Connection (TLSSettings (..))</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- &gt; import Network.HTTP.Conduit</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- &gt; main :: IO ()</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- &gt; main = do</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- &gt;     request &lt;- parseRequest &quot;https://github.com/&quot;</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- &gt;     let settings = mkManagerSettings (TLSSettingsSimple True False False) Nothing</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- &gt;     manager &lt;- newManager settings</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- &gt;     res &lt;- httpLbs request manager</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- &gt;     print res</span><span>
+</span><span id="line-135"></span><span class="hs-comment">--</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- For more information, please be sure to read the documentation in the</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- &quot;Network.HTTP.Client&quot; module.</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.HTTP.Conduit</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Perform a request</span></span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><a href="Network.HTTP.Conduit.html#simpleHttp"><span class="hs-identifier">simpleHttp</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.HTTP.Conduit.html#httpLbs"><span class="hs-identifier">httpLbs</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.HTTP.Conduit.html#http"><span class="hs-identifier">http</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Datatypes</span></span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">RequestBody</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="hs-comment">-- ** Request</span></span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Request</span></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">method</span></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">secure</span></span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">host</span></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">port</span></span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">path</span></span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">queryString</span></span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">requestHeaders</span></span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">requestBody</span></span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">proxy</span></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hostAddress</span></span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">rawBody</span></span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">decompress</span></span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">redirectCount</span></span><span class="hs-cpp">
+#if MIN_VERSION_http_client(0,6,2)
+</span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">shouldStripHeaderOnRedirect</span></span><span class="hs-cpp">
+#endif
+</span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">checkResponse</span></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseTimeout</span></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">cookieJar</span></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">requestVersion</span></span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">HCC.setQueryString</span></span><span>
+</span><span id="line-170"></span><span>      </span><span class="annot"><span class="hs-comment">-- *** Request body</span></span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySource"><span class="hs-identifier">requestBodySource</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySourceChunked"><span class="hs-identifier">requestBodySourceChunked</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySourceIO"><span class="hs-identifier">requestBodySourceIO</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySourceChunkedIO"><span class="hs-identifier">requestBodySourceChunkedIO</span></a></span><span>
+</span><span id="line-175"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Response</span></span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Response</span></span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseStatus</span></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseVersion</span></span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseHeaders</span></span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseBody</span></span><span>
+</span><span id="line-181"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseCookieJar</span></span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseEarlyHints</span></span><span>
+</span><span id="line-183"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Manager</span></span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Manager</span></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">newManager</span></span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">closeManager</span></span><span>
+</span><span id="line-187"></span><span>      </span><span class="annot"><span class="hs-comment">-- ** Settings</span></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ManagerSettings</span></span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">tlsManagerSettings</span></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">mkManagerSettings</span></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">managerConnCount</span></span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">managerResponseTimeout</span></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">managerTlsConnection</span></span><span>
+</span><span id="line-194"></span><span>      </span><span class="annot"><span class="hs-comment">-- ** Response timeout</span></span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">HC.ResponseTimeout</span></span><span>
+</span><span id="line-196"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">HC.responseTimeoutMicro</span></span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">HC.responseTimeoutNone</span></span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">HC.responseTimeoutDefault</span></span><span>
+</span><span id="line-199"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Cookies</span></span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Cookie</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">CookieJar</span></span><span>
+</span><span id="line-202"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">createCookieJar</span></span><span>
+</span><span id="line-203"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">destroyCookieJar</span></span><span>
+</span><span id="line-204"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Utility functions</span></span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseUrl</span></span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseUrlThrow</span></span><span>
+</span><span id="line-207"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseRequest</span></span><span>
+</span><span id="line-208"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseRequest_</span></span><span>
+</span><span id="line-209"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">defaultRequest</span></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">applyBasicAuth</span></span><span>
+</span><span id="line-211"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">addProxy</span></span><span>
+</span><span id="line-212"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.HTTP.Conduit.html#lbsResponse"><span class="hs-identifier">lbsResponse</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getRedirectedRequest</span></span><span>
+</span><span id="line-214"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Decompression predicates</span></span><span>
+</span><span id="line-215"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">alwaysDecompress</span></span><span>
+</span><span id="line-216"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">browserDecompress</span></span><span>
+</span><span id="line-217"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Request bodies</span></span><span>
+</span><span id="line-218"></span><span>      </span><span class="hs-comment">-- | &quot;Network.HTTP.Client.MultipartFormData&quot; provides an API for building</span><span>
+</span><span id="line-219"></span><span>      </span><span class="hs-comment">-- form-data request bodies.</span><span>
+</span><span id="line-220"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">urlEncodedBody</span></span><span>
+</span><span id="line-221"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Exceptions</span></span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">HttpException</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">HCC.HttpExceptionContent</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>              </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-227"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span>         </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-228"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Conduit</span></span><span>
+</span><span id="line-229"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Conduit.List</span></span><span>            </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CL</span></span><span>
+</span><span id="line-230"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier">readIORef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#writeIORef"><span class="hs-identifier">writeIORef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier">newIORef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-231"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Int.html"><span class="hs-identifier">Data.Int</span></a></span><span>                     </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier">Int64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">A</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator">(&lt;$&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Unlift</span></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Resource</span></span><span>
+</span><span id="line-235"></span><span>
+</span><span id="line-236"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client</span></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Client</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">httpLbs</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responseOpen</span></span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client</span></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HC</span></span><span>
+</span><span id="line-238"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Network.HTTP.Client.Conduit.html"><span class="hs-identifier">Network.HTTP.Client.Conduit</span></a></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HCC</span></span><span>
+</span><span id="line-239"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">createCookieJar</span></span><span class="hs-special">,</span><span>
+</span><span id="line-240"></span><span>                                               </span><span class="annot"><span class="hs-identifier">destroyCookieJar</span></span><span class="hs-special">)</span><span>
+</span><span id="line-241"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Manager</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ManagerSettings</span></span><span class="hs-special">,</span><span>
+</span><span id="line-242"></span><span>                                               </span><span class="annot"><span class="hs-identifier">closeManager</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">managerConnCount</span></span><span class="hs-special">,</span><span>
+</span><span id="line-243"></span><span>                                               </span><span class="annot"><span class="hs-identifier">managerResponseTimeout</span></span><span class="hs-special">,</span><span>
+</span><span id="line-244"></span><span>                                               </span><span class="annot"><span class="hs-identifier">managerTlsConnection</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">newManager</span></span><span class="hs-special">)</span><span>
+</span><span id="line-245"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client</span></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">parseUrl</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseUrlThrow</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">urlEncodedBody</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">applyBasicAuth</span></span><span class="hs-special">,</span><span>
+</span><span id="line-246"></span><span>                                               </span><span class="annot"><span class="hs-identifier">defaultRequest</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseRequest</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseRequest_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-247"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ResponseClose</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">addProxy</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">alwaysDecompress</span></span><span class="hs-special">,</span><span>
+</span><span id="line-248"></span><span>                                               </span><span class="annot"><span class="hs-identifier">browserDecompress</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getRedirectedRequest</span></span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client.TLS</span></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mkManagerSettings</span></span><span class="hs-special">,</span><span>
+</span><span id="line-250"></span><span>                                               </span><span class="annot"><span class="hs-identifier">tlsManagerSettings</span></span><span class="hs-special">)</span><span>
+</span><span id="line-251"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.HTTP.Client.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Cookie</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">CookieJar</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-252"></span><span>                                               </span><span class="annot"><span class="hs-identifier">HttpException</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-253"></span><span>                                               </span><span class="annot"><span class="hs-identifier">Request</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">RequestBody</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-254"></span><span>                                               </span><span class="annot"><span class="hs-identifier">Response</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-255"></span><span>
+</span><span id="line-256"></span><span class="hs-comment">-- | Download the specified 'Request', returning the results as a 'Response'.</span><span>
+</span><span id="line-257"></span><span class="hs-comment">--</span><span>
+</span><span id="line-258"></span><span class="hs-comment">-- This is a simplified version of 'http' for the common case where you simply</span><span>
+</span><span id="line-259"></span><span class="hs-comment">-- want the response data as a simple datatype. If you want more power, such as</span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- interleaved actions on the response body during download, you'll need to use</span><span>
+</span><span id="line-261"></span><span class="hs-comment">-- 'http' directly. This function is defined as:</span><span>
+</span><span id="line-262"></span><span class="hs-comment">--</span><span>
+</span><span id="line-263"></span><span class="hs-comment">-- @httpLbs = 'lbsResponse' &lt;=&lt; 'http'@</span><span>
+</span><span id="line-264"></span><span class="hs-comment">--</span><span>
+</span><span id="line-265"></span><span class="hs-comment">-- Even though the 'Response' contains a lazy bytestring, this</span><span>
+</span><span id="line-266"></span><span class="hs-comment">-- function does /not/ utilize lazy I/O, and therefore the entire</span><span>
+</span><span id="line-267"></span><span class="hs-comment">-- response body will live in memory. If you want constant memory</span><span>
+</span><span id="line-268"></span><span class="hs-comment">-- usage, you'll need to use @conduit@ packages's</span><span>
+</span><span id="line-269"></span><span class="hs-comment">-- 'C.Source' returned by 'http'.</span><span>
+</span><span id="line-270"></span><span class="hs-comment">--</span><span>
+</span><span id="line-271"></span><span class="hs-comment">-- This function will 'throwIO' an 'HttpException' for any</span><span>
+</span><span id="line-272"></span><span class="hs-comment">-- response with a non-2xx status code (besides 3xx redirects up</span><span>
+</span><span id="line-273"></span><span class="hs-comment">-- to a limit of 10 redirects). This behavior can be modified by</span><span>
+</span><span id="line-274"></span><span class="hs-comment">-- changing the 'checkStatus' field of your request.</span><span>
+</span><span id="line-275"></span><span class="hs-comment">--</span><span>
+</span><span id="line-276"></span><span class="hs-comment">-- Note: Unlike previous versions, this function will perform redirects, as</span><span>
+</span><span id="line-277"></span><span class="hs-comment">-- specified by the 'redirectCount' setting.</span><span>
+</span><span id="line-278"></span><span id="local-6989586621679103886"><span class="annot"><a href="Network.HTTP.Conduit.html#httpLbs"><span class="hs-identifier hs-type">httpLbs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679103886"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Request</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Manager</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679103886"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Response</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">L.ByteString</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-279"></span><span id="httpLbs"><span class="annot"><span class="annottext">httpLbs :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Request -&gt; Manager -&gt; m (Response ByteString)
+</span><a href="Network.HTTP.Conduit.html#httpLbs"><span class="hs-identifier hs-var hs-var">httpLbs</span></a></span></span><span> </span><span id="local-6989586621679104077"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104077"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679104078"><span class="annot"><span class="annottext">Manager
+</span><a href="#local-6989586621679104078"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Response ByteString) -&gt; m (Response ByteString)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Response ByteString) -&gt; m (Response ByteString))
+-&gt; IO (Response ByteString) -&gt; m (Response ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Request -&gt; Manager -&gt; IO (Response ByteString)
+</span><span class="hs-identifier hs-var">Client.httpLbs</span></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104077"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Manager
+</span><a href="#local-6989586621679104078"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-280"></span><span>
+</span><span id="line-281"></span><span class="hs-comment">-- | Download the specified URL, following any redirects, and</span><span>
+</span><span id="line-282"></span><span class="hs-comment">-- return the response body.</span><span>
+</span><span id="line-283"></span><span class="hs-comment">--</span><span>
+</span><span id="line-284"></span><span class="hs-comment">-- This function will 'throwIO' an 'HttpException' for any</span><span>
+</span><span id="line-285"></span><span class="hs-comment">-- response with a non-2xx status code (besides 3xx redirects up</span><span>
+</span><span id="line-286"></span><span class="hs-comment">-- to a limit of 10 redirects). It uses 'parseUrlThrow' to parse the</span><span>
+</span><span id="line-287"></span><span class="hs-comment">-- input. This function essentially wraps 'httpLbs'.</span><span>
+</span><span id="line-288"></span><span class="hs-comment">--</span><span>
+</span><span id="line-289"></span><span class="hs-comment">-- Note: Even though this function returns a lazy bytestring, it</span><span>
+</span><span id="line-290"></span><span class="hs-comment">-- does /not/ utilize lazy I/O, and therefore the entire response</span><span>
+</span><span id="line-291"></span><span class="hs-comment">-- body will live in memory. If you want constant memory usage,</span><span>
+</span><span id="line-292"></span><span class="hs-comment">-- you'll need to use the @conduit@ package and 'http' directly.</span><span>
+</span><span id="line-293"></span><span class="hs-comment">--</span><span>
+</span><span id="line-294"></span><span class="hs-comment">-- Note: This function creates a new 'Manager'. It should be avoided</span><span>
+</span><span id="line-295"></span><span class="hs-comment">-- in production code.</span><span>
+</span><span id="line-296"></span><span id="local-6989586621679103897"><span class="annot"><a href="Network.HTTP.Conduit.html#simpleHttp"><span class="hs-identifier hs-type">simpleHttp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679103897"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679103897"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">L.ByteString</span></a></span></span><span>
+</span><span id="line-297"></span><span id="simpleHttp"><span class="annot"><span class="annottext">simpleHttp :: forall (m :: * -&gt; *). MonadIO m =&gt; String -&gt; m ByteString
+</span><a href="Network.HTTP.Conduit.html#simpleHttp"><span class="hs-identifier hs-var hs-var">simpleHttp</span></a></span></span><span> </span><span id="local-6989586621679104089"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679104089"><span class="hs-identifier hs-var">url</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; m ByteString
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ByteString -&gt; m ByteString) -&gt; IO ByteString -&gt; m ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-298"></span><span>    </span><span id="local-6989586621679104090"><span class="annot"><span class="annottext">Manager
+</span><a href="#local-6989586621679104090"><span class="hs-identifier hs-var">man</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ManagerSettings -&gt; IO Manager
+</span><span class="hs-identifier hs-var">newManager</span></span><span> </span><span class="annot"><span class="annottext">ManagerSettings
+</span><span class="hs-identifier hs-var">tlsManagerSettings</span></span><span>
+</span><span id="line-299"></span><span>    </span><span id="local-6989586621679104091"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104091"><span class="hs-identifier hs-var">req</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Request -&gt; IO Request
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Request -&gt; IO Request) -&gt; IO Request -&gt; IO Request
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO Request
+forall (m :: * -&gt; *). MonadThrow m =&gt; String -&gt; m Request
+</span><span class="hs-identifier hs-var">parseUrlThrow</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679104089"><span class="hs-identifier hs-var">url</span></a></span><span>
+</span><span id="line-300"></span><span>    </span><span class="annot"><span class="annottext">Response ByteString -&gt; ByteString
+forall body. Response body -&gt; body
+</span><span class="hs-identifier hs-var">responseBody</span></span><span> </span><span class="annot"><span class="annottext">(Response ByteString -&gt; ByteString)
+-&gt; IO (Response ByteString) -&gt; IO ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">A.&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Request -&gt; Manager -&gt; IO (Response ByteString)
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Request -&gt; Manager -&gt; m (Response ByteString)
+</span><a href="Network.HTTP.Conduit.html#httpLbs"><span class="hs-identifier hs-var">httpLbs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Request -&gt; Request
+</span><a href="Network.HTTP.Conduit.html#setConnectionClose"><span class="hs-identifier hs-var">setConnectionClose</span></a></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104091"><span class="hs-identifier hs-var">req</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Manager
+</span><a href="#local-6989586621679104090"><span class="hs-identifier hs-var">man</span></a></span><span>
+</span><span id="line-301"></span><span>
+</span><span id="line-302"></span><span class="annot"><a href="Network.HTTP.Conduit.html#setConnectionClose"><span class="hs-identifier hs-type">setConnectionClose</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Request</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Request</span></span><span>
+</span><span id="line-303"></span><span id="setConnectionClose"><span class="annot"><span class="annottext">setConnectionClose :: Request -&gt; Request
+</span><a href="Network.HTTP.Conduit.html#setConnectionClose"><span class="hs-identifier hs-var hs-var">setConnectionClose</span></a></span></span><span> </span><span id="local-6989586621679104093"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104093"><span class="hs-identifier hs-var">req</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104093"><span class="hs-identifier hs-var">req</span></a></span><span class="hs-special">{</span><span class="annot"><span class="hs-identifier hs-var">requestHeaders</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-string">&quot;Connection&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;close&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-var">requestHeaders</span></span><span> </span><span class="annot"><a href="#local-6989586621679104093"><span class="hs-identifier hs-type">req</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-304"></span><span>
+</span><span id="line-305"></span><span id="local-6989586621679103908"><span class="annot"><a href="Network.HTTP.Conduit.html#lbsResponse"><span class="hs-identifier hs-type">lbsResponse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679103908"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-306"></span><span>            </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Response</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ConduitM</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679103908"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-307"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679103908"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Response</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">L.ByteString</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-308"></span><span id="lbsResponse"><span class="annot"><span class="annottext">lbsResponse :: forall (m :: * -&gt; *).
+Monad m =&gt;
+Response (ConduitM () ByteString m ()) -&gt; m (Response ByteString)
+</span><a href="Network.HTTP.Conduit.html#lbsResponse"><span class="hs-identifier hs-var hs-var">lbsResponse</span></a></span></span><span> </span><span id="local-6989586621679104100"><span class="annot"><span class="annottext">Response (ConduitM () ByteString m ())
+</span><a href="#local-6989586621679104100"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-309"></span><span>    </span><span id="local-6989586621679104101"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679104101"><span class="hs-identifier hs-var">bss</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ConduitT () Void m [ByteString] -&gt; m [ByteString]
+forall (m :: * -&gt; *) r. Monad m =&gt; ConduitT () Void m r -&gt; m r
+</span><span class="hs-identifier hs-var">runConduit</span></span><span> </span><span class="annot"><span class="annottext">(ConduitT () Void m [ByteString] -&gt; m [ByteString])
+-&gt; ConduitT () Void m [ByteString] -&gt; m [ByteString]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Response (ConduitM () ByteString m ())
+-&gt; ConduitM () ByteString m ()
+forall body. Response body -&gt; body
+</span><span class="hs-identifier hs-var">responseBody</span></span><span> </span><span class="annot"><span class="annottext">Response (ConduitM () ByteString m ())
+</span><a href="#local-6989586621679104100"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitM () ByteString m ()
+-&gt; ConduitT ByteString Void m [ByteString]
+-&gt; ConduitT () Void m [ByteString]
+forall (m :: * -&gt; *) a b c r.
+Monad m =&gt;
+ConduitT a b m () -&gt; ConduitT b c m r -&gt; ConduitT a c m r
+</span><span class="hs-operator hs-var">.|</span></span><span> </span><span class="annot"><span class="annottext">ConduitT ByteString Void m [ByteString]
+forall (m :: * -&gt; *) a o. Monad m =&gt; ConduitT a o m [a]
+</span><span class="hs-identifier hs-var">CL.consume</span></span><span>
+</span><span id="line-310"></span><span>    </span><span class="annot"><span class="annottext">Response ByteString -&gt; m (Response ByteString)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Response (ConduitM () ByteString m ())
+</span><a href="#local-6989586621679104100"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-311"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-identifier hs-var">responseBody</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#fromChunks"><span class="hs-identifier hs-type">L.fromChunks</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679104101"><span class="hs-identifier hs-type">bss</span></a></span><span>
+</span><span id="line-312"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-313"></span><span>
+</span><span id="line-314"></span><span id="local-6989586621679103923"><span id="local-6989586621679103925"><span class="annot"><a href="Network.HTTP.Conduit.html#http"><span class="hs-identifier hs-type">http</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadResource</span></span><span> </span><span class="annot"><a href="#local-6989586621679103923"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-315"></span><span>     </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Request</span></span><span>
+</span><span id="line-316"></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Manager</span></span><span>
+</span><span id="line-317"></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679103923"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Response</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ConduitM</span></span><span> </span><span class="annot"><a href="#local-6989586621679103925"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679103923"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-318"></span><span id="http"><span class="annot"><span class="annottext">http :: forall (m :: * -&gt; *) i.
+MonadResource m =&gt;
+Request -&gt; Manager -&gt; m (Response (ConduitM i ByteString m ()))
+</span><a href="Network.HTTP.Conduit.html#http"><span class="hs-identifier hs-var hs-var">http</span></a></span></span><span> </span><span id="local-6989586621679104124"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104124"><span class="hs-identifier hs-var">req</span></a></span></span><span> </span><span id="local-6989586621679104125"><span class="annot"><span class="annottext">Manager
+</span><a href="#local-6989586621679104125"><span class="hs-identifier hs-var">man</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((forall a. ResourceT IO a -&gt; ResourceT IO a)
+ -&gt; ResourceT IO (Response (ConduitM i ByteString m ())))
+-&gt; m (Response (ConduitM i ByteString m ()))
+forall (m :: * -&gt; *) b.
+MonadResource m =&gt;
+((forall a. ResourceT IO a -&gt; ResourceT IO a) -&gt; ResourceT IO b)
+-&gt; m b
+</span><span class="hs-identifier hs-var">resourceMask</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. ResourceT IO a -&gt; ResourceT IO a)
+  -&gt; ResourceT IO (Response (ConduitM i ByteString m ())))
+ -&gt; m (Response (ConduitM i ByteString m ())))
+-&gt; ((forall a. ResourceT IO a -&gt; ResourceT IO a)
+    -&gt; ResourceT IO (Response (ConduitM i ByteString m ())))
+-&gt; m (Response (ConduitM i ByteString m ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">forall a. ResourceT IO a -&gt; ResourceT IO a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-319"></span><span>    </span><span id="local-6989586621679104127"><span class="annot"><span class="annottext">Response BodyReader
+</span><a href="#local-6989586621679104127"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Response BodyReader) -&gt; ResourceT IO (Response BodyReader)
+forall a. IO a -&gt; ResourceT IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Response BodyReader) -&gt; ResourceT IO (Response BodyReader))
+-&gt; IO (Response BodyReader) -&gt; ResourceT IO (Response BodyReader)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Request -&gt; Manager -&gt; IO (Response BodyReader)
+</span><span class="hs-identifier hs-var">Client.responseOpen</span></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679104124"><span class="hs-identifier hs-var">req</span></a></span><span> </span><span class="annot"><span class="annottext">Manager
+</span><a href="#local-6989586621679104125"><span class="hs-identifier hs-var">man</span></a></span><span>
+</span><span id="line-320"></span><span>    </span><span class="hs-comment">-- Move the cleanup action for the response into `ResourceT` so</span><span>
+</span><span id="line-321"></span><span>    </span><span class="hs-comment">-- that we can release it from the `ReleaseMap` as soon as the</span><span>
+</span><span id="line-322"></span><span>    </span><span class="hs-comment">-- response is closed or the body is consumed.</span><span>
+</span><span id="line-323"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ResponseClose</span></span><span> </span><span id="local-6989586621679104129"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679104129"><span class="hs-identifier hs-var">cleanup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Response BodyReader -&gt; ResponseClose
+forall body. Response body -&gt; ResponseClose
+</span><span class="hs-identifier hs-var">responseClose'</span></span><span> </span><span class="annot"><span class="annottext">Response BodyReader
+</span><a href="#local-6989586621679104127"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-324"></span><span>    </span><span id="local-6989586621679104131"><span class="annot"><span class="annottext">ReleaseKey
+</span><a href="#local-6989586621679104131"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ResourceT IO ReleaseKey
+forall (m :: * -&gt; *). MonadResource m =&gt; IO () -&gt; m ReleaseKey
+</span><span class="hs-identifier hs-var">register</span></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679104129"><span class="hs-identifier hs-var">cleanup</span></a></span><span>
+</span><span id="line-325"></span><span>    </span><span class="annot"><span class="annottext">Response (ConduitM i ByteString m ())
+-&gt; ResourceT IO (Response (ConduitM i ByteString m ()))
+forall a. a -&gt; ResourceT IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Response BodyReader
+</span><a href="#local-6989586621679104127"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-identifier hs-var">responseClose'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ResponseClose</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">release</span></span><span> </span><span class="annot"><a href="#local-6989586621679104131"><span class="hs-identifier hs-type">key</span></a></span><span>
+</span><span id="line-326"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-var">responseBody</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-327"></span><span>                 </span><span class="annot"><a href="Network.HTTP.Client.Conduit.html#bodyReaderSource"><span class="hs-identifier hs-type">HCC.bodyReaderSource</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-var">responseBody</span></span><span> </span><span class="annot"><a href="#local-6989586621679104127"><span class="hs-identifier hs-type">res</span></a></span><span>
+</span><span id="line-328"></span><span>                 </span><span class="annot"><span class="hs-identifier hs-type">release</span></span><span> </span><span class="annot"><a href="#local-6989586621679104131"><span class="hs-identifier hs-type">key</span></a></span><span>
+</span><span id="line-329"></span><span>             </span><span class="hs-special">}</span><span>
+</span><span id="line-330"></span><span>
+</span><span id="line-331"></span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySource"><span class="hs-identifier hs-type">requestBodySource</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitM</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ResourceT</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RequestBody</span></span><span>
+</span><span id="line-332"></span><span id="requestBodySource"><span class="annot"><span class="annottext">requestBodySource :: Int64 -&gt; ConduitM () ByteString (ResourceT IO) () -&gt; RequestBody
+</span><a href="Network.HTTP.Conduit.html#requestBodySource"><span class="hs-identifier hs-var hs-var">requestBodySource</span></a></span></span><span> </span><span id="local-6989586621679104135"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679104135"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; GivesPopper () -&gt; RequestBody
+</span><span class="hs-identifier hs-var">RequestBodyStream</span></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679104135"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">(GivesPopper () -&gt; RequestBody)
+-&gt; (ConduitM () ByteString (ResourceT IO) () -&gt; GivesPopper ())
+-&gt; ConduitM () ByteString (ResourceT IO) ()
+-&gt; RequestBody
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitM () ByteString (ResourceT IO) () -&gt; GivesPopper ()
+</span><a href="Network.HTTP.Conduit.html#srcToPopper"><span class="hs-identifier hs-var">srcToPopper</span></a></span><span>
+</span><span id="line-333"></span><span>
+</span><span id="line-334"></span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySourceChunked"><span class="hs-identifier hs-type">requestBodySourceChunked</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitM</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ResourceT</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RequestBody</span></span><span>
+</span><span id="line-335"></span><span id="requestBodySourceChunked"><span class="annot"><span class="annottext">requestBodySourceChunked :: ConduitM () ByteString (ResourceT IO) () -&gt; RequestBody
+</span><a href="Network.HTTP.Conduit.html#requestBodySourceChunked"><span class="hs-identifier hs-var hs-var">requestBodySourceChunked</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GivesPopper () -&gt; RequestBody
+</span><span class="hs-identifier hs-var">RequestBodyStreamChunked</span></span><span> </span><span class="annot"><span class="annottext">(GivesPopper () -&gt; RequestBody)
+-&gt; (ConduitM () ByteString (ResourceT IO) () -&gt; GivesPopper ())
+-&gt; ConduitM () ByteString (ResourceT IO) ()
+-&gt; RequestBody
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitM () ByteString (ResourceT IO) () -&gt; GivesPopper ()
+</span><a href="Network.HTTP.Conduit.html#srcToPopper"><span class="hs-identifier hs-var">srcToPopper</span></a></span><span>
+</span><span id="line-336"></span><span>
+</span><span id="line-337"></span><span class="annot"><a href="Network.HTTP.Conduit.html#srcToPopper"><span class="hs-identifier hs-type">srcToPopper</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitM</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ResourceT</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HCC.GivesPopper</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-338"></span><span id="srcToPopper"><span class="annot"><span class="annottext">srcToPopper :: ConduitM () ByteString (ResourceT IO) () -&gt; GivesPopper ()
+</span><a href="Network.HTTP.Conduit.html#srcToPopper"><span class="hs-identifier hs-var hs-var">srcToPopper</span></a></span></span><span> </span><span id="local-6989586621679104140"><span class="annot"><span class="annottext">ConduitM () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104140"><span class="hs-identifier hs-var">src</span></a></span></span><span> </span><span id="local-6989586621679104141"><span class="annot"><span class="annottext">NeedsPopper ()
+</span><a href="#local-6989586621679104141"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ResourceT IO () -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadUnliftIO m =&gt; ResourceT m a -&gt; m a
+</span><span class="hs-identifier hs-var">runResourceT</span></span><span> </span><span class="annot"><span class="annottext">(ResourceT IO () -&gt; IO ()) -&gt; ResourceT IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-339"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679104143"><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104143"><span class="hs-identifier hs-var">rsrc0</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ConduitM () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104140"><span class="hs-identifier hs-var">src</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitM () ByteString (ResourceT IO) ()
+-&gt; ConduitT ByteString Void (ResourceT IO) ()
+-&gt; ResourceT
+     IO (SealedConduitT () ByteString (ResourceT IO) (), ())
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+ConduitT () a m ()
+-&gt; ConduitT a Void m b -&gt; m (SealedConduitT () a m (), b)
+</span><span class="hs-operator hs-var">$$+</span></span><span> </span><span class="annot"><span class="annottext">() -&gt; ConduitT ByteString Void (ResourceT IO) ()
+forall a. a -&gt; ConduitT ByteString Void (ResourceT IO) a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-340"></span><span>    </span><span id="local-6989586621679104145"><span class="annot"><span class="annottext">IORef (SealedConduitT () ByteString (ResourceT IO) ())
+</span><a href="#local-6989586621679104145"><span class="hs-identifier hs-var">irsrc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (IORef (SealedConduitT () ByteString (ResourceT IO) ()))
+-&gt; ResourceT
+     IO (IORef (SealedConduitT () ByteString (ResourceT IO) ()))
+forall a. IO a -&gt; ResourceT IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (IORef (SealedConduitT () ByteString (ResourceT IO) ()))
+ -&gt; ResourceT
+      IO (IORef (SealedConduitT () ByteString (ResourceT IO) ())))
+-&gt; IO (IORef (SealedConduitT () ByteString (ResourceT IO) ()))
+-&gt; ResourceT
+     IO (IORef (SealedConduitT () ByteString (ResourceT IO) ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+-&gt; IO (IORef (SealedConduitT () ByteString (ResourceT IO) ()))
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104143"><span class="hs-identifier hs-var">rsrc0</span></a></span><span>
+</span><span id="line-341"></span><span>    </span><span id="local-6989586621679104146"><span class="annot"><span class="annottext">InternalState
+</span><a href="#local-6989586621679104146"><span class="hs-identifier hs-var">is</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ResourceT IO InternalState
+forall (m :: * -&gt; *). Monad m =&gt; ResourceT m InternalState
+</span><span class="hs-identifier hs-var">getInternalState</span></span><span>
+</span><span id="line-342"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679104148"><span class="hs-identifier hs-type">popper</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span>
+</span><span id="line-343"></span><span>        </span><span id="local-6989586621679104148"><span class="annot"><span class="annottext">popper :: BodyReader
+</span><a href="#local-6989586621679104148"><span class="hs-identifier hs-var hs-var">popper</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-344"></span><span>            </span><span id="local-6989586621679104149"><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104149"><span class="hs-identifier hs-var">rsrc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (SealedConduitT () ByteString (ResourceT IO) ())
+-&gt; IO (SealedConduitT () ByteString (ResourceT IO) ())
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (SealedConduitT () ByteString (ResourceT IO) ())
+</span><a href="#local-6989586621679104145"><span class="hs-identifier hs-var">irsrc</span></a></span><span>
+</span><span id="line-345"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679104150"><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104150"><span class="hs-identifier hs-var">rsrc'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679104151"><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679104151"><span class="hs-identifier hs-var">mres</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ResourceT
+  IO
+  (SealedConduitT () ByteString (ResourceT IO) (), Maybe ByteString)
+-&gt; InternalState
+-&gt; IO
+     (SealedConduitT () ByteString (ResourceT IO) (), Maybe ByteString)
+forall (m :: * -&gt; *) a. ResourceT m a -&gt; InternalState -&gt; m a
+</span><span class="hs-identifier hs-var">runInternalState</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104149"><span class="hs-identifier hs-var">rsrc</span></a></span><span> </span><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+-&gt; ConduitT ByteString Void (ResourceT IO) (Maybe ByteString)
+-&gt; ResourceT
+     IO
+     (SealedConduitT () ByteString (ResourceT IO) (), Maybe ByteString)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+SealedConduitT () a m ()
+-&gt; ConduitT a Void m b -&gt; m (SealedConduitT () a m (), b)
+</span><span class="hs-operator hs-var">$$++</span></span><span> </span><span class="annot"><span class="annottext">ConduitT ByteString Void (ResourceT IO) (Maybe ByteString)
+forall (m :: * -&gt; *) i o. Monad m =&gt; ConduitT i o m (Maybe i)
+</span><span class="hs-identifier hs-var">await</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">InternalState
+</span><a href="#local-6989586621679104146"><span class="hs-identifier hs-var">is</span></a></span><span>
+</span><span id="line-346"></span><span>            </span><span class="annot"><span class="annottext">IORef (SealedConduitT () ByteString (ResourceT IO) ())
+-&gt; SealedConduitT () ByteString (ResourceT IO) () -&gt; IO ()
+forall a. IORef a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#writeIORef"><span class="hs-identifier hs-var">writeIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (SealedConduitT () ByteString (ResourceT IO) ())
+</span><a href="#local-6989586621679104145"><span class="hs-identifier hs-var">irsrc</span></a></span><span> </span><span class="annot"><span class="annottext">SealedConduitT () ByteString (ResourceT IO) ()
+</span><a href="#local-6989586621679104150"><span class="hs-identifier hs-var">rsrc'</span></a></span><span>
+</span><span id="line-347"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679104151"><span class="hs-identifier hs-var">mres</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-348"></span><span>                </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; BodyReader
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#empty"><span class="hs-identifier hs-var">S.empty</span></a></span><span>
+</span><span id="line-349"></span><span>                </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679104156"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679104156"><span class="hs-identifier hs-var">bs</span></a></span></span><span>
+</span><span id="line-350"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">S.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679104156"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BodyReader
+</span><a href="#local-6989586621679104148"><span class="hs-identifier hs-var">popper</span></a></span><span>
+</span><span id="line-351"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; BodyReader
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679104156"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-352"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; ResourceT IO ()
+forall a. IO a -&gt; ResourceT IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ResourceT IO ()) -&gt; IO () -&gt; ResourceT IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NeedsPopper ()
+</span><a href="#local-6989586621679104141"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">BodyReader
+</span><a href="#local-6989586621679104148"><span class="hs-identifier hs-var">popper</span></a></span><span>
+</span><span id="line-353"></span><span>
+</span><span id="line-354"></span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySourceIO"><span class="hs-identifier hs-type">requestBodySourceIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitM</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RequestBody</span></span><span>
+</span><span id="line-355"></span><span id="requestBodySourceIO"><span class="annot"><span class="annottext">requestBodySourceIO :: Int64 -&gt; ConduitM () ByteString IO () -&gt; RequestBody
+</span><a href="Network.HTTP.Conduit.html#requestBodySourceIO"><span class="hs-identifier hs-var hs-var">requestBodySourceIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; ConduitM () ByteString IO () -&gt; RequestBody
+</span><a href="Network.HTTP.Client.Conduit.html#requestBodySource"><span class="hs-identifier hs-var">HCC.requestBodySource</span></a></span><span>
+</span><span id="line-356"></span><span>
+</span><span id="line-357"></span><span class="annot"><a href="Network.HTTP.Conduit.html#requestBodySourceChunkedIO"><span class="hs-identifier hs-type">requestBodySourceChunkedIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitM</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RequestBody</span></span><span>
+</span><span id="line-358"></span><span id="requestBodySourceChunkedIO"><span class="annot"><span class="annottext">requestBodySourceChunkedIO :: ConduitM () ByteString IO () -&gt; RequestBody
+</span><a href="Network.HTTP.Conduit.html#requestBodySourceChunkedIO"><span class="hs-identifier hs-var hs-var">requestBodySourceChunkedIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConduitM () ByteString IO () -&gt; RequestBody
+</span><a href="Network.HTTP.Client.Conduit.html#requestBodySourceChunked"><span class="hs-identifier hs-var">HCC.requestBodySourceChunked</span></a></span><span>
+</span><span id="line-359"></span></pre></body></html>

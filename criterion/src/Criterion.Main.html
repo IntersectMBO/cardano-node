@@ -1,0 +1,557 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE Trustworthy #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module      : Criterion.Main</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Copyright   : (c) 2009-2014 Bryan O'Sullivan</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- License     : BSD-style</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Maintainer  : bos@serpentine.com</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Portability : GHC</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Wrappers for compiling and running benchmarks quickly and easily.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- See 'defaultMain' below for an example.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- All of the 'IO'-returning functions in this module initialize the timer</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- before measuring time (refer to the documentation for 'initializeTime'</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- for more details).</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Criterion.Main</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- * How to write benchmarks</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- $bench</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Benchmarking IO actions</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-comment">-- $io</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Benchmarking pure code</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="hs-comment">-- $pure</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Fully evaluating a result</span></span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="hs-comment">-- $rnf</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Types</span></span><span>
+</span><span id="line-34"></span><span>      </span><span class="annot"><span class="hs-identifier">Benchmarkable</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Benchmark</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Creating a benchmark suite</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">env</span></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">envWithCleanup</span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perBatchEnv</span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perBatchEnvWithCleanup</span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perRunEnv</span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perRunEnvWithCleanup</span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toBenchmarkable</span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">bench</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">bgroup</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Running a benchmark</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nf</span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">whnf</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nfIO</span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">whnfIO</span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nfAppIO</span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">whnfAppIO</span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Turning a suite of benchmarks into a program</span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.html#defaultMain"><span class="hs-identifier">defaultMain</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.html#defaultMainWith"><span class="hs-identifier">defaultMainWith</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html#defaultConfig"><span class="hs-identifier">defaultConfig</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Other useful code</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.html#makeMatcher"><span class="hs-identifier">makeMatcher</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.html#runMode"><span class="hs-identifier">runMode</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier">unless</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Trans.html"><span class="hs-identifier">Control.Monad.Trans</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.IO.Printf.html"><span class="hs-identifier">Criterion.IO.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.IO.Printf.html#printError"><span class="hs-identifier">printError</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.IO.Printf.html#writeCsv"><span class="hs-identifier">writeCsv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Internal.html"><span class="hs-identifier">Criterion.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Internal.html#runAndAnalyse"><span class="hs-identifier">runAndAnalyse</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Internal.html#runFixedIters"><span class="hs-identifier">runFixedIters</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html"><span class="hs-identifier">Criterion.Main.Options</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Main.Options.html#MatchType"><span class="hs-identifier">MatchType</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html#Mode"><span class="hs-identifier">Mode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html#defaultConfig"><span class="hs-identifier">defaultConfig</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html#describe"><span class="hs-identifier">describe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>                               </span><span class="annot"><a href="Criterion.Main.Options.html#versionInfo"><span class="hs-identifier">versionInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Criterion.Measurement</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">initializeTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Monad.html"><span class="hs-identifier">Criterion.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Monad.html#withConfig"><span class="hs-identifier">withConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Types.html"><span class="hs-identifier">Criterion.Types</span></a></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#toLower"><span class="hs-identifier">toLower</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#isInfixOf"><span class="hs-identifier">isInfixOf</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#isPrefixOf"><span class="hs-identifier">isPrefixOf</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#sort"><span class="hs-identifier">sort</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#stripPrefix"><span class="hs-identifier">stripPrefix</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">execParser</span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html"><span class="hs-identifier">System.Environment</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html#getProgName"><span class="hs-identifier">getProgName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html"><span class="hs-identifier">System.Exit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitCode"><span class="hs-identifier">ExitCode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitWith"><span class="hs-identifier">exitWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.FilePath.Glob</span></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- | An entry point that can be used as a @main@ function.</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- &gt; import Criterion.Main</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- &gt; fib :: Int -&gt; Int</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- &gt; fib 0 = 0</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- &gt; fib 1 = 1</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- &gt; fib n = fib (n-1) + fib (n-2)</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- &gt; main = defaultMain [</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- &gt;        bgroup &quot;fib&quot; [ bench &quot;10&quot; $ whnf fib 10</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- &gt;                     , bench &quot;35&quot; $ whnf fib 35</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- &gt;                     , bench &quot;37&quot; $ whnf fib 37</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- &gt;                     ]</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- &gt;                    ]</span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Criterion.Main.html#defaultMain"><span class="hs-identifier hs-type">defaultMain</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Benchmark</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span id="defaultMain"><span class="annot"><span class="annottext">defaultMain :: [Benchmark] -&gt; IO ()
+</span><a href="Criterion.Main.html#defaultMain"><span class="hs-identifier hs-var hs-var">defaultMain</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Config -&gt; [Benchmark] -&gt; IO ()
+</span><a href="Criterion.Main.html#defaultMainWith"><span class="hs-identifier hs-var">defaultMainWith</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="Criterion.Main.Options.html#defaultConfig"><span class="hs-identifier hs-var">defaultConfig</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- | Create a function that can tell if a name given on the command</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- line matches a benchmark.</span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Criterion.Main.html#makeMatcher"><span class="hs-identifier hs-type">makeMatcher</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html#MatchType"><span class="hs-identifier hs-type">MatchType</span></a></span><span>
+</span><span id="line-100"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="hs-comment">-- ^ Command line arguments.</span></span><span>
+</span><span id="line-102"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span id="makeMatcher"><span class="annot"><span class="annottext">makeMatcher :: MatchType -&gt; [String] -&gt; Either String (String -&gt; Bool)
+</span><a href="Criterion.Main.html#makeMatcher"><span class="hs-identifier hs-var hs-var">makeMatcher</span></a></span></span><span> </span><span id="local-6989586621679126410"><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126410"><span class="hs-identifier hs-var">matchKind</span></a></span></span><span> </span><span id="local-6989586621679126411"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126410"><span class="hs-identifier hs-var">matchKind</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">MatchType
+</span><a href="Criterion.Main.Options.html#Prefix"><span class="hs-identifier hs-var">Prefix</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Bool) -&gt; Either String (String -&gt; Bool))
+-&gt; (String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679126413"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126413"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; [String] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#isPrefixOf"><span class="hs-operator hs-var">`isPrefixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126413"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">MatchType
+</span><a href="Criterion.Main.Options.html#Glob"><span class="hs-identifier hs-var">Glob</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679126418"><span class="annot"><span class="annottext">compOptions :: CompOptions
+</span><a href="#local-6989586621679126418"><span class="hs-identifier hs-var hs-var">compOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompOptions
+</span><span class="hs-identifier hs-var">compDefault</span></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-identifier hs-var">errorRecovery</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-type">False</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either String Pattern)
+-&gt; [String] -&gt; Either String [Pattern]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompOptions -&gt; String -&gt; Either String Pattern
+</span><span class="hs-identifier hs-var">tryCompileWith</span></span><span> </span><span class="annot"><span class="annottext">CompOptions
+</span><a href="#local-6989586621679126418"><span class="hs-identifier hs-var">compOptions</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-109"></span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679126423"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126423"><span class="hs-identifier hs-var">errMsg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String (String -&gt; Bool)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either String (String -&gt; Bool))
+-&gt; (String -&gt; String) -&gt; String -&gt; Either String (String -&gt; Bool)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String -&gt; String
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126423"><span class="hs-identifier hs-var">errMsg</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe String -&gt; String)
+-&gt; (String -&gt; Maybe String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Maybe String
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Maybe [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#stripPrefix"><span class="hs-identifier hs-var">stripPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;compile :: &quot;</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either String (String -&gt; Bool))
+-&gt; String -&gt; Either String (String -&gt; Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-110"></span><span>                          </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126423"><span class="hs-identifier hs-var">errMsg</span></a></span><span>
+</span><span id="line-111"></span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679126425"><span class="annot"><span class="annottext">[Pattern]
+</span><a href="#local-6989586621679126425"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Bool) -&gt; Either String (String -&gt; Bool))
+-&gt; (String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679126426"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126426"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Pattern] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[Pattern]
+</span><a href="#local-6989586621679126425"><span class="hs-identifier hs-var">ps</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">(Pattern -&gt; Bool) -&gt; [Pattern] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pattern -&gt; String -&gt; Bool
+</span><span class="hs-operator hs-var">`match`</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126426"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Pattern]
+</span><a href="#local-6989586621679126425"><span class="hs-identifier hs-var">ps</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">MatchType
+</span><a href="Criterion.Main.Options.html#Pattern"><span class="hs-identifier hs-var">Pattern</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Bool) -&gt; Either String (String -&gt; Bool))
+-&gt; (String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679126429"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126429"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; [String] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#isInfixOf"><span class="hs-operator hs-var">`isInfixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126429"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">MatchType
+</span><a href="Criterion.Main.Options.html#IPattern"><span class="hs-identifier hs-var">IPattern</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Bool) -&gt; Either String (String -&gt; Bool))
+-&gt; (String -&gt; Bool) -&gt; Either String (String -&gt; Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679126431"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126431"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; [String] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#isInfixOf"><span class="hs-operator hs-var">`isInfixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; String -&gt; String
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#toLower"><span class="hs-identifier hs-var">toLower</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126431"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; String -&gt; String
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#toLower"><span class="hs-identifier hs-var">toLower</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126411"><span class="hs-identifier hs-var">args</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Criterion.Main.html#selectBenches"><span class="hs-identifier hs-type">selectBenches</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html#MatchType"><span class="hs-identifier hs-type">MatchType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Benchmark</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span id="selectBenches"><span class="annot"><span class="annottext">selectBenches :: MatchType -&gt; [String] -&gt; Benchmark -&gt; IO (String -&gt; Bool)
+</span><a href="Criterion.Main.html#selectBenches"><span class="hs-identifier hs-var hs-var">selectBenches</span></a></span></span><span> </span><span id="local-6989586621679126433"><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126433"><span class="hs-identifier hs-var">matchType</span></a></span></span><span> </span><span id="local-6989586621679126434"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126434"><span class="hs-identifier hs-var">benches</span></a></span></span><span> </span><span id="local-6989586621679126435"><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679126435"><span class="hs-identifier hs-var">bsgroup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621679126436"><span class="annot"><span class="annottext">String -&gt; Bool
+</span><a href="#local-6989586621679126436"><span class="hs-identifier hs-var">toRun</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO (String -&gt; Bool))
+-&gt; ((String -&gt; Bool) -&gt; IO (String -&gt; Bool))
+-&gt; Either String (String -&gt; Bool)
+-&gt; IO (String -&gt; Bool)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO (String -&gt; Bool)
+forall a. String -&gt; IO a
+</span><a href="Criterion.Main.html#parseError"><span class="hs-identifier hs-var">parseError</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; IO (String -&gt; Bool)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String (String -&gt; Bool) -&gt; IO (String -&gt; Bool))
+-&gt; ([String] -&gt; Either String (String -&gt; Bool))
+-&gt; [String]
+-&gt; IO (String -&gt; Bool)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">MatchType -&gt; [String] -&gt; Either String (String -&gt; Bool)
+</span><a href="Criterion.Main.html#makeMatcher"><span class="hs-identifier hs-var">makeMatcher</span></a></span><span> </span><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126433"><span class="hs-identifier hs-var">matchType</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; IO (String -&gt; Bool))
+-&gt; [String] -&gt; IO (String -&gt; Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126434"><span class="hs-identifier hs-var">benches</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126434"><span class="hs-identifier hs-var">benches</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; [String] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+</span><a href="#local-6989586621679126436"><span class="hs-identifier hs-var">toRun</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Benchmark -&gt; [String]
+</span><span class="hs-identifier hs-var">benchNames</span></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679126435"><span class="hs-identifier hs-var">bsgroup</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; IO ()
+forall a. String -&gt; IO a
+</span><a href="Criterion.Main.html#parseError"><span class="hs-identifier hs-var">parseError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;none of the specified names matches a benchmark&quot;</span></span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; IO (String -&gt; Bool)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+</span><a href="#local-6989586621679126436"><span class="hs-identifier hs-var">toRun</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | An entry point that can be used as a @main@ function, with</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- configurable defaults.</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- &gt; import Criterion.Main.Options</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- &gt; import Criterion.Main</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- &gt; myConfig = defaultConfig {</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- &gt;               -- Resample 10 times for bootstrapping</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- &gt;               resamples = 10</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- &gt;            }</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- &gt; main = defaultMainWith myConfig [</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- &gt;          bench &quot;fib 30&quot; $ whnf fib 30</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- &gt;        ]</span><span>
+</span><span id="line-138"></span><span class="hs-comment">--</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- If you save the above example as @\&quot;Fib.hs\&quot;@, you should be able</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- to compile it as follows:</span><span>
+</span><span id="line-141"></span><span class="hs-comment">--</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- &gt; ghc -O --make Fib</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- Run @\&quot;Fib --help\&quot;@ on the command line to get a list of command</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- line options.</span><span>
+</span><span id="line-146"></span><span class="annot"><a href="Criterion.Main.html#defaultMainWith"><span class="hs-identifier hs-type">defaultMainWith</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Criterion.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span>
+</span><span id="line-147"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Benchmark</span></span><span class="hs-special">]</span><span>
+</span><span id="line-148"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span id="defaultMainWith"><span class="annot"><span class="annottext">defaultMainWith :: Config -&gt; [Benchmark] -&gt; IO ()
+</span><a href="Criterion.Main.html#defaultMainWith"><span class="hs-identifier hs-var hs-var">defaultMainWith</span></a></span></span><span> </span><span id="local-6989586621679126440"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126440"><span class="hs-identifier hs-var">defCfg</span></a></span></span><span> </span><span id="local-6989586621679126441"><span class="annot"><span class="annottext">[Benchmark]
+</span><a href="#local-6989586621679126441"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679126442"><span class="annot"><span class="annottext">Mode
+</span><a href="#local-6989586621679126442"><span class="hs-identifier hs-var">wat</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ParserInfo Mode -&gt; IO Mode
+forall a. ParserInfo a -&gt; IO a
+</span><span class="hs-identifier hs-var">execParser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Config -&gt; ParserInfo Mode
+</span><a href="Criterion.Main.Options.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126440"><span class="hs-identifier hs-var">defCfg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="annottext">Mode -&gt; [Benchmark] -&gt; IO ()
+</span><a href="Criterion.Main.html#runMode"><span class="hs-identifier hs-var">runMode</span></a></span><span> </span><span class="annot"><span class="annottext">Mode
+</span><a href="#local-6989586621679126442"><span class="hs-identifier hs-var">wat</span></a></span><span> </span><span class="annot"><span class="annottext">[Benchmark]
+</span><a href="#local-6989586621679126441"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- | Run a set of 'Benchmark's with the given 'Mode'.</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- This can be useful if you have a 'Mode' from some other source (e.g. from a</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- one in your benchmark driver's command-line parser).</span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Criterion.Main.html#runMode"><span class="hs-identifier hs-type">runMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Benchmark</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span id="runMode"><span class="annot"><span class="annottext">runMode :: Mode -&gt; [Benchmark] -&gt; IO ()
+</span><a href="Criterion.Main.html#runMode"><span class="hs-identifier hs-var hs-var">runMode</span></a></span></span><span> </span><span id="local-6989586621679126444"><span class="annot"><span class="annottext">Mode
+</span><a href="#local-6989586621679126444"><span class="hs-identifier hs-var">wat</span></a></span></span><span> </span><span id="local-6989586621679126445"><span class="annot"><span class="annottext">[Benchmark]
+</span><a href="#local-6989586621679126445"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Mode
+</span><a href="#local-6989586621679126444"><span class="hs-identifier hs-var">wat</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">Mode
+</span><a href="Criterion.Main.Options.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; [String] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; IO ())
+-&gt; ([Benchmark] -&gt; [String]) -&gt; [Benchmark] -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String]
+forall a. Ord a =&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#sort"><span class="hs-identifier hs-var">sort</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [String])
+-&gt; ([Benchmark] -&gt; [String]) -&gt; [Benchmark] -&gt; [String]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Benchmark -&gt; [String]) -&gt; [Benchmark] -&gt; [String]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark -&gt; [String]
+</span><span class="hs-identifier hs-var">benchNames</span></span><span> </span><span class="annot"><span class="annottext">([Benchmark] -&gt; IO ()) -&gt; [Benchmark] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Benchmark]
+</span><a href="#local-6989586621679126445"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="annottext">Mode
+</span><a href="Criterion.Main.Options.html#Version"><span class="hs-identifier hs-var">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Criterion.Main.Options.html#versionInfo"><span class="hs-identifier hs-var">versionInfo</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><a href="Criterion.Main.Options.html#RunIters"><span class="hs-identifier hs-type">RunIters</span></a></span><span> </span><span id="local-6989586621679126452"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126452"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span id="local-6989586621679126453"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679126453"><span class="hs-identifier hs-var">iters</span></a></span></span><span> </span><span id="local-6989586621679126454"><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126454"><span class="hs-identifier hs-var">matchType</span></a></span></span><span> </span><span id="local-6989586621679126455"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126455"><span class="hs-identifier hs-var">benches</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-163"></span><span>      </span><span id="local-6989586621679126456"><span class="annot"><span class="annottext">String -&gt; Bool
+</span><a href="#local-6989586621679126456"><span class="hs-identifier hs-var">shouldRun</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MatchType -&gt; [String] -&gt; Benchmark -&gt; IO (String -&gt; Bool)
+</span><a href="Criterion.Main.html#selectBenches"><span class="hs-identifier hs-var">selectBenches</span></a></span><span> </span><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126454"><span class="hs-identifier hs-var">matchType</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126455"><span class="hs-identifier hs-var">benches</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679126457"><span class="hs-identifier hs-var">bsgroup</span></a></span><span>
+</span><span id="line-164"></span><span>      </span><span class="annot"><span class="annottext">Config -&gt; Criterion () -&gt; IO ()
+forall a. Config -&gt; Criterion a -&gt; IO a
+</span><a href="Criterion.Monad.html#withConfig"><span class="hs-identifier hs-var">withConfig</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126452"><span class="hs-identifier hs-var">cfg</span></a></span><span> </span><span class="annot"><span class="annottext">(Criterion () -&gt; IO ()) -&gt; Criterion () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-165"></span><span>        </span><span class="annot"><span class="annottext">Int64 -&gt; (String -&gt; Bool) -&gt; Benchmark -&gt; Criterion ()
+</span><a href="Criterion.Internal.html#runFixedIters"><span class="hs-identifier hs-var">runFixedIters</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679126453"><span class="hs-identifier hs-var">iters</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+</span><a href="#local-6989586621679126456"><span class="hs-identifier hs-var">shouldRun</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679126457"><span class="hs-identifier hs-var">bsgroup</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><a href="Criterion.Main.Options.html#Run"><span class="hs-identifier hs-type">Run</span></a></span><span> </span><span id="local-6989586621679126459"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126459"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span id="local-6989586621679126460"><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126460"><span class="hs-identifier hs-var">matchType</span></a></span></span><span> </span><span id="local-6989586621679126461"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126461"><span class="hs-identifier hs-var">benches</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-167"></span><span>      </span><span id="local-6989586621679126462"><span class="annot"><span class="annottext">String -&gt; Bool
+</span><a href="#local-6989586621679126462"><span class="hs-identifier hs-var">shouldRun</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MatchType -&gt; [String] -&gt; Benchmark -&gt; IO (String -&gt; Bool)
+</span><a href="Criterion.Main.html#selectBenches"><span class="hs-identifier hs-var">selectBenches</span></a></span><span> </span><span class="annot"><span class="annottext">MatchType
+</span><a href="#local-6989586621679126460"><span class="hs-identifier hs-var">matchType</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679126461"><span class="hs-identifier hs-var">benches</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679126457"><span class="hs-identifier hs-var">bsgroup</span></a></span><span>
+</span><span id="line-168"></span><span>      </span><span class="annot"><span class="annottext">Config -&gt; Criterion () -&gt; IO ()
+forall a. Config -&gt; Criterion a -&gt; IO a
+</span><a href="Criterion.Monad.html#withConfig"><span class="hs-identifier hs-var">withConfig</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126459"><span class="hs-identifier hs-var">cfg</span></a></span><span> </span><span class="annot"><span class="annottext">(Criterion () -&gt; IO ()) -&gt; Criterion () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">(String, String, String, String, String, String, String)
+-&gt; Criterion ()
+forall a. ToRecord a =&gt; a -&gt; Criterion ()
+</span><a href="Criterion.IO.Printf.html#writeCsv"><span class="hs-identifier hs-var">writeCsv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Name&quot;</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Mean&quot;</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;MeanLB&quot;</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;MeanUB&quot;</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Stddev&quot;</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;StddevLB&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-170"></span><span>                  </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;StddevUB&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; Criterion ()
+forall a. IO a -&gt; Criterion a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier hs-var">initializeTime</span></span><span>
+</span><span id="line-172"></span><span>        </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; Benchmark -&gt; Criterion ()
+</span><a href="Criterion.Internal.html#runAndAnalyse"><span class="hs-identifier hs-var">runAndAnalyse</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+</span><a href="#local-6989586621679126462"><span class="hs-identifier hs-var">shouldRun</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmark
+</span><a href="#local-6989586621679126457"><span class="hs-identifier hs-var">bsgroup</span></a></span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679126457"><span class="annot"><span class="annottext">bsgroup :: Benchmark
+</span><a href="#local-6989586621679126457"><span class="hs-identifier hs-var hs-var">bsgroup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; [Benchmark] -&gt; Benchmark
+</span><span class="hs-identifier hs-var">BenchGroup</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Benchmark]
+</span><a href="#local-6989586621679126445"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- | Display an error message from a command line parsing failure, and</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- exit.</span><span>
+</span><span id="line-177"></span><span id="local-6989586621679126285"><span class="annot"><a href="Criterion.Main.html#parseError"><span class="hs-identifier hs-type">parseError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679126285"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-178"></span><span id="parseError"><span class="annot"><span class="annottext">parseError :: forall a. String -&gt; IO a
+</span><a href="Criterion.Main.html#parseError"><span class="hs-identifier hs-var hs-var">parseError</span></a></span></span><span> </span><span id="local-6989586621679126479"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126479"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-179"></span><span>  </span><span class="annot"><span class="annottext">Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; IO Any
+forall r. CritHPrintfType r =&gt; String -&gt; r
+</span><a href="Criterion.IO.Printf.html#printError"><span class="hs-identifier hs-var">printError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Error: %s\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679126479"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><span class="annottext">Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; IO Any
+forall r. CritHPrintfType r =&gt; String -&gt; r
+</span><a href="Criterion.IO.Printf.html#printError"><span class="hs-identifier hs-var">printError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Run \&quot;%s --help\&quot; for usage information\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO Any) -&gt; IO String -&gt; IO Any
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html#getProgName"><span class="hs-identifier hs-var">getProgName</span></a></span><span>
+</span><span id="line-181"></span><span>  </span><span class="annot"><span class="annottext">ExitCode -&gt; IO a
+forall a. ExitCode -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitWith"><span class="hs-identifier hs-var">exitWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; ExitCode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitFailure"><span class="hs-identifier hs-var">ExitFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- $bench</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--</span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- The 'Benchmarkable' type is a container for code that can be</span><span>
+</span><span id="line-186"></span><span class="hs-comment">-- benchmarked.  The value inside must run a benchmark the given</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- number of times.  We are most interested in benchmarking two</span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- things:</span><span>
+</span><span id="line-189"></span><span class="hs-comment">--</span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- * 'IO' actions.  Most 'IO' actions can be benchmarked directly.</span><span>
+</span><span id="line-191"></span><span class="hs-comment">--</span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- * Pure functions.  GHC optimises aggressively when compiling with</span><span>
+</span><span id="line-193"></span><span class="hs-comment">--   @-O@, so it is easy to write innocent-looking benchmark code that</span><span>
+</span><span id="line-194"></span><span class="hs-comment">--   doesn't measure the performance of a pure function at all.  We</span><span>
+</span><span id="line-195"></span><span class="hs-comment">--   work around this by benchmarking both a function and its final</span><span>
+</span><span id="line-196"></span><span class="hs-comment">--   argument together.</span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- $io</span><span>
+</span><span id="line-199"></span><span class="hs-comment">--</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- Most 'IO' actions can be benchmarked easily using one of the following</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- two functions:</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- 'nfIO'   :: 'NFData' a =&gt; 'IO' a -&gt; 'Benchmarkable'</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- 'whnfIO' ::               'IO' a -&gt; 'Benchmarkable'</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-207"></span><span class="hs-comment">--</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- In certain corner cases, you may find it useful to use the following</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- variants, which take the input as a separate argument:</span><span>
+</span><span id="line-210"></span><span class="hs-comment">--</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- 'nfAppIO'   :: 'NFData' b =&gt; (a -&gt; 'IO' b) -&gt; a -&gt; 'Benchmarkable'</span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- 'whnfAppIO' ::               (a -&gt; 'IO' b) -&gt; a -&gt; 'Benchmarkable'</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- This is useful when the bulk of the work performed by the function is</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- not bound by IO, but rather by pure computations that may optimize away if</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- the argument is known statically, as in 'nfIO'/'whnfIO'.</span><span>
+</span><span id="line-219"></span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- $pure</span><span>
+</span><span id="line-221"></span><span class="hs-comment">--</span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- Because GHC optimises aggressively when compiling with @-O@, it is</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- potentially easy to write innocent-looking benchmark code that will</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- only be evaluated once, for which all but the first iteration of</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- the timing loop will be timing the cost of doing nothing.</span><span>
+</span><span id="line-226"></span><span class="hs-comment">--</span><span>
+</span><span id="line-227"></span><span class="hs-comment">-- To work around this, we provide two functions for benchmarking pure</span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- code.</span><span>
+</span><span id="line-229"></span><span class="hs-comment">--</span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- The first will cause results to be fully evaluated to normal form</span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- (NF):</span><span>
+</span><span id="line-232"></span><span class="hs-comment">--</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- 'nf' :: 'NFData' b =&gt; (a -&gt; b) -&gt; a -&gt; 'Benchmarkable'</span><span>
+</span><span id="line-235"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-236"></span><span class="hs-comment">--</span><span>
+</span><span id="line-237"></span><span class="hs-comment">-- The second will cause results to be evaluated to weak head normal</span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- form (the Haskell default):</span><span>
+</span><span id="line-239"></span><span class="hs-comment">--</span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- 'whnf' :: (a -&gt; b) -&gt; a -&gt; 'Benchmarkable'</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-243"></span><span class="hs-comment">--</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- As both of these types suggest, when you want to benchmark a</span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- function, you must supply two values:</span><span>
+</span><span id="line-246"></span><span class="hs-comment">--</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- * The first element is the function, saturated with all but its</span><span>
+</span><span id="line-248"></span><span class="hs-comment">--   last argument.</span><span>
+</span><span id="line-249"></span><span class="hs-comment">--</span><span>
+</span><span id="line-250"></span><span class="hs-comment">-- * The second element is the last argument to the function.</span><span>
+</span><span id="line-251"></span><span class="hs-comment">--</span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- Here is an example that makes the use of these functions clearer.</span><span>
+</span><span id="line-253"></span><span class="hs-comment">-- Suppose we want to benchmark the following function:</span><span>
+</span><span id="line-254"></span><span class="hs-comment">--</span><span>
+</span><span id="line-255"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-256"></span><span class="hs-comment">-- firstN :: Int -&gt; [Int]</span><span>
+</span><span id="line-257"></span><span class="hs-comment">-- firstN k = take k [(0::Int)..]</span><span>
+</span><span id="line-258"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-259"></span><span class="hs-comment">--</span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- So in the easy case, we construct a benchmark as follows:</span><span>
+</span><span id="line-261"></span><span class="hs-comment">--</span><span>
+</span><span id="line-262"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-263"></span><span class="hs-comment">-- 'nf' firstN 1000</span><span>
+</span><span id="line-264"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-265"></span><span>
+</span><span id="line-266"></span><span class="hs-comment">-- $rnf</span><span>
+</span><span id="line-267"></span><span class="hs-comment">--</span><span>
+</span><span id="line-268"></span><span class="hs-comment">-- The 'whnf' harness for evaluating a pure function only evaluates</span><span>
+</span><span id="line-269"></span><span class="hs-comment">-- the result to weak head normal form (WHNF).  If you need the result</span><span>
+</span><span id="line-270"></span><span class="hs-comment">-- evaluated all the way to normal form, use the 'nf' function to</span><span>
+</span><span id="line-271"></span><span class="hs-comment">-- force its complete evaluation.</span><span>
+</span><span id="line-272"></span><span class="hs-comment">--</span><span>
+</span><span id="line-273"></span><span class="hs-comment">-- Using the @firstN@ example from earlier, to naive eyes it might</span><span>
+</span><span id="line-274"></span><span class="hs-comment">-- /appear/ that the following code ought to benchmark the production</span><span>
+</span><span id="line-275"></span><span class="hs-comment">-- of the first 1000 list elements:</span><span>
+</span><span id="line-276"></span><span class="hs-comment">--</span><span>
+</span><span id="line-277"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-278"></span><span class="hs-comment">-- 'whnf' firstN 1000</span><span>
+</span><span id="line-279"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-280"></span><span class="hs-comment">--</span><span>
+</span><span id="line-281"></span><span class="hs-comment">-- Since we are using 'whnf', in this case the result will only be</span><span>
+</span><span id="line-282"></span><span class="hs-comment">-- forced until it reaches WHNF, so what this would /actually/</span><span>
+</span><span id="line-283"></span><span class="hs-comment">-- benchmark is merely how long it takes to produce the first list</span><span>
+</span><span id="line-284"></span><span class="hs-comment">-- element!</span><span>
+</span><span id="line-285"></span></pre></body></html>

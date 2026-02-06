@@ -1,0 +1,294 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable, BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.HUnit.Steps</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.Steps.html#testCaseSteps"><span class="hs-identifier">testCaseSteps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier">foldl'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>  </span><span class="hs-comment">-- Silence AMP import warnings</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html"><span class="hs-identifier">Test.Tasty.HUnit.Orig</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Tasty.Providers</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Tasty.Runners</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">getTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html"><span class="hs-identifier">Text.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier">printf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">newtype</span><span> </span><span id="TestCaseSteps"><span class="annot"><a href="Test.Tasty.HUnit.Steps.html#TestCaseSteps"><span class="hs-identifier hs-var">TestCaseSteps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TestCaseSteps"><span class="annot"><a href="Test.Tasty.HUnit.Steps.html#TestCaseSteps"><span class="hs-identifier hs-var">TestCaseSteps</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsTest</span></span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Steps.html#TestCaseSteps"><span class="hs-identifier hs-type">TestCaseSteps</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span id="local-6989586621679043099"><span class="annot"><span class="annottext">run :: OptionSet -&gt; TestCaseSteps -&gt; (Progress -&gt; IO ()) -&gt; IO Result
+</span><a href="#local-6989586621679043099"><span class="hs-identifier hs-var hs-var hs-var hs-var">run</span></a></span></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.Steps.html#TestCaseSteps"><span class="hs-identifier hs-type">TestCaseSteps</span></a></span><span> </span><span id="local-6989586621679043101"><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; IO ()
+</span><a href="#local-6989586621679043101"><span class="hs-identifier hs-var">assertionFn</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679043102"><span class="annot"><span class="annottext">Progress -&gt; IO ()
+</span><a href="#local-6989586621679043102"><span class="hs-identifier hs-var">yieldProgress</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-20"></span><span>    </span><span id="local-6989586621679043103"><span class="annot"><span class="annottext">IORef [(Time, String)]
+</span><a href="#local-6989586621679043103"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Time, String)] -&gt; IO (IORef [(Time, String)])
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-23"></span><span>      </span><span class="annot"><a href="#local-6989586621679043105"><span class="hs-identifier hs-type">stepFn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>      </span><span id="local-6989586621679043105"><span class="annot"><span class="annottext">stepFn :: String -&gt; IO ()
+</span><a href="#local-6989586621679043105"><span class="hs-identifier hs-var hs-var">stepFn</span></a></span></span><span> </span><span id="local-6989586621679043106"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043106"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-25"></span><span>        </span><span id="local-6989586621679043107"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043107"><span class="hs-identifier hs-var">tme</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Time
+</span><span class="hs-identifier hs-var">getTime</span></span><span>
+</span><span id="line-26"></span><span>        </span><span class="hs-comment">-- The number of steps is not fixed, so we can't </span><span>
+</span><span id="line-27"></span><span>        </span><span class="hs-comment">-- provide the progress percentage.</span><span>
+</span><span id="line-28"></span><span>        </span><span class="hs-comment">-- We also don't provide the timings here, only</span><span>
+</span><span id="line-29"></span><span>        </span><span class="hs-comment">-- at the end.</span><span>
+</span><span id="line-30"></span><span>        </span><span class="annot"><span class="annottext">Progress -&gt; IO ()
+</span><a href="#local-6989586621679043102"><span class="hs-identifier hs-var">yieldProgress</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Float -&gt; Progress
+</span><span class="hs-identifier hs-var">Progress</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043106"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>        </span><span class="annot"><span class="annottext">IORef [(Time, String)]
+-&gt; ([(Time, String)] -&gt; ([(Time, String)], ())) -&gt; IO ()
+forall a b. IORef a -&gt; (a -&gt; (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html#atomicModifyIORef"><span class="hs-identifier hs-var">atomicModifyIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef [(Time, String)]
+</span><a href="#local-6989586621679043103"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679043110"><span class="annot"><span class="annottext">[(Time, String)]
+</span><a href="#local-6989586621679043110"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043107"><span class="hs-identifier hs-var">tme</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043106"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span class="annot"><span class="annottext">(Time, String) -&gt; [(Time, String)] -&gt; [(Time, String)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[(Time, String)]
+</span><a href="#local-6989586621679043110"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>    </span><span id="local-6989586621679043111"><span class="annot"><span class="annottext">Either String ()
+</span><a href="#local-6989586621679043111"><span class="hs-identifier hs-var">hunitResult</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; Either String ()
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(() -&gt; Either String ()) -&gt; IO () -&gt; IO (Either String ())
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; IO ()
+</span><a href="#local-6989586621679043101"><span class="hs-identifier hs-var">assertionFn</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="#local-6989586621679043105"><span class="hs-identifier hs-var">stepFn</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO (Either String ())
+-&gt; (SomeException -&gt; IO (Either String ()))
+-&gt; IO (Either String ())
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#catch"><span class="hs-operator hs-var">`catch`</span></a></span><span>
+</span><span id="line-34"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span> </span><span id="local-6989586621679043118"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679043118"><span class="hs-identifier hs-var">ex</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either String () -&gt; IO (Either String ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String () -&gt; IO (Either String ()))
+-&gt; Either String () -&gt; IO (Either String ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">e -&gt; String
+forall e. Exception e =&gt; e -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#displayException"><span class="hs-identifier hs-var">displayException</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679043118"><span class="hs-identifier hs-var">ex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621679043120"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043120"><span class="hs-identifier hs-var">endTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Time
+</span><span class="hs-identifier hs-var">getTime</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679043121"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679043121"><span class="hs-identifier hs-var">maxMsgLength</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Int -&gt; [Int] -&gt; Int
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int)
+-&gt; ([(Time, String)] -&gt; [Int]) -&gt; [(Time, String)] -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((Time, String) -&gt; Int) -&gt; [(Time, String)] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Int)
+-&gt; ((Time, String) -&gt; String) -&gt; (Time, String) -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Time, String) -&gt; String
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(Time, String)] -&gt; Int) -&gt; IO [(Time, String)] -&gt; IO Int
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IORef [(Time, String)] -&gt; IO [(Time, String)]
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef [(Time, String)]
+</span><a href="#local-6989586621679043103"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679043131"><span class="annot"><span class="annottext">msgFormat :: String
+</span><a href="#local-6989586621679043131"><span class="hs-identifier hs-var hs-var">msgFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;%-&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679043121"><span class="hs-identifier hs-var">maxMsgLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">62</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;s (%.02fs)&quot;</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679043134"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679043134"><span class="hs-identifier hs-var">msgs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Time, [String]) -&gt; [String]
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Time, [String]) -&gt; [String])
+-&gt; ([(Time, String)] -&gt; (Time, [String]))
+-&gt; [(Time, String)]
+-&gt; [String]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((Time, [String]) -&gt; (Time, String) -&gt; (Time, [String]))
+-&gt; (Time, [String]) -&gt; [(Time, String)] -&gt; (Time, [String])
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679043135"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043135"><span class="hs-identifier hs-var">lastTime</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679043136"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679043136"><span class="hs-identifier hs-var">acc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679043137"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043137"><span class="hs-identifier hs-var">curTime</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679043138"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043138"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>           </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679043141"><span class="annot"><span class="annottext">duration :: Time
+</span><a href="#local-6989586621679043141"><span class="hs-identifier hs-var hs-var">duration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043135"><span class="hs-identifier hs-var">lastTime</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; Time
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043137"><span class="hs-identifier hs-var">curTime</span></a></span><span>
+</span><span id="line-45"></span><span>               </span><span class="hs-glyph">!</span><span id="local-6989586621679043160"><span class="annot"><span class="annottext">msg' :: String
+</span><a href="#local-6989586621679043160"><span class="hs-identifier hs-var hs-var">msg'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043141"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><span class="hs-number">0.01</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Time -&gt; String
+forall r. PrintfType r =&gt; String -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043131"><span class="hs-identifier hs-var">msgFormat</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043138"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043141"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043138"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-46"></span><span>            </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043137"><span class="hs-identifier hs-var">curTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043160"><span class="hs-identifier hs-var">msg'</span></a></span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; [String]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679043136"><span class="hs-identifier hs-var">acc</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679043120"><span class="hs-identifier hs-var">endTime</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><span class="annottext">([(Time, String)] -&gt; [String])
+-&gt; IO [(Time, String)] -&gt; IO [String]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IORef [(Time, String)] -&gt; IO [(Time, String)]
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef [(Time, String)]
+</span><a href="#local-6989586621679043103"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">Result -&gt; IO Result
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Result -&gt; IO Result) -&gt; Result -&gt; IO Result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either String ()
+</span><a href="#local-6989586621679043111"><span class="hs-identifier hs-var">hunitResult</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Result
+</span><span class="hs-identifier hs-var">testPassed</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679043134"><span class="hs-identifier hs-var">msgs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679043163"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043163"><span class="hs-identifier hs-var">errMsg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Result
+</span><span class="hs-identifier hs-var">testFailed</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Result) -&gt; String -&gt; Result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-56"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679043134"><span class="hs-identifier hs-var">msgs</span></a></span><span>
+</span><span id="line-57"></span><span>            </span><span class="hs-keyword">then</span><span>
+</span><span id="line-58"></span><span>              </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043163"><span class="hs-identifier hs-var">errMsg</span></a></span><span>
+</span><span id="line-59"></span><span>            </span><span class="hs-keyword">else</span><span>
+</span><span id="line-60"></span><span>              </span><span class="hs-comment">-- Indent the error msg w.r.t. step messages</span><span>
+</span><span id="line-61"></span><span>              </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; String) -&gt; [String] -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-62"></span><span>                </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679043134"><span class="hs-identifier hs-var">msgs</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; [String] -&gt; [String]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;  &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; [String]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043163"><span class="hs-identifier hs-var">errMsg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679043169"><span class="annot"><span class="annottext">testOptions :: Tagged TestCaseSteps [OptionDescription]
+</span><a href="#local-6989586621679043169"><span class="hs-identifier hs-var hs-var hs-var hs-var">testOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; Tagged TestCaseSteps [OptionDescription]
+forall a. a -&gt; Tagged TestCaseSteps a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | Create a multi-step unit test.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- &gt;main = defaultMain $ testCaseSteps &quot;Multi-step test&quot; $ \step -&gt; do</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- &gt;  step &quot;Preparing...&quot;</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- &gt;  -- do something</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- &gt;  step &quot;Running part 1&quot;</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- &gt;  -- do something</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- &gt;  step &quot;Running part 2&quot;</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- &gt;  -- do something</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- &gt;  assertFailure &quot;BAM!&quot;</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- &gt;  step &quot;Running part 3&quot;</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- &gt;  -- do something</span><span>
+</span><span id="line-83"></span><span class="hs-comment">--</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- The @step@ calls are mere annotations. They let you see which steps were</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- performed successfully, and which step failed.</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- You can think of @step@</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- as 'putStrLn', except 'putStrLn' would mess up the output with the</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- console reporter and get lost with the others.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- For the example above, the output will be</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- &gt;Multi-step test: FAIL</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- &gt;  Preparing...</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- &gt;  Running part 1</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- &gt;  Running part 2</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- &gt;    BAM!</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- &gt;1 out of 1 tests failed (0.00s)</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Note that:</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- * Tasty still treats this as a single test, even though it consists of</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- multiple steps.</span><span>
+</span><span id="line-105"></span><span class="hs-comment">--</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- * The execution stops after the first failure. When we are looking at</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- a failed test, we know that all /displayed/ steps but the last one were</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- successful, and the last one failed. The steps /after/ the failed one</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- are /not displayed/, since they didn't run.</span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Test.Tasty.HUnit.Steps.html#testCaseSteps"><span class="hs-identifier hs-type">testCaseSteps</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TestName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TestTree</span></span><span>
+</span><span id="line-111"></span><span id="testCaseSteps"><span class="annot"><span class="annottext">testCaseSteps :: String -&gt; ((String -&gt; IO ()) -&gt; IO ()) -&gt; TestTree
+</span><a href="Test.Tasty.HUnit.Steps.html#testCaseSteps"><span class="hs-identifier hs-var hs-var">testCaseSteps</span></a></span></span><span> </span><span id="local-6989586621679043173"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043173"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; TestCaseSteps -&gt; TestTree
+forall t. IsTest t =&gt; String -&gt; t -&gt; TestTree
+</span><span class="hs-identifier hs-var">singleTest</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679043173"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">(TestCaseSteps -&gt; TestTree)
+-&gt; (((String -&gt; IO ()) -&gt; IO ()) -&gt; TestCaseSteps)
+-&gt; ((String -&gt; IO ()) -&gt; IO ())
+-&gt; TestTree
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((String -&gt; IO ()) -&gt; IO ()) -&gt; TestCaseSteps
+</span><a href="Test.Tasty.HUnit.Steps.html#TestCaseSteps"><span class="hs-identifier hs-var">TestCaseSteps</span></a></span><span>
+</span><span id="line-112"></span></pre></body></html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.Opaque</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Hedgehog.Internal.Opaque.html#Opaque"><span class="hs-identifier">Opaque</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | Opaque values.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--   Useful if you want to put something without a 'Show' instance inside</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--   something which you'd like to be able to display.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--   For example:</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--   data State v =</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--     State {</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--         stateRefs :: [Var (Opaque (IORef Int)) v]</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--       } deriving (Eq, Show)</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">newtype</span><span> </span><span id="Opaque"><span class="annot"><a href="Hedgehog.Internal.Opaque.html#Opaque"><span class="hs-identifier hs-var">Opaque</span></a></span></span><span> </span><span id="local-6989586621679473803"><span class="annot"><a href="#local-6989586621679473803"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-22"></span><span>  </span><span id="Opaque"><span class="annot"><a href="Hedgehog.Internal.Opaque.html#Opaque"><span class="hs-identifier hs-var">Opaque</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-23"></span><span>      </span><span id="unOpaque"><span class="annot"><span class="annottext">forall a. Opaque a -&gt; a
+</span><a href="Hedgehog.Internal.Opaque.html#unOpaque"><span class="hs-identifier hs-var hs-var">unOpaque</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679473803"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679473823"><span id="local-6989586621679473827"><span class="annot"><span class="annottext">Opaque a -&gt; Opaque a -&gt; Bool
+(Opaque a -&gt; Opaque a -&gt; Bool)
+-&gt; (Opaque a -&gt; Opaque a -&gt; Bool) -&gt; Eq (Opaque a)
+forall a. Eq a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+== :: Opaque a -&gt; Opaque a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+/= :: Opaque a -&gt; Opaque a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679473837"><span id="local-6989586621679473841"><span id="local-6989586621679473845"><span id="local-6989586621679473849"><span id="local-6989586621679473853"><span id="local-6989586621679473857"><span id="local-6989586621679473861"><span class="annot"><span class="annottext">Eq (Opaque a)
+Eq (Opaque a) =&gt;
+(Opaque a -&gt; Opaque a -&gt; Ordering)
+-&gt; (Opaque a -&gt; Opaque a -&gt; Bool)
+-&gt; (Opaque a -&gt; Opaque a -&gt; Bool)
+-&gt; (Opaque a -&gt; Opaque a -&gt; Bool)
+-&gt; (Opaque a -&gt; Opaque a -&gt; Bool)
+-&gt; (Opaque a -&gt; Opaque a -&gt; Opaque a)
+-&gt; (Opaque a -&gt; Opaque a -&gt; Opaque a)
+-&gt; Ord (Opaque a)
+Opaque a -&gt; Opaque a -&gt; Bool
+Opaque a -&gt; Opaque a -&gt; Ordering
+Opaque a -&gt; Opaque a -&gt; Opaque a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Opaque a)
+forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Ordering
+forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Opaque a
+$ccompare :: forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Ordering
+compare :: Opaque a -&gt; Opaque a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+&lt; :: Opaque a -&gt; Opaque a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+&lt;= :: Opaque a -&gt; Opaque a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+&gt; :: Opaque a -&gt; Opaque a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Bool
+&gt;= :: Opaque a -&gt; Opaque a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Opaque a
+max :: Opaque a -&gt; Opaque a -&gt; Opaque a
+$cmin :: forall a. Ord a =&gt; Opaque a -&gt; Opaque a -&gt; Opaque a
+min :: Opaque a -&gt; Opaque a -&gt; Opaque a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679473818"><span id="local-6989586621679473869"><span id="local-6989586621679473873"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Opaque.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679473818"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679473876"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Opaque a -&gt; ShowS
+</span><a href="#local-6989586621679473876"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Opaque.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Opaque&quot;</span></span><span>
+</span><span id="line-29"></span></pre></body></html>

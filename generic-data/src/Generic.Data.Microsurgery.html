@@ -1,0 +1,273 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ExplicitNamespaces #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Simple operations on generic representations:</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- modify 'GHC.Generics.Generic' instances to tweak the behavior of generic</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- implementations as if you had declared a slightly different type.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- This module provides the following microsurgeries:</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- - 'RenameFields': rename the fields of a record type.</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- - 'RenameConstrs': rename the constructors.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- - 'OnFields': apply a type constructor @f :: Type -&gt; Type@ to every field.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- - 'CopyRep': use the generic representation of another type of the same shape.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- - 'Typeage': treat a @newtype@ as a @data@ type.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- - 'Derecordify': treat a type as if it weren't a record.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- More complex surgeries can be found in</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- &lt;https://hackage.haskell.org/package/generic-data-surgery generic-data-surgery&gt;</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- but also, perhaps surprisingly,</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- in &lt;https://hackage.haskell.org/package/generic-lens generic-lens&gt;</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- (read more about this just below) and</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- &lt;https://hackage.haskell.org/package/one-liner one-liner&gt;.</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- Surgeries can be used:</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- - to derive type class instances with the @DerivingVia@ extension,</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--   using the 'Surgery' or 'ProductSurgery' type synonyms</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--   (for classes with instances for 'Generically' or 'GenericProduct');</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- - with the 'Data' \&quot;synthetic type\&quot; for more involved transformations,</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--   for example using lenses in the next section.</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Generic.Data.Microsurgery</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Surgeries with generic-lens</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="hs-comment">-- $lens-surgery</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Deriving via</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#Surgery"><span class="hs-identifier">Surgery</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#ProductSurgery"><span class="hs-identifier">ProductSurgery</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#Surgeries"><span class="hs-identifier">Surgeries</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#ProductSurgeries"><span class="hs-identifier">ProductSurgeries</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#Surgery%27"><span class="hs-identifier">Surgery'</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#GSurgery"><span class="hs-identifier">GSurgery</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generically"><span class="hs-identifier">Generically</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Generically.html#GenericProduct"><span class="hs-identifier">GenericProduct</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Synthetic types</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Data.html#toData"><span class="hs-identifier">toData</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Data.html#fromData"><span class="hs-identifier">fromData</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#onData"><span class="hs-identifier">onData</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Microsurgeries</span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">-- | Each microsurgery consists of a type family @F@ to modify metadata in</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- GHC Generic representations, and two mappings (that are just</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- 'Data.Coerce.coerce'):</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">--   f :: 'Data' ('GHC.Generics.Rep' a) p -&gt; 'Data' (F ('GHC.Generics.Rep' a)) p</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- unf :: 'Data' (F ('GHC.Generics.Rep' a)) p -&gt; 'Data' ('GHC.Generics.Rep' a) p</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- Use @f@ with 'toData' for generic functions that consume generic values,</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- and @unf@ with 'fromData' for generic functions that produce generic</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">-- values. Abstract example:</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- genericSerialize . f . 'toData'</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- 'fromData' . unf . genericDeserialize</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Renaming of fields and constructors</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- | These surgeries require @DataKinds@ and @TypeApplications@.</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- ==== Examples</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- {-# LANGUAGE</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">--     DataKinds,</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">--     TypeApplications #-}</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- -- Rename all fields to \&quot;foo\&quot;</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">-- 'renameFields' \@('SConst' \&quot;foo\&quot;)</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-comment">-- -- Rename constructor \&quot;Bar\&quot; to \&quot;Baz\&quot;, and leave all others the same</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- 'renameConstrs' \@('SRename' '[ '(\&quot;Bar\&quot;, \&quot;Baz\&quot;) ] 'SId')</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#RenameFields"><span class="hs-identifier">RenameFields</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#renameFields"><span class="hs-identifier">renameFields</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#unrenameFields"><span class="hs-identifier">unrenameFields</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#RenameConstrs"><span class="hs-identifier">RenameConstrs</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#renameConstrs"><span class="hs-identifier">renameConstrs</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#unrenameConstrs"><span class="hs-identifier">unrenameConstrs</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Renaming functions</span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#%40%40"><span class="hs-operator">(@@)</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#SId"><span class="hs-identifier">SId</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#SError"><span class="hs-identifier">SError</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#SConst"><span class="hs-identifier">SConst</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#SRename"><span class="hs-identifier">SRename</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Wrap every field in a type constructor</span></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- | Give every field a type @f FieldType@ (where @f@ is a parameter), to</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- obtain a family of types with a shared structure. Some applications of</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- this \&quot;higher-kindification\&quot; technique may be found in the following</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- blogposts:</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">-- - https://www.benjamin.pizza/posts/2017-12-15-functor-functors.html</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">-- - https://reasonablypolymorphic.com/blog/higher-kinded-data/</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-comment">-- See also the file @test/one-liner-surgery.hs@ in this package for an</span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-comment">-- example of using one-liner and generic-lens with a synthetic type</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-comment">-- constructed with 'DOnFields'.</span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-comment">-- === Example</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-comment">-- Derive 'Data.Semigroup.Semigroup' and 'Data.Monoid.Monoid' for</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">-- a product of 'Prelude.Num' types:</span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-comment">-- data TwoCounters = MkTwoCounters { c1 :: Int, c2 :: Int }</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-comment">--   deriving 'GHC.Generics.Generic'</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-comment">--   deriving ('Data.Semigroup.Semigroup', 'Data.Monoid.Monoid')</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-comment">--     via ('ProductSurgery' ('OnFields' 'Data.Monoid.Sum') TwoCounters)  -- Surgery here</span><span>
+</span><span id="line-131"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-comment">-- ==== __Extensions and imports__</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-comment">-- {-\# LANGUAGE DeriveGeneric, DerivingVia \#-}</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- import &quot;Data.Monoid&quot; ('Data.Monoid.Sum'(..))  -- Constructors must be in scope</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-comment">-- import &quot;GHC.Generics&quot; ('GHC.Generics.Generic')</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-comment">-- import &quot;Generic.Data.Microsurgery&quot;</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-comment">--   ( 'ProductSurgery'</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-comment">--   , 'OnFields'</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">--   , 'GenericProduct'(..)  -- Constructors must be in scope</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">--   , 'Surgery''(..)        --</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-comment">--   )</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#OnFields"><span class="hs-identifier">OnFields</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#DOnFields"><span class="hs-identifier">DOnFields</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#OnField"><span class="hs-identifier">OnField</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#%25~"><span class="hs-operator">(%~)</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#Cat"><span class="hs-identifier">Cat</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#DCat"><span class="hs-identifier">DCat</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Substitute a generic representation from another type</span></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- === Example</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-comment">-- Derive 'Data.Semigroup.Semigroup' and 'Data.Monoid.Monoid' for</span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-comment">-- a product of 'Prelude.Num' types, but using 'Data.Monoid.Sum' for one</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-comment">-- field and 'Data.Monoid.Product' for the other.</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-comment">-- In other words, we use the fact that @Polar a@ below is isomorphic to</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-comment">-- the monoid @('Data.Monoid.Product' a, 'Data.Monoid.Sum' a)@.</span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-comment">-- {-\# LANGUAGE DeriveGeneric, DerivingVia \#-}</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-comment">-- import &quot;Data.Monoid&quot; ('Data.Monoid.Sum'(..), 'Data.Monoid.Product'(..))  -- Constructors must be in scope</span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-comment">-- import &quot;GHC.Generics&quot; ('GHC.Generics.Generic')</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-comment">-- import &quot;Generic.Data.Microsurgery&quot;</span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-comment">--   ( 'ProductSurgery'</span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-comment">--   , 'CopyRep'</span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-comment">--   , 'GenericProduct'(..)  -- Constructors must be in scope</span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-comment">--   , 'Surgery''(..)        --</span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-comment">--   )</span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-comment">-- data Polar a = Exp { modulus :: a, argument :: a }</span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-comment">--   deriving 'GHC.Generics.Generic'</span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-comment">--   deriving ('Data.Semigroup.Semigroup', 'Data.Monoid.Monoid')</span><span>
+</span><span id="line-181"></span><span>    </span><span class="hs-comment">--     via ('ProductSurgery' ('CopyRep' ('Data.Monoid.Product' a, 'Data.Monoid.Sum' a)) (Polar a))  -- Surgery here</span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-comment">-- That is the polar representation of a complex number:</span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-comment">-- &gt; z = modulus * exp(i * argument)</span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-comment">-- The product of complex numbers defines a monoid isomorphic to</span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-comment">-- the monoid product @(Product Double, Sum Double)@</span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-comment">-- (multiply the moduli, add the arguments).</span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-comment">-- z1 'Data.Semigroup.&lt;&gt;' z2</span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-comment">--  = z1 'Prelude.*' z2</span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-comment">--  = Exp (modulus z1 'Prelude.*' modulus z2) (argument z1 'Prelude.+' argument z2)</span><span>
+</span><span id="line-196"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-comment">-- 'Data.Monoid.mempty' = 1 = Exp 1 0</span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#CopyRep"><span class="hs-identifier">CopyRep</span></a></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#copyRep"><span class="hs-identifier">copyRep</span></a></span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#uncopyRep"><span class="hs-identifier">uncopyRep</span></a></span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Type aging (&quot;denewtypify&quot;)</span></span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#Typeage"><span class="hs-identifier">Typeage</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#typeage"><span class="hs-identifier">typeage</span></a></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#untypeage"><span class="hs-identifier">untypeage</span></a></span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Derecordify</span></span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#Derecordify"><span class="hs-identifier">Derecordify</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#derecordify"><span class="hs-identifier">derecordify</span></a></span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html#underecordify"><span class="hs-identifier">underecordify</span></a></span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-217"></span><span>
+</span><span id="line-218"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Data.html"><span class="hs-identifier">Generic.Data.Internal.Data</span></a></span><span>
+</span><span id="line-219"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Generically.html"><span class="hs-identifier">Generic.Data.Internal.Generically</span></a></span><span>
+</span><span id="line-220"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Microsurgery.html"><span class="hs-identifier">Generic.Data.Internal.Microsurgery</span></a></span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- $lens-surgery</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- One common and simple situation is to modify the type of some fields,</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- for example wrapping them in a newtype.</span><span>
+</span><span id="line-225"></span><span class="hs-comment">--</span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- We can leverage the @generic-lens@ library, with the two functions below.</span><span>
+</span><span id="line-227"></span><span class="hs-comment">--</span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- -- Lens to a field named @fd@ in a Generic record.</span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- field_ :: HasField_ fd s t a b =&gt; Lens s t a b  -- from generic-lens</span><span>
+</span><span id="line-231"></span><span class="hs-comment">--</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- -- Update a value through a lens (ASetter is a specialization of Lens).</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- over :: ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t   -- from lens or microlens</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-235"></span><span class="hs-comment">--</span><span>
+</span><span id="line-236"></span><span class="hs-comment">-- For example, here is a record type:</span><span>
+</span><span id="line-237"></span><span class="hs-comment">--</span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- data R = R { myField :: Int } deriving 'GHC.Generics.Generic'</span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-241"></span><span class="hs-comment">--</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- The function @over (field_ \@\&quot;myField\&quot;) 'Generic.Data.Opaque'@</span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- applies the newtype constructor 'Generic.Data.Opaque' to the field</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- @\&quot;myField\&quot;@, but this actually doesn't typecheck as-is. With a bit of help</span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- from this module, we can wrap that function as follows:</span><span>
+</span><span id="line-246"></span><span class="hs-comment">--</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- 'onData' (over (field_ \@\&quot;myField\&quot;) 'Generic.Data.Opaque') . 'toData'</span><span>
+</span><span id="line-249"></span><span class="hs-comment">--   :: R -&gt; 'Data' _ _   -- type arguments hidden</span><span>
+</span><span id="line-250"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-251"></span><span class="hs-comment">--</span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- The result has a type @'Data' _ _@, that from the point of view of &quot;GHC.Generics&quot;</span><span>
+</span><span id="line-253"></span><span class="hs-comment">-- looks just like @R@ but with the field @\&quot;myField\&quot;@ wrapped in</span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- 'Generic.Data.Opaque', as if we had defined:</span><span>
+</span><span id="line-255"></span><span class="hs-comment">--</span><span>
+</span><span id="line-256"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-257"></span><span class="hs-comment">-- data R = R { myField :: 'Generic.Data.Opaque' Int } deriving 'GHC.Generics.Generic'</span><span>
+</span><span id="line-258"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-259"></span><span class="hs-comment">--</span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- ==== Example usage</span><span>
+</span><span id="line-261"></span><span class="hs-comment">--</span><span>
+</span><span id="line-262"></span><span class="hs-comment">-- We derive an instance of 'Show' that hides the @\&quot;myField\&quot;@ field,</span><span>
+</span><span id="line-263"></span><span class="hs-comment">-- whatever its type.</span><span>
+</span><span id="line-264"></span><span class="hs-comment">--</span><span>
+</span><span id="line-265"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-266"></span><span class="hs-comment">-- instance 'Show' R where</span><span>
+</span><span id="line-267"></span><span class="hs-comment">--   'showsPrec' n = 'Generic.Data.gshowsPrec' n</span><span>
+</span><span id="line-268"></span><span class="hs-comment">--     . 'onData' (over (field_ \@\&quot;myField\&quot;) 'Generic.Data.Opaque')</span><span>
+</span><span id="line-269"></span><span class="hs-comment">--     . 'toData'</span><span>
+</span><span id="line-270"></span><span class="hs-comment">--</span><span>
+</span><span id="line-271"></span><span class="hs-comment">-- 'show' (R 3) = \&quot;R {myField = _}\&quot;</span><span>
+</span><span id="line-272"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-273"></span></pre></body></html>

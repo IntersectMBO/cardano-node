@@ -1,0 +1,951 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK hide #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Types.State
+   Description : Create lookups for 'Attribute's.
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   This module provides functions to assist with building 'Attribute'
+   lookups.
+-}</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Types.State</span><span>
+</span><span id="line-14"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier">Path</span></a></span><span>
+</span><span id="line-15"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#recursiveCall"><span class="hs-identifier">recursiveCall</span></a></span><span>
+</span><span id="line-16"></span><span>         </span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GraphState"><span class="hs-identifier">GraphState</span></a></span><span>
+</span><span id="line-18"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterLookup"><span class="hs-identifier">ClusterLookup</span></a></span><span>
+</span><span id="line-19"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#getGraphInfo"><span class="hs-identifier">getGraphInfo</span></a></span><span>
+</span><span id="line-20"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#addSubGraph"><span class="hs-identifier">addSubGraph</span></a></span><span>
+</span><span id="line-21"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#addGraphGlobals"><span class="hs-identifier">addGraphGlobals</span></a></span><span>
+</span><span id="line-22"></span><span>         </span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeState"><span class="hs-identifier">NodeState</span></a></span><span>
+</span><span id="line-24"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeLookup"><span class="hs-identifier">NodeLookup</span></a></span><span>
+</span><span id="line-25"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#getNodeLookup"><span class="hs-identifier">getNodeLookup</span></a></span><span>
+</span><span id="line-26"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#toDotNodes"><span class="hs-identifier">toDotNodes</span></a></span><span>
+</span><span id="line-27"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#addNodeGlobals"><span class="hs-identifier">addNodeGlobals</span></a></span><span>
+</span><span id="line-28"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#addNode"><span class="hs-identifier">addNode</span></a></span><span>
+</span><span id="line-29"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#addEdgeNodes"><span class="hs-identifier">addEdgeNodes</span></a></span><span>
+</span><span id="line-30"></span><span>         </span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#EdgeState"><span class="hs-identifier">EdgeState</span></a></span><span>
+</span><span id="line-32"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#getDotEdges"><span class="hs-identifier">getDotEdges</span></a></span><span>
+</span><span id="line-33"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#addEdgeGlobals"><span class="hs-identifier">addEdgeGlobals</span></a></span><span>
+</span><span id="line-34"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#addEdge"><span class="hs-identifier">addEdge</span></a></span><span>
+</span><span id="line-35"></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html"><span class="hs-identifier">Data.GraphViz.Attributes.Complete</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier">Attributes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#usedByClusters"><span class="hs-identifier">usedByClusters</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>                                            </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#usedByGraphs"><span class="hs-identifier">usedByGraphs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html"><span class="hs-identifier">Data.GraphViz.Attributes.Same</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html"><span class="hs-identifier">Data.GraphViz.Types.Internal.Common</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html"><span class="hs-identifier">Control.Arrow</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%26%26%26"><span class="hs-operator">(&amp;&amp;&amp;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator">(***)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.html"><span class="hs-identifier">Control.Monad.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Lazy.html#State"><span class="hs-identifier">State</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Lazy.html#execState"><span class="hs-identifier">execState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#gets"><span class="hs-identifier">gets</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#modify"><span class="hs-identifier">modify</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.DList</span></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.DList</span></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DList</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-identifier">on</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span>            </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span>            </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.html"><span class="hs-identifier">Data.Sequence</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#Seq"><span class="hs-identifier">Seq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#ViewL"><span class="hs-identifier">ViewL</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#%7C%3E"><span class="hs-operator">(|&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.html"><span class="hs-identifier">Data.Sequence</span></a></span><span>       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Seq</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span>            </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">type</span><span> </span><span id="GVState"><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-var">GVState</span></a></span></span><span> </span><span id="local-6989586621679223966"><span class="annot"><a href="#local-6989586621679223966"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621679223967"><span class="annot"><a href="#local-6989586621679223967"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Lazy.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#StateValue"><span class="hs-identifier hs-type">StateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223966"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679223967"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">data</span><span> </span><span id="StateValue"><span class="annot"><a href="Data.GraphViz.Types.State.html#StateValue"><span class="hs-identifier hs-var">StateValue</span></a></span></span><span> </span><span id="local-6989586621679223761"><span class="annot"><a href="#local-6989586621679223761"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SV"><span class="annot"><a href="Data.GraphViz.Types.State.html#SV"><span class="hs-identifier hs-var">SV</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="globalAttrs"><span class="annot"><span class="annottext">forall a. StateValue a -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#globalAttrs"><span class="hs-identifier hs-var hs-var">globalAttrs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span>
+</span><span id="line-59"></span><span>                       </span><span class="hs-special">,</span><span> </span><span id="useGlobals"><span class="annot"><span class="annottext">forall a. StateValue a -&gt; Bool
+</span><a href="Data.GraphViz.Types.State.html#useGlobals"><span class="hs-identifier hs-var hs-var">useGlobals</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-60"></span><span>                       </span><span class="hs-special">,</span><span> </span><span id="globalPath"><span class="annot"><span class="annottext">forall a. StateValue a -&gt; Path
+</span><a href="Data.GraphViz.Types.State.html#globalPath"><span class="hs-identifier hs-var hs-var">globalPath</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span>
+</span><span id="line-61"></span><span>                       </span><span class="hs-special">,</span><span> </span><span id="value"><span class="annot"><span class="annottext">forall a. StateValue a -&gt; a
+</span><a href="Data.GraphViz.Types.State.html#value"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679223761"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-62"></span><span>                       </span><span class="hs-special">}</span><span>
+</span><span id="line-63"></span><span>                  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679223975"><span id="local-6989586621679223986"><span class="annot"><span class="annottext">StateValue a -&gt; StateValue a -&gt; Bool
+(StateValue a -&gt; StateValue a -&gt; Bool)
+-&gt; (StateValue a -&gt; StateValue a -&gt; Bool) -&gt; Eq (StateValue a)
+forall a. Eq a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+== :: StateValue a -&gt; StateValue a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+/= :: StateValue a -&gt; StateValue a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679223999"><span id="local-6989586621679224008"><span id="local-6989586621679224014"><span id="local-6989586621679224018"><span id="local-6989586621679224021"><span id="local-6989586621679224024"><span id="local-6989586621679224027"><span class="annot"><span class="annottext">Eq (StateValue a)
+Eq (StateValue a) =&gt;
+(StateValue a -&gt; StateValue a -&gt; Ordering)
+-&gt; (StateValue a -&gt; StateValue a -&gt; Bool)
+-&gt; (StateValue a -&gt; StateValue a -&gt; Bool)
+-&gt; (StateValue a -&gt; StateValue a -&gt; Bool)
+-&gt; (StateValue a -&gt; StateValue a -&gt; Bool)
+-&gt; (StateValue a -&gt; StateValue a -&gt; StateValue a)
+-&gt; (StateValue a -&gt; StateValue a -&gt; StateValue a)
+-&gt; Ord (StateValue a)
+StateValue a -&gt; StateValue a -&gt; Bool
+StateValue a -&gt; StateValue a -&gt; Ordering
+StateValue a -&gt; StateValue a -&gt; StateValue a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (StateValue a)
+forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; Ordering
+forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; StateValue a
+$ccompare :: forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; Ordering
+compare :: StateValue a -&gt; StateValue a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+&lt; :: StateValue a -&gt; StateValue a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+&lt;= :: StateValue a -&gt; StateValue a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+&gt; :: StateValue a -&gt; StateValue a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; Bool
+&gt;= :: StateValue a -&gt; StateValue a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; StateValue a
+max :: StateValue a -&gt; StateValue a -&gt; StateValue a
+$cmin :: forall a. Ord a =&gt; StateValue a -&gt; StateValue a -&gt; StateValue a
+min :: StateValue a -&gt; StateValue a -&gt; StateValue a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679224033"><span id="local-6989586621679224046"><span id="local-6989586621679224050"><span class="annot"><span class="annottext">Int -&gt; StateValue a -&gt; ShowS
+[StateValue a] -&gt; ShowS
+StateValue a -&gt; String
+(Int -&gt; StateValue a -&gt; ShowS)
+-&gt; (StateValue a -&gt; String)
+-&gt; ([StateValue a] -&gt; ShowS)
+-&gt; Show (StateValue a)
+forall a. Show a =&gt; Int -&gt; StateValue a -&gt; ShowS
+forall a. Show a =&gt; [StateValue a] -&gt; ShowS
+forall a. Show a =&gt; StateValue a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; StateValue a -&gt; ShowS
+showsPrec :: Int -&gt; StateValue a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; StateValue a -&gt; String
+show :: StateValue a -&gt; String
+$cshowList :: forall a. Show a =&gt; [StateValue a] -&gt; ShowS
+showList :: [StateValue a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679224059"><span id="local-6989586621679224063"><span id="local-6989586621679224066"><span id="local-6989586621679224089"><span class="annot"><span class="annottext">ReadPrec [StateValue a]
+ReadPrec (StateValue a)
+Int -&gt; ReadS (StateValue a)
+ReadS [StateValue a]
+(Int -&gt; ReadS (StateValue a))
+-&gt; ReadS [StateValue a]
+-&gt; ReadPrec (StateValue a)
+-&gt; ReadPrec [StateValue a]
+-&gt; Read (StateValue a)
+forall a. Read a =&gt; ReadPrec [StateValue a]
+forall a. Read a =&gt; ReadPrec (StateValue a)
+forall a. Read a =&gt; Int -&gt; ReadS (StateValue a)
+forall a. Read a =&gt; ReadS [StateValue a]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: forall a. Read a =&gt; Int -&gt; ReadS (StateValue a)
+readsPrec :: Int -&gt; ReadS (StateValue a)
+$creadList :: forall a. Read a =&gt; ReadS [StateValue a]
+readList :: ReadS [StateValue a]
+$creadPrec :: forall a. Read a =&gt; ReadPrec (StateValue a)
+readPrec :: ReadPrec (StateValue a)
+$creadListPrec :: forall a. Read a =&gt; ReadPrec [StateValue a]
+readListPrec :: ReadPrec [StateValue a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><span class="hs-comment">-- | The path of clusters that must be traversed to reach this spot.</span></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">type</span><span> </span><span id="Path"><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-var">Path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#Seq"><span class="hs-identifier hs-type">Seq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span id="local-6989586621679223796"><span class="annot"><a href="Data.GraphViz.Types.State.html#modifyGlobal"><span class="hs-identifier hs-type">modifyGlobal</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223796"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-69"></span><span id="modifyGlobal"><span class="annot"><span class="annottext">modifyGlobal :: forall s. (SAttrs -&gt; SAttrs) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyGlobal"><span class="hs-identifier hs-var hs-var">modifyGlobal</span></a></span></span><span> </span><span id="local-6989586621679224099"><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs
+</span><a href="#local-6989586621679224099"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StateValue s -&gt; StateValue s) -&gt; StateT (StateValue s) Identity ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; (s -&gt; s) -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#modify"><span class="hs-identifier hs-var">modify</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue s -&gt; StateValue s
+forall {a}. StateValue a -&gt; StateValue a
+</span><a href="#local-6989586621679224100"><span class="hs-identifier hs-var">f'</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679224100"><span class="annot"><span class="annottext">f' :: StateValue a -&gt; StateValue a
+</span><a href="#local-6989586621679224100"><span class="hs-identifier hs-var hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679224101"><span class="annot"><span class="annottext">sv :: StateValue a
+</span><a href="#local-6989586621679224101"><span class="hs-identifier hs-var">sv</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#SV"><span class="hs-identifier hs-type">SV</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">globalAttrs :: forall a. StateValue a -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#globalAttrs"><span class="hs-identifier hs-var">globalAttrs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679224102"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224102"><span class="hs-identifier hs-var">gas</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateValue a
+</span><a href="#local-6989586621679224101"><span class="hs-identifier hs-var">sv</span></a></span><span class="hs-special">{</span><span class="annot"><a href="Data.GraphViz.Types.State.html#globalAttrs"><span class="hs-identifier hs-var">globalAttrs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679224099"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224102"><span class="hs-identifier hs-type">gas</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span id="local-6989586621679223805"><span class="annot"><a href="Data.GraphViz.Types.State.html#modifyValue"><span class="hs-identifier hs-type">modifyValue</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679223805"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679223805"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223805"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-74"></span><span id="modifyValue"><span class="annot"><span class="annottext">modifyValue :: forall s. (s -&gt; s) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyValue"><span class="hs-identifier hs-var hs-var">modifyValue</span></a></span></span><span> </span><span id="local-6989586621679224105"><span class="annot"><span class="annottext">s -&gt; s
+</span><a href="#local-6989586621679224105"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StateValue s -&gt; StateValue s) -&gt; StateT (StateValue s) Identity ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; (s -&gt; s) -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#modify"><span class="hs-identifier hs-var">modify</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue s -&gt; StateValue s
+</span><a href="#local-6989586621679224106"><span class="hs-identifier hs-var">f'</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679224106"><span class="annot"><span class="annottext">f' :: StateValue s -&gt; StateValue s
+</span><a href="#local-6989586621679224106"><span class="hs-identifier hs-var hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679224107"><span class="annot"><span class="annottext">sv :: StateValue s
+</span><a href="#local-6989586621679224107"><span class="hs-identifier hs-var">sv</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#SV"><span class="hs-identifier hs-type">SV</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">value :: forall a. StateValue a -&gt; a
+</span><a href="Data.GraphViz.Types.State.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679224108"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679224108"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateValue s
+</span><a href="#local-6989586621679224107"><span class="hs-identifier hs-var">sv</span></a></span><span class="hs-special">{</span><span class="annot"><a href="Data.GraphViz.Types.State.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679224105"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224108"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span id="local-6989586621679223808"><span class="annot"><a href="Data.GraphViz.Types.State.html#addGlobals"><span class="hs-identifier hs-type">addGlobals</span></a></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223808"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-79"></span><span id="addGlobals"><span class="annot"><span class="annottext">addGlobals :: forall s. Attributes -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#addGlobals"><span class="hs-identifier hs-var hs-var">addGlobals</span></a></span></span><span> </span><span id="local-6989586621679224116"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224116"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679224117"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679224117"><span class="hs-identifier hs-var">addG</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(StateValue s -&gt; Bool) -&gt; StateT (StateValue s) Identity Bool
+forall s (m :: * -&gt; *) a. MonadState s m =&gt; (s -&gt; a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#gets"><span class="hs-identifier hs-var">gets</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue s -&gt; Bool
+forall a. StateValue a -&gt; Bool
+</span><a href="Data.GraphViz.Types.State.html#useGlobals"><span class="hs-identifier hs-var">useGlobals</span></a></span><span>
+</span><span id="line-80"></span><span>                   </span><span class="annot"><span class="annottext">Bool -&gt; GVState s () -&gt; GVState s ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679224117"><span class="hs-identifier hs-var">addG</span></a></span><span> </span><span class="annot"><span class="annottext">(GVState s () -&gt; GVState s ()) -&gt; GVState s () -&gt; GVState s ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(SAttrs -&gt; SAttrs) -&gt; GVState s ()
+forall s. (SAttrs -&gt; SAttrs) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyGlobal"><span class="hs-identifier hs-var">modifyGlobal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SAttrs -&gt; Attributes -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#unionWith"><span class="hs-operator hs-var">`unionWith`</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224116"><span class="hs-keyword hs-var">as</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span id="local-6989586621679223819"><span class="annot"><a href="Data.GraphViz.Types.State.html#getGlobals"><span class="hs-identifier hs-type">getGlobals</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223819"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span></span><span>
+</span><span id="line-83"></span><span id="getGlobals"><span class="annot"><span class="annottext">getGlobals :: forall s. GVState s SAttrs
+</span><a href="Data.GraphViz.Types.State.html#getGlobals"><span class="hs-identifier hs-var hs-var">getGlobals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StateValue s -&gt; SAttrs) -&gt; StateT (StateValue s) Identity SAttrs
+forall s (m :: * -&gt; *) a. MonadState s m =&gt; (s -&gt; a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#gets"><span class="hs-identifier hs-var">gets</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue s -&gt; SAttrs
+forall a. StateValue a -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#globalAttrs"><span class="hs-identifier hs-var">globalAttrs</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679223821"><span class="annot"><a href="Data.GraphViz.Types.State.html#getPath"><span class="hs-identifier hs-type">getPath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223821"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span></span><span>
+</span><span id="line-86"></span><span id="getPath"><span class="annot"><span class="annottext">getPath :: forall s. GVState s Path
+</span><a href="Data.GraphViz.Types.State.html#getPath"><span class="hs-identifier hs-var hs-var">getPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StateValue s -&gt; Path) -&gt; StateT (StateValue s) Identity Path
+forall s (m :: * -&gt; *) a. MonadState s m =&gt; (s -&gt; a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#gets"><span class="hs-identifier hs-var">gets</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue s -&gt; Path
+forall a. StateValue a -&gt; Path
+</span><a href="Data.GraphViz.Types.State.html#globalPath"><span class="hs-identifier hs-var">globalPath</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679223823"><span class="annot"><a href="Data.GraphViz.Types.State.html#modifyPath"><span class="hs-identifier hs-type">modifyPath</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223823"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-89"></span><span id="modifyPath"><span class="annot"><span class="annottext">modifyPath :: forall s. (Path -&gt; Path) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyPath"><span class="hs-identifier hs-var hs-var">modifyPath</span></a></span></span><span> </span><span id="local-6989586621679224125"><span class="annot"><span class="annottext">Path -&gt; Path
+</span><a href="#local-6989586621679224125"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StateValue s -&gt; StateValue s) -&gt; StateT (StateValue s) Identity ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; (s -&gt; s) -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#modify"><span class="hs-identifier hs-var">modify</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue s -&gt; StateValue s
+forall {a}. StateValue a -&gt; StateValue a
+</span><a href="#local-6989586621679224126"><span class="hs-identifier hs-var">f'</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679224126"><span class="annot"><span class="annottext">f' :: StateValue a -&gt; StateValue a
+</span><a href="#local-6989586621679224126"><span class="hs-identifier hs-var hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679224127"><span class="annot"><span class="annottext">sv :: StateValue a
+</span><a href="#local-6989586621679224127"><span class="hs-identifier hs-var">sv</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#SV"><span class="hs-identifier hs-type">SV</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">globalPath :: forall a. StateValue a -&gt; Path
+</span><a href="Data.GraphViz.Types.State.html#globalPath"><span class="hs-identifier hs-var">globalPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679224128"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224128"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateValue a
+</span><a href="#local-6989586621679224127"><span class="hs-identifier hs-var">sv</span></a></span><span class="hs-special">{</span><span class="annot"><a href="Data.GraphViz.Types.State.html#globalPath"><span class="hs-identifier hs-var">globalPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679224125"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224128"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- When calling recursively, back-up and restore the global attrs</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- since they shouldn't change.</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- Outer Maybe: Nothing for subgraphs, Just for clusters</span><span>
+</span><span id="line-97"></span><span id="local-6989586621679223826"><span class="annot"><a href="Data.GraphViz.Types.State.html#recursiveCall"><span class="hs-identifier hs-type">recursiveCall</span></a></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223826"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223826"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-98"></span><span id="recursiveCall"><span class="annot"><span class="annottext">recursiveCall :: forall s. Maybe (Maybe GraphID) -&gt; GVState s () -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#recursiveCall"><span class="hs-identifier hs-var hs-var">recursiveCall</span></a></span></span><span> </span><span id="local-6989586621679224135"><span class="annot"><span class="annottext">Maybe (Maybe GraphID)
+</span><a href="#local-6989586621679224135"><span class="hs-identifier hs-var">mc</span></a></span></span><span> </span><span id="local-6989586621679224136"><span class="annot"><span class="annottext">GVState s ()
+</span><a href="#local-6989586621679224136"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679224137"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224137"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState s SAttrs
+forall s. GVState s SAttrs
+</span><a href="Data.GraphViz.Types.State.html#getGlobals"><span class="hs-identifier hs-var">getGlobals</span></a></span><span>
+</span><span id="line-99"></span><span>                        </span><span id="local-6989586621679224138"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224138"><span class="hs-identifier hs-var">p</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState s Path
+forall s. GVState s Path
+</span><a href="Data.GraphViz.Types.State.html#getPath"><span class="hs-identifier hs-var">getPath</span></a></span><span>
+</span><span id="line-100"></span><span>                        </span><span class="annot"><span class="annottext">GVState s ()
+-&gt; (Maybe GraphID -&gt; GVState s ())
+-&gt; Maybe (Maybe GraphID)
+-&gt; GVState s ()
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; GVState s ()
+forall a. a -&gt; StateT (StateValue s) Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Path -&gt; Path) -&gt; GVState s ()
+forall s. (Path -&gt; Path) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyPath"><span class="hs-identifier hs-var">modifyPath</span></a></span><span> </span><span class="annot"><span class="annottext">((Path -&gt; Path) -&gt; GVState s ())
+-&gt; (Maybe GraphID -&gt; Path -&gt; Path) -&gt; Maybe GraphID -&gt; GVState s ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Path -&gt; Maybe GraphID -&gt; Path) -&gt; Maybe GraphID -&gt; Path -&gt; Path
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Path -&gt; Maybe GraphID -&gt; Path
+forall a. Seq a -&gt; a -&gt; Seq a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#%7C%3E"><span class="hs-operator hs-var">(|&gt;)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe GraphID)
+</span><a href="#local-6989586621679224135"><span class="hs-identifier hs-var">mc</span></a></span><span>
+</span><span id="line-101"></span><span>                        </span><span class="annot"><span class="annottext">GVState s ()
+</span><a href="#local-6989586621679224136"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-102"></span><span>                        </span><span class="annot"><span class="annottext">(SAttrs -&gt; SAttrs) -&gt; GVState s ()
+forall s. (SAttrs -&gt; SAttrs) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyGlobal"><span class="hs-identifier hs-var">modifyGlobal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; SAttrs
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224137"><span class="hs-identifier hs-var">gas</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>                        </span><span class="annot"><span class="annottext">(Path -&gt; Path) -&gt; GVState s ()
+forall s. (Path -&gt; Path) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyPath"><span class="hs-identifier hs-var">modifyPath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Path -&gt; Path -&gt; Path
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224138"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#unionWith"><span class="hs-identifier hs-type">unionWith</span></a></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span>
+</span><span id="line-106"></span><span id="unionWith"><span class="annot"><span class="annottext">unionWith :: SAttrs -&gt; Attributes -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#unionWith"><span class="hs-identifier hs-var hs-var">unionWith</span></a></span></span><span> </span><span id="local-6989586621679224143"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224143"><span class="hs-identifier hs-var">sas</span></a></span></span><span> </span><span id="local-6989586621679224144"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224144"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; SAttrs
+</span><a href="Data.GraphViz.Attributes.Same.html#toSAttr"><span class="hs-identifier hs-var">toSAttr</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224144"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; SAttrs
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#union"><span class="hs-operator hs-var">`Set.union`</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224143"><span class="hs-identifier hs-var">sas</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- Dealing with sub-graphs</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">type</span><span> </span><span id="GraphState"><span class="annot"><a href="Data.GraphViz.Types.State.html#GraphState"><span class="hs-identifier hs-var">GraphState</span></a></span></span><span> </span><span id="local-6989586621679224147"><span class="annot"><a href="#local-6989586621679224147"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterLookup%27"><span class="hs-identifier hs-type">ClusterLookup'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224147"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- | The available information for each cluster; the @['Path']@</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--   denotes all locations where that particular cluster is located</span><span>
+</span><span id="line-115"></span><span class="hs-comment">--   (more than one location can indicate possible problems).</span><span>
+</span><span id="line-116"></span><span class="hs-keyword">type</span><span> </span><span id="ClusterLookup"><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterLookup"><span class="hs-identifier hs-var">ClusterLookup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GlobalAttributes"><span class="hs-identifier hs-type">GlobalAttributes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">type</span><span> </span><span id="ClusterLookup%27"><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterLookup%27"><span class="hs-identifier hs-var">ClusterLookup'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterInfo"><span class="hs-identifier hs-type">ClusterInfo</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">type</span><span> </span><span id="ClusterInfo"><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterInfo"><span class="hs-identifier hs-var">ClusterInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DList</span></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span id="local-6989586621679223842"><span class="annot"><a href="Data.GraphViz.Types.State.html#getGraphInfo"><span class="hs-identifier hs-type">getGraphInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GraphState"><span class="hs-identifier hs-type">GraphState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223842"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GlobalAttributes"><span class="hs-identifier hs-type">GlobalAttributes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterLookup"><span class="hs-identifier hs-type">ClusterLookup</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-123"></span><span id="getGraphInfo"><span class="annot"><span class="annottext">getGraphInfo :: forall a. GraphState a -&gt; (GlobalAttributes, ClusterLookup)
+</span><a href="Data.GraphViz.Types.State.html#getGraphInfo"><span class="hs-identifier hs-var hs-var">getGraphInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">SAttrs -&gt; GlobalAttributes
+</span><a href="#local-6989586621679224150"><span class="hs-identifier hs-var">graphGlobal</span></a></span><span> </span><span class="annot"><span class="annottext">(SAttrs -&gt; GlobalAttributes)
+-&gt; (StateValue ClusterLookup' -&gt; SAttrs)
+-&gt; StateValue ClusterLookup'
+-&gt; GlobalAttributes
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue ClusterLookup' -&gt; SAttrs
+forall a. StateValue a -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#globalAttrs"><span class="hs-identifier hs-var">globalAttrs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(StateValue ClusterLookup' -&gt; GlobalAttributes)
+-&gt; (StateValue ClusterLookup' -&gt; ClusterLookup)
+-&gt; StateValue ClusterLookup'
+-&gt; (GlobalAttributes, ClusterLookup)
+forall b c c'. (b -&gt; c) -&gt; (b -&gt; c') -&gt; b -&gt; (c, c')
+forall (a :: * -&gt; * -&gt; *) b c c'.
+Arrow a =&gt;
+a b c -&gt; a b c' -&gt; a b (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%26%26%26"><span class="hs-operator hs-var">&amp;&amp;&amp;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ClusterLookup' -&gt; ClusterLookup
+forall {k}.
+Map k (DList Path, SAttrs) -&gt; Map k ([Path], GlobalAttributes)
+</span><a href="#local-6989586621679224151"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">(ClusterLookup' -&gt; ClusterLookup)
+-&gt; (StateValue ClusterLookup' -&gt; ClusterLookup')
+-&gt; StateValue ClusterLookup'
+-&gt; ClusterLookup
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue ClusterLookup' -&gt; ClusterLookup'
+forall a. StateValue a -&gt; a
+</span><a href="Data.GraphViz.Types.State.html#value"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>               </span><span class="annot"><span class="annottext">(StateValue ClusterLookup' -&gt; (GlobalAttributes, ClusterLookup))
+-&gt; (GraphState a -&gt; StateValue ClusterLookup')
+-&gt; GraphState a
+-&gt; (GlobalAttributes, ClusterLookup)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GraphState a
+-&gt; StateValue ClusterLookup' -&gt; StateValue ClusterLookup'
+forall s a. State s a -&gt; s -&gt; s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Lazy.html#execState"><span class="hs-operator hs-var">`execState`</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue ClusterLookup'
+forall {k} {a}. StateValue (Map k a)
+</span><a href="#local-6989586621679224152"><span class="hs-identifier hs-var">initState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679224151"><span class="annot"><span class="annottext">convert :: Map k (DList Path, SAttrs) -&gt; Map k ([Path], GlobalAttributes)
+</span><a href="#local-6989586621679224151"><span class="hs-identifier hs-var hs-var">convert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((DList Path, SAttrs) -&gt; ([Path], GlobalAttributes))
+-&gt; Map k (DList Path, SAttrs) -&gt; Map k ([Path], GlobalAttributes)
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#map"><span class="hs-identifier hs-var">Map.map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Path] -&gt; [Path]
+</span><a href="#local-6989586621679224155"><span class="hs-identifier hs-var">uniq</span></a></span><span> </span><span class="annot"><span class="annottext">([Path] -&gt; [Path])
+-&gt; (DList Path -&gt; [Path]) -&gt; DList Path -&gt; [Path]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DList Path -&gt; [Path]
+forall a. DList a -&gt; [a]
+</span><span class="hs-identifier hs-var">DList.toList</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(DList Path -&gt; [Path])
+-&gt; (SAttrs -&gt; GlobalAttributes)
+-&gt; (DList Path, SAttrs)
+-&gt; ([Path], GlobalAttributes)
+forall b c b' c'. (b -&gt; c) -&gt; (b' -&gt; c') -&gt; (b, b') -&gt; (c, c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+Arrow a =&gt;
+a b c -&gt; a b' c' -&gt; a (b, b') (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; GlobalAttributes
+</span><a href="#local-6989586621679224157"><span class="hs-identifier hs-var">toGlobal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679224157"><span class="annot"><span class="annottext">toGlobal :: SAttrs -&gt; GlobalAttributes
+</span><a href="#local-6989586621679224157"><span class="hs-identifier hs-var hs-var">toGlobal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GlobalAttributes
+</span><a href="Data.GraphViz.Types.Internal.Common.html#GraphAttrs"><span class="hs-identifier hs-var">GraphAttrs</span></a></span><span> </span><span class="annot"><span class="annottext">(Attributes -&gt; GlobalAttributes)
+-&gt; (SAttrs -&gt; Attributes) -&gt; SAttrs -&gt; GlobalAttributes
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Attribute -&gt; Bool) -&gt; Attributes -&gt; Attributes
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="annot"><span class="annottext">Attribute -&gt; Bool
+</span><a href="Data.GraphViz.Attributes.Complete.html#usedByClusters"><span class="hs-identifier hs-var">usedByClusters</span></a></span><span> </span><span class="annot"><span class="annottext">(Attributes -&gt; Attributes)
+-&gt; (SAttrs -&gt; Attributes) -&gt; SAttrs -&gt; Attributes
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; Attributes
+</span><a href="Data.GraphViz.Attributes.Same.html#unSame"><span class="hs-identifier hs-var">unSame</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621679224150"><span class="annot"><span class="annottext">graphGlobal :: SAttrs -&gt; GlobalAttributes
+</span><a href="#local-6989586621679224150"><span class="hs-identifier hs-var hs-var">graphGlobal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GlobalAttributes
+</span><a href="Data.GraphViz.Types.Internal.Common.html#GraphAttrs"><span class="hs-identifier hs-var">GraphAttrs</span></a></span><span> </span><span class="annot"><span class="annottext">(Attributes -&gt; GlobalAttributes)
+-&gt; (SAttrs -&gt; Attributes) -&gt; SAttrs -&gt; GlobalAttributes
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Attribute -&gt; Bool) -&gt; Attributes -&gt; Attributes
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="annot"><span class="annottext">Attribute -&gt; Bool
+</span><a href="Data.GraphViz.Attributes.Complete.html#usedByGraphs"><span class="hs-identifier hs-var">usedByGraphs</span></a></span><span> </span><span class="annot"><span class="annottext">(Attributes -&gt; Attributes)
+-&gt; (SAttrs -&gt; Attributes) -&gt; SAttrs -&gt; Attributes
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; Attributes
+</span><a href="Data.GraphViz.Attributes.Same.html#unSame"><span class="hs-identifier hs-var">unSame</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621679224152"><span class="annot"><span class="annottext">initState :: StateValue (Map k a)
+</span><a href="#local-6989586621679224152"><span class="hs-identifier hs-var hs-var">initState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; Bool -&gt; Path -&gt; Map k a -&gt; StateValue (Map k a)
+forall a. SAttrs -&gt; Bool -&gt; Path -&gt; a -&gt; StateValue a
+</span><a href="Data.GraphViz.Types.State.html#SV"><span class="hs-identifier hs-var">SV</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+forall a. Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#empty"><span class="hs-identifier hs-var">Set.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+forall a. Seq a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#empty"><span class="hs-identifier hs-var">Seq.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679224155"><span class="annot"><span class="annottext">uniq :: [Path] -&gt; [Path]
+</span><a href="#local-6989586621679224155"><span class="hs-identifier hs-var hs-var">uniq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Path -&gt; [Path]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">Set.toList</span></a></span><span> </span><span class="annot"><span class="annottext">(Set Path -&gt; [Path]) -&gt; ([Path] -&gt; Set Path) -&gt; [Path] -&gt; [Path]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Path] -&gt; Set Path
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromList"><span class="hs-identifier hs-var">Set.fromList</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#mergeCInfos"><span class="hs-identifier hs-type">mergeCInfos</span></a></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterInfo"><span class="hs-identifier hs-type">ClusterInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterInfo"><span class="hs-identifier hs-type">ClusterInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#ClusterInfo"><span class="hs-identifier hs-type">ClusterInfo</span></a></span><span>
+</span><span id="line-133"></span><span id="mergeCInfos"><span class="annot"><span class="annottext">mergeCInfos :: (DList Path, SAttrs)
+-&gt; (DList Path, SAttrs) -&gt; (DList Path, SAttrs)
+</span><a href="Data.GraphViz.Types.State.html#mergeCInfos"><span class="hs-identifier hs-var hs-var">mergeCInfos</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679224170"><span class="annot"><span class="annottext">DList Path
+</span><a href="#local-6989586621679224170"><span class="hs-identifier hs-var">p1</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679224171"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224171"><span class="hs-identifier hs-var">as1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DList Path -&gt; DList Path -&gt; DList Path
+forall a. DList a -&gt; DList a -&gt; DList a
+</span><span class="hs-identifier hs-var">DList.append</span></span><span> </span><span class="annot"><span class="annottext">DList Path
+</span><a href="#local-6989586621679224170"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">(DList Path -&gt; DList Path)
+-&gt; (SAttrs -&gt; SAttrs)
+-&gt; (DList Path, SAttrs)
+-&gt; (DList Path, SAttrs)
+forall b c b' c'. (b -&gt; c) -&gt; (b' -&gt; c') -&gt; (b, b') -&gt; (c, c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+Arrow a =&gt;
+a b c -&gt; a b' c' -&gt; a (b, b') (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; SAttrs
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#union"><span class="hs-identifier hs-var">Set.union</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224171"><span class="hs-identifier hs-var">as1</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#addCluster"><span class="hs-identifier hs-type">addCluster</span></a></span><span>                 </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span>
+</span><span id="line-136"></span><span>                              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GraphState"><span class="hs-identifier hs-type">GraphState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span id="addCluster"><span class="annot"><span class="annottext">addCluster :: Maybe (Maybe GraphID) -&gt; Path -&gt; SAttrs -&gt; GraphState ()
+</span><a href="Data.GraphViz.Types.State.html#addCluster"><span class="hs-identifier hs-var hs-var">addCluster</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe GraphID)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>    </span><span class="annot"><span class="annottext">Path
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; GraphState ()
+forall a. a -&gt; StateT (StateValue ClusterLookup') Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#addCluster"><span class="hs-identifier hs-var">addCluster</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679224174"><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679224174"><span class="hs-identifier hs-var">gid</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679224175"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224175"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679224176"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224176"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ClusterLookup' -&gt; ClusterLookup') -&gt; GraphState ()
+forall s. (s -&gt; s) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyValue"><span class="hs-identifier hs-var">modifyValue</span></a></span><span> </span><span class="annot"><span class="annottext">((ClusterLookup' -&gt; ClusterLookup') -&gt; GraphState ())
+-&gt; (ClusterLookup' -&gt; ClusterLookup') -&gt; GraphState ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((DList Path, SAttrs)
+ -&gt; (DList Path, SAttrs) -&gt; (DList Path, SAttrs))
+-&gt; Maybe GraphID
+-&gt; (DList Path, SAttrs)
+-&gt; ClusterLookup'
+-&gt; ClusterLookup'
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#insertWith"><span class="hs-identifier hs-var">Map.insertWith</span></a></span><span> </span><span class="annot"><span class="annottext">(DList Path, SAttrs)
+-&gt; (DList Path, SAttrs) -&gt; (DList Path, SAttrs)
+</span><a href="Data.GraphViz.Types.State.html#mergeCInfos"><span class="hs-identifier hs-var">mergeCInfos</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679224174"><span class="hs-identifier hs-var">gid</span></a></span><span> </span><span class="annot"><span class="annottext">(DList Path, SAttrs)
+</span><a href="#local-6989586621679224178"><span class="hs-identifier hs-var">ci</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-140"></span><span>    </span><span id="local-6989586621679224178"><span class="annot"><span class="annottext">ci :: (DList Path, SAttrs)
+</span><a href="#local-6989586621679224178"><span class="hs-identifier hs-var hs-var">ci</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Path -&gt; DList Path
+forall a. a -&gt; DList a
+</span><span class="hs-identifier hs-var">DList.singleton</span></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224175"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224176"><span class="hs-keyword hs-var">as</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- Use this instead of recursiveCall</span><span>
+</span><span id="line-143"></span><span id="local-6989586621679223879"><span class="annot"><a href="Data.GraphViz.Types.State.html#addSubGraph"><span class="hs-identifier hs-type">addSubGraph</span></a></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GraphState"><span class="hs-identifier hs-type">GraphState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223879"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GraphState"><span class="hs-identifier hs-type">GraphState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-144"></span><span id="addSubGraph"><span class="annot"><span class="annottext">addSubGraph :: forall a. Maybe (Maybe GraphID) -&gt; GraphState a -&gt; GraphState ()
+</span><a href="Data.GraphViz.Types.State.html#addSubGraph"><span class="hs-identifier hs-var hs-var">addSubGraph</span></a></span></span><span> </span><span id="local-6989586621679224183"><span class="annot"><span class="annottext">Maybe (Maybe GraphID)
+</span><a href="#local-6989586621679224183"><span class="hs-identifier hs-var">mid</span></a></span></span><span> </span><span id="local-6989586621679224184"><span class="annot"><span class="annottext">GraphState a
+</span><a href="#local-6989586621679224184"><span class="hs-identifier hs-var">cntns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679224185"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224185"><span class="hs-identifier hs-var">pth</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState ClusterLookup' Path
+forall s. GVState s Path
+</span><a href="Data.GraphViz.Types.State.html#getPath"><span class="hs-identifier hs-var">getPath</span></a></span><span> </span><span class="hs-comment">-- Want path before we add it...</span><span>
+</span><span id="line-145"></span><span>                           </span><span class="annot"><span class="annottext">Maybe (Maybe GraphID) -&gt; GraphState () -&gt; GraphState ()
+forall s. Maybe (Maybe GraphID) -&gt; GVState s () -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#recursiveCall"><span class="hs-identifier hs-var">recursiveCall</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe GraphID)
+</span><a href="#local-6989586621679224183"><span class="hs-identifier hs-var">mid</span></a></span><span> </span><span class="annot"><span class="annottext">(GraphState () -&gt; GraphState ()) -&gt; GraphState () -&gt; GraphState ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">GraphState a
+</span><a href="#local-6989586621679224184"><span class="hs-identifier hs-var">cntns</span></a></span><span>
+</span><span id="line-146"></span><span>                                                  </span><span class="hs-comment">-- But want attrs after we</span><span>
+</span><span id="line-147"></span><span>                                                  </span><span class="hs-comment">-- finish it.</span><span>
+</span><span id="line-148"></span><span>                                                  </span><span id="local-6989586621679224186"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224186"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState ClusterLookup' SAttrs
+forall s. GVState s SAttrs
+</span><a href="Data.GraphViz.Types.State.html#getGlobals"><span class="hs-identifier hs-var">getGlobals</span></a></span><span>
+</span><span id="line-149"></span><span>                                                  </span><span class="annot"><span class="annottext">Maybe (Maybe GraphID) -&gt; Path -&gt; SAttrs -&gt; GraphState ()
+</span><a href="Data.GraphViz.Types.State.html#addCluster"><span class="hs-identifier hs-var">addCluster</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe GraphID)
+</span><a href="#local-6989586621679224183"><span class="hs-identifier hs-var">mid</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224185"><span class="hs-identifier hs-var">pth</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224186"><span class="hs-identifier hs-var">gas</span></a></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#addGraphGlobals"><span class="hs-identifier hs-type">addGraphGlobals</span></a></span><span>                 </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GlobalAttributes"><span class="hs-identifier hs-type">GlobalAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GraphState"><span class="hs-identifier hs-type">GraphState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span id="addGraphGlobals"><span class="annot"><span class="annottext">addGraphGlobals :: GlobalAttributes -&gt; GraphState ()
+</span><a href="Data.GraphViz.Types.State.html#addGraphGlobals"><span class="hs-identifier hs-var hs-var">addGraphGlobals</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphAttrs"><span class="hs-identifier hs-type">GraphAttrs</span></a></span><span> </span><span id="local-6989586621679224187"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224187"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GraphState ()
+forall s. Attributes -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#addGlobals"><span class="hs-identifier hs-var">addGlobals</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224187"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#addGraphGlobals"><span class="hs-identifier hs-var">addGraphGlobals</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalAttributes
+</span><span class="hs-identifier">_</span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; GraphState ()
+forall a. a -&gt; StateT (StateValue ClusterLookup') Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- Dealing with DotNodes</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><span class="hs-comment">-- | The available information on each 'DotNode' (both explicit and implicit).</span></span><span>
+</span><span id="line-159"></span><span class="hs-keyword">type</span><span> </span><span id="NodeLookup"><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeLookup"><span class="hs-identifier hs-var">NodeLookup</span></a></span></span><span> </span><span id="local-6989586621679224189"><span class="annot"><a href="#local-6989586621679224189"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224189"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-keyword">type</span><span> </span><span id="NodeLookup%27"><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeLookup%27"><span class="hs-identifier hs-var">NodeLookup'</span></a></span></span><span> </span><span id="local-6989586621679224190"><span class="annot"><a href="#local-6989586621679224190"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224190"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeInfo"><span class="hs-identifier hs-type">NodeInfo</span></a></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-keyword">data</span><span> </span><span id="NodeInfo"><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeInfo"><span class="hs-identifier hs-var">NodeInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NI"><span class="annot"><a href="Data.GraphViz.Types.State.html#NI"><span class="hs-identifier hs-var">NI</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="atts"><span class="annot"><span class="annottext">NodeInfo -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#atts"><span class="hs-identifier hs-var hs-var">atts</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span>
+</span><span id="line-164"></span><span>                   </span><span class="hs-special">,</span><span> </span><span id="gAtts"><span class="annot"><span class="annottext">NodeInfo -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#gAtts"><span class="hs-identifier hs-var hs-var">gAtts</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span> </span><span class="hs-comment">-- from globals</span><span>
+</span><span id="line-165"></span><span>                   </span><span class="hs-special">,</span><span> </span><span id="location"><span class="annot"><span class="annottext">NodeInfo -&gt; Path
+</span><a href="Data.GraphViz.Types.State.html#location"><span class="hs-identifier hs-var hs-var">location</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span>
+</span><span id="line-166"></span><span>                   </span><span class="hs-special">}</span><span>
+</span><span id="line-167"></span><span>              </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679224196"><span id="local-6989586621679224203"><span class="annot"><span class="annottext">NodeInfo -&gt; NodeInfo -&gt; Bool
+(NodeInfo -&gt; NodeInfo -&gt; Bool)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; Bool) -&gt; Eq NodeInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NodeInfo -&gt; NodeInfo -&gt; Bool
+== :: NodeInfo -&gt; NodeInfo -&gt; Bool
+$c/= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+/= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679224210"><span id="local-6989586621679224215"><span id="local-6989586621679224220"><span id="local-6989586621679224224"><span id="local-6989586621679224227"><span id="local-6989586621679224230"><span id="local-6989586621679224233"><span class="annot"><span class="annottext">Eq NodeInfo
+Eq NodeInfo =&gt;
+(NodeInfo -&gt; NodeInfo -&gt; Ordering)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; Bool)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; Bool)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; Bool)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; Bool)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; NodeInfo)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; NodeInfo)
+-&gt; Ord NodeInfo
+NodeInfo -&gt; NodeInfo -&gt; Bool
+NodeInfo -&gt; NodeInfo -&gt; Ordering
+NodeInfo -&gt; NodeInfo -&gt; NodeInfo
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: NodeInfo -&gt; NodeInfo -&gt; Ordering
+compare :: NodeInfo -&gt; NodeInfo -&gt; Ordering
+$c&lt; :: NodeInfo -&gt; NodeInfo -&gt; Bool
+&lt; :: NodeInfo -&gt; NodeInfo -&gt; Bool
+$c&lt;= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+&lt;= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+$c&gt; :: NodeInfo -&gt; NodeInfo -&gt; Bool
+&gt; :: NodeInfo -&gt; NodeInfo -&gt; Bool
+$c&gt;= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+&gt;= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+$cmax :: NodeInfo -&gt; NodeInfo -&gt; NodeInfo
+max :: NodeInfo -&gt; NodeInfo -&gt; NodeInfo
+$cmin :: NodeInfo -&gt; NodeInfo -&gt; NodeInfo
+min :: NodeInfo -&gt; NodeInfo -&gt; NodeInfo
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679224236"><span id="local-6989586621679224244"><span id="local-6989586621679224248"><span class="annot"><span class="annottext">Int -&gt; NodeInfo -&gt; ShowS
+[NodeInfo] -&gt; ShowS
+NodeInfo -&gt; String
+(Int -&gt; NodeInfo -&gt; ShowS)
+-&gt; (NodeInfo -&gt; String) -&gt; ([NodeInfo] -&gt; ShowS) -&gt; Show NodeInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NodeInfo -&gt; ShowS
+showsPrec :: Int -&gt; NodeInfo -&gt; ShowS
+$cshow :: NodeInfo -&gt; String
+show :: NodeInfo -&gt; String
+$cshowList :: [NodeInfo] -&gt; ShowS
+showList :: [NodeInfo] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679224252"><span id="local-6989586621679224256"><span id="local-6989586621679224259"><span id="local-6989586621679224275"><span class="annot"><span class="annottext">ReadPrec [NodeInfo]
+ReadPrec NodeInfo
+Int -&gt; ReadS NodeInfo
+ReadS [NodeInfo]
+(Int -&gt; ReadS NodeInfo)
+-&gt; ReadS [NodeInfo]
+-&gt; ReadPrec NodeInfo
+-&gt; ReadPrec [NodeInfo]
+-&gt; Read NodeInfo
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS NodeInfo
+readsPrec :: Int -&gt; ReadS NodeInfo
+$creadList :: ReadS [NodeInfo]
+readList :: ReadS [NodeInfo]
+$creadPrec :: ReadPrec NodeInfo
+readPrec :: ReadPrec NodeInfo
+$creadListPrec :: ReadPrec [NodeInfo]
+readListPrec :: ReadPrec [NodeInfo]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-keyword">type</span><span> </span><span id="NodeState"><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeState"><span class="hs-identifier hs-var">NodeState</span></a></span></span><span> </span><span id="local-6989586621679224278"><span class="annot"><a href="#local-6989586621679224278"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span id="local-6989586621679224279"><span class="annot"><a href="#local-6989586621679224279"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeLookup%27"><span class="hs-identifier hs-type">NodeLookup'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224278"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679224279"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span id="local-6989586621679223882"><span class="annot"><a href="Data.GraphViz.Types.State.html#toDotNodes"><span class="hs-identifier hs-type">toDotNodes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeLookup"><span class="hs-identifier hs-type">NodeLookup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223882"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotNode"><span class="hs-identifier hs-type">DotNode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223882"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-172"></span><span id="toDotNodes"><span class="annot"><span class="annottext">toDotNodes :: forall n. NodeLookup n -&gt; [DotNode n]
+</span><a href="Data.GraphViz.Types.State.html#toDotNodes"><span class="hs-identifier hs-var hs-var">toDotNodes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((n, (Path, Attributes)) -&gt; DotNode n)
+-&gt; [(n, (Path, Attributes))] -&gt; [DotNode n]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679224280"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224280"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Path
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span id="local-6989586621679224281"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224281"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">n -&gt; Attributes -&gt; DotNode n
+forall n. n -&gt; Attributes -&gt; DotNode n
+</span><a href="Data.GraphViz.Types.Internal.Common.html#DotNode"><span class="hs-identifier hs-var">DotNode</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224280"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224281"><span class="hs-keyword hs-var">as</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(n, (Path, Attributes))] -&gt; [DotNode n])
+-&gt; (NodeLookup n -&gt; [(n, (Path, Attributes))])
+-&gt; NodeLookup n
+-&gt; [DotNode n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NodeLookup n -&gt; [(n, (Path, Attributes))]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#assocs"><span class="hs-identifier hs-var">Map.assocs</span></a></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span id="local-6989586621679223891"><span id="local-6989586621679223892"><span class="annot"><a href="Data.GraphViz.Types.State.html#getNodeLookup"><span class="hs-identifier hs-type">getNodeLookup</span></a></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeState"><span class="hs-identifier hs-type">NodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223891"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeLookup"><span class="hs-identifier hs-type">NodeLookup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223891"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-175"></span><span id="getNodeLookup"><span class="annot"><span class="annottext">getNodeLookup :: forall n a. Bool -&gt; NodeState n a -&gt; NodeLookup n
+</span><a href="Data.GraphViz.Types.State.html#getNodeLookup"><span class="hs-identifier hs-var hs-var">getNodeLookup</span></a></span></span><span> </span><span id="local-6989586621679224283"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679224283"><span class="hs-identifier hs-var">addGs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(NodeInfo -&gt; (Path, Attributes))
+-&gt; Map n NodeInfo -&gt; Map n (Path, Attributes)
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#map"><span class="hs-identifier hs-var">Map.map</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; (Path, Attributes)
+</span><a href="#local-6989586621679224284"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">(Map n NodeInfo -&gt; Map n (Path, Attributes))
+-&gt; (NodeState n a -&gt; Map n NodeInfo)
+-&gt; NodeState n a
+-&gt; Map n (Path, Attributes)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue (Map n NodeInfo) -&gt; Map n NodeInfo
+forall a. StateValue a -&gt; a
+</span><a href="Data.GraphViz.Types.State.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(StateValue (Map n NodeInfo) -&gt; Map n NodeInfo)
+-&gt; (NodeState n a -&gt; StateValue (Map n NodeInfo))
+-&gt; NodeState n a
+-&gt; Map n NodeInfo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeState n a
+-&gt; StateValue (Map n NodeInfo) -&gt; StateValue (Map n NodeInfo)
+forall s a. State s a -&gt; s -&gt; s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Lazy.html#execState"><span class="hs-operator hs-var">`execState`</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue (Map n NodeInfo)
+forall {k} {a}. StateValue (Map k a)
+</span><a href="#local-6989586621679224285"><span class="hs-identifier hs-var">initState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-177"></span><span>    </span><span id="local-6989586621679224285"><span class="annot"><span class="annottext">initState :: StateValue (Map k a)
+</span><a href="#local-6989586621679224285"><span class="hs-identifier hs-var hs-var">initState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; Bool -&gt; Path -&gt; Map k a -&gt; StateValue (Map k a)
+forall a. SAttrs -&gt; Bool -&gt; Path -&gt; a -&gt; StateValue a
+</span><a href="Data.GraphViz.Types.State.html#SV"><span class="hs-identifier hs-var">SV</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+forall a. Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#empty"><span class="hs-identifier hs-var">Set.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679224283"><span class="hs-identifier hs-var">addGs</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+forall a. Seq a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#empty"><span class="hs-identifier hs-var">Seq.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span id="local-6989586621679224284"><span class="annot"><span class="annottext">combine :: NodeInfo -&gt; (Path, Attributes)
+</span><a href="#local-6989586621679224284"><span class="hs-identifier hs-var hs-var">combine</span></a></span></span><span> </span><span id="local-6989586621679224287"><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679224287"><span class="hs-identifier hs-var">ni</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeInfo -&gt; Path
+</span><a href="Data.GraphViz.Types.State.html#location"><span class="hs-identifier hs-var">location</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679224287"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; Attributes
+</span><a href="Data.GraphViz.Attributes.Same.html#unSame"><span class="hs-identifier hs-var">unSame</span></a></span><span> </span><span class="annot"><span class="annottext">(SAttrs -&gt; Attributes) -&gt; SAttrs -&gt; Attributes
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#atts"><span class="hs-identifier hs-var">atts</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679224287"><span class="hs-identifier hs-var">ni</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; SAttrs
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#union"><span class="hs-operator hs-var">`Set.union`</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; SAttrs
+</span><a href="Data.GraphViz.Types.State.html#gAtts"><span class="hs-identifier hs-var">gAtts</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679224287"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- New -&gt; Old -&gt; Inserted</span><span>
+</span><span id="line-181"></span><span class="hs-comment">--</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- For specific attributes, newer one takes precedence; for global</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- attributes and path, older one takes precedence.</span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#mergeNInfos"><span class="hs-identifier hs-type">mergeNInfos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeInfo"><span class="hs-identifier hs-type">NodeInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeInfo"><span class="hs-identifier hs-type">NodeInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeInfo"><span class="hs-identifier hs-type">NodeInfo</span></a></span><span>
+</span><span id="line-185"></span><span id="mergeNInfos"><span class="annot"><span class="annottext">mergeNInfos :: NodeInfo -&gt; NodeInfo -&gt; NodeInfo
+</span><a href="Data.GraphViz.Types.State.html#mergeNInfos"><span class="hs-identifier hs-var hs-var">mergeNInfos</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#NI"><span class="hs-identifier hs-type">NI</span></a></span><span> </span><span id="local-6989586621679224289"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224289"><span class="hs-identifier hs-var">a1</span></a></span></span><span> </span><span id="local-6989586621679224290"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224290"><span class="hs-identifier hs-var">ga1</span></a></span></span><span> </span><span id="local-6989586621679224291"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224291"><span class="hs-identifier hs-var">p1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.State.html#NI"><span class="hs-identifier hs-type">NI</span></a></span><span> </span><span id="local-6989586621679224292"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224292"><span class="hs-identifier hs-var">a2</span></a></span></span><span> </span><span id="local-6989586621679224293"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224293"><span class="hs-identifier hs-var">ga2</span></a></span></span><span> </span><span id="local-6989586621679224294"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224294"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; Path -&gt; NodeInfo
+</span><a href="Data.GraphViz.Types.State.html#NI"><span class="hs-identifier hs-var">NI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224289"><span class="hs-identifier hs-var">a1</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; SAttrs
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#union"><span class="hs-operator hs-var">`Set.union`</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224292"><span class="hs-identifier hs-var">a2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>                                                </span><span class="hs-comment">-- old one takes precendence</span><span>
+</span><span id="line-187"></span><span>                                               </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224293"><span class="hs-identifier hs-var">ga2</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; SAttrs
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#union"><span class="hs-operator hs-var">`Set.union`</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224290"><span class="hs-identifier hs-var">ga1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>                                                </span><span class="hs-comment">-- old one takes precendence</span><span>
+</span><span id="line-189"></span><span>                                               </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Path -&gt; Path -&gt; Path
+</span><a href="Data.GraphViz.Types.State.html#mergePs"><span class="hs-identifier hs-var">mergePs</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224294"><span class="hs-identifier hs-var">p2</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224291"><span class="hs-identifier hs-var">p1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- | If one 'Path' is a prefix of another, then take the longer one;</span><span>
+</span><span id="line-192"></span><span class="hs-comment">--   otherwise, take the first 'Path'.</span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#mergePs"><span class="hs-identifier hs-type">mergePs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span>
+</span><span id="line-194"></span><span id="mergePs"><span class="annot"><span class="annottext">mergePs :: Path -&gt; Path -&gt; Path
+</span><a href="Data.GraphViz.Types.State.html#mergePs"><span class="hs-identifier hs-var hs-var">mergePs</span></a></span></span><span> </span><span id="local-6989586621679224296"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224296"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span id="local-6989586621679224297"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224297"><span class="hs-identifier hs-var">p2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Path -&gt; Path -&gt; Path
+</span><a href="#local-6989586621679224298"><span class="hs-identifier hs-var">mrg'</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224296"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224297"><span class="hs-identifier hs-var">p2</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-196"></span><span>    </span><span id="local-6989586621679224298"><span class="annot"><span class="annottext">mrg' :: Path -&gt; Path -&gt; Path
+</span><a href="#local-6989586621679224298"><span class="hs-identifier hs-var hs-var">mrg'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ViewL (Maybe GraphID) -&gt; ViewL (Maybe GraphID) -&gt; Path
+</span><a href="#local-6989586621679224301"><span class="hs-identifier hs-var">mrg</span></a></span><span> </span><span class="annot"><span class="annottext">(ViewL (Maybe GraphID) -&gt; ViewL (Maybe GraphID) -&gt; Path)
+-&gt; (Path -&gt; ViewL (Maybe GraphID)) -&gt; Path -&gt; Path -&gt; Path
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="annot"><span class="annottext">Path -&gt; ViewL (Maybe GraphID)
+forall a. Seq a -&gt; ViewL a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#viewl"><span class="hs-identifier hs-var">Seq.viewl</span></a></span><span>
+</span><span id="line-197"></span><span>    </span><span id="local-6989586621679224301"><span class="annot"><span class="annottext">mrg :: ViewL (Maybe GraphID) -&gt; ViewL (Maybe GraphID) -&gt; Path
+</span><a href="#local-6989586621679224301"><span class="hs-identifier hs-var hs-var">mrg</span></a></span></span><span> </span><span class="annot"><span class="annottext">ViewL (Maybe GraphID)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#EmptyL"><span class="hs-identifier hs-var">EmptyL</span></a></span><span>      </span><span class="annot"><span class="annottext">ViewL (Maybe GraphID)
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224297"><span class="hs-identifier hs-var">p2</span></a></span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><a href="#local-6989586621679224301"><span class="hs-identifier hs-var">mrg</span></a></span><span> </span><span class="annot"><span class="annottext">ViewL (Maybe GraphID)
+</span><span class="hs-identifier">_</span></span><span>           </span><span class="annot"><span class="annottext">ViewL (Maybe GraphID)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#EmptyL"><span class="hs-identifier hs-var">EmptyL</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224296"><span class="hs-identifier hs-var">p1</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><a href="#local-6989586621679224301"><span class="hs-identifier hs-var">mrg</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679224304"><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679224304"><span class="hs-identifier hs-var">c1</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#%3A%3C"><span class="hs-operator hs-type">:&lt;</span></a></span><span> </span><span id="local-6989586621679224306"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224306"><span class="hs-identifier hs-var">p1'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679224307"><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679224307"><span class="hs-identifier hs-var">c2</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#%3A%3C"><span class="hs-operator hs-type">:&lt;</span></a></span><span> </span><span id="local-6989586621679224308"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224308"><span class="hs-identifier hs-var">p2'</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679224304"><span class="hs-identifier hs-var">c1</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GraphID -&gt; Maybe GraphID -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679224307"><span class="hs-identifier hs-var">c2</span></a></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Path -&gt; Path -&gt; Path
+</span><a href="#local-6989586621679224298"><span class="hs-identifier hs-var">mrg'</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224306"><span class="hs-identifier hs-var">p1'</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224308"><span class="hs-identifier hs-var">p2'</span></a></span><span>
+</span><span id="line-201"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224296"><span class="hs-identifier hs-var">p1</span></a></span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span id="local-6989586621679223903"><span class="annot"><a href="Data.GraphViz.Types.State.html#addNodeGlobals"><span class="hs-identifier hs-type">addNodeGlobals</span></a></span><span>                </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GlobalAttributes"><span class="hs-identifier hs-type">GlobalAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeState"><span class="hs-identifier hs-type">NodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223903"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-204"></span><span id="addNodeGlobals"><span class="annot"><span class="annottext">addNodeGlobals :: forall n. GlobalAttributes -&gt; NodeState n ()
+</span><a href="Data.GraphViz.Types.State.html#addNodeGlobals"><span class="hs-identifier hs-var hs-var">addNodeGlobals</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#NodeAttrs"><span class="hs-identifier hs-type">NodeAttrs</span></a></span><span> </span><span id="local-6989586621679224311"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224311"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GVState (NodeLookup' n) ()
+forall s. Attributes -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#addGlobals"><span class="hs-identifier hs-var">addGlobals</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224311"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-205"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#addNodeGlobals"><span class="hs-identifier hs-var">addNodeGlobals</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalAttributes
+</span><span class="hs-identifier">_</span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; GVState (NodeLookup' n) ()
+forall a. a -&gt; StateT (StateValue (NodeLookup' n)) Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span id="local-6989586621679223906"><span class="annot"><a href="Data.GraphViz.Types.State.html#mergeNode"><span class="hs-identifier hs-type">mergeNode</span></a></span><span>            </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223906"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679223906"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span>
+</span><span id="line-208"></span><span>                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeState"><span class="hs-identifier hs-type">NodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223906"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-209"></span><span id="mergeNode"><span class="annot"><span class="annottext">mergeNode :: forall n.
+Ord n =&gt;
+n -&gt; Attributes -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+</span><a href="Data.GraphViz.Types.State.html#mergeNode"><span class="hs-identifier hs-var hs-var">mergeNode</span></a></span></span><span> </span><span id="local-6989586621679224315"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224315"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679224316"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224316"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span id="local-6989586621679224317"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224317"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span id="local-6989586621679224318"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224318"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(NodeLookup' n -&gt; NodeLookup' n) -&gt; GVState (NodeLookup' n) ()
+forall s. (s -&gt; s) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyValue"><span class="hs-identifier hs-var">modifyValue</span></a></span><span> </span><span class="annot"><span class="annottext">((NodeLookup' n -&gt; NodeLookup' n) -&gt; GVState (NodeLookup' n) ())
+-&gt; (NodeLookup' n -&gt; NodeLookup' n) -&gt; GVState (NodeLookup' n) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeInfo -&gt; NodeInfo -&gt; NodeInfo)
+-&gt; n -&gt; NodeInfo -&gt; NodeLookup' n -&gt; NodeLookup' n
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#insertWith"><span class="hs-identifier hs-var">Map.insertWith</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; NodeInfo -&gt; NodeInfo
+</span><a href="Data.GraphViz.Types.State.html#mergeNInfos"><span class="hs-identifier hs-var">mergeNInfos</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224315"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679224319"><span class="hs-identifier hs-var">ni</span></a></span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-211"></span><span>    </span><span id="local-6989586621679224319"><span class="annot"><span class="annottext">ni :: NodeInfo
+</span><a href="#local-6989586621679224319"><span class="hs-identifier hs-var hs-var">ni</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; SAttrs -&gt; Path -&gt; NodeInfo
+</span><a href="Data.GraphViz.Types.State.html#NI"><span class="hs-identifier hs-var">NI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Attributes -&gt; SAttrs
+</span><a href="Data.GraphViz.Attributes.Same.html#toSAttr"><span class="hs-identifier hs-var">toSAttr</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224316"><span class="hs-keyword hs-var">as</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224317"><span class="hs-identifier hs-var">gas</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224318"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span id="local-6989586621679223908"><span class="annot"><a href="Data.GraphViz.Types.State.html#addNode"><span class="hs-identifier hs-type">addNode</span></a></span><span>                </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223908"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotNode"><span class="hs-identifier hs-type">DotNode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223908"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeState"><span class="hs-identifier hs-type">NodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223908"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-214"></span><span id="addNode"><span class="annot"><span class="annottext">addNode :: forall n. Ord n =&gt; DotNode n -&gt; NodeState n ()
+</span><a href="Data.GraphViz.Types.State.html#addNode"><span class="hs-identifier hs-var hs-var">addNode</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotNode"><span class="hs-identifier hs-type">DotNode</span></a></span><span> </span><span id="local-6989586621679224324"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224324"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679224325"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224325"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679224326"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224326"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState (NodeLookup' n) SAttrs
+forall s. GVState s SAttrs
+</span><a href="Data.GraphViz.Types.State.html#getGlobals"><span class="hs-identifier hs-var">getGlobals</span></a></span><span>
+</span><span id="line-215"></span><span>                            </span><span id="local-6989586621679224327"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224327"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState (NodeLookup' n) Path
+forall s. GVState s Path
+</span><a href="Data.GraphViz.Types.State.html#getPath"><span class="hs-identifier hs-var">getPath</span></a></span><span>
+</span><span id="line-216"></span><span>                            </span><span class="hs-comment">-- insertWith takes func (new -&gt; old -&gt; inserted)</span><span>
+</span><span id="line-217"></span><span>                            </span><span class="annot"><span class="annottext">n -&gt; Attributes -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+forall n.
+Ord n =&gt;
+n -&gt; Attributes -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+</span><a href="Data.GraphViz.Types.State.html#mergeNode"><span class="hs-identifier hs-var">mergeNode</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224324"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224325"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224326"><span class="hs-identifier hs-var">gas</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224327"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span id="local-6989586621679223910"><span class="annot"><a href="Data.GraphViz.Types.State.html#addEdgeNodes"><span class="hs-identifier hs-type">addEdgeNodes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223910"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-type">DotEdge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223910"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#NodeState"><span class="hs-identifier hs-type">NodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223910"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-220"></span><span id="addEdgeNodes"><span class="annot"><span class="annottext">addEdgeNodes :: forall n. Ord n =&gt; DotEdge n -&gt; NodeState n ()
+</span><a href="Data.GraphViz.Types.State.html#addEdgeNodes"><span class="hs-identifier hs-var hs-var">addEdgeNodes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-type">DotEdge</span></a></span><span> </span><span id="local-6989586621679224335"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224335"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679224336"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224336"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679224337"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224337"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState (NodeLookup' n) SAttrs
+forall s. GVState s SAttrs
+</span><a href="Data.GraphViz.Types.State.html#getGlobals"><span class="hs-identifier hs-var">getGlobals</span></a></span><span>
+</span><span id="line-221"></span><span>                                  </span><span id="local-6989586621679224338"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224338"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState (NodeLookup' n) Path
+forall s. GVState s Path
+</span><a href="Data.GraphViz.Types.State.html#getPath"><span class="hs-identifier hs-var">getPath</span></a></span><span>
+</span><span id="line-222"></span><span>                                  </span><span class="annot"><span class="annottext">n -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+forall {n}. Ord n =&gt; n -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+</span><a href="#local-6989586621679224339"><span class="hs-identifier hs-var">addEN</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224335"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224337"><span class="hs-identifier hs-var">gas</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224338"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-223"></span><span>                                  </span><span class="annot"><span class="annottext">n -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+forall {n}. Ord n =&gt; n -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+</span><a href="#local-6989586621679224339"><span class="hs-identifier hs-var">addEN</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224336"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224337"><span class="hs-identifier hs-var">gas</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679224338"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-225"></span><span>    </span><span id="local-6989586621679224339"><span class="annot"><span class="annottext">addEN :: n -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+</span><a href="#local-6989586621679224339"><span class="hs-identifier hs-var hs-var">addEN</span></a></span></span><span> </span><span id="local-6989586621679224344"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224344"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">n -&gt; Attributes -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+forall n.
+Ord n =&gt;
+n -&gt; Attributes -&gt; SAttrs -&gt; Path -&gt; NodeState n ()
+</span><a href="Data.GraphViz.Types.State.html#mergeNode"><span class="hs-identifier hs-var">mergeNode</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679224344"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-226"></span><span>
+</span><span id="line-227"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- Dealing with DotEdges</span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span class="hs-keyword">type</span><span> </span><span id="EdgeState"><span class="annot"><a href="Data.GraphViz.Types.State.html#EdgeState"><span class="hs-identifier hs-var">EdgeState</span></a></span></span><span> </span><span id="local-6989586621679224345"><span class="annot"><a href="#local-6989586621679224345"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span id="local-6989586621679224346"><span class="annot"><a href="#local-6989586621679224346"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#GVState"><span class="hs-identifier hs-type">GVState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-type">DotEdge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224345"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679224346"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span id="local-6989586621679223915"><span id="local-6989586621679223916"><span class="annot"><a href="Data.GraphViz.Types.State.html#getDotEdges"><span class="hs-identifier hs-type">getDotEdges</span></a></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#EdgeState"><span class="hs-identifier hs-type">EdgeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223915"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223916"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-type">DotEdge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223915"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-233"></span><span id="getDotEdges"><span class="annot"><span class="annottext">getDotEdges :: forall n a. Bool -&gt; EdgeState n a -&gt; [DotEdge n]
+</span><a href="Data.GraphViz.Types.State.html#getDotEdges"><span class="hs-identifier hs-var hs-var">getDotEdges</span></a></span></span><span> </span><span id="local-6989586621679224347"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679224347"><span class="hs-identifier hs-var">addGs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DList (DotEdge n) -&gt; [DotEdge n]
+forall a. DList a -&gt; [a]
+</span><span class="hs-identifier hs-var">DList.toList</span></span><span> </span><span class="annot"><span class="annottext">(DList (DotEdge n) -&gt; [DotEdge n])
+-&gt; (EdgeState n a -&gt; DList (DotEdge n))
+-&gt; EdgeState n a
+-&gt; [DotEdge n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue (DList (DotEdge n)) -&gt; DList (DotEdge n)
+forall a. StateValue a -&gt; a
+</span><a href="Data.GraphViz.Types.State.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(StateValue (DList (DotEdge n)) -&gt; DList (DotEdge n))
+-&gt; (EdgeState n a -&gt; StateValue (DList (DotEdge n)))
+-&gt; EdgeState n a
+-&gt; DList (DotEdge n)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EdgeState n a
+-&gt; StateValue (DList (DotEdge n)) -&gt; StateValue (DList (DotEdge n))
+forall s a. State s a -&gt; s -&gt; s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Lazy.html#execState"><span class="hs-operator hs-var">`execState`</span></a></span><span> </span><span class="annot"><span class="annottext">StateValue (DList (DotEdge n))
+forall {a}. StateValue (DList a)
+</span><a href="#local-6989586621679224348"><span class="hs-identifier hs-var">initState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-235"></span><span>    </span><span id="local-6989586621679224348"><span class="annot"><span class="annottext">initState :: StateValue (DList a)
+</span><a href="#local-6989586621679224348"><span class="hs-identifier hs-var hs-var">initState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; Bool -&gt; Path -&gt; DList a -&gt; StateValue (DList a)
+forall a. SAttrs -&gt; Bool -&gt; Path -&gt; a -&gt; StateValue a
+</span><a href="Data.GraphViz.Types.State.html#SV"><span class="hs-identifier hs-var">SV</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs
+forall a. Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#empty"><span class="hs-identifier hs-var">Set.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679224347"><span class="hs-identifier hs-var">addGs</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+forall a. Seq a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#empty"><span class="hs-identifier hs-var">Seq.empty</span></a></span><span> </span><span class="annot"><span class="annottext">DList a
+forall a. DList a
+</span><span class="hs-identifier hs-var">DList.empty</span></span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span id="local-6989586621679223922"><span class="annot"><a href="Data.GraphViz.Types.State.html#addEdgeGlobals"><span class="hs-identifier hs-type">addEdgeGlobals</span></a></span><span>                </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GlobalAttributes"><span class="hs-identifier hs-type">GlobalAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#EdgeState"><span class="hs-identifier hs-type">EdgeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223922"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-238"></span><span id="addEdgeGlobals"><span class="annot"><span class="annottext">addEdgeGlobals :: forall n. GlobalAttributes -&gt; EdgeState n ()
+</span><a href="Data.GraphViz.Types.State.html#addEdgeGlobals"><span class="hs-identifier hs-var hs-var">addEdgeGlobals</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#EdgeAttrs"><span class="hs-identifier hs-type">EdgeAttrs</span></a></span><span> </span><span id="local-6989586621679224352"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224352"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GVState (DList (DotEdge n)) ()
+forall s. Attributes -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#addGlobals"><span class="hs-identifier hs-var">addGlobals</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224352"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-239"></span><span class="annot"><a href="Data.GraphViz.Types.State.html#addEdgeGlobals"><span class="hs-identifier hs-var">addEdgeGlobals</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalAttributes
+</span><span class="hs-identifier">_</span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; GVState (DList (DotEdge n)) ()
+forall a. a -&gt; StateT (StateValue (DList (DotEdge n))) Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span id="local-6989586621679223924"><span class="annot"><a href="Data.GraphViz.Types.State.html#addEdge"><span class="hs-identifier hs-type">addEdge</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-type">DotEdge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223924"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#EdgeState"><span class="hs-identifier hs-type">EdgeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679223924"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-242"></span><span id="addEdge"><span class="annot"><span class="annottext">addEdge :: forall n. DotEdge n -&gt; EdgeState n ()
+</span><a href="Data.GraphViz.Types.State.html#addEdge"><span class="hs-identifier hs-var hs-var">addEdge</span></a></span></span><span> </span><span id="local-6989586621679224354"><span class="annot"><span class="annottext">de :: DotEdge n
+</span><a href="#local-6989586621679224354"><span class="hs-identifier hs-var">de</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-type">DotEdge</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">edgeAttributes :: forall n. DotEdge n -&gt; Attributes
+</span><a href="Data.GraphViz.Types.Internal.Common.html#edgeAttributes"><span class="hs-identifier hs-var">edgeAttributes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679224356"><span class="annot"><span class="annottext">Attributes
+</span><a href="#local-6989586621679224356"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">}</span><span>
+</span><span id="line-243"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679224357"><span class="annot"><span class="annottext">SAttrs
+</span><a href="#local-6989586621679224357"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GVState (DList (DotEdge n)) SAttrs
+forall s. GVState s SAttrs
+</span><a href="Data.GraphViz.Types.State.html#getGlobals"><span class="hs-identifier hs-var">getGlobals</span></a></span><span>
+</span><span id="line-244"></span><span>       </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679224358"><span class="annot"><span class="annottext">de' :: DotEdge n
+</span><a href="#local-6989586621679224358"><span class="hs-identifier hs-var hs-var">de'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotEdge n
+</span><a href="#local-6989586621679224354"><span class="hs-identifier hs-var">de</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#edgeAttributes"><span class="hs-identifier hs-var">edgeAttributes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#unSame"><span class="hs-identifier hs-type">unSame</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.State.html#unionWith"><span class="hs-identifier hs-type">unionWith</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224357"><span class="hs-identifier hs-type">gas</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224356"><span class="hs-keyword hs-type">as</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-245"></span><span>       </span><span class="annot"><span class="annottext">(DList (DotEdge n) -&gt; DList (DotEdge n)) -&gt; EdgeState n ()
+forall s. (s -&gt; s) -&gt; GVState s ()
+</span><a href="Data.GraphViz.Types.State.html#modifyValue"><span class="hs-identifier hs-var">modifyValue</span></a></span><span> </span><span class="annot"><span class="annottext">((DList (DotEdge n) -&gt; DList (DotEdge n)) -&gt; EdgeState n ())
+-&gt; (DList (DotEdge n) -&gt; DList (DotEdge n)) -&gt; EdgeState n ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DList (DotEdge n) -&gt; DotEdge n -&gt; DList (DotEdge n)
+forall a. DList a -&gt; a -&gt; DList a
+</span><span class="hs-operator hs-var">`DList.snoc`</span></span><span> </span><span class="annot"><span class="annottext">DotEdge n
+</span><a href="#local-6989586621679224358"><span class="hs-identifier hs-var">de'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-246"></span></pre></body></html>

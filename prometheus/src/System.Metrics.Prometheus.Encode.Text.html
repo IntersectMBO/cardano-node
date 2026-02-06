@@ -1,0 +1,212 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Metrics.Prometheus.Encode.Text</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetrics"><span class="hs-identifier">encodeMetrics</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html"><span class="hs-identifier">Data.ByteString.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier">Builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-identifier">on</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#groupBy"><span class="hs-identifier">groupBy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#intersperse"><span class="hs-identifier">intersperse</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator">(&lt;&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.Histogram.html"><span class="hs-identifier">System.Metrics.Prometheus.Encode.Text.Histogram</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.Histogram.html#encodeHistogram"><span class="hs-identifier">encodeHistogram</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html"><span class="hs-identifier">System.Metrics.Prometheus.Encode.Text.MetricId</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeDouble"><span class="hs-identifier">encodeDouble</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeHeader"><span class="hs-identifier">encodeHeader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeInt"><span class="hs-identifier">encodeInt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeMetricId"><span class="hs-identifier">encodeMetricId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#newline"><span class="hs-identifier">newline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#space"><span class="hs-identifier">space</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.html#MetricSample"><span class="hs-identifier">MetricSample</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.html#metricSample"><span class="hs-identifier">metricSample</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Counter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html#CounterSample"><span class="hs-identifier">CounterSample</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Gauge</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html#GaugeSample"><span class="hs-identifier">GaugeSample</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html"><span class="hs-identifier">System.Metrics.Prometheus.MetricId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier">MetricId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html"><span class="hs-identifier">System.Metrics.Prometheus.Registry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html#RegistrySample"><span class="hs-identifier">RegistrySample</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetrics"><span class="hs-identifier hs-type">encodeMetrics</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html#RegistrySample"><span class="hs-identifier hs-type">RegistrySample</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-34"></span><span id="encodeMetrics"><span class="annot"><span class="annottext">encodeMetrics :: RegistrySample -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetrics"><span class="hs-identifier hs-var hs-var">encodeMetrics</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; Builder)
+-&gt; (RegistrySample -&gt; Builder) -&gt; RegistrySample -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Builder] -&gt; Builder)
+-&gt; (RegistrySample -&gt; [Builder]) -&gt; RegistrySample -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; [Builder] -&gt; [Builder]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#intersperse"><span class="hs-identifier hs-var">intersperse</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span> </span><span class="annot"><span class="annottext">([Builder] -&gt; [Builder])
+-&gt; (RegistrySample -&gt; [Builder]) -&gt; RegistrySample -&gt; [Builder]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">([(MetricId, MetricSample)] -&gt; Builder)
+-&gt; [[(MetricId, MetricSample)]] -&gt; [Builder]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">[(MetricId, MetricSample)] -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetricGroup"><span class="hs-identifier hs-var">encodeMetricGroup</span></a></span><span>
+</span><span id="line-36"></span><span>        </span><span class="annot"><span class="annottext">([[(MetricId, MetricSample)]] -&gt; [Builder])
+-&gt; (RegistrySample -&gt; [[(MetricId, MetricSample)]])
+-&gt; RegistrySample
+-&gt; [Builder]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(MetricId, MetricSample)] -&gt; [[(MetricId, MetricSample)]]
+forall {b}. [(MetricId, b)] -&gt; [[(MetricId, b)]]
+</span><a href="#local-6989586621679074524"><span class="hs-identifier hs-var">groupByName</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">([(MetricId, MetricSample)] -&gt; [[(MetricId, MetricSample)]])
+-&gt; (RegistrySample -&gt; [(MetricId, MetricSample)])
+-&gt; RegistrySample
+-&gt; [[(MetricId, MetricSample)]]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map MetricId MetricSample -&gt; [(MetricId, MetricSample)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span>
+</span><span id="line-38"></span><span>        </span><span class="annot"><span class="annottext">(Map MetricId MetricSample -&gt; [(MetricId, MetricSample)])
+-&gt; (RegistrySample -&gt; Map MetricId MetricSample)
+-&gt; RegistrySample
+-&gt; [(MetricId, MetricSample)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">RegistrySample -&gt; Map MetricId MetricSample
+</span><a href="System.Metrics.Prometheus.Registry.html#unRegistrySample"><span class="hs-identifier hs-var">unRegistrySample</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679074524"><span class="annot"><span class="annottext">groupByName :: [(MetricId, b)] -&gt; [[(MetricId, b)]]
+</span><a href="#local-6989586621679074524"><span class="hs-identifier hs-var hs-var">groupByName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((MetricId, b) -&gt; (MetricId, b) -&gt; Bool)
+-&gt; [(MetricId, b)] -&gt; [[(MetricId, b)]]
+forall a. (a -&gt; a -&gt; Bool) -&gt; [a] -&gt; [[a]]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#groupBy"><span class="hs-identifier hs-var">groupBy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; Name -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">(==)</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; Name -&gt; Bool)
+-&gt; ((MetricId, b) -&gt; Name)
+-&gt; (MetricId, b)
+-&gt; (MetricId, b)
+-&gt; Bool
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricId -&gt; Name
+</span><a href="System.Metrics.Prometheus.MetricId.html#name"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">(MetricId -&gt; Name)
+-&gt; ((MetricId, b) -&gt; MetricId) -&gt; (MetricId, b) -&gt; Name
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(MetricId, b) -&gt; MetricId
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetricGroup"><span class="hs-identifier hs-type">encodeMetricGroup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.html#MetricSample"><span class="hs-identifier hs-type">MetricSample</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-44"></span><span id="encodeMetricGroup"><span class="annot"><span class="annottext">encodeMetricGroup :: [(MetricId, MetricSample)] -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetricGroup"><span class="hs-identifier hs-var hs-var">encodeMetricGroup</span></a></span></span><span> </span><span id="local-6989586621679074531"><span class="annot"><span class="annottext">[(MetricId, MetricSample)]
+</span><a href="#local-6989586621679074531"><span class="hs-identifier hs-var">group</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">MetricId -&gt; MetricSample -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeHeader"><span class="hs-identifier hs-var">encodeHeader</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074532"><span class="hs-identifier hs-var">mid</span></a></span><span> </span><span class="annot"><span class="annottext">MetricSample
+</span><a href="#local-6989586621679074533"><span class="hs-identifier hs-var">sample</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span>
+</span><span id="line-46"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder -&gt; [Builder] -&gt; [Builder]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#intersperse"><span class="hs-identifier hs-var">intersperse</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span> </span><span class="annot"><span class="annottext">([Builder] -&gt; [Builder]) -&gt; [Builder] -&gt; [Builder]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((MetricId, MetricSample) -&gt; Builder)
+-&gt; [(MetricId, MetricSample)] -&gt; [Builder]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(MetricId, MetricSample) -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetric"><span class="hs-identifier hs-var">encodeMetric</span></a></span><span> </span><span class="annot"><span class="annottext">[(MetricId, MetricSample)]
+</span><a href="#local-6989586621679074531"><span class="hs-identifier hs-var">group</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679074532"><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074532"><span class="hs-identifier hs-var">mid</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074533"><span class="annot"><span class="annottext">MetricSample
+</span><a href="#local-6989586621679074533"><span class="hs-identifier hs-var">sample</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(MetricId, MetricSample)] -&gt; (MetricId, MetricSample)
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#head"><span class="hs-identifier hs-var">head</span></a></span><span> </span><span class="annot"><span class="annottext">[(MetricId, MetricSample)]
+</span><a href="#local-6989586621679074531"><span class="hs-identifier hs-var">group</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetric"><span class="hs-identifier hs-type">encodeMetric</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.html#MetricSample"><span class="hs-identifier hs-type">MetricSample</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-52"></span><span id="encodeMetric"><span class="annot"><span class="annottext">encodeMetric :: (MetricId, MetricSample) -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeMetric"><span class="hs-identifier hs-var hs-var">encodeMetric</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679074538"><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074538"><span class="hs-identifier hs-var">mid</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074539"><span class="annot"><span class="annottext">MetricSample
+</span><a href="#local-6989586621679074539"><span class="hs-identifier hs-var">sample</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">(CounterSample -&gt; Builder)
+-&gt; (GaugeSample -&gt; Builder)
+-&gt; (HistogramSample -&gt; Builder)
+-&gt; (SummarySample -&gt; Builder)
+-&gt; MetricSample
+-&gt; Builder
+forall a.
+(CounterSample -&gt; a)
+-&gt; (GaugeSample -&gt; a)
+-&gt; (HistogramSample -&gt; a)
+-&gt; (SummarySample -&gt; a)
+-&gt; MetricSample
+-&gt; a
+</span><a href="System.Metrics.Prometheus.Metric.html#metricSample"><span class="hs-identifier hs-var">metricSample</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricId -&gt; CounterSample -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeCounter"><span class="hs-identifier hs-var">encodeCounter</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074538"><span class="hs-identifier hs-var">mid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricId -&gt; GaugeSample -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeGauge"><span class="hs-identifier hs-var">encodeGauge</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074538"><span class="hs-identifier hs-var">mid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricId -&gt; HistogramSample -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.Histogram.html#encodeHistogram"><span class="hs-identifier hs-var">encodeHistogram</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074538"><span class="hs-identifier hs-var">mid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricId -&gt; SummarySample -&gt; Builder
+forall {a}. a
+</span><a href="#local-6989586621679074542"><span class="hs-identifier hs-var">encodeSummary</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074538"><span class="hs-identifier hs-var">mid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">MetricSample
+</span><a href="#local-6989586621679074539"><span class="hs-identifier hs-var">sample</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621679074542"><span class="annot"><span class="annottext">encodeSummary :: a
+</span><a href="#local-6989586621679074542"><span class="hs-identifier hs-var hs-var">encodeSummary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+forall a. HasCallStack =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#undefined"><span class="hs-identifier hs-var">undefined</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.html#encodeCounter"><span class="hs-identifier hs-type">encodeCounter</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html#CounterSample"><span class="hs-identifier hs-type">CounterSample</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-64"></span><span id="encodeCounter"><span class="annot"><span class="annottext">encodeCounter :: MetricId -&gt; CounterSample -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeCounter"><span class="hs-identifier hs-var hs-var">encodeCounter</span></a></span></span><span> </span><span id="local-6989586621679074546"><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074546"><span class="hs-identifier hs-var">mid</span></a></span></span><span> </span><span id="local-6989586621679074547"><span class="annot"><span class="annottext">CounterSample
+</span><a href="#local-6989586621679074547"><span class="hs-identifier hs-var">counter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricId -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeMetricId"><span class="hs-identifier hs-var">encodeMetricId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074546"><span class="hs-identifier hs-var">mid</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#space"><span class="hs-identifier hs-var">space</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeInt"><span class="hs-identifier hs-var">encodeInt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CounterSample -&gt; Int
+</span><a href="System.Metrics.Prometheus.Metric.Counter.html#unCounterSample"><span class="hs-identifier hs-var">unCounterSample</span></a></span><span> </span><span class="annot"><span class="annottext">CounterSample
+</span><a href="#local-6989586621679074547"><span class="hs-identifier hs-var">counter</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="System.Metrics.Prometheus.Encode.Text.html#encodeGauge"><span class="hs-identifier hs-type">encodeGauge</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html#GaugeSample"><span class="hs-identifier hs-type">GaugeSample</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-68"></span><span id="encodeGauge"><span class="annot"><span class="annottext">encodeGauge :: MetricId -&gt; GaugeSample -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.html#encodeGauge"><span class="hs-identifier hs-var hs-var">encodeGauge</span></a></span></span><span> </span><span id="local-6989586621679074549"><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074549"><span class="hs-identifier hs-var">mid</span></a></span></span><span> </span><span id="local-6989586621679074550"><span class="annot"><span class="annottext">GaugeSample
+</span><a href="#local-6989586621679074550"><span class="hs-identifier hs-var">gauge</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricId -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeMetricId"><span class="hs-identifier hs-var">encodeMetricId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074549"><span class="hs-identifier hs-var">mid</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#space"><span class="hs-identifier hs-var">space</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Builder
+forall f. RealFloat f =&gt; f -&gt; Builder
+</span><a href="System.Metrics.Prometheus.Encode.Text.MetricId.html#encodeDouble"><span class="hs-identifier hs-var">encodeDouble</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GaugeSample -&gt; Double
+</span><a href="System.Metrics.Prometheus.Metric.Gauge.html#unGaugeSample"><span class="hs-identifier hs-var">unGaugeSample</span></a></span><span> </span><span class="annot"><span class="annottext">GaugeSample
+</span><a href="#local-6989586621679074550"><span class="hs-identifier hs-var">gauge</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span></pre></body></html>

@@ -1,0 +1,742 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679199096"><span id="local-6989586621679199097"></span></span><span class="hs-pragma">{-# LANGUAGE CPP, OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_HADDOCK hide #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Attributes.Internal
+   Description : Internal Attribute value definitions
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   This module is defined so as to avoid exposing internal functions
+   in the external API.  These are those that are needed for the
+   testsuite.
+
+ -}</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Attributes.Internal</span><span>
+</span><span id="line-18"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortName"><span class="hs-identifier">PortName</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortPos"><span class="hs-identifier">PortPos</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier">CompassPoint</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#compassLookup"><span class="hs-identifier">compassLookup</span></a></span><span>
+</span><span id="line-22"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#parseEdgeBasedPP"><span class="hs-identifier">parseEdgeBasedPP</span></a></span><span>
+</span><span id="line-23"></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html"><span class="hs-identifier">Data.GraphViz.Parsing</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Printing.html"><span class="hs-identifier">Data.GraphViz.Printing</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span>       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>     </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isNothing"><span class="hs-identifier">isNothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if !MIN_VERSION_base (4,13,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Monoid</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-operator">&lt;&gt;</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Note that printing and parsing of PortName values is specific to</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- where it's being used: record- and HTML-like labels print/parse</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- them differently from when they're on they're part of PortPos; the</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- default printing and parsing is done for the latter.</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Should this really be exported from here?  Or in another common module?</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Specifies a name for ports (used also in record-based and</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--   HTML-like labels).  Note that it is not valid for a 'PortName'</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--   value to contain a colon (@:@) character; it is assumed that it</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--   doesn't.</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">newtype</span><span> </span><span id="PortName"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortName"><span class="hs-identifier hs-var">PortName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PN"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PN"><span class="hs-identifier hs-var">PN</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="portName"><span class="annot"><span class="annottext">PortName -&gt; Text
+</span><a href="Data.GraphViz.Attributes.Internal.html#portName"><span class="hs-identifier hs-var hs-var">portName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-51"></span><span>                 </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679199130"><span id="local-6989586621679199135"><span class="annot"><span class="annottext">PortName -&gt; PortName -&gt; Bool
+(PortName -&gt; PortName -&gt; Bool)
+-&gt; (PortName -&gt; PortName -&gt; Bool) -&gt; Eq PortName
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PortName -&gt; PortName -&gt; Bool
+== :: PortName -&gt; PortName -&gt; Bool
+$c/= :: PortName -&gt; PortName -&gt; Bool
+/= :: PortName -&gt; PortName -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199143"><span id="local-6989586621679199147"><span id="local-6989586621679199151"><span id="local-6989586621679199155"><span id="local-6989586621679199159"><span id="local-6989586621679199163"><span id="local-6989586621679199167"><span class="annot"><span class="annottext">Eq PortName
+Eq PortName =&gt;
+(PortName -&gt; PortName -&gt; Ordering)
+-&gt; (PortName -&gt; PortName -&gt; Bool)
+-&gt; (PortName -&gt; PortName -&gt; Bool)
+-&gt; (PortName -&gt; PortName -&gt; Bool)
+-&gt; (PortName -&gt; PortName -&gt; Bool)
+-&gt; (PortName -&gt; PortName -&gt; PortName)
+-&gt; (PortName -&gt; PortName -&gt; PortName)
+-&gt; Ord PortName
+PortName -&gt; PortName -&gt; Bool
+PortName -&gt; PortName -&gt; Ordering
+PortName -&gt; PortName -&gt; PortName
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: PortName -&gt; PortName -&gt; Ordering
+compare :: PortName -&gt; PortName -&gt; Ordering
+$c&lt; :: PortName -&gt; PortName -&gt; Bool
+&lt; :: PortName -&gt; PortName -&gt; Bool
+$c&lt;= :: PortName -&gt; PortName -&gt; Bool
+&lt;= :: PortName -&gt; PortName -&gt; Bool
+$c&gt; :: PortName -&gt; PortName -&gt; Bool
+&gt; :: PortName -&gt; PortName -&gt; Bool
+$c&gt;= :: PortName -&gt; PortName -&gt; Bool
+&gt;= :: PortName -&gt; PortName -&gt; Bool
+$cmax :: PortName -&gt; PortName -&gt; PortName
+max :: PortName -&gt; PortName -&gt; PortName
+$cmin :: PortName -&gt; PortName -&gt; PortName
+min :: PortName -&gt; PortName -&gt; PortName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199173"><span id="local-6989586621679199179"><span id="local-6989586621679199183"><span class="annot"><span class="annottext">Int -&gt; PortName -&gt; ShowS
+[PortName] -&gt; ShowS
+PortName -&gt; String
+(Int -&gt; PortName -&gt; ShowS)
+-&gt; (PortName -&gt; String) -&gt; ([PortName] -&gt; ShowS) -&gt; Show PortName
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PortName -&gt; ShowS
+showsPrec :: Int -&gt; PortName -&gt; ShowS
+$cshow :: PortName -&gt; String
+show :: PortName -&gt; String
+$cshowList :: [PortName] -&gt; ShowS
+showList :: [PortName] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199187"><span id="local-6989586621679199191"><span id="local-6989586621679199194"><span id="local-6989586621679199204"><span class="annot"><span class="annottext">ReadPrec [PortName]
+ReadPrec PortName
+Int -&gt; ReadS PortName
+ReadS [PortName]
+(Int -&gt; ReadS PortName)
+-&gt; ReadS [PortName]
+-&gt; ReadPrec PortName
+-&gt; ReadPrec [PortName]
+-&gt; Read PortName
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS PortName
+readsPrec :: Int -&gt; ReadS PortName
+$creadList :: ReadS [PortName]
+readList :: ReadS [PortName]
+$creadPrec :: ReadPrec PortName
+readPrec :: ReadPrec PortName
+$creadListPrec :: ReadPrec [PortName]
+readListPrec :: ReadPrec [PortName]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679199210"><span id="local-6989586621679199214"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortName"><span class="hs-identifier hs-type">PortName</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679199219"><span class="annot"><span class="annottext">unqtDot :: PortName -&gt; DotCode
+</span><a href="#local-6989586621679199219"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; DotCode) -&gt; (PortName -&gt; Text) -&gt; PortName -&gt; DotCode
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PortName -&gt; Text
+</span><a href="Data.GraphViz.Attributes.Internal.html#portName"><span class="hs-identifier hs-var">portName</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679199223"><span class="annot"><span class="annottext">toDot :: PortName -&gt; DotCode
+</span><a href="#local-6989586621679199223"><span class="hs-identifier hs-var hs-var hs-var hs-var">toDot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#toDot"><span class="hs-identifier hs-var">toDot</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; DotCode) -&gt; (PortName -&gt; Text) -&gt; PortName -&gt; DotCode
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PortName -&gt; Text
+</span><a href="Data.GraphViz.Attributes.Internal.html#portName"><span class="hs-identifier hs-var">portName</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679199228"><span id="local-6989586621679199231"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortName"><span class="hs-identifier hs-type">PortName</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679199235"><span class="annot"><span class="annottext">parseUnqt :: Parse PortName
+</span><a href="#local-6989586621679199235"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; PortName
+</span><a href="Data.GraphViz.Attributes.Internal.html#PN"><span class="hs-identifier hs-var">PN</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; PortName) -&gt; Parser GraphvizState Text -&gt; Parse PortName
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; String -&gt; Parser GraphvizState Text
+</span><a href="Data.GraphViz.Parsing.html#parseEscaped"><span class="hs-identifier hs-var">parseEscaped</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679199240"><span class="annot"><span class="annottext">parse :: Parse PortName
+</span><a href="#local-6989586621679199240"><span class="hs-identifier hs-var hs-var hs-var hs-var">parse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse PortName -&gt; Parse PortName
+forall a. Parse a -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#quotedParse"><span class="hs-identifier hs-var">quotedParse</span></a></span><span> </span><span class="annot"><span class="annottext">Parse PortName
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span class="annot"><span class="annottext">Parse PortName -&gt; Parse PortName -&gt; Parse PortName
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">Parse PortName
+</span><a href="Data.GraphViz.Attributes.Internal.html#unqtPortName"><span class="hs-identifier hs-var">unqtPortName</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#unqtPortName"><span class="hs-identifier hs-type">unqtPortName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortName"><span class="hs-identifier hs-type">PortName</span></a></span><span>
+</span><span id="line-66"></span><span id="unqtPortName"><span class="annot"><span class="annottext">unqtPortName :: Parse PortName
+</span><a href="Data.GraphViz.Attributes.Internal.html#unqtPortName"><span class="hs-identifier hs-var hs-var">unqtPortName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; PortName
+</span><a href="Data.GraphViz.Attributes.Internal.html#PN"><span class="hs-identifier hs-var">PN</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; PortName) -&gt; Parser GraphvizState Text -&gt; Parse PortName
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Text
+</span><a href="Data.GraphViz.Parsing.html#quotelessString"><span class="hs-identifier hs-var">quotelessString</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">data</span><span> </span><span id="PortPos"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortPos"><span class="hs-identifier hs-var">PortPos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LabelledPort"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#LabelledPort"><span class="hs-identifier hs-var">LabelledPort</span></a></span></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortName"><span class="hs-identifier hs-type">PortName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-type">CompassPoint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>             </span><span class="hs-glyph">|</span><span> </span><span id="CompassPoint"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-var">CompassPoint</span></a></span></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-type">CompassPoint</span></a></span><span>
+</span><span id="line-72"></span><span>             </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679199249"><span id="local-6989586621679199256"><span class="annot"><span class="annottext">PortPos -&gt; PortPos -&gt; Bool
+(PortPos -&gt; PortPos -&gt; Bool)
+-&gt; (PortPos -&gt; PortPos -&gt; Bool) -&gt; Eq PortPos
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PortPos -&gt; PortPos -&gt; Bool
+== :: PortPos -&gt; PortPos -&gt; Bool
+$c/= :: PortPos -&gt; PortPos -&gt; Bool
+/= :: PortPos -&gt; PortPos -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199263"><span id="local-6989586621679199270"><span id="local-6989586621679199276"><span id="local-6989586621679199280"><span id="local-6989586621679199283"><span id="local-6989586621679199286"><span id="local-6989586621679199289"><span class="annot"><span class="annottext">Eq PortPos
+Eq PortPos =&gt;
+(PortPos -&gt; PortPos -&gt; Ordering)
+-&gt; (PortPos -&gt; PortPos -&gt; Bool)
+-&gt; (PortPos -&gt; PortPos -&gt; Bool)
+-&gt; (PortPos -&gt; PortPos -&gt; Bool)
+-&gt; (PortPos -&gt; PortPos -&gt; Bool)
+-&gt; (PortPos -&gt; PortPos -&gt; PortPos)
+-&gt; (PortPos -&gt; PortPos -&gt; PortPos)
+-&gt; Ord PortPos
+PortPos -&gt; PortPos -&gt; Bool
+PortPos -&gt; PortPos -&gt; Ordering
+PortPos -&gt; PortPos -&gt; PortPos
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: PortPos -&gt; PortPos -&gt; Ordering
+compare :: PortPos -&gt; PortPos -&gt; Ordering
+$c&lt; :: PortPos -&gt; PortPos -&gt; Bool
+&lt; :: PortPos -&gt; PortPos -&gt; Bool
+$c&lt;= :: PortPos -&gt; PortPos -&gt; Bool
+&lt;= :: PortPos -&gt; PortPos -&gt; Bool
+$c&gt; :: PortPos -&gt; PortPos -&gt; Bool
+&gt; :: PortPos -&gt; PortPos -&gt; Bool
+$c&gt;= :: PortPos -&gt; PortPos -&gt; Bool
+&gt;= :: PortPos -&gt; PortPos -&gt; Bool
+$cmax :: PortPos -&gt; PortPos -&gt; PortPos
+max :: PortPos -&gt; PortPos -&gt; PortPos
+$cmin :: PortPos -&gt; PortPos -&gt; PortPos
+min :: PortPos -&gt; PortPos -&gt; PortPos
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199293"><span id="local-6989586621679199302"><span id="local-6989586621679199306"><span class="annot"><span class="annottext">Int -&gt; PortPos -&gt; ShowS
+[PortPos] -&gt; ShowS
+PortPos -&gt; String
+(Int -&gt; PortPos -&gt; ShowS)
+-&gt; (PortPos -&gt; String) -&gt; ([PortPos] -&gt; ShowS) -&gt; Show PortPos
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PortPos -&gt; ShowS
+showsPrec :: Int -&gt; PortPos -&gt; ShowS
+$cshow :: PortPos -&gt; String
+show :: PortPos -&gt; String
+$cshowList :: [PortPos] -&gt; ShowS
+showList :: [PortPos] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199310"><span id="local-6989586621679199314"><span id="local-6989586621679199317"><span id="local-6989586621679199331"><span class="annot"><span class="annottext">ReadPrec [PortPos]
+ReadPrec PortPos
+Int -&gt; ReadS PortPos
+ReadS [PortPos]
+(Int -&gt; ReadS PortPos)
+-&gt; ReadS [PortPos]
+-&gt; ReadPrec PortPos
+-&gt; ReadPrec [PortPos]
+-&gt; Read PortPos
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS PortPos
+readsPrec :: Int -&gt; ReadS PortPos
+$creadList :: ReadS [PortPos]
+readList :: ReadS [PortPos]
+$creadPrec :: ReadPrec PortPos
+readPrec :: ReadPrec PortPos
+$creadListPrec :: ReadPrec [PortPos]
+readListPrec :: ReadPrec [PortPos]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679199337"><span id="local-6989586621679199341"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortPos"><span class="hs-identifier hs-type">PortPos</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679199355"><span class="annot"><span class="annottext">unqtDot :: PortPos -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#LabelledPort"><span class="hs-identifier hs-type">LabelledPort</span></a></span><span> </span><span id="local-6989586621679199356"><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199356"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679199357"><span class="annot"><span class="annottext">Maybe CompassPoint
+</span><a href="#local-6989586621679199357"><span class="hs-identifier hs-var">mc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PortName -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199356"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-76"></span><span>                                </span><span class="annot"><span class="annottext">DotCode -&gt; DotCode -&gt; DotCode
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DotCode -&gt; (DotCode -&gt; DotCode) -&gt; Maybe DotCode -&gt; DotCode
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; m Doc
+</span><span class="hs-identifier hs-var">empty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; m Doc
+</span><span class="hs-identifier hs-var">colon</span></span><span> </span><span class="annot"><span class="annottext">DotCode -&gt; DotCode -&gt; DotCode
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CompassPoint -&gt; DotCode) -&gt; Maybe CompassPoint -&gt; Maybe DotCode
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint
+</span><a href="#local-6989586621679199357"><span class="hs-identifier hs-var">mc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-type">CompassPoint</span></a></span><span> </span><span id="local-6989586621679199361"><span class="annot"><span class="annottext">CompassPoint
+</span><a href="#local-6989586621679199361"><span class="hs-identifier hs-var">cp</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="#local-6989586621679199361"><span class="hs-identifier hs-var">cp</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679199367"><span class="annot"><span class="annottext">toDot :: PortPos -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#toDot"><span class="hs-identifier hs-var hs-var hs-var hs-var">toDot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#LabelledPort"><span class="hs-identifier hs-type">LabelledPort</span></a></span><span> </span><span id="local-6989586621679199368"><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199368"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PortName -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#toDot"><span class="hs-identifier hs-var">toDot</span></a></span><span> </span><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199368"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#toDot"><span class="hs-identifier hs-var">toDot</span></a></span><span> </span><span id="local-6989586621679199369"><span class="annot"><span class="annottext">lp :: PortPos
+</span><a href="#local-6989586621679199369"><span class="hs-identifier hs-var">lp</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#LabelledPort"><span class="hs-identifier hs-type">LabelledPort</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotCode -&gt; DotCode
+forall (m :: * -&gt; *). Functor m =&gt; m Doc -&gt; m Doc
+</span><span class="hs-identifier hs-var">dquotes</span></span><span> </span><span class="annot"><span class="annottext">(DotCode -&gt; DotCode) -&gt; DotCode -&gt; DotCode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PortPos -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">PortPos
+</span><a href="#local-6989586621679199369"><span class="hs-identifier hs-var">lp</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#toDot"><span class="hs-identifier hs-var">toDot</span></a></span><span> </span><span id="local-6989586621679199371"><span class="annot"><span class="annottext">PortPos
+</span><a href="#local-6989586621679199371"><span class="hs-identifier hs-var">cp</span></a></span></span><span>                       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PortPos -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">PortPos
+</span><a href="#local-6989586621679199371"><span class="hs-identifier hs-var">cp</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679199375"><span id="local-6989586621679199378"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortPos"><span class="hs-identifier hs-type">PortPos</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679199389"><span class="annot"><span class="annottext">parseUnqt :: Parse PortPos
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679199390"><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199390"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parse PortName
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span>
+</span><span id="line-85"></span><span>                 </span><span id="local-6989586621679199391"><span class="annot"><span class="annottext">Maybe CompassPoint
+</span><a href="#local-6989586621679199391"><span class="hs-identifier hs-var">mc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState CompassPoint
+-&gt; Parser GraphvizState (Maybe CompassPoint)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser GraphvizState CompassPoint
+ -&gt; Parser GraphvizState (Maybe CompassPoint))
+-&gt; Parser GraphvizState CompassPoint
+-&gt; Parser GraphvizState (Maybe CompassPoint)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parse Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span> </span><span class="annot"><span class="annottext">Parse Char
+-&gt; Parser GraphvizState CompassPoint
+-&gt; Parser GraphvizState CompassPoint
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState CompassPoint
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span>
+</span><span id="line-86"></span><span>                 </span><span class="annot"><span class="annottext">PortPos -&gt; Parse PortPos
+forall a. a -&gt; Parser GraphvizState a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(PortPos -&gt; Parse PortPos) -&gt; PortPos -&gt; Parse PortPos
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isNothing"><span class="hs-identifier hs-var">isNothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint
+</span><a href="#local-6989586621679199391"><span class="hs-identifier hs-var">mc</span></a></span><span>
+</span><span id="line-87"></span><span>                          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">PortName -&gt; PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#checkPortName"><span class="hs-identifier hs-var">checkPortName</span></a></span><span> </span><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199390"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-88"></span><span>                          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">PortName -&gt; Maybe CompassPoint -&gt; PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#LabelledPort"><span class="hs-identifier hs-var">LabelledPort</span></a></span><span> </span><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199390"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint
+</span><a href="#local-6989586621679199391"><span class="hs-identifier hs-var">mc</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679199397"><span class="annot"><span class="annottext">parse :: Parse PortPos
+</span><a href="Data.GraphViz.Parsing.html#parse"><span class="hs-identifier hs-var hs-var hs-var hs-var">parse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse PortPos -&gt; Parse PortPos
+forall a. Parse a -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#quotedParse"><span class="hs-identifier hs-var">quotedParse</span></a></span><span> </span><span class="annot"><span class="annottext">Parse PortPos
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span>
+</span><span id="line-91"></span><span>          </span><span class="annot"><span class="annottext">Parse PortPos -&gt; Parse PortPos -&gt; Parse PortPos
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-92"></span><span>          </span><span class="annot"><span class="annottext">(PortName -&gt; PortPos) -&gt; Parse PortName -&gt; Parse PortPos
+forall a b.
+(a -&gt; b) -&gt; Parser GraphvizState a -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">PortName -&gt; PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#checkPortName"><span class="hs-identifier hs-var">checkPortName</span></a></span><span> </span><span class="annot"><span class="annottext">Parse PortName
+</span><a href="Data.GraphViz.Attributes.Internal.html#unqtPortName"><span class="hs-identifier hs-var">unqtPortName</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#checkPortName"><span class="hs-identifier hs-type">checkPortName</span></a></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortName"><span class="hs-identifier hs-type">PortName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortPos"><span class="hs-identifier hs-type">PortPos</span></a></span><span>
+</span><span id="line-95"></span><span id="checkPortName"><span class="annot"><span class="annottext">checkPortName :: PortName -&gt; PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#checkPortName"><span class="hs-identifier hs-var hs-var">checkPortName</span></a></span></span><span> </span><span id="local-6989586621679199398"><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199398"><span class="hs-identifier hs-var">pn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PortPos
+-&gt; (CompassPoint -&gt; PortPos) -&gt; Maybe CompassPoint -&gt; PortPos
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PortName -&gt; Maybe CompassPoint -&gt; PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#LabelledPort"><span class="hs-identifier hs-var">LabelledPort</span></a></span><span> </span><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199398"><span class="hs-identifier hs-var">pn</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-var">CompassPoint</span></a></span><span>
+</span><span id="line-96"></span><span>                   </span><span class="annot"><span class="annottext">(Maybe CompassPoint -&gt; PortPos)
+-&gt; (Text -&gt; Maybe CompassPoint) -&gt; Text -&gt; PortPos
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Map Text CompassPoint -&gt; Maybe CompassPoint
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-operator hs-var">`Map.lookup`</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#compassLookup"><span class="hs-identifier hs-var">compassLookup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>                   </span><span class="annot"><span class="annottext">(Text -&gt; PortPos) -&gt; Text -&gt; PortPos
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PortName -&gt; Text
+</span><a href="Data.GraphViz.Attributes.Internal.html#portName"><span class="hs-identifier hs-var">portName</span></a></span><span> </span><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621679199398"><span class="hs-identifier hs-var">pn</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | When attached to a node in a DotEdge definition, the 'PortName'</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--   and the 'CompassPoint' can be in separate quotes.</span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#parseEdgeBasedPP"><span class="hs-identifier hs-type">parseEdgeBasedPP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#PortPos"><span class="hs-identifier hs-type">PortPos</span></a></span><span>
+</span><span id="line-102"></span><span id="parseEdgeBasedPP"><span class="annot"><span class="annottext">parseEdgeBasedPP :: Parse PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#parseEdgeBasedPP"><span class="hs-identifier hs-var hs-var">parseEdgeBasedPP</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PortName -&gt; Maybe CompassPoint -&gt; PortPos)
+-&gt; Parse PortName
+-&gt; Parser GraphvizState (Maybe CompassPoint)
+-&gt; Parse PortPos
+forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; Parser GraphvizState a
+-&gt; Parser GraphvizState b
+-&gt; Parser GraphvizState c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="annot"><span class="annottext">PortName -&gt; Maybe CompassPoint -&gt; PortPos
+</span><a href="Data.GraphViz.Attributes.Internal.html#LabelledPort"><span class="hs-identifier hs-var">LabelledPort</span></a></span><span> </span><span class="annot"><span class="annottext">Parse PortName
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parse"><span class="hs-identifier hs-var">parse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CompassPoint -&gt; Maybe CompassPoint)
+-&gt; Parser GraphvizState CompassPoint
+-&gt; Parser GraphvizState (Maybe CompassPoint)
+forall a b.
+(a -&gt; b) -&gt; Parser GraphvizState a -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; Maybe CompassPoint
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser GraphvizState CompassPoint
+ -&gt; Parser GraphvizState (Maybe CompassPoint))
+-&gt; Parser GraphvizState CompassPoint
+-&gt; Parser GraphvizState (Maybe CompassPoint)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parse Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span> </span><span class="annot"><span class="annottext">Parse Char
+-&gt; Parser GraphvizState CompassPoint
+-&gt; Parser GraphvizState CompassPoint
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState CompassPoint
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parse"><span class="hs-identifier hs-var">parse</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>                   </span><span class="annot"><span class="annottext">Parse PortPos -&gt; Parse PortPos -&gt; Parse PortPos
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-104"></span><span>                   </span><span class="annot"><span class="annottext">Parse PortPos
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parse"><span class="hs-identifier hs-var">parse</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-keyword">data</span><span> </span><span id="CompassPoint"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-var">CompassPoint</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="North"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#North"><span class="hs-identifier hs-var">North</span></a></span></span><span>
+</span><span id="line-107"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="NorthEast"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#NorthEast"><span class="hs-identifier hs-var">NorthEast</span></a></span></span><span>
+</span><span id="line-108"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="East"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#East"><span class="hs-identifier hs-var">East</span></a></span></span><span>
+</span><span id="line-109"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="SouthEast"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#SouthEast"><span class="hs-identifier hs-var">SouthEast</span></a></span></span><span>
+</span><span id="line-110"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="South"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#South"><span class="hs-identifier hs-var">South</span></a></span></span><span>
+</span><span id="line-111"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="SouthWest"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#SouthWest"><span class="hs-identifier hs-var">SouthWest</span></a></span></span><span>
+</span><span id="line-112"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="West"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#West"><span class="hs-identifier hs-var">West</span></a></span></span><span>
+</span><span id="line-113"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="NorthWest"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#NorthWest"><span class="hs-identifier hs-var">NorthWest</span></a></span></span><span>
+</span><span id="line-114"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="CenterPoint"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CenterPoint"><span class="hs-identifier hs-var">CenterPoint</span></a></span></span><span>
+</span><span id="line-115"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="NoCP"><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#NoCP"><span class="hs-identifier hs-var">NoCP</span></a></span></span><span>
+</span><span id="line-116"></span><span>                  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679199412"><span id="local-6989586621679199414"><span class="annot"><span class="annottext">CompassPoint -&gt; CompassPoint -&gt; Bool
+(CompassPoint -&gt; CompassPoint -&gt; Bool)
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; Bool) -&gt; Eq CompassPoint
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: CompassPoint -&gt; CompassPoint -&gt; Bool
+== :: CompassPoint -&gt; CompassPoint -&gt; Bool
+$c/= :: CompassPoint -&gt; CompassPoint -&gt; Bool
+/= :: CompassPoint -&gt; CompassPoint -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199419"><span id="local-6989586621679199421"><span id="local-6989586621679199423"><span id="local-6989586621679199426"><span id="local-6989586621679199429"><span id="local-6989586621679199432"><span id="local-6989586621679199435"><span class="annot"><span class="annottext">Eq CompassPoint
+Eq CompassPoint =&gt;
+(CompassPoint -&gt; CompassPoint -&gt; Ordering)
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; Bool)
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; Bool)
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; Bool)
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; Bool)
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; CompassPoint)
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; CompassPoint)
+-&gt; Ord CompassPoint
+CompassPoint -&gt; CompassPoint -&gt; Bool
+CompassPoint -&gt; CompassPoint -&gt; Ordering
+CompassPoint -&gt; CompassPoint -&gt; CompassPoint
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: CompassPoint -&gt; CompassPoint -&gt; Ordering
+compare :: CompassPoint -&gt; CompassPoint -&gt; Ordering
+$c&lt; :: CompassPoint -&gt; CompassPoint -&gt; Bool
+&lt; :: CompassPoint -&gt; CompassPoint -&gt; Bool
+$c&lt;= :: CompassPoint -&gt; CompassPoint -&gt; Bool
+&lt;= :: CompassPoint -&gt; CompassPoint -&gt; Bool
+$c&gt; :: CompassPoint -&gt; CompassPoint -&gt; Bool
+&gt; :: CompassPoint -&gt; CompassPoint -&gt; Bool
+$c&gt;= :: CompassPoint -&gt; CompassPoint -&gt; Bool
+&gt;= :: CompassPoint -&gt; CompassPoint -&gt; Bool
+$cmax :: CompassPoint -&gt; CompassPoint -&gt; CompassPoint
+max :: CompassPoint -&gt; CompassPoint -&gt; CompassPoint
+$cmin :: CompassPoint -&gt; CompassPoint -&gt; CompassPoint
+min :: CompassPoint -&gt; CompassPoint -&gt; CompassPoint
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199438"><span id="local-6989586621679199440"><span class="annot"><span class="annottext">CompassPoint
+CompassPoint -&gt; CompassPoint -&gt; Bounded CompassPoint
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: CompassPoint
+minBound :: CompassPoint
+$cmaxBound :: CompassPoint
+maxBound :: CompassPoint
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199444"><span id="local-6989586621679199452"><span id="local-6989586621679199458"><span id="local-6989586621679199471"><span id="local-6989586621679199473"><span id="local-6989586621679199477"><span id="local-6989586621679199481"><span id="local-6989586621679199485"><span class="annot"><span class="annottext">Int -&gt; CompassPoint
+CompassPoint -&gt; Int
+CompassPoint -&gt; [CompassPoint]
+CompassPoint -&gt; CompassPoint
+CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+CompassPoint -&gt; CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+(CompassPoint -&gt; CompassPoint)
+-&gt; (CompassPoint -&gt; CompassPoint)
+-&gt; (Int -&gt; CompassPoint)
+-&gt; (CompassPoint -&gt; Int)
+-&gt; (CompassPoint -&gt; [CompassPoint])
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; [CompassPoint])
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; [CompassPoint])
+-&gt; (CompassPoint -&gt; CompassPoint -&gt; CompassPoint -&gt; [CompassPoint])
+-&gt; Enum CompassPoint
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: CompassPoint -&gt; CompassPoint
+succ :: CompassPoint -&gt; CompassPoint
+$cpred :: CompassPoint -&gt; CompassPoint
+pred :: CompassPoint -&gt; CompassPoint
+$ctoEnum :: Int -&gt; CompassPoint
+toEnum :: Int -&gt; CompassPoint
+$cfromEnum :: CompassPoint -&gt; Int
+fromEnum :: CompassPoint -&gt; Int
+$cenumFrom :: CompassPoint -&gt; [CompassPoint]
+enumFrom :: CompassPoint -&gt; [CompassPoint]
+$cenumFromThen :: CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+enumFromThen :: CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+$cenumFromTo :: CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+enumFromTo :: CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+$cenumFromThenTo :: CompassPoint -&gt; CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+enumFromThenTo :: CompassPoint -&gt; CompassPoint -&gt; CompassPoint -&gt; [CompassPoint]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199489"><span id="local-6989586621679199491"><span id="local-6989586621679199494"><span class="annot"><span class="annottext">Int -&gt; CompassPoint -&gt; ShowS
+[CompassPoint] -&gt; ShowS
+CompassPoint -&gt; String
+(Int -&gt; CompassPoint -&gt; ShowS)
+-&gt; (CompassPoint -&gt; String)
+-&gt; ([CompassPoint] -&gt; ShowS)
+-&gt; Show CompassPoint
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CompassPoint -&gt; ShowS
+showsPrec :: Int -&gt; CompassPoint -&gt; ShowS
+$cshow :: CompassPoint -&gt; String
+show :: CompassPoint -&gt; String
+$cshowList :: [CompassPoint] -&gt; ShowS
+showList :: [CompassPoint] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679199497"><span id="local-6989586621679199500"><span id="local-6989586621679199503"><span id="local-6989586621679199515"><span class="annot"><span class="annottext">ReadPrec [CompassPoint]
+ReadPrec CompassPoint
+Int -&gt; ReadS CompassPoint
+ReadS [CompassPoint]
+(Int -&gt; ReadS CompassPoint)
+-&gt; ReadS [CompassPoint]
+-&gt; ReadPrec CompassPoint
+-&gt; ReadPrec [CompassPoint]
+-&gt; Read CompassPoint
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS CompassPoint
+readsPrec :: Int -&gt; ReadS CompassPoint
+$creadList :: ReadS [CompassPoint]
+readList :: ReadS [CompassPoint]
+$creadPrec :: ReadPrec CompassPoint
+readPrec :: ReadPrec CompassPoint
+$creadListPrec :: ReadPrec [CompassPoint]
+readListPrec :: ReadPrec [CompassPoint]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679199519"><span id="local-6989586621679199522"><span id="local-6989586621679199525"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-type">CompassPoint</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>  </span><span id="local-6989586621679199547"><span class="annot"><span class="annottext">unqtDot :: CompassPoint -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NorthEast"><span class="hs-identifier hs-var">NorthEast</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ne&quot;</span></span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NorthWest"><span class="hs-identifier hs-var">NorthWest</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nw&quot;</span></span><span>
+</span><span id="line-121"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#North"><span class="hs-identifier hs-var">North</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;n&quot;</span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#East"><span class="hs-identifier hs-var">East</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;e&quot;</span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#SouthEast"><span class="hs-identifier hs-var">SouthEast</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;se&quot;</span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#SouthWest"><span class="hs-identifier hs-var">SouthWest</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;sw&quot;</span></span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#South"><span class="hs-identifier hs-var">South</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;s&quot;</span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#West"><span class="hs-identifier hs-var">West</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;w&quot;</span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#CenterPoint"><span class="hs-identifier hs-var">CenterPoint</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;c&quot;</span></span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NoCP"><span class="hs-identifier hs-var">NoCP</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679199551"><span id="local-6989586621679199554"><span id="local-6989586621679199557"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-type">CompassPoint</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-comment">-- Have to take care of longer parsing values first.</span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621679199561"><span class="annot"><span class="annottext">parseUnqt :: Parser GraphvizState CompassPoint
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Parser GraphvizState CompassPoint]
+-&gt; Parser GraphvizState CompassPoint
+forall (p :: * -&gt; *) a. PolyParse p =&gt; [p a] -&gt; p a
+</span><span class="hs-identifier hs-var">oneOf</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NorthEast"><span class="hs-identifier hs-var">NorthEast</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ne&quot;</span></span><span>
+</span><span id="line-133"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NorthWest"><span class="hs-identifier hs-var">NorthWest</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;nw&quot;</span></span><span>
+</span><span id="line-134"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#North"><span class="hs-identifier hs-var">North</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;n&quot;</span></span><span>
+</span><span id="line-135"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#SouthEast"><span class="hs-identifier hs-var">SouthEast</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;se&quot;</span></span><span>
+</span><span id="line-136"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#SouthWest"><span class="hs-identifier hs-var">SouthWest</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;sw&quot;</span></span><span>
+</span><span id="line-137"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#South"><span class="hs-identifier hs-var">South</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;s&quot;</span></span><span>
+</span><span id="line-138"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#East"><span class="hs-identifier hs-var">East</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;e&quot;</span></span><span>
+</span><span id="line-139"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#West"><span class="hs-identifier hs-var">West</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;w&quot;</span></span><span>
+</span><span id="line-140"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#CenterPoint"><span class="hs-identifier hs-var">CenterPoint</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;c&quot;</span></span><span>
+</span><span id="line-141"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint -&gt; String -&gt; Parser GraphvizState CompassPoint
+forall a. a -&gt; String -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringRep"><span class="hs-identifier hs-var">stringRep</span></a></span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NoCP"><span class="hs-identifier hs-var">NoCP</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;_&quot;</span></span><span>
+</span><span id="line-142"></span><span>                    </span><span class="hs-special">]</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#compassLookup"><span class="hs-identifier hs-type">compassLookup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Internal.html#CompassPoint"><span class="hs-identifier hs-type">CompassPoint</span></a></span><span>
+</span><span id="line-145"></span><span id="compassLookup"><span class="annot"><span class="annottext">compassLookup :: Map Text CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#compassLookup"><span class="hs-identifier hs-var hs-var">compassLookup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Text, CompassPoint)] -&gt; Map Text CompassPoint
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ne&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NorthEast"><span class="hs-identifier hs-var">NorthEast</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nw&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NorthWest"><span class="hs-identifier hs-var">NorthWest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;n&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#North"><span class="hs-identifier hs-var">North</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;e&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#East"><span class="hs-identifier hs-var">East</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;se&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#SouthEast"><span class="hs-identifier hs-var">SouthEast</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;sw&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#SouthWest"><span class="hs-identifier hs-var">SouthWest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;s&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#South"><span class="hs-identifier hs-var">South</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;w&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#West"><span class="hs-identifier hs-var">West</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;c&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#CenterPoint"><span class="hs-identifier hs-var">CenterPoint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CompassPoint
+</span><a href="Data.GraphViz.Attributes.Internal.html#NoCP"><span class="hs-identifier hs-var">NoCP</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>                             </span><span class="hs-special">]</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-158"></span></pre></body></html>

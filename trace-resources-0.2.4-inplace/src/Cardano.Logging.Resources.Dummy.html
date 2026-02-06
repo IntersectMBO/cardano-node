@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Resources.Dummy</span><span>
+</span><span id="line-2"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>      </span><span class="annot"><a href="Cardano.Logging.Resources.Dummy.html#readResourceStatsInternal"><span class="hs-identifier">readResourceStatsInternal</span></a></span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Resources.Types.html"><span class="hs-identifier">Cardano.Logging.Resources.Types</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html"><span class="hs-identifier">GHC.Stats</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GhcStats</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.CPUTime.html"><span class="hs-identifier">System.CPUTime</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="annot"><a href="Cardano.Logging.Resources.Dummy.html#readResourceStatsInternal"><span class="hs-identifier hs-type">readResourceStatsInternal</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Resources.Types.html#ResourceStats"><span class="hs-identifier hs-type">ResourceStats</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span id="readResourceStatsInternal"><span class="annot"><span class="annottext">readResourceStatsInternal :: IO (Maybe ResourceStats)
+</span><a href="Cardano.Logging.Resources.Dummy.html#readResourceStatsInternal"><span class="hs-identifier hs-var hs-var">readResourceStatsInternal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-15"></span><span>  </span><span id="local-6989586621679097457"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679097457"><span class="hs-identifier hs-var">cpu</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Integer
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.CPUTime.html#getCPUTime"><span class="hs-identifier hs-var">getCPUTime</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span id="local-6989586621679097459"><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO RTSStats
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#getRTSStats"><span class="hs-identifier hs-var">GhcStats.getRTSStats</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><span class="annottext">Maybe ResourceStats -&gt; IO (Maybe ResourceStats)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe ResourceStats -&gt; IO (Maybe ResourceStats))
+-&gt; Maybe ResourceStats -&gt; IO (Maybe ResourceStats)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceStats -&gt; Maybe ResourceStats
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(ResourceStats -&gt; Maybe ResourceStats)
+-&gt; ResourceStats -&gt; Maybe ResourceStats
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Resources.Types.html#Resources"><span class="hs-identifier hs-type">Resources</span></a></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">rCentiCpu :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rCentiCpu"><span class="hs-identifier hs-var">rCentiCpu</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word64
+</span><a href="#local-6989586621679097463"><span class="hs-identifier hs-var">intToCenti</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679097457"><span class="hs-identifier hs-var">cpu</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rCentiGC :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rCentiGC"><span class="hs-identifier hs-var">rCentiGC</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RtsTime -&gt; Word64
+</span><a href="#local-6989586621679097465"><span class="hs-identifier hs-var">nsToCenti</span></a></span><span> </span><span class="annot"><span class="annottext">(RtsTime -&gt; Word64) -&gt; RtsTime -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; RtsTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#gc_cpu_ns"><span class="hs-identifier hs-var">GhcStats.gc_cpu_ns</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rCentiMut :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rCentiMut"><span class="hs-identifier hs-var">rCentiMut</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RtsTime -&gt; Word64
+</span><a href="#local-6989586621679097465"><span class="hs-identifier hs-var">nsToCenti</span></a></span><span> </span><span class="annot"><span class="annottext">(RtsTime -&gt; Word64) -&gt; RtsTime -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; RtsTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#mutator_cpu_ns"><span class="hs-identifier hs-var">GhcStats.mutator_cpu_ns</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rGcsMajor :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rGcsMajor"><span class="hs-identifier hs-var">rGcsMajor</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Word64) -&gt; Word32 -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; Word32
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#major_gcs"><span class="hs-identifier hs-var">GhcStats.major_gcs</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rGcsMinor :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rGcsMinor"><span class="hs-identifier hs-var">rGcsMinor</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Word64) -&gt; Word32 -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; Word32
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#gcs"><span class="hs-identifier hs-var">GhcStats.gcs</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Word32 -&gt; Word32
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; Word32
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#major_gcs"><span class="hs-identifier hs-var">GhcStats.major_gcs</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rAlloc :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rAlloc"><span class="hs-identifier hs-var">rAlloc</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; Word64
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#allocated_bytes"><span class="hs-identifier hs-var">GhcStats.allocated_bytes</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rLive :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rLive"><span class="hs-identifier hs-var">rLive</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GCDetails -&gt; Word64
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#gcdetails_live_bytes"><span class="hs-identifier hs-var">GhcStats.gcdetails_live_bytes</span></a></span><span> </span><span class="annot"><span class="annottext">(GCDetails -&gt; Word64) -&gt; GCDetails -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; GCDetails
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#gc"><span class="hs-identifier hs-var">GhcStats.gc</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats
+</span><a href="#local-6989586621679097459"><span class="hs-identifier hs-var">rts</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rRSS :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rRSS"><span class="hs-identifier hs-var">rRSS</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rHeap :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rHeap"><span class="hs-identifier hs-var">rHeap</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rCentiBlkIO :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rCentiBlkIO"><span class="hs-identifier hs-var">rCentiBlkIO</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rNetRd :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rNetRd"><span class="hs-identifier hs-var">rNetRd</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rNetWr :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rNetWr"><span class="hs-identifier hs-var">rNetWr</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rFsRd :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rFsRd"><span class="hs-identifier hs-var">rFsRd</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rFsWr :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rFsWr"><span class="hs-identifier hs-var">rFsWr</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rThreads :: Word64
+</span><a href="Cardano.Logging.Resources.Types.html#rThreads"><span class="hs-identifier hs-var">rThreads</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>   </span><span class="annot"><a href="#local-6989586621679097465"><span class="hs-identifier hs-type">nsToCenti</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stats.html#RtsTime"><span class="hs-identifier hs-type">GhcStats.RtsTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-37"></span><span>   </span><span id="local-6989586621679097465"><span class="annot"><span class="annottext">nsToCenti :: RtsTime -&gt; Word64
+</span><a href="#local-6989586621679097465"><span class="hs-identifier hs-var hs-var">nsToCenti</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RtsTime -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(RtsTime -&gt; Word64) -&gt; (RtsTime -&gt; RtsTime) -&gt; RtsTime -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RtsTime -&gt; RtsTime -&gt; RtsTime
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">RtsTime
+</span><span class="hs-number">10000000</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>   </span><span class="annot"><a href="#local-6989586621679097463"><span class="hs-identifier hs-type">intToCenti</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-39"></span><span>   </span><span id="local-6989586621679097463"><span class="annot"><span class="annottext">intToCenti :: Integer -&gt; Word64
+</span><a href="#local-6989586621679097463"><span class="hs-identifier hs-var hs-var">intToCenti</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Word64) -&gt; (Integer -&gt; Integer) -&gt; Integer -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">10000000</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span></pre></body></html>

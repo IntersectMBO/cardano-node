@@ -1,0 +1,193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Examples that should always compile. If reading on Haddock, you</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- can view the sources to each of these.</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Formatting.Examples</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Formatting.Examples.html#hello"><span class="hs-identifier">hello</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Formatting.Examples.html#strings"><span class="hs-identifier">strings</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Formatting.Examples.html#texts"><span class="hs-identifier">texts</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Formatting.Examples.html#builders"><span class="hs-identifier">builders</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Formatting.Examples.html#integers"><span class="hs-identifier">integers</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Formatting.Examples.html#floats"><span class="hs-identifier">floats</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Formatting.Examples.html#hexes"><span class="hs-identifier">hexes</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Formatting.Examples.html#padding"><span class="hs-identifier">padding</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier">Builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Formatting.html"><span class="hs-identifier">Formatting</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><span class="hs-comment">-- | Simple hello, world!</span></span><span>
+</span><span id="line-22"></span><span class="annot"><a href="Formatting.Examples.html#hello"><span class="hs-identifier hs-type">hello</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-23"></span><span id="hello"><span class="annot"><span class="annottext">hello :: Text
+</span><a href="Formatting.Examples.html#hello"><span class="hs-identifier hs-var hs-var">hello</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Format Text Text -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text Text
+</span><span class="hs-string">&quot;Hello, World!&quot;</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><span class="hs-comment">-- | Printing strings.</span></span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Formatting.Examples.html#strings"><span class="hs-identifier hs-type">strings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-27"></span><span id="strings"><span class="annot"><span class="annottext">strings :: Text
+</span><a href="Formatting.Examples.html#strings"><span class="hs-identifier hs-var hs-var">strings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="annottext">Format Text (String -&gt; String -&gt; Text) -&gt; String -&gt; String -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (String -&gt; String -&gt; Text) (String -&gt; String -&gt; Text)
+</span><span class="hs-string">&quot;Here comes a string: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (String -&gt; String -&gt; Text) (String -&gt; String -&gt; Text)
+-&gt; Format Text (String -&gt; String -&gt; Text)
+-&gt; Format Text (String -&gt; String -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (String -&gt; Text) (String -&gt; String -&gt; Text)
+forall r. Format r (String -&gt; r)
+</span><a href="Formatting.Formatters.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">Format (String -&gt; Text) (String -&gt; String -&gt; Text)
+-&gt; Format Text (String -&gt; Text)
+-&gt; Format Text (String -&gt; String -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (String -&gt; Text) (String -&gt; Text)
+</span><span class="hs-string">&quot; and another &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (String -&gt; Text) (String -&gt; Text)
+-&gt; Format Text (String -&gt; Text) -&gt; Format Text (String -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text (String -&gt; Text)
+forall r. Format r (String -&gt; r)
+</span><a href="Formatting.Formatters.html#string"><span class="hs-identifier hs-var">string</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>         </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Hello, World!&quot;</span></span><span>
+</span><span id="line-30"></span><span>         </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Ahoy!&quot;</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | Printing texts.</span></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Formatting.Examples.html#texts"><span class="hs-identifier hs-type">texts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-34"></span><span id="texts"><span class="annot"><span class="annottext">texts :: Text
+</span><a href="Formatting.Examples.html#texts"><span class="hs-identifier hs-var hs-var">texts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">Format Text (Text -&gt; Text -&gt; Text) -&gt; Text -&gt; Text -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Text -&gt; Text -&gt; Text) (Text -&gt; Text -&gt; Text)
+</span><span class="hs-string">&quot;Here comes a string: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text -&gt; Text) (Text -&gt; Text -&gt; Text)
+-&gt; Format Text (Text -&gt; Text -&gt; Text)
+-&gt; Format Text (Text -&gt; Text -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Text -&gt; Text -&gt; Text)
+forall r. Format r (Text -&gt; r)
+</span><a href="Formatting.Formatters.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Text -&gt; Text -&gt; Text)
+-&gt; Format Text (Text -&gt; Text) -&gt; Format Text (Text -&gt; Text -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Text -&gt; Text)
+</span><span class="hs-string">&quot; and another &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Text -&gt; Text)
+-&gt; Format Text (Text -&gt; Text) -&gt; Format Text (Text -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text (Text -&gt; Text)
+forall r. Format r (Text -&gt; r)
+</span><a href="Formatting.Formatters.html#text"><span class="hs-identifier hs-var">text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>         </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Hello, World!&quot;</span></span><span>
+</span><span id="line-37"></span><span>         </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Ahoy!&quot;</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | Printing builders.</span></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Formatting.Examples.html#builders"><span class="hs-identifier hs-type">builders</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-41"></span><span id="builders"><span class="annot"><span class="annottext">builders :: Text
+</span><a href="Formatting.Examples.html#builders"><span class="hs-identifier hs-var hs-var">builders</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">Format Text (Builder -&gt; Text -&gt; Text) -&gt; Builder -&gt; Text -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Builder -&gt; Text -&gt; Text) (Builder -&gt; Text -&gt; Text)
+</span><span class="hs-string">&quot;Here comes a string: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Builder -&gt; Text -&gt; Text) (Builder -&gt; Text -&gt; Text)
+-&gt; Format Text (Builder -&gt; Text -&gt; Text)
+-&gt; Format Text (Builder -&gt; Text -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Builder -&gt; Text -&gt; Text)
+forall r. Format r (Builder -&gt; r)
+</span><a href="Formatting.Formatters.html#builder"><span class="hs-identifier hs-var">builder</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Builder -&gt; Text -&gt; Text)
+-&gt; Format Text (Text -&gt; Text)
+-&gt; Format Text (Builder -&gt; Text -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Text -&gt; Text)
+</span><span class="hs-string">&quot; and another &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Text) (Text -&gt; Text)
+-&gt; Format Text (Text -&gt; Text) -&gt; Format Text (Text -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text (Text -&gt; Text)
+forall r. Format r (Text -&gt; r)
+</span><a href="Formatting.Formatters.html#text"><span class="hs-identifier hs-var">text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>         </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;Hello, World!&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>         </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Ahoy!&quot;</span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | Printing integers.</span></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Formatting.Examples.html#integers"><span class="hs-identifier hs-type">integers</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-48"></span><span id="integers"><span class="annot"><span class="annottext">integers :: Text
+</span><a href="Formatting.Examples.html#integers"><span class="hs-identifier hs-var hs-var">integers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">Format Text (Int -&gt; Integer -&gt; Text) -&gt; Int -&gt; Integer -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Int -&gt; Integer -&gt; Text) (Int -&gt; Integer -&gt; Text)
+</span><span class="hs-string">&quot;Here comes an integer: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Int -&gt; Integer -&gt; Text) (Int -&gt; Integer -&gt; Text)
+-&gt; Format Text (Int -&gt; Integer -&gt; Text)
+-&gt; Format Text (Int -&gt; Integer -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Integer -&gt; Text) (Int -&gt; Integer -&gt; Text)
+forall a r. Integral a =&gt; Format r (a -&gt; r)
+</span><a href="Formatting.Formatters.html#int"><span class="hs-identifier hs-var">int</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Integer -&gt; Text) (Int -&gt; Integer -&gt; Text)
+-&gt; Format Text (Integer -&gt; Text)
+-&gt; Format Text (Int -&gt; Integer -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Integer -&gt; Text) (Integer -&gt; Text)
+</span><span class="hs-string">&quot; and another: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Integer -&gt; Text) (Integer -&gt; Text)
+-&gt; Format Text (Integer -&gt; Text) -&gt; Format Text (Integer -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text (Integer -&gt; Text)
+forall a r. Integral a =&gt; Format r (a -&gt; r)
+</span><a href="Formatting.Formatters.html#int"><span class="hs-identifier hs-var">int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>         </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">23</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>         </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | Printing floating points.</span></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Formatting.Examples.html#floats"><span class="hs-identifier hs-type">floats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-55"></span><span id="floats"><span class="annot"><span class="annottext">floats :: Text
+</span><a href="Formatting.Examples.html#floats"><span class="hs-identifier hs-var hs-var">floats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">Format Text (Float -&gt; Text) -&gt; Float -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Float -&gt; Text) (Float -&gt; Text)
+</span><span class="hs-string">&quot;Here comes a float: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Float -&gt; Text) (Float -&gt; Text)
+-&gt; Format Text (Float -&gt; Text) -&gt; Format Text (Float -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text (Float -&gt; Text)
+forall a r. Real a =&gt; Format r (a -&gt; r)
+</span><a href="Formatting.Formatters.html#float"><span class="hs-identifier hs-var">float</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>         </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">123.2342</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Float"><span class="hs-identifier hs-type">Float</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><span class="hs-comment">-- | Printing integrals in hex (base-16).</span></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Formatting.Examples.html#hexes"><span class="hs-identifier hs-type">hexes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-61"></span><span id="hexes"><span class="annot"><span class="annottext">hexes :: Text
+</span><a href="Formatting.Examples.html#hexes"><span class="hs-identifier hs-var hs-var">hexes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">Format Text (Int -&gt; Text) -&gt; Int -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Int -&gt; Text) (Int -&gt; Text)
+</span><span class="hs-string">&quot;Here comes a hex: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Int -&gt; Text) (Int -&gt; Text)
+-&gt; Format Text (Int -&gt; Text) -&gt; Format Text (Int -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text (Int -&gt; Text)
+forall a r. Integral a =&gt; Format r (a -&gt; r)
+</span><a href="Formatting.Formatters.html#hex"><span class="hs-identifier hs-var">hex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>         </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">123</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><span class="hs-comment">-- | Padding.</span></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Formatting.Examples.html#padding"><span class="hs-identifier hs-type">padding</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-67"></span><span id="padding"><span class="annot"><span class="annottext">padding :: Text
+</span><a href="Formatting.Examples.html#padding"><span class="hs-identifier hs-var hs-var">padding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">Format Text (Int -&gt; Text) -&gt; Int -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="Formatting.Internal.html#format"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Int -&gt; Text) (Int -&gt; Text)
+</span><span class="hs-string">&quot;A left-padded number: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Int -&gt; Text) (Int -&gt; Text)
+-&gt; Format Text (Int -&gt; Text) -&gt; Format Text (Int -&gt; Text)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><a href="Formatting.Internal.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Format Text (Int -&gt; Text)
+forall a r. Buildable a =&gt; Int -&gt; Char -&gt; Format r (a -&gt; r)
+</span><a href="Formatting.Formatters.html#left"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'0'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>         </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">9</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span></pre></body></html>

@@ -1,0 +1,415 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable, FlexibleInstances, TypeSynonymInstances #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- required for HasCallStack by different versions of GHC</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ConstraintKinds, FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | This is the code copied from the original hunit package (v. 1.2.5.2).</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- with minor modifications</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.HUnit.Orig</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.CallStack</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Interfaces</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- ----------</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- | An assertion is simply an 'IO' action. Assertion failure is indicated</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- by throwing an exception, typically 'HUnitFailure'.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- Instead of throwing the exception directly, you should use</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- functions like 'assertFailure' and 'assertBool'.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- Test cases are composed of a sequence of one or more assertions.</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">type</span><span> </span><span id="Assertion"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-var">Assertion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Unconditionally signals that a failure has occured.  All</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- other assertions can be expressed with the form:</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--    if conditionIsMet</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--        then return ()</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--        else assertFailure msg</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span id="local-6989586621679042790"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier hs-type">assertFailure</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ A message that is displayed with the assertion failure</span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042790"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-41"></span><span id="assertFailure"><span class="annot"><span class="annottext">assertFailure :: forall a. HasCallStack =&gt; String -&gt; IO a
+</span><a href="Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier hs-var hs-var">assertFailure</span></a></span></span><span> </span><span id="local-6989586621679042841"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042841"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HUnitFailure -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe SrcLoc -&gt; String -&gt; HUnitFailure
+</span><a href="Test.Tasty.HUnit.Orig.html#HUnitFailure"><span class="hs-identifier hs-var">HUnitFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="#local-6989586621679042843"><span class="hs-identifier hs-var">location</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042841"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><a href="#local-6989586621679042843"><span class="hs-identifier hs-type">location</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#SrcLoc"><span class="hs-identifier hs-type">SrcLoc</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621679042843"><span class="annot"><span class="annottext">location :: Maybe SrcLoc
+</span><a href="#local-6989586621679042843"><span class="hs-identifier hs-var hs-var">location</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[(String, SrcLoc)] -&gt; [(String, SrcLoc)]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, SrcLoc)]
+HasCallStack =&gt; [(String, SrcLoc)]
+</span><span class="hs-identifier hs-var">callStack</span></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679042846"><span class="annot"><span class="annottext">SrcLoc
+</span><a href="#local-6989586621679042846"><span class="hs-identifier hs-var">loc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, SrcLoc)]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SrcLoc -&gt; Maybe SrcLoc
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SrcLoc
+</span><a href="#local-6989586621679042846"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe SrcLoc
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- Conditional Assertion Functions</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- -------------------------------</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><span class="hs-comment">-- | Asserts that the specified condition holds.</span></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertBool"><span class="hs-identifier hs-type">assertBool</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ The message that is displayed if the assertion fails</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The condition</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span>
+</span><span id="line-57"></span><span id="assertBool"><span class="annot"><span class="annottext">assertBool :: HasCallStack =&gt; String -&gt; Bool -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertBool"><span class="hs-identifier hs-var hs-var">assertBool</span></a></span></span><span> </span><span id="local-6989586621679042852"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042852"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span id="local-6989586621679042853"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679042853"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Assertion -&gt; Assertion
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679042853"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Assertion
+forall a. HasCallStack =&gt; String -&gt; IO a
+</span><a href="Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier hs-var">assertFailure</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042852"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | Asserts that the specified actual value is equal to the expected value.</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- The output message will contain the prefix, the expected value, and the</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- actual value.</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- If the prefix is the empty string (i.e., @\&quot;\&quot;@), then the prefix is omitted</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- and only the expected and actual values are output.</span><span>
+</span><span id="line-65"></span><span id="local-6989586621679042801"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-type">assertEqual</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042801"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042801"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The message prefix</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679042801"><span class="hs-identifier hs-type">a</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The expected value</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679042801"><span class="hs-identifier hs-type">a</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The actual value</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span></span><span>
+</span><span id="line-71"></span><span id="assertEqual"><span class="annot"><span class="annottext">assertEqual :: forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var hs-var">assertEqual</span></a></span></span><span> </span><span id="local-6989586621679042863"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042863"><span class="hs-identifier hs-var">preface</span></a></span></span><span> </span><span id="local-6989586621679042864"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042864"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span id="local-6989586621679042865"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042865"><span class="hs-identifier hs-var">actual</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; Assertion -&gt; Assertion
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042865"><span class="hs-identifier hs-var">actual</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042864"><span class="hs-identifier hs-var">expected</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Assertion
+forall a. HasCallStack =&gt; String -&gt; IO a
+</span><a href="Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier hs-var">assertFailure</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042866"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679042866"><span class="annot"><span class="annottext">msg :: String
+</span><a href="#local-6989586621679042866"><span class="hs-identifier hs-var hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042863"><span class="hs-identifier hs-var">preface</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042863"><span class="hs-identifier hs-var">preface</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-74"></span><span>             </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;expected: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042864"><span class="hs-identifier hs-var">expected</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n but got: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042865"><span class="hs-identifier hs-var">actual</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">infix</span><span>  </span><span class="hs-number">1</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3F"><span class="hs-operator hs-type">@?</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3D%3F"><span class="hs-operator hs-type">@=?</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator hs-type">@?=</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- | Asserts that the specified actual value is equal to the expected value</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--   (with the /expected/ value on the left-hand side).</span><span>
+</span><span id="line-80"></span><span id="local-6989586621679042808"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3D%3F"><span class="hs-operator hs-type">(@=?)</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042808"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042808"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679042808"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The expected value</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679042808"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The actual value</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679042883"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042883"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span id="%40%3D%3F"><span class="annot"><span class="annottext">@=? :: forall a. (Eq a, Show a, HasCallStack) =&gt; a -&gt; a -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#%40%3D%3F"><span class="hs-operator hs-var hs-var">@=?</span></a></span></span><span> </span><span id="local-6989586621679042884"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042884"><span class="hs-identifier hs-var">actual</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; a -&gt; a -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042883"><span class="hs-identifier hs-var">expected</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042884"><span class="hs-identifier hs-var">actual</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Asserts that the specified actual value is equal to the expected value</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--   (with the /actual/ value on the left-hand side).</span><span>
+</span><span id="line-89"></span><span id="local-6989586621679042885"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator hs-type">(@?=)</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042885"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042885"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679042885"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The actual value</span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679042885"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The expected value</span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span></span><span>
+</span><span id="line-94"></span><span id="local-6989586621679042893"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042893"><span class="hs-identifier hs-var">actual</span></a></span></span><span> </span><span id="%40%3F%3D"><span class="annot"><span class="annottext">@?= :: forall a. (Eq a, Show a, HasCallStack) =&gt; a -&gt; a -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator hs-var hs-var">@?=</span></a></span></span><span> </span><span id="local-6989586621679042894"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042894"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; a -&gt; a -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042894"><span class="hs-identifier hs-var">expected</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679042893"><span class="hs-identifier hs-var">actual</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- | An infix and flipped version of 'assertBool'. E.g. instead of</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- &gt;assertBool &quot;Non-empty list&quot; (null [1])</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- you can write</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- &gt;null [1] @? &quot;Non-empty list&quot;</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- '@?' is also overloaded to accept @'IO' 'Bool'@ predicates, so instead</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- of</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- &gt; do</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- &gt;   e &lt;- doesFileExist &quot;test&quot;</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- &gt;   e @? &quot;File does not exist&quot;</span><span>
+</span><span id="line-110"></span><span class="hs-comment">--</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- you can write</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- &gt; doesFileExist &quot;test&quot; @? &quot;File does not exist&quot;</span><span>
+</span><span id="line-114"></span><span id="local-6989586621679042811"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3F"><span class="hs-operator hs-type">(@?)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicable"><span class="hs-identifier hs-type">AssertionPredicable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042811"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679042811"><span class="hs-identifier hs-type">t</span></a></span><span>          </span><span class="annot"><span class="hs-comment">-- ^ A value of which the asserted condition is predicated</span></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ A message that is displayed if the assertion fails</span></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span></span><span>
+</span><span id="line-118"></span><span id="local-6989586621679042902"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679042902"><span class="hs-identifier hs-var">predi</span></a></span></span><span> </span><span id="%40%3F"><span class="annot"><span class="annottext">@? :: forall t.
+(AssertionPredicable t, HasCallStack) =&gt;
+t -&gt; String -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#%40%3F"><span class="hs-operator hs-var hs-var">@?</span></a></span></span><span> </span><span id="local-6989586621679042903"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042903"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">t -&gt; IO Bool
+forall t. AssertionPredicable t =&gt; t -&gt; IO Bool
+</span><a href="Test.Tasty.HUnit.Orig.html#assertionPredicate"><span class="hs-identifier hs-var">assertionPredicate</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679042902"><span class="hs-identifier hs-var">predi</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; (Bool -&gt; Assertion) -&gt; Assertion
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Bool -&gt; Assertion
+String -&gt; Bool -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertBool"><span class="hs-identifier hs-var">assertBool</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042903"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- | An ad-hoc class used to overload the '@?' operator.</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- The only intended instances of this class are @'Bool'@ and @'IO' 'Bool'@.</span><span>
+</span><span id="line-123"></span><span class="hs-comment">--</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- You shouldn't need to interact with this class directly.</span><span>
+</span><span id="line-125"></span><span class="hs-keyword">class</span><span> </span><span id="AssertionPredicable"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicable"><span class="hs-identifier hs-var">AssertionPredicable</span></a></span></span><span> </span><span id="local-6989586621679042814"><span class="annot"><a href="#local-6989586621679042814"><span class="hs-identifier hs-type">t</span></a></span></span><span>
+</span><span id="line-126"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="assertionPredicate"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertionPredicate"><span class="hs-identifier hs-type">assertionPredicate</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679042814"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicable"><span class="hs-identifier hs-type">AssertionPredicable</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-129"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679042909"><span class="annot"><span class="annottext">assertionPredicate :: Bool -&gt; IO Bool
+</span><a href="Test.Tasty.HUnit.Orig.html#assertionPredicate"><span class="hs-identifier hs-var hs-var hs-var hs-var">assertionPredicate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679042820"><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicable"><span class="hs-identifier hs-type">AssertionPredicable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042820"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicable"><span class="hs-identifier hs-type">AssertionPredicable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042820"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-132"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679042915"><span class="annot"><span class="annottext">assertionPredicate :: IO t -&gt; IO Bool
+</span><a href="Test.Tasty.HUnit.Orig.html#assertionPredicate"><span class="hs-identifier hs-var hs-var hs-var hs-var">assertionPredicate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO t -&gt; (t -&gt; IO Bool) -&gt; IO Bool
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">t -&gt; IO Bool
+forall t. AssertionPredicable t =&gt; t -&gt; IO Bool
+</span><a href="Test.Tasty.HUnit.Orig.html#assertionPredicate"><span class="hs-identifier hs-var">assertionPredicate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><span class="hs-comment">-- | Exception thrown by 'assertFailure' etc.</span></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">data</span><span> </span><span id="HUnitFailure"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#HUnitFailure"><span class="hs-identifier hs-var">HUnitFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HUnitFailure"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#HUnitFailure"><span class="hs-identifier hs-var">HUnitFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#SrcLoc"><span class="hs-identifier hs-type">SrcLoc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679042917"><span id="local-6989586621679042925"><span class="annot"><span class="annottext">HUnitFailure -&gt; HUnitFailure -&gt; Bool
+(HUnitFailure -&gt; HUnitFailure -&gt; Bool)
+-&gt; (HUnitFailure -&gt; HUnitFailure -&gt; Bool) -&gt; Eq HUnitFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: HUnitFailure -&gt; HUnitFailure -&gt; Bool
+== :: HUnitFailure -&gt; HUnitFailure -&gt; Bool
+$c/= :: HUnitFailure -&gt; HUnitFailure -&gt; Bool
+/= :: HUnitFailure -&gt; HUnitFailure -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679042932"><span id="local-6989586621679042942"><span id="local-6989586621679042946"><span class="annot"><span class="annottext">Int -&gt; HUnitFailure -&gt; String -&gt; String
+[HUnitFailure] -&gt; String -&gt; String
+HUnitFailure -&gt; String
+(Int -&gt; HUnitFailure -&gt; String -&gt; String)
+-&gt; (HUnitFailure -&gt; String)
+-&gt; ([HUnitFailure] -&gt; String -&gt; String)
+-&gt; Show HUnitFailure
+forall a.
+(Int -&gt; a -&gt; String -&gt; String)
+-&gt; (a -&gt; String) -&gt; ([a] -&gt; String -&gt; String) -&gt; Show a
+$cshowsPrec :: Int -&gt; HUnitFailure -&gt; String -&gt; String
+showsPrec :: Int -&gt; HUnitFailure -&gt; String -&gt; String
+$cshow :: HUnitFailure -&gt; String
+show :: HUnitFailure -&gt; String
+$cshowList :: [HUnitFailure] -&gt; String -&gt; String
+showList :: [HUnitFailure] -&gt; String -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679042956"><span id="local-6989586621679042959"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">E.Exception</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#HUnitFailure"><span class="hs-identifier hs-type">HUnitFailure</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679042963"><span class="annot"><span class="annottext">displayException :: HUnitFailure -&gt; String
+</span><a href="#local-6989586621679042963"><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#HUnitFailure"><span class="hs-identifier hs-type">HUnitFailure</span></a></span><span> </span><span id="local-6989586621679042965"><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="#local-6989586621679042965"><span class="hs-identifier hs-var">mbloc</span></a></span></span><span> </span><span id="local-6989586621679042966"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042966"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SrcLoc -&gt; String -&gt; String
+</span><a href="Test.Tasty.HUnit.Orig.html#prependLocation"><span class="hs-identifier hs-var">prependLocation</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="#local-6989586621679042965"><span class="hs-identifier hs-var">mbloc</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042966"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#prependLocation"><span class="hs-identifier hs-type">prependLocation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#SrcLoc"><span class="hs-identifier hs-type">SrcLoc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-142"></span><span id="prependLocation"><span class="annot"><span class="annottext">prependLocation :: Maybe SrcLoc -&gt; String -&gt; String
+</span><a href="Test.Tasty.HUnit.Orig.html#prependLocation"><span class="hs-identifier hs-var hs-var">prependLocation</span></a></span></span><span> </span><span id="local-6989586621679042968"><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="#local-6989586621679042968"><span class="hs-identifier hs-var">mbloc</span></a></span></span><span> </span><span id="local-6989586621679042969"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042969"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="#local-6989586621679042968"><span class="hs-identifier hs-var">mbloc</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042969"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679042970"><span class="annot"><span class="annottext">SrcLoc
+</span><a href="#local-6989586621679042970"><span class="hs-identifier hs-var">loc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SrcLoc -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocFile"><span class="hs-identifier hs-var">srcLocFile</span></a></span><span> </span><span class="annot"><span class="annottext">SrcLoc
+</span><a href="#local-6989586621679042970"><span class="hs-identifier hs-var">loc</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;:&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SrcLoc -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocStartLine"><span class="hs-identifier hs-var">srcLocStartLine</span></a></span><span> </span><span class="annot"><span class="annottext">SrcLoc
+</span><a href="#local-6989586621679042970"><span class="hs-identifier hs-var">loc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;:\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042969"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-comment">----------------------------------------------------------------------</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--                          DEPRECATED CODE</span><span>
+</span><span id="line-149"></span><span class="hs-comment">----------------------------------------------------------------------</span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">assertString</span><span> </span><span class="hs-pragma">&quot;Why not use assertBool instead?&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-152"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">Assertable</span><span class="hs-pragma">,</span><span> </span><span class="hs-pragma">AssertionPredicate</span><span>
+</span><span id="line-153"></span><span>   </span><span class="hs-pragma">&quot;This class or type seems dubious. If you have a good use case for it, please create an issue for tasty. Otherwise, it may be removed in a future version.&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- | Signals an assertion failure if a non-empty message (i.e., a message</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- other than @\&quot;\&quot;@) is passed.</span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertString"><span class="hs-identifier hs-type">assertString</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ The message that is displayed with the assertion failure</span></span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span>
+</span><span id="line-161"></span><span id="assertString"><span class="annot"><span class="annottext">assertString :: HasCallStack =&gt; String -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertString"><span class="hs-identifier hs-var hs-var">assertString</span></a></span></span><span> </span><span id="local-6989586621679042979"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042979"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Assertion -&gt; Assertion
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042979"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Assertion
+forall a. HasCallStack =&gt; String -&gt; IO a
+</span><a href="Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier hs-var">assertFailure</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679042979"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- Overloaded `assert` Function</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- ----------------------------</span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- | Allows the extension of the assertion mechanism.</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- Since an 'Assertion' can be a sequence of @Assertion@s and @IO@ actions,</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- there is a fair amount of flexibility of what can be achieved.  As a rule,</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- the resulting @Assertion@ should be the body of a @TestCase@ or part of</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- a @TestCase@; it should not be used to assert multiple, independent</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- conditions.</span><span>
+</span><span id="line-173"></span><span class="hs-comment">--</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- If more complex arrangements of assertions are needed, @Test@ and</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- @Testable@ should be used.</span><span>
+</span><span id="line-176"></span><span class="hs-keyword">class</span><span> </span><span id="Assertable"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertable"><span class="hs-identifier hs-var">Assertable</span></a></span></span><span> </span><span id="local-6989586621679042828"><span class="annot"><a href="#local-6989586621679042828"><span class="hs-identifier hs-type">t</span></a></span></span><span>
+</span><span id="line-177"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="assert"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assert"><span class="hs-identifier hs-type">assert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679042828"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertable"><span class="hs-identifier hs-type">Assertable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679042985"><span class="annot"><span class="annottext">assert :: () -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assert"><span class="hs-identifier hs-var hs-var hs-var hs-var">assert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; Assertion
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertable"><span class="hs-identifier hs-type">Assertable</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-183"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679042990"><span class="annot"><span class="annottext">assert :: Bool -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assert"><span class="hs-identifier hs-var hs-var hs-var hs-var">assert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Bool -&gt; Assertion
+String -&gt; Bool -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertBool"><span class="hs-identifier hs-var">assertBool</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679042830"><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertable"><span class="hs-identifier hs-type">Assertable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042830"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertable"><span class="hs-identifier hs-type">Assertable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679042830"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-186"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679042996"><span class="annot"><span class="annottext">assert :: IO t -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assert"><span class="hs-identifier hs-var hs-var hs-var hs-var">assert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO t -&gt; (t -&gt; Assertion) -&gt; Assertion
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">t -&gt; Assertion
+forall t. Assertable t =&gt; t -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertable"><span class="hs-identifier hs-type">Assertable</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-189"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679043001"><span class="annot"><span class="annottext">assert :: String -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assert"><span class="hs-identifier hs-var hs-var hs-var hs-var">assert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Assertion
+String -&gt; Assertion
+</span><a href="Test.Tasty.HUnit.Orig.html#assertString"><span class="hs-identifier hs-var">assertString</span></a></span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- Overloaded `assertionPredicate` Function</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- ----------------------------------------</span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- | The result of an assertion that hasn't been evaluated yet.</span><span>
+</span><span id="line-196"></span><span class="hs-comment">--</span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- Most test cases follow the following steps:</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--</span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- 1. Do some processing or an action.</span><span>
+</span><span id="line-200"></span><span class="hs-comment">--</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- 2. Assert certain conditions.</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- However, this flow is not always suitable.  @AssertionPredicate@ allows for</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- additional steps to be inserted without the initial action to be affected</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- by side effects.  Additionally, clean-up can be done before the test case</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- has a chance to end.  A potential work flow is:</span><span>
+</span><span id="line-207"></span><span class="hs-comment">--</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- 1. Write data to a file.</span><span>
+</span><span id="line-209"></span><span class="hs-comment">--</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- 2. Read data from a file, evaluate conditions.</span><span>
+</span><span id="line-211"></span><span class="hs-comment">--</span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- 3. Clean up the file.</span><span>
+</span><span id="line-213"></span><span class="hs-comment">--</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- 4. Assert that the side effects of the read operation meet certain conditions.</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- 5. Assert that the conditions evaluated in step 2 are met.</span><span>
+</span><span id="line-217"></span><span class="hs-keyword">type</span><span> </span><span id="AssertionPredicate"><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicate"><span class="hs-identifier hs-var">AssertionPredicate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span></pre></body></html>

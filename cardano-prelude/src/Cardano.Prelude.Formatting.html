@@ -1,0 +1,360 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | This module contains custom @Format@s for use with the `formatting` library</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--   @Format@s allow a type-safe version of string formatting. For example we</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--   might have:</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--   &gt; myFormat :: Format r (Text -&gt; Int -&gt; r)</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--   &gt; myFormat = &quot;Person's name is &quot; . text . &quot;, age is &quot; . hex</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--   The type parameter @r@ is the polymorphic return type. `formatting`</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--   provides a number of functions to run the format. For example, we could use</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--   @sformat :: Format Text a -&gt; a@ to run @myFormat@, which would give:</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--   &gt; sformat myFormat :: Text -&gt; Int -&gt; Text</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--   This is now a simple function, which will return a formatted strict @Text@.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--   `formatting` also provides a @Buildable a@ type-class for values that can</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--   be turned into a @Text@ @Builder@. It provides @build :: a -&gt; Builder@.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--   There is then a formatter @build :: Buildable a =&gt; Format r (a -&gt; r)@.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--   So, to get a @Text@ from any @Buildable@ value we can simply call</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--   @sformat build value@, and we can compose this @build@ in larger @Format@s.</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Prelude.Formatting</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.Formatting.html#base16Builder"><span class="hs-identifier">base16Builder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.Formatting.html#base16F"><span class="hs-identifier">base16F</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.Formatting.html#pairF"><span class="hs-identifier">pairF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.Formatting.html#pairBuilder"><span class="hs-identifier">pairBuilder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.Formatting.html#listJson"><span class="hs-identifier">listJson</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.Formatting.html#listJsonIndent"><span class="hs-identifier">listJsonIndent</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.Formatting.html#mapJson"><span class="hs-identifier">mapJson</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Prelude.Base.html"><span class="hs-identifier">Cardano.Prelude.Base</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Prelude.Base.html#map"><span class="hs-identifier">map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Base16</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B16</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LT</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier">Builder</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromLazyText"><span class="hs-identifier">fromLazyText</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromString"><span class="hs-identifier">fromString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Formatting</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Format</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">bprint</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">later</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Formatting</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">build</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Formatting.Buildable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Buildable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">build</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Exts</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator">(.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- Base16</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | A @Builder@ for a @ByteString@ that performs base 16 encoding</span></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Cardano.Prelude.Formatting.html#base16Builder"><span class="hs-identifier hs-type">base16Builder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-55"></span><span id="base16Builder"><span class="annot"><span class="annottext">base16Builder :: ByteString -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#base16Builder"><span class="hs-identifier hs-var hs-var">base16Builder</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Builder)
+-&gt; (ByteString -&gt; String) -&gt; ByteString -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html#unpack"><span class="hs-identifier hs-var">BS.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; String)
+-&gt; (ByteString -&gt; ByteString) -&gt; ByteString -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">B16.encode</span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><span class="hs-comment">-- | A @Format@ for a @ByteString@ that performs base 16 encoding</span></span><span>
+</span><span id="line-58"></span><span id="local-6989586621679095079"><span class="annot"><a href="Cardano.Prelude.Formatting.html#base16F"><span class="hs-identifier hs-type">base16F</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Format</span></span><span> </span><span class="annot"><a href="#local-6989586621679095079"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095079"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-59"></span><span id="base16F"><span class="annot"><span class="annottext">base16F :: forall r. Format r (ByteString -&gt; r)
+</span><a href="Cardano.Prelude.Formatting.html#base16F"><span class="hs-identifier hs-var hs-var">base16F</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Builder) -&gt; Format r (ByteString -&gt; r)
+forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">later</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#base16Builder"><span class="hs-identifier hs-var">base16Builder</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- Containers</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><span class="hs-comment">-- | A @Builder@ for a pair of @Buildable@ values @(a, b)@</span></span><span>
+</span><span id="line-66"></span><span id="local-6989586621679095084"><span id="local-6989586621679095086"><span class="annot"><a href="Cardano.Prelude.Formatting.html#pairBuilder"><span class="hs-identifier hs-type">pairBuilder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095084"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095086"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095084"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095086"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span></span></span><span>
+</span><span id="line-67"></span><span id="pairBuilder"><span class="annot"><span class="annottext">pairBuilder :: forall a b. (Buildable a, Buildable b) =&gt; (a, b) -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#pairBuilder"><span class="hs-identifier hs-var hs-var">pairBuilder</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679095198"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095198"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679095199"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095199"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Format Builder (a -&gt; b -&gt; Builder) -&gt; a -&gt; b -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><span class="hs-identifier hs-var">bprint</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (a -&gt; b -&gt; Builder) (a -&gt; b -&gt; Builder)
+</span><span class="hs-string">&quot;(&quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (a -&gt; b -&gt; Builder) (a -&gt; b -&gt; Builder)
+-&gt; Format Builder (a -&gt; b -&gt; Builder)
+-&gt; Format Builder (a -&gt; b -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format (b -&gt; Builder) (a -&gt; b -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">F.build</span></span><span> </span><span class="annot"><span class="annottext">Format (b -&gt; Builder) (a -&gt; b -&gt; Builder)
+-&gt; Format Builder (b -&gt; Builder)
+-&gt; Format Builder (a -&gt; b -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format (b -&gt; Builder) (b -&gt; Builder)
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (b -&gt; Builder) (b -&gt; Builder)
+-&gt; Format Builder (b -&gt; Builder) -&gt; Format Builder (b -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder (b -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">F.build</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (b -&gt; Builder)
+-&gt; Format Builder Builder -&gt; Format Builder (b -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder Builder
+</span><span class="hs-string">&quot;)&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095198"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095199"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><span class="hs-comment">-- | A @Format@ for a pair of @Buildable@ values @(a, b)@</span></span><span>
+</span><span id="line-70"></span><span id="local-6989586621679095097"><span id="local-6989586621679095098"><span id="local-6989586621679095099"><span class="annot"><a href="Cardano.Prelude.Formatting.html#pairF"><span class="hs-identifier hs-type">pairF</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095097"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095098"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Format</span></span><span> </span><span class="annot"><a href="#local-6989586621679095099"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095097"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095098"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095099"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-71"></span><span id="pairF"><span class="annot"><span class="annottext">pairF :: forall a b r. (Buildable a, Buildable b) =&gt; Format r ((a, b) -&gt; r)
+</span><a href="Cardano.Prelude.Formatting.html#pairF"><span class="hs-identifier hs-var hs-var">pairF</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((a, b) -&gt; Builder) -&gt; Format r ((a, b) -&gt; r)
+forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">later</span></span><span> </span><span class="annot"><span class="annottext">(a, b) -&gt; Builder
+forall a b. (Buildable a, Buildable b) =&gt; (a, b) -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#pairBuilder"><span class="hs-identifier hs-var">pairBuilder</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | A @Builder@ for @Foldable@ containers of @Buildable@ values that surrounds</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--   values using @prefix@ and @suffix@, and splits them using @delimiter@</span><span>
+</span><span id="line-75"></span><span id="local-6989586621679095103"><span id="local-6989586621679095104"><span class="annot"><a href="Cardano.Prelude.Formatting.html#foldableBuilder"><span class="hs-identifier hs-type">foldableBuilder</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095103"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095104"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="#local-6989586621679095103"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095104"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span></span></span><span>
+</span><span id="line-82"></span><span id="foldableBuilder"><span class="annot"><span class="annottext">foldableBuilder :: forall (t :: * -&gt; *) a.
+(Foldable t, Buildable a) =&gt;
+Builder -&gt; Builder -&gt; Builder -&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#foldableBuilder"><span class="hs-identifier hs-var hs-var">foldableBuilder</span></a></span></span><span> </span><span id="local-6989586621679095213"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095213"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679095214"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095214"><span class="hs-identifier hs-var">delimiter</span></a></span></span><span> </span><span id="local-6989586621679095215"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095215"><span class="hs-identifier hs-var">suffix</span></a></span></span><span> </span><span id="local-6989586621679095216"><span class="annot"><span class="annottext">t a
+</span><a href="#local-6989586621679095216"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095213"><span class="hs-identifier hs-var">prefix</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">[Builder]
+</span><a href="#local-6989586621679095217"><span class="hs-identifier hs-var">builders</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095215"><span class="hs-identifier hs-var">suffix</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621679095217"><span class="annot"><span class="annottext">builders :: [Builder]
+</span><a href="#local-6989586621679095217"><span class="hs-identifier hs-var hs-var">builders</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; [Builder] -&gt; [Builder]) -&gt; [Builder] -&gt; t a -&gt; [Builder]
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [Builder] -&gt; [Builder]
+</span><a href="#local-6989586621679095219"><span class="hs-identifier hs-var">appendBuilder</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">t a
+</span><a href="#local-6989586621679095216"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679095219"><span class="annot"><span class="annottext">appendBuilder :: a -&gt; [Builder] -&gt; [Builder]
+</span><a href="#local-6989586621679095219"><span class="hs-identifier hs-var hs-var">appendBuilder</span></a></span></span><span> </span><span id="local-6989586621679095220"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095220"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a -&gt; Builder
+forall p. Buildable p =&gt; p -&gt; Builder
+</span><span class="hs-identifier hs-var">build</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095220"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="#local-6989586621679095219"><span class="hs-identifier hs-var">appendBuilder</span></a></span><span> </span><span id="local-6989586621679095221"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095221"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679095222"><span class="annot"><span class="annottext">[Builder]
+</span><a href="#local-6989586621679095222"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Builder
+forall p. Buildable p =&gt; p -&gt; Builder
+</span><span class="hs-identifier hs-var">build</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095221"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; [Builder] -&gt; [Builder]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095214"><span class="hs-identifier hs-var">delimiter</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; [Builder] -&gt; [Builder]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Builder]
+</span><a href="#local-6989586621679095222"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- | A @Builder@ for @Foldable@ containers that outputs a JSON-style list</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--   &gt; &quot;[111, ololo, blablabla]&quot;</span><span>
+</span><span id="line-93"></span><span id="local-6989586621679095112"><span id="local-6989586621679095113"><span class="annot"><a href="Cardano.Prelude.Formatting.html#listBuilderJson"><span class="hs-identifier hs-type">listBuilderJson</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095112"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095113"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095112"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095113"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span></span></span><span>
+</span><span id="line-94"></span><span id="listBuilderJson"><span class="annot"><span class="annottext">listBuilderJson :: forall (t :: * -&gt; *) a. (Foldable t, Buildable a) =&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#listBuilderJson"><span class="hs-identifier hs-var hs-var">listBuilderJson</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder -&gt; t a -&gt; Builder
+forall (t :: * -&gt; *) a.
+(Foldable t, Buildable a) =&gt;
+Builder -&gt; Builder -&gt; Builder -&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#foldableBuilder"><span class="hs-identifier hs-var">foldableBuilder</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;[&quot;</span></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;]&quot;</span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><span class="hs-comment">-- | A @Format@ for @Foldable@ containers that outputs a JSON-style list</span></span><span>
+</span><span id="line-97"></span><span id="local-6989586621679095116"><span id="local-6989586621679095117"><span id="local-6989586621679095118"><span class="annot"><a href="Cardano.Prelude.Formatting.html#listJson"><span class="hs-identifier hs-type">listJson</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095116"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095117"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Format</span></span><span> </span><span class="annot"><a href="#local-6989586621679095118"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095116"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095117"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095118"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-98"></span><span id="listJson"><span class="annot"><span class="annottext">listJson :: forall (t :: * -&gt; *) a r.
+(Foldable t, Buildable a) =&gt;
+Format r (t a -&gt; r)
+</span><a href="Cardano.Prelude.Formatting.html#listJson"><span class="hs-identifier hs-var hs-var">listJson</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(t a -&gt; Builder) -&gt; Format r (t a -&gt; r)
+forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">later</span></span><span> </span><span class="annot"><span class="annottext">t a -&gt; Builder
+forall (t :: * -&gt; *) a. (Foldable t, Buildable a) =&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#listBuilderJson"><span class="hs-identifier hs-var">listBuilderJson</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- | A @Builder@ similar to @listBuilderJson@ that prints each value on a new</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--   line with @indent@ spaces of indentation</span><span>
+</span><span id="line-102"></span><span id="local-6989586621679095122"><span id="local-6989586621679095123"><span class="annot"><a href="Cardano.Prelude.Formatting.html#listBuilderJsonIndent"><span class="hs-identifier hs-type">listBuilderJsonIndent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095122"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095123"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095122"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095123"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span></span></span><span>
+</span><span id="line-103"></span><span id="listBuilderJsonIndent"><span class="annot"><span class="annottext">listBuilderJsonIndent :: forall (t :: * -&gt; *) a.
+(Foldable t, Buildable a) =&gt;
+Word -&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#listBuilderJsonIndent"><span class="hs-identifier hs-var hs-var">listBuilderJsonIndent</span></a></span></span><span> </span><span id="local-6989586621679095255"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095255"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679095256"><span class="annot"><span class="annottext">t a
+</span><a href="#local-6989586621679095256"><span class="hs-keyword hs-var">as</span></a></span></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">t a -&gt; Bool
+forall a. t a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">t a
+</span><a href="#local-6989586621679095256"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;[]&quot;</span></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder -&gt; t a -&gt; Builder
+forall (t :: * -&gt; *) a.
+(Foldable t, Buildable a) =&gt;
+Builder -&gt; Builder -&gt; Builder -&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#foldableBuilder"><span class="hs-identifier hs-var">foldableBuilder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;[\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095258"><span class="hs-identifier hs-var">spaces</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095259"><span class="hs-identifier hs-var">delimiter</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;\n]&quot;</span></span><span> </span><span class="annot"><span class="annottext">t a
+</span><a href="#local-6989586621679095256"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679095258"><span class="annot"><span class="annottext">spaces :: Builder
+</span><a href="#local-6989586621679095258"><span class="hs-identifier hs-var hs-var">spaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromLazyText"><span class="hs-identifier hs-var">fromLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Builder) -&gt; Text -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html#replicate"><span class="hs-identifier hs-var">LT.replicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095255"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679095259"><span class="annot"><span class="annottext">delimiter :: Builder
+</span><a href="#local-6989586621679095259"><span class="hs-identifier hs-var hs-var">delimiter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;,\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679095258"><span class="hs-identifier hs-var">spaces</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- | A @Format@ similar to @listJson@ that prints each value on a new line with</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--   @indent@ spaces of indentation</span><span>
+</span><span id="line-112"></span><span id="local-6989586621679095134"><span id="local-6989586621679095135"><span id="local-6989586621679095136"><span class="annot"><a href="Cardano.Prelude.Formatting.html#listJsonIndent"><span class="hs-identifier hs-type">listJsonIndent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095134"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095135"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Format</span></span><span> </span><span class="annot"><a href="#local-6989586621679095136"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095134"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095135"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095136"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-113"></span><span id="listJsonIndent"><span class="annot"><span class="annottext">listJsonIndent :: forall (t :: * -&gt; *) a r.
+(Foldable t, Buildable a) =&gt;
+Word -&gt; Format r (t a -&gt; r)
+</span><a href="Cardano.Prelude.Formatting.html#listJsonIndent"><span class="hs-identifier hs-var hs-var">listJsonIndent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(t a -&gt; Builder) -&gt; Format r (t a -&gt; r)
+forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">later</span></span><span> </span><span class="annot"><span class="annottext">((t a -&gt; Builder) -&gt; Format r (t a -&gt; r))
+-&gt; (Word -&gt; t a -&gt; Builder) -&gt; Word -&gt; Format r (t a -&gt; r)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; t a -&gt; Builder
+forall (t :: * -&gt; *) a.
+(Foldable t, Buildable a) =&gt;
+Word -&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#listBuilderJsonIndent"><span class="hs-identifier hs-var">listBuilderJsonIndent</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- | A @Builder@ for @Exts.IsList@ containers of @Buildable@ key-value pairs</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--   that outputs a JSON-style colon-separated map</span><span>
+</span><span id="line-117"></span><span id="local-6989586621679095140"><span id="local-6989586621679095142"><span id="local-6989586621679095143"><span class="annot"><a href="Cardano.Prelude.Formatting.html#mapBuilderJson"><span class="hs-identifier hs-type">mapBuilderJson</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#IsList"><span class="hs-identifier hs-type">Exts.IsList</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095140"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#Item"><span class="hs-identifier hs-type">Exts.Item</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095140"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#~"><span class="hs-operator hs-type">~</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095142"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095143"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095142"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095143"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><a href="#local-6989586621679095140"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span></span></span></span><span>
+</span><span id="line-121"></span><span id="mapBuilderJson"><span class="annot"><span class="annottext">mapBuilderJson :: forall t k v.
+(IsList t, Item t ~ (k, v), Buildable k, Buildable v) =&gt;
+t -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#mapBuilderJson"><span class="hs-identifier hs-var hs-var">mapBuilderJson</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder -&gt; [Builder] -&gt; Builder
+forall (t :: * -&gt; *) a.
+(Foldable t, Buildable a) =&gt;
+Builder -&gt; Builder -&gt; Builder -&gt; t a -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#foldableBuilder"><span class="hs-identifier hs-var">foldableBuilder</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;{&quot;</span></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;}&quot;</span></span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">([Builder] -&gt; Builder) -&gt; (t -&gt; [Builder]) -&gt; t -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((k, v) -&gt; Builder) -&gt; [(k, v)] -&gt; [Builder]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(k -&gt; v -&gt; Builder) -&gt; (k, v) -&gt; Builder
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">((k -&gt; v -&gt; Builder) -&gt; (k, v) -&gt; Builder)
+-&gt; (k -&gt; v -&gt; Builder) -&gt; (k, v) -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder (k -&gt; v -&gt; Builder) -&gt; k -&gt; v -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><span class="hs-identifier hs-var">bprint</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (v -&gt; Builder) (k -&gt; v -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">F.build</span></span><span> </span><span class="annot"><span class="annottext">Format (v -&gt; Builder) (k -&gt; v -&gt; Builder)
+-&gt; Format Builder (v -&gt; Builder)
+-&gt; Format Builder (k -&gt; v -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format (v -&gt; Builder) (v -&gt; Builder)
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (v -&gt; Builder) (v -&gt; Builder)
+-&gt; Format Builder (v -&gt; Builder) -&gt; Format Builder (v -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder (v -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">F.build</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">([(k, v)] -&gt; [Builder]) -&gt; (t -&gt; [(k, v)]) -&gt; t -&gt; [Builder]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">t -&gt; [(k, v)]
+t -&gt; [Item t]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#toList"><span class="hs-identifier hs-var">Exts.toList</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | A @Format@ for @Exts.IsList@ containers of @Buildable@ key-value pairs that</span><span>
+</span><span id="line-127"></span><span class="hs-comment">--   outputs a JSON-style colon-separated map</span><span>
+</span><span id="line-128"></span><span id="local-6989586621679095153"><span id="local-6989586621679095154"><span id="local-6989586621679095155"><span id="local-6989586621679095156"><span class="annot"><a href="Cardano.Prelude.Formatting.html#mapJson"><span class="hs-identifier hs-type">mapJson</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#IsList"><span class="hs-identifier hs-type">Exts.IsList</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095153"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#Item"><span class="hs-identifier hs-type">Exts.Item</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095153"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#~"><span class="hs-operator hs-type">~</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095154"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095155"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095154"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679095155"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Format</span></span><span> </span><span class="annot"><a href="#local-6989586621679095156"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095153"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095156"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-131"></span><span id="mapJson"><span class="annot"><span class="annottext">mapJson :: forall t k v r.
+(IsList t, Item t ~ (k, v), Buildable k, Buildable v) =&gt;
+Format r (t -&gt; r)
+</span><a href="Cardano.Prelude.Formatting.html#mapJson"><span class="hs-identifier hs-var hs-var">mapJson</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(t -&gt; Builder) -&gt; Format r (t -&gt; r)
+forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">later</span></span><span> </span><span class="annot"><span class="annottext">t -&gt; Builder
+forall t k v.
+(IsList t, Item t ~ (k, v), Buildable k, Buildable v) =&gt;
+t -&gt; Builder
+</span><a href="Cardano.Prelude.Formatting.html#mapBuilderJson"><span class="hs-identifier hs-var">mapBuilderJson</span></a></span><span>
+</span><span id="line-132"></span></pre></body></html>

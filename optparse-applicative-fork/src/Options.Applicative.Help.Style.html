@@ -1,0 +1,569 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FunctionalDependencies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Options.Applicative.Help.Style</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier">SetStyle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ColorIntensity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Layer"><span class="hs-identifier">Layer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ConsoleIntensity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Underlining</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Italicized"><span class="hs-identifier">Italicized</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier">Color</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#color"><span class="hs-identifier">color</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#bgColor"><span class="hs-identifier">bgColor</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#colorDull"><span class="hs-identifier">colorDull</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#bgColorDull"><span class="hs-identifier">bgColorDull</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#bold"><span class="hs-identifier">bold</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#underlined"><span class="hs-identifier">underlined</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#italicized"><span class="hs-identifier">italicized</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#styleToRawText"><span class="hs-identifier">styleToRawText</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#defaultStyle"><span class="hs-identifier">defaultStyle</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Console.ANSI</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ConsoleIntensity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ColorIntensity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Underlining</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Console.ANSI</span></span><span>    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ANSI</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="SetStyle"><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-var">SetStyle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SetStyle"><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-var">SetStyle</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ansiReset"><span class="annot"><span class="annottext">SetStyle -&gt; Bool
+</span><a href="Options.Applicative.Help.Style.html#ansiReset"><span class="hs-identifier hs-var hs-var">ansiReset</span></a></span></span><span>             </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ansiForeground"><span class="annot"><span class="annottext">SetStyle -&gt; Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiForeground"><span class="hs-identifier hs-var hs-var">ansiForeground</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ColorIntensity</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Set the foreground color, or keep the old one.</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ansiBackground"><span class="annot"><span class="annottext">SetStyle -&gt; Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiBackground"><span class="hs-identifier hs-var hs-var">ansiBackground</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ColorIntensity</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Set the background color, or keep the old one.</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ansiConsoleIntensity"><span class="annot"><span class="annottext">SetStyle -&gt; Maybe ConsoleIntensity
+</span><a href="Options.Applicative.Help.Style.html#ansiConsoleIntensity"><span class="hs-identifier hs-var hs-var">ansiConsoleIntensity</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConsoleIntensity</span></span><span>         </span><span class="annot"><span class="hs-comment">-- ^ Adjust boldness</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ansiItalics"><span class="annot"><span class="annottext">SetStyle -&gt; Maybe Italicized
+</span><a href="Options.Applicative.Help.Style.html#ansiItalics"><span class="hs-identifier hs-var hs-var">ansiItalics</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Italicized"><span class="hs-identifier hs-type">Italicized</span></a></span><span>               </span><span class="annot"><span class="hs-comment">-- ^ Adjust italics</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ansiUnderlining"><span class="annot"><span class="annottext">SetStyle -&gt; Maybe Underlining
+</span><a href="Options.Applicative.Help.Style.html#ansiUnderlining"><span class="hs-identifier hs-var hs-var">ansiUnderlining</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Underlining</span></span><span>              </span><span class="annot"><span class="hs-comment">-- ^ Adjust underlining</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679083112"><span id="local-6989586621679083126"><span class="annot"><span class="annottext">SetStyle -&gt; SetStyle -&gt; Bool
+(SetStyle -&gt; SetStyle -&gt; Bool)
+-&gt; (SetStyle -&gt; SetStyle -&gt; Bool) -&gt; Eq SetStyle
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SetStyle -&gt; SetStyle -&gt; Bool
+== :: SetStyle -&gt; SetStyle -&gt; Bool
+$c/= :: SetStyle -&gt; SetStyle -&gt; Bool
+/= :: SetStyle -&gt; SetStyle -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083141"><span id="local-6989586621679083155"><span id="local-6989586621679083167"><span id="local-6989586621679083171"><span id="local-6989586621679083174"><span id="local-6989586621679083177"><span id="local-6989586621679083180"><span class="annot"><span class="annottext">Eq SetStyle
+Eq SetStyle =&gt;
+(SetStyle -&gt; SetStyle -&gt; Ordering)
+-&gt; (SetStyle -&gt; SetStyle -&gt; Bool)
+-&gt; (SetStyle -&gt; SetStyle -&gt; Bool)
+-&gt; (SetStyle -&gt; SetStyle -&gt; Bool)
+-&gt; (SetStyle -&gt; SetStyle -&gt; Bool)
+-&gt; (SetStyle -&gt; SetStyle -&gt; SetStyle)
+-&gt; (SetStyle -&gt; SetStyle -&gt; SetStyle)
+-&gt; Ord SetStyle
+SetStyle -&gt; SetStyle -&gt; Bool
+SetStyle -&gt; SetStyle -&gt; Ordering
+SetStyle -&gt; SetStyle -&gt; SetStyle
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: SetStyle -&gt; SetStyle -&gt; Ordering
+compare :: SetStyle -&gt; SetStyle -&gt; Ordering
+$c&lt; :: SetStyle -&gt; SetStyle -&gt; Bool
+&lt; :: SetStyle -&gt; SetStyle -&gt; Bool
+$c&lt;= :: SetStyle -&gt; SetStyle -&gt; Bool
+&lt;= :: SetStyle -&gt; SetStyle -&gt; Bool
+$c&gt; :: SetStyle -&gt; SetStyle -&gt; Bool
+&gt; :: SetStyle -&gt; SetStyle -&gt; Bool
+$c&gt;= :: SetStyle -&gt; SetStyle -&gt; Bool
+&gt;= :: SetStyle -&gt; SetStyle -&gt; Bool
+$cmax :: SetStyle -&gt; SetStyle -&gt; SetStyle
+max :: SetStyle -&gt; SetStyle -&gt; SetStyle
+$cmin :: SetStyle -&gt; SetStyle -&gt; SetStyle
+min :: SetStyle -&gt; SetStyle -&gt; SetStyle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083194"><span id="local-6989586621679083210"><span id="local-6989586621679083214"><span class="annot"><span class="annottext">Int -&gt; SetStyle -&gt; ShowS
+[SetStyle] -&gt; ShowS
+SetStyle -&gt; String
+(Int -&gt; SetStyle -&gt; ShowS)
+-&gt; (SetStyle -&gt; String) -&gt; ([SetStyle] -&gt; ShowS) -&gt; Show SetStyle
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SetStyle -&gt; ShowS
+showsPrec :: Int -&gt; SetStyle -&gt; ShowS
+$cshow :: SetStyle -&gt; String
+show :: SetStyle -&gt; String
+$cshowList :: [SetStyle] -&gt; ShowS
+showList :: [SetStyle] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679083231"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679083234"><span class="annot"><span class="annottext">mempty :: SetStyle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; Maybe (ColorIntensity, Color)
+-&gt; Maybe (ColorIntensity, Color)
+-&gt; Maybe ConsoleIntensity
+-&gt; Maybe Italicized
+-&gt; Maybe Underlining
+-&gt; SetStyle
+</span><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-var">SetStyle</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ConsoleIntensity
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Italicized
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Underlining
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679083236"><span class="annot"><span class="annottext">mappend :: SetStyle -&gt; SetStyle -&gt; SetStyle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; SetStyle -&gt; SetStyle
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#defaultStyle"><span class="hs-identifier hs-type">defaultStyle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-43"></span><span id="defaultStyle"><span class="annot"><span class="annottext">defaultStyle :: SetStyle
+</span><a href="Options.Applicative.Help.Style.html#defaultStyle"><span class="hs-identifier hs-var hs-var">defaultStyle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ansiReset :: Bool
+</span><a href="Options.Applicative.Help.Style.html#ansiReset"><span class="hs-identifier hs-var">ansiReset</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiForeground :: Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiForeground"><span class="hs-identifier hs-var">ansiForeground</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiBackground :: Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiBackground"><span class="hs-identifier hs-var">ansiBackground</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiConsoleIntensity :: Maybe ConsoleIntensity
+</span><a href="Options.Applicative.Help.Style.html#ansiConsoleIntensity"><span class="hs-identifier hs-var">ansiConsoleIntensity</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity -&gt; Maybe ConsoleIntensity
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity
+</span><span class="hs-identifier hs-var">NormalIntensity</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiItalics :: Maybe Italicized
+</span><a href="Options.Applicative.Help.Style.html#ansiItalics"><span class="hs-identifier hs-var">ansiItalics</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Italicized -&gt; Maybe Italicized
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Italicized
+</span><a href="Options.Applicative.Help.Style.html#NoItalics"><span class="hs-identifier hs-var">NoItalics</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiUnderlining :: Maybe Underlining
+</span><a href="Options.Applicative.Help.Style.html#ansiUnderlining"><span class="hs-identifier hs-var">ansiUnderlining</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Underlining -&gt; Maybe Underlining
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Underlining
+</span><span class="hs-identifier hs-var">NoUnderline</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#isItalicised"><span class="hs-identifier hs-type">isItalicised</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Italicized"><span class="hs-identifier hs-type">Italicized</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-53"></span><span id="isItalicised"><span class="annot"><span class="annottext">isItalicised :: Italicized -&gt; Bool
+</span><a href="Options.Applicative.Help.Style.html#isItalicised"><span class="hs-identifier hs-var hs-var">isItalicised</span></a></span></span><span> </span><span class="annot"><span class="annottext">Italicized
+</span><a href="Options.Applicative.Help.Style.html#Italicized"><span class="hs-identifier hs-var">Italicized</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#isItalicised"><span class="hs-identifier hs-var">isItalicised</span></a></span><span> </span><span class="annot"><span class="annottext">Italicized
+</span><a href="Options.Applicative.Help.Style.html#NoItalics"><span class="hs-identifier hs-var">NoItalics</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#styleToRawText"><span class="hs-identifier hs-type">styleToRawText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-57"></span><span id="styleToRawText"><span class="annot"><span class="annottext">styleToRawText :: SetStyle -&gt; String
+</span><a href="Options.Applicative.Help.Style.html#styleToRawText"><span class="hs-identifier hs-var hs-var">styleToRawText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SGR] -&gt; String
+</span><span class="hs-identifier hs-var">ANSI.setSGRCode</span></span><span> </span><span class="annot"><span class="annottext">([SGR] -&gt; String) -&gt; (SetStyle -&gt; [SGR]) -&gt; SetStyle -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; [SGR]
+</span><a href="#local-6989586621679083244"><span class="hs-identifier hs-var">stylesToSgrs</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><a href="#local-6989586621679083244"><span class="hs-identifier hs-type">stylesToSgrs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">ANSI.SGR</span></span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621679083244"><span class="annot"><span class="annottext">stylesToSgrs :: SetStyle -&gt; [SGR]
+</span><a href="#local-6989586621679083244"><span class="hs-identifier hs-var hs-var">stylesToSgrs</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span> </span><span id="local-6989586621679083245"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679083245"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679083246"><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+</span><a href="#local-6989586621679083246"><span class="hs-identifier hs-var">fg</span></a></span></span><span> </span><span id="local-6989586621679083247"><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+</span><a href="#local-6989586621679083247"><span class="hs-identifier hs-var">bg</span></a></span></span><span> </span><span id="local-6989586621679083248"><span class="annot"><span class="annottext">Maybe ConsoleIntensity
+</span><a href="#local-6989586621679083248"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679083249"><span class="annot"><span class="annottext">Maybe Italicized
+</span><a href="#local-6989586621679083249"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679083250"><span class="annot"><span class="annottext">Maybe Underlining
+</span><a href="#local-6989586621679083250"><span class="hs-identifier hs-var">u</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Maybe SGR] -&gt; [SGR]
+forall a. [Maybe a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier hs-var">catMaybes</span></a></span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679083245"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">SGR -&gt; Maybe SGR
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SGR
+</span><span class="hs-identifier hs-var">ANSI.Reset</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe SGR
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">((ColorIntensity, Color) -&gt; SGR)
+-&gt; Maybe (ColorIntensity, Color) -&gt; Maybe SGR
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679083253"><span class="annot"><span class="annottext">ColorIntensity
+</span><a href="#local-6989586621679083253"><span class="hs-identifier hs-var">intensity</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083254"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083254"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConsoleLayer -&gt; ColorIntensity -&gt; Color -&gt; SGR
+</span><span class="hs-identifier hs-var">ANSI.SetColor</span></span><span> </span><span class="annot"><span class="annottext">ConsoleLayer
+</span><span class="hs-identifier hs-var">ANSI.Foreground</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><a href="#local-6989586621679083253"><span class="hs-identifier hs-var">intensity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Color -&gt; Color
+</span><a href="#local-6989586621679083257"><span class="hs-identifier hs-var">convertColor</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083254"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+</span><a href="#local-6989586621679083246"><span class="hs-identifier hs-var">fg</span></a></span><span>
+</span><span id="line-63"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">((ColorIntensity, Color) -&gt; SGR)
+-&gt; Maybe (ColorIntensity, Color) -&gt; Maybe SGR
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679083258"><span class="annot"><span class="annottext">ColorIntensity
+</span><a href="#local-6989586621679083258"><span class="hs-identifier hs-var">intensity</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083259"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083259"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConsoleLayer -&gt; ColorIntensity -&gt; Color -&gt; SGR
+</span><span class="hs-identifier hs-var">ANSI.SetColor</span></span><span> </span><span class="annot"><span class="annottext">ConsoleLayer
+</span><span class="hs-identifier hs-var">ANSI.Background</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><a href="#local-6989586621679083258"><span class="hs-identifier hs-var">intensity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Color -&gt; Color
+</span><a href="#local-6989586621679083257"><span class="hs-identifier hs-var">convertColor</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083259"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+</span><a href="#local-6989586621679083247"><span class="hs-identifier hs-var">bg</span></a></span><span>
+</span><span id="line-64"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(ConsoleIntensity -&gt; SGR) -&gt; Maybe ConsoleIntensity -&gt; Maybe SGR
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity -&gt; SGR
+</span><span class="hs-identifier hs-var">ANSI.SetConsoleIntensity</span></span><span> </span><span class="annot"><span class="annottext">Maybe ConsoleIntensity
+</span><a href="#local-6989586621679083248"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-65"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Italicized -&gt; SGR) -&gt; Maybe Italicized -&gt; Maybe SGR
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; SGR
+</span><span class="hs-identifier hs-var">ANSI.SetItalicized</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; SGR) -&gt; (Italicized -&gt; Bool) -&gt; Italicized -&gt; SGR
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Italicized -&gt; Bool
+</span><a href="Options.Applicative.Help.Style.html#isItalicised"><span class="hs-identifier hs-var">isItalicised</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Italicized
+</span><a href="#local-6989586621679083249"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-66"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Underlining -&gt; SGR) -&gt; Maybe Underlining -&gt; Maybe SGR
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Underlining -&gt; SGR
+</span><span class="hs-identifier hs-var">ANSI.SetUnderlining</span></span><span> </span><span class="annot"><span class="annottext">Maybe Underlining
+</span><a href="#local-6989586621679083250"><span class="hs-identifier hs-var">u</span></a></span><span>
+</span><span id="line-67"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><a href="#local-6989586621679083257"><span class="hs-identifier hs-type">convertColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ANSI.Color</span></span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679083257"><span class="annot"><span class="annottext">convertColor :: Color -&gt; Color
+</span><a href="#local-6989586621679083257"><span class="hs-identifier hs-var hs-var">convertColor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679083264"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083264"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083264"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#Black"><span class="hs-identifier hs-var">Black</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.Black</span></span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#Red"><span class="hs-identifier hs-var">Red</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.Red</span></span><span>
+</span><span id="line-73"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#Green"><span class="hs-identifier hs-var">Green</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.Green</span></span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#Yellow"><span class="hs-identifier hs-var">Yellow</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.Yellow</span></span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#Blue"><span class="hs-identifier hs-var">Blue</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.Blue</span></span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#Magenta"><span class="hs-identifier hs-var">Magenta</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.Magenta</span></span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#Cyan"><span class="hs-identifier hs-var">Cyan</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.Cyan</span></span><span>
+</span><span id="line-78"></span><span>        </span><span class="annot"><span class="annottext">Color
+</span><a href="Options.Applicative.Help.Style.html#White"><span class="hs-identifier hs-var">White</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">ANSI.White</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">data</span><span> </span><span id="Layer"><span class="annot"><a href="Options.Applicative.Help.Style.html#Layer"><span class="hs-identifier hs-var">Layer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Foreground"><span class="annot"><a href="Options.Applicative.Help.Style.html#Foreground"><span class="hs-identifier hs-var">Foreground</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Background"><span class="annot"><a href="Options.Applicative.Help.Style.html#Background"><span class="hs-identifier hs-var">Background</span></a></span></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679083284"><span id="local-6989586621679083286"><span class="annot"><span class="annottext">Layer -&gt; Layer -&gt; Bool
+(Layer -&gt; Layer -&gt; Bool) -&gt; (Layer -&gt; Layer -&gt; Bool) -&gt; Eq Layer
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Layer -&gt; Layer -&gt; Bool
+== :: Layer -&gt; Layer -&gt; Bool
+$c/= :: Layer -&gt; Layer -&gt; Bool
+/= :: Layer -&gt; Layer -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083292"><span id="local-6989586621679083294"><span id="local-6989586621679083296"><span id="local-6989586621679083300"><span id="local-6989586621679083303"><span id="local-6989586621679083306"><span id="local-6989586621679083309"><span class="annot"><span class="annottext">Eq Layer
+Eq Layer =&gt;
+(Layer -&gt; Layer -&gt; Ordering)
+-&gt; (Layer -&gt; Layer -&gt; Bool)
+-&gt; (Layer -&gt; Layer -&gt; Bool)
+-&gt; (Layer -&gt; Layer -&gt; Bool)
+-&gt; (Layer -&gt; Layer -&gt; Bool)
+-&gt; (Layer -&gt; Layer -&gt; Layer)
+-&gt; (Layer -&gt; Layer -&gt; Layer)
+-&gt; Ord Layer
+Layer -&gt; Layer -&gt; Bool
+Layer -&gt; Layer -&gt; Ordering
+Layer -&gt; Layer -&gt; Layer
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Layer -&gt; Layer -&gt; Ordering
+compare :: Layer -&gt; Layer -&gt; Ordering
+$c&lt; :: Layer -&gt; Layer -&gt; Bool
+&lt; :: Layer -&gt; Layer -&gt; Bool
+$c&lt;= :: Layer -&gt; Layer -&gt; Bool
+&lt;= :: Layer -&gt; Layer -&gt; Bool
+$c&gt; :: Layer -&gt; Layer -&gt; Bool
+&gt; :: Layer -&gt; Layer -&gt; Bool
+$c&gt;= :: Layer -&gt; Layer -&gt; Bool
+&gt;= :: Layer -&gt; Layer -&gt; Bool
+$cmax :: Layer -&gt; Layer -&gt; Layer
+max :: Layer -&gt; Layer -&gt; Layer
+$cmin :: Layer -&gt; Layer -&gt; Layer
+min :: Layer -&gt; Layer -&gt; Layer
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083312"><span id="local-6989586621679083314"><span id="local-6989586621679083318"><span class="annot"><span class="annottext">Int -&gt; Layer -&gt; ShowS
+[Layer] -&gt; ShowS
+Layer -&gt; String
+(Int -&gt; Layer -&gt; ShowS)
+-&gt; (Layer -&gt; String) -&gt; ([Layer] -&gt; ShowS) -&gt; Show Layer
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Layer -&gt; ShowS
+showsPrec :: Int -&gt; Layer -&gt; ShowS
+$cshow :: Layer -&gt; String
+show :: Layer -&gt; String
+$cshowList :: [Layer] -&gt; ShowS
+showList :: [Layer] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">data</span><span> </span><span id="Italicized"><span class="annot"><a href="Options.Applicative.Help.Style.html#Italicized"><span class="hs-identifier hs-var">Italicized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Italicized"><span class="annot"><a href="Options.Applicative.Help.Style.html#Italicized"><span class="hs-identifier hs-var">Italicized</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="NoItalics"><span class="annot"><a href="Options.Applicative.Help.Style.html#NoItalics"><span class="hs-identifier hs-var">NoItalics</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679083321"><span id="local-6989586621679083323"><span class="annot"><span class="annottext">Italicized -&gt; Italicized -&gt; Bool
+(Italicized -&gt; Italicized -&gt; Bool)
+-&gt; (Italicized -&gt; Italicized -&gt; Bool) -&gt; Eq Italicized
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Italicized -&gt; Italicized -&gt; Bool
+== :: Italicized -&gt; Italicized -&gt; Bool
+$c/= :: Italicized -&gt; Italicized -&gt; Bool
+/= :: Italicized -&gt; Italicized -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083328"><span id="local-6989586621679083330"><span id="local-6989586621679083332"><span id="local-6989586621679083335"><span id="local-6989586621679083338"><span id="local-6989586621679083341"><span id="local-6989586621679083344"><span class="annot"><span class="annottext">Eq Italicized
+Eq Italicized =&gt;
+(Italicized -&gt; Italicized -&gt; Ordering)
+-&gt; (Italicized -&gt; Italicized -&gt; Bool)
+-&gt; (Italicized -&gt; Italicized -&gt; Bool)
+-&gt; (Italicized -&gt; Italicized -&gt; Bool)
+-&gt; (Italicized -&gt; Italicized -&gt; Bool)
+-&gt; (Italicized -&gt; Italicized -&gt; Italicized)
+-&gt; (Italicized -&gt; Italicized -&gt; Italicized)
+-&gt; Ord Italicized
+Italicized -&gt; Italicized -&gt; Bool
+Italicized -&gt; Italicized -&gt; Ordering
+Italicized -&gt; Italicized -&gt; Italicized
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Italicized -&gt; Italicized -&gt; Ordering
+compare :: Italicized -&gt; Italicized -&gt; Ordering
+$c&lt; :: Italicized -&gt; Italicized -&gt; Bool
+&lt; :: Italicized -&gt; Italicized -&gt; Bool
+$c&lt;= :: Italicized -&gt; Italicized -&gt; Bool
+&lt;= :: Italicized -&gt; Italicized -&gt; Bool
+$c&gt; :: Italicized -&gt; Italicized -&gt; Bool
+&gt; :: Italicized -&gt; Italicized -&gt; Bool
+$c&gt;= :: Italicized -&gt; Italicized -&gt; Bool
+&gt;= :: Italicized -&gt; Italicized -&gt; Bool
+$cmax :: Italicized -&gt; Italicized -&gt; Italicized
+max :: Italicized -&gt; Italicized -&gt; Italicized
+$cmin :: Italicized -&gt; Italicized -&gt; Italicized
+min :: Italicized -&gt; Italicized -&gt; Italicized
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083347"><span id="local-6989586621679083349"><span id="local-6989586621679083352"><span class="annot"><span class="annottext">Int -&gt; Italicized -&gt; ShowS
+[Italicized] -&gt; ShowS
+Italicized -&gt; String
+(Int -&gt; Italicized -&gt; ShowS)
+-&gt; (Italicized -&gt; String)
+-&gt; ([Italicized] -&gt; ShowS)
+-&gt; Show Italicized
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Italicized -&gt; ShowS
+showsPrec :: Int -&gt; Italicized -&gt; ShowS
+$cshow :: Italicized -&gt; String
+show :: Italicized -&gt; String
+$cshowList :: [Italicized] -&gt; ShowS
+showList :: [Italicized] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679083356"><span id="local-6989586621679083359"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679083370"><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083370"><span class="hs-identifier hs-var">cs1</span></a></span></span><span> </span><span id="local-6989586621679083371"><span class="annot"><span class="annottext">&lt;&gt; :: SetStyle -&gt; SetStyle -&gt; SetStyle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679083372"><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083372"><span class="hs-identifier hs-var">cs2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ansiReset :: Bool
+</span><a href="Options.Applicative.Help.Style.html#ansiReset"><span class="hs-identifier hs-var">ansiReset</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Bool
+</span><a href="Options.Applicative.Help.Style.html#ansiReset"><span class="hs-identifier hs-var">ansiReset</span></a></span><span>             </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083370"><span class="hs-identifier hs-var">cs1</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span>  </span><span class="annot"><span class="annottext">SetStyle -&gt; Bool
+</span><a href="Options.Applicative.Help.Style.html#ansiReset"><span class="hs-identifier hs-var">ansiReset</span></a></span><span>             </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083372"><span class="hs-identifier hs-var">cs2</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiForeground :: Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiForeground"><span class="hs-identifier hs-var">ansiForeground</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiForeground"><span class="hs-identifier hs-var">ansiForeground</span></a></span><span>        </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083370"><span class="hs-identifier hs-var">cs1</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+-&gt; Maybe (ColorIntensity, Color) -&gt; Maybe (ColorIntensity, Color)
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiForeground"><span class="hs-identifier hs-var">ansiForeground</span></a></span><span>        </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083372"><span class="hs-identifier hs-var">cs2</span></a></span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiBackground :: Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiBackground"><span class="hs-identifier hs-var">ansiBackground</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiBackground"><span class="hs-identifier hs-var">ansiBackground</span></a></span><span>        </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083370"><span class="hs-identifier hs-var">cs1</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ColorIntensity, Color)
+-&gt; Maybe (ColorIntensity, Color) -&gt; Maybe (ColorIntensity, Color)
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe (ColorIntensity, Color)
+</span><a href="Options.Applicative.Help.Style.html#ansiBackground"><span class="hs-identifier hs-var">ansiBackground</span></a></span><span>        </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083372"><span class="hs-identifier hs-var">cs2</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiConsoleIntensity :: Maybe ConsoleIntensity
+</span><a href="Options.Applicative.Help.Style.html#ansiConsoleIntensity"><span class="hs-identifier hs-var">ansiConsoleIntensity</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe ConsoleIntensity
+</span><a href="Options.Applicative.Help.Style.html#ansiConsoleIntensity"><span class="hs-identifier hs-var">ansiConsoleIntensity</span></a></span><span>  </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083370"><span class="hs-identifier hs-var">cs1</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ConsoleIntensity
+-&gt; Maybe ConsoleIntensity -&gt; Maybe ConsoleIntensity
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe ConsoleIntensity
+</span><a href="Options.Applicative.Help.Style.html#ansiConsoleIntensity"><span class="hs-identifier hs-var">ansiConsoleIntensity</span></a></span><span>  </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083372"><span class="hs-identifier hs-var">cs2</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiItalics :: Maybe Italicized
+</span><a href="Options.Applicative.Help.Style.html#ansiItalics"><span class="hs-identifier hs-var">ansiItalics</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe Italicized
+</span><a href="Options.Applicative.Help.Style.html#ansiItalics"><span class="hs-identifier hs-var">ansiItalics</span></a></span><span>           </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083370"><span class="hs-identifier hs-var">cs1</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Italicized -&gt; Maybe Italicized -&gt; Maybe Italicized
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe Italicized
+</span><a href="Options.Applicative.Help.Style.html#ansiItalics"><span class="hs-identifier hs-var">ansiItalics</span></a></span><span>           </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083372"><span class="hs-identifier hs-var">cs2</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ansiUnderlining :: Maybe Underlining
+</span><a href="Options.Applicative.Help.Style.html#ansiUnderlining"><span class="hs-identifier hs-var">ansiUnderlining</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe Underlining
+</span><a href="Options.Applicative.Help.Style.html#ansiUnderlining"><span class="hs-identifier hs-var">ansiUnderlining</span></a></span><span>       </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083370"><span class="hs-identifier hs-var">cs1</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Underlining -&gt; Maybe Underlining -&gt; Maybe Underlining
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SetStyle -&gt; Maybe Underlining
+</span><a href="Options.Applicative.Help.Style.html#ansiUnderlining"><span class="hs-identifier hs-var">ansiUnderlining</span></a></span><span>       </span><span class="annot"><span class="annottext">SetStyle
+</span><a href="#local-6989586621679083372"><span class="hs-identifier hs-var">cs2</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">data</span><span> </span><span id="Color"><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-var">Color</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Black"><span class="annot"><a href="Options.Applicative.Help.Style.html#Black"><span class="hs-identifier hs-var">Black</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Red"><span class="annot"><a href="Options.Applicative.Help.Style.html#Red"><span class="hs-identifier hs-var">Red</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Green"><span class="annot"><a href="Options.Applicative.Help.Style.html#Green"><span class="hs-identifier hs-var">Green</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Yellow"><span class="annot"><a href="Options.Applicative.Help.Style.html#Yellow"><span class="hs-identifier hs-var">Yellow</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Blue"><span class="annot"><a href="Options.Applicative.Help.Style.html#Blue"><span class="hs-identifier hs-var">Blue</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Magenta"><span class="annot"><a href="Options.Applicative.Help.Style.html#Magenta"><span class="hs-identifier hs-var">Magenta</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Cyan"><span class="annot"><a href="Options.Applicative.Help.Style.html#Cyan"><span class="hs-identifier hs-var">Cyan</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="White"><span class="annot"><a href="Options.Applicative.Help.Style.html#White"><span class="hs-identifier hs-var">White</span></a></span></span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679083376"><span id="local-6989586621679083378"><span class="annot"><span class="annottext">Color -&gt; Color -&gt; Bool
+(Color -&gt; Color -&gt; Bool) -&gt; (Color -&gt; Color -&gt; Bool) -&gt; Eq Color
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Color -&gt; Color -&gt; Bool
+== :: Color -&gt; Color -&gt; Bool
+$c/= :: Color -&gt; Color -&gt; Bool
+/= :: Color -&gt; Color -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083383"><span id="local-6989586621679083385"><span id="local-6989586621679083387"><span id="local-6989586621679083390"><span id="local-6989586621679083393"><span id="local-6989586621679083396"><span id="local-6989586621679083399"><span class="annot"><span class="annottext">Eq Color
+Eq Color =&gt;
+(Color -&gt; Color -&gt; Ordering)
+-&gt; (Color -&gt; Color -&gt; Bool)
+-&gt; (Color -&gt; Color -&gt; Bool)
+-&gt; (Color -&gt; Color -&gt; Bool)
+-&gt; (Color -&gt; Color -&gt; Bool)
+-&gt; (Color -&gt; Color -&gt; Color)
+-&gt; (Color -&gt; Color -&gt; Color)
+-&gt; Ord Color
+Color -&gt; Color -&gt; Bool
+Color -&gt; Color -&gt; Ordering
+Color -&gt; Color -&gt; Color
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Color -&gt; Color -&gt; Ordering
+compare :: Color -&gt; Color -&gt; Ordering
+$c&lt; :: Color -&gt; Color -&gt; Bool
+&lt; :: Color -&gt; Color -&gt; Bool
+$c&lt;= :: Color -&gt; Color -&gt; Bool
+&lt;= :: Color -&gt; Color -&gt; Bool
+$c&gt; :: Color -&gt; Color -&gt; Bool
+&gt; :: Color -&gt; Color -&gt; Bool
+$c&gt;= :: Color -&gt; Color -&gt; Bool
+&gt;= :: Color -&gt; Color -&gt; Bool
+$cmax :: Color -&gt; Color -&gt; Color
+max :: Color -&gt; Color -&gt; Color
+$cmin :: Color -&gt; Color -&gt; Color
+min :: Color -&gt; Color -&gt; Color
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083402"><span id="local-6989586621679083404"><span id="local-6989586621679083407"><span class="annot"><span class="annottext">Int -&gt; Color -&gt; ShowS
+[Color] -&gt; ShowS
+Color -&gt; String
+(Int -&gt; Color -&gt; ShowS)
+-&gt; (Color -&gt; String) -&gt; ([Color] -&gt; ShowS) -&gt; Show Color
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Color -&gt; ShowS
+showsPrec :: Int -&gt; Color -&gt; ShowS
+$cshow :: Color -&gt; String
+show :: Color -&gt; String
+$cshowList :: [Color] -&gt; ShowS
+showList :: [Color] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="annot"><span class="hs-comment">-- | Style the foreground with a vivid color.</span></span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#color"><span class="hs-identifier hs-type">color</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-100"></span><span id="color"><span class="annot"><span class="annottext">color :: Color -&gt; SetStyle
+</span><a href="Options.Applicative.Help.Style.html#color"><span class="hs-identifier hs-var hs-var">color</span></a></span></span><span> </span><span id="local-6989586621679083409"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083409"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#ansiForeground"><span class="hs-identifier hs-var">ansiForeground</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Vivid</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679083409"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="annot"><span class="hs-comment">-- | Style the background with a vivid color.</span></span><span>
+</span><span id="line-103"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#bgColor"><span class="hs-identifier hs-type">bgColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-104"></span><span id="bgColor"><span class="annot"><span class="annottext">bgColor :: Color -&gt; SetStyle
+</span><a href="Options.Applicative.Help.Style.html#bgColor"><span class="hs-identifier hs-var hs-var">bgColor</span></a></span></span><span> </span><span id="local-6989586621679083411"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083411"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">SetStyle
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#ansiBackground"><span class="hs-identifier hs-var">ansiBackground</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Vivid</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679083411"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><span class="hs-comment">-- | Style the foreground with a dull color.</span></span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#colorDull"><span class="hs-identifier hs-type">colorDull</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-108"></span><span id="colorDull"><span class="annot"><span class="annottext">colorDull :: Color -&gt; SetStyle
+</span><a href="Options.Applicative.Help.Style.html#colorDull"><span class="hs-identifier hs-var hs-var">colorDull</span></a></span></span><span> </span><span id="local-6989586621679083412"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083412"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">SetStyle
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#ansiForeground"><span class="hs-identifier hs-var">ansiForeground</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Dull</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679083412"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="annot"><span class="hs-comment">-- | Style the background with a dull color.</span></span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#bgColorDull"><span class="hs-identifier hs-type">bgColorDull</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-112"></span><span id="bgColorDull"><span class="annot"><span class="annottext">bgColorDull :: Color -&gt; SetStyle
+</span><a href="Options.Applicative.Help.Style.html#bgColorDull"><span class="hs-identifier hs-var hs-var">bgColorDull</span></a></span></span><span> </span><span id="local-6989586621679083414"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621679083414"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">SetStyle
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#ansiBackground"><span class="hs-identifier hs-var">ansiBackground</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Dull</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679083414"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><span class="hs-comment">-- | Render in __bold__.</span></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#bold"><span class="hs-identifier hs-type">bold</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-116"></span><span id="bold"><span class="annot"><span class="annottext">bold :: SetStyle
+</span><a href="Options.Applicative.Help.Style.html#bold"><span class="hs-identifier hs-var hs-var">bold</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#ansiConsoleIntensity"><span class="hs-identifier hs-var">ansiConsoleIntensity</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">BoldIntensity</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="annot"><span class="hs-comment">-- | Render in /italics/.</span></span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#italicized"><span class="hs-identifier hs-type">italicized</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-120"></span><span id="italicized"><span class="annot"><span class="annottext">italicized :: SetStyle
+</span><a href="Options.Applicative.Help.Style.html#italicized"><span class="hs-identifier hs-var hs-var">italicized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#ansiItalics"><span class="hs-identifier hs-var">ansiItalics</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#Italicized"><span class="hs-identifier hs-type">Italicized</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><span class="hs-comment">-- | Render underlined.</span></span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Options.Applicative.Help.Style.html#underlined"><span class="hs-identifier hs-type">underlined</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-124"></span><span id="underlined"><span class="annot"><span class="annottext">underlined :: SetStyle
+</span><a href="Options.Applicative.Help.Style.html#underlined"><span class="hs-identifier hs-var hs-var">underlined</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SetStyle
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#ansiUnderlining"><span class="hs-identifier hs-var">ansiUnderlining</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SingleUnderline</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-125"></span></pre></body></html>

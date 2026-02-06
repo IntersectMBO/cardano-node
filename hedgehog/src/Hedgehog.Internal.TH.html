@@ -1,0 +1,257 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.TH</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier">TExpQ</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#discover"><span class="hs-identifier">discover</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#discoverPrefix"><span class="hs-identifier">discoverPrefix</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Ord.html"><span class="hs-identifier">Data.Ord</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ord</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Discovery.html"><span class="hs-identifier">Hedgehog.Internal.Discovery</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Property.html"><span class="hs-identifier">Hedgehog.Internal.Property</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.html"><span class="hs-identifier">Language.Haskell.TH</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Exp"><span class="hs-identifier">Exp</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Q"><span class="hs-identifier">Q</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#location"><span class="hs-identifier">location</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#runIO"><span class="hs-identifier">runIO</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_template_haskell(2,17,0)
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Lib.Internal.html#CodeQ"><span class="hs-identifier">CodeQ</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#joinCode"><span class="hs-identifier">joinCode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#unTypeCode"><span class="hs-identifier">unTypeCode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#unsafeCodeCoerce"><span class="hs-identifier">unsafeCodeCoerce</span></a></span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html"><span class="hs-identifier">Language.Haskell.TH.Syntax</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Loc"><span class="hs-identifier">Loc</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#mkName"><span class="hs-identifier">mkName</span></a></span><span class="hs-cpp">
+#if !MIN_VERSION_template_haskell(2,17,0)
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">TExp</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">unsafeTExpCoerce</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">unTypeQ</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if MIN_VERSION_template_haskell(2,17,0)
+</span><span class="hs-keyword">type</span><span> </span><span id="TExpQ"><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-var">TExpQ</span></a></span></span><span> </span><span id="local-6989586621679489780"><span class="annot"><a href="#local-6989586621679489780"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Lib.Internal.html#CodeQ"><span class="hs-identifier hs-type">CodeQ</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489780"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-cpp">
+#else
+</span><span class="hs-comment">-- Originally `Code` is a more polymorphic newtype wrapper, but for this module</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- we can get away with just making it a type alias.</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">type</span><span> </span><span class="hs-identifier">TExpQ</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">Q</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">TExp</span><span> </span><span class="hs-identifier">a</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-identifier">joinCode</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Q</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">TExpQ</span><span> </span><span class="hs-identifier">a</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">TExpQ</span><span> </span><span class="hs-identifier">a</span><span>
+</span><span id="line-36"></span><span class="hs-identifier">joinCode</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-operator">&gt;&gt;=</span><span> </span><span class="hs-identifier">id</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-identifier">unsafeCodeCoerce</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Q</span><span> </span><span class="hs-identifier">Exp</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">TExpQ</span><span> </span><span class="hs-identifier">a</span><span>
+</span><span id="line-38"></span><span class="hs-identifier">unsafeCodeCoerce</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">unsafeTExpCoerce</span><span>
+</span><span id="line-39"></span><span class="hs-identifier">unTypeCode</span><span> </span><span class="hs-glyph">::</span><span>  </span><span class="hs-identifier">TExpQ</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">Q</span><span> </span><span class="hs-identifier">Exp</span><span>
+</span><span id="line-40"></span><span class="hs-identifier">unTypeCode</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">unTypeQ</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | Discover all the properties in a module.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--   Functions starting with `prop_` are assumed to be properties.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Hedgehog.Internal.TH.html#discover"><span class="hs-identifier hs-type">discover</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-type">TExpQ</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#Group"><span class="hs-identifier hs-type">Group</span></a></span><span>
+</span><span id="line-48"></span><span id="discover"><span class="annot"><span class="annottext">discover :: TExpQ Group
+</span><a href="Hedgehog.Internal.TH.html#discover"><span class="hs-identifier hs-var hs-var">discover</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; TExpQ Group
+</span><a href="Hedgehog.Internal.TH.html#discoverPrefix"><span class="hs-identifier hs-var">discoverPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;prop_&quot;</span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Hedgehog.Internal.TH.html#discoverPrefix"><span class="hs-identifier hs-type">discoverPrefix</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-type">TExpQ</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#Group"><span class="hs-identifier hs-type">Group</span></a></span><span>
+</span><span id="line-51"></span><span id="discoverPrefix"><span class="annot"><span class="annottext">discoverPrefix :: String -&gt; TExpQ Group
+</span><a href="Hedgehog.Internal.TH.html#discoverPrefix"><span class="hs-identifier hs-var hs-var">discoverPrefix</span></a></span></span><span> </span><span id="local-6989586621679489781"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489781"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Q (TExpQ Group) -&gt; TExpQ Group
+forall (m :: * -&gt; *) a. Monad m =&gt; m (Code m a) -&gt; Code m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#joinCode"><span class="hs-identifier hs-var">joinCode</span></a></span><span> </span><span class="annot"><span class="annottext">(Q (TExpQ Group) -&gt; TExpQ Group) -&gt; Q (TExpQ Group) -&gt; TExpQ Group
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679489782"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489782"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Q String
+</span><a href="Hedgehog.Internal.TH.html#getCurrentFile"><span class="hs-identifier hs-var">getCurrentFile</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679489784"><span class="annot"><span class="annottext">[(PropertyName, PropertySource)]
+</span><a href="#local-6989586621679489784"><span class="hs-identifier hs-var">properties</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map PropertyName PropertySource -&gt; [(PropertyName, PropertySource)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="annot"><span class="annottext">(Map PropertyName PropertySource
+ -&gt; [(PropertyName, PropertySource)])
+-&gt; Q (Map PropertyName PropertySource)
+-&gt; Q [(PropertyName, PropertySource)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Map PropertyName PropertySource)
+-&gt; Q (Map PropertyName PropertySource)
+forall a. IO a -&gt; Q a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#runIO"><span class="hs-identifier hs-var">runIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; IO (Map PropertyName PropertySource)
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+String -&gt; String -&gt; m (Map PropertyName PropertySource)
+</span><a href="Hedgehog.Internal.Discovery.html#readProperties"><span class="hs-identifier hs-var">readProperties</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489781"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679489782"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679489790"><span class="annot"><span class="annottext">startLine :: (a, PropertySource) -&gt; (a, PropertySource) -&gt; Ordering
+</span><a href="#local-6989586621679489790"><span class="hs-identifier hs-var hs-var">startLine</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">((a, PropertySource) -&gt; LineNo)
+-&gt; (a, PropertySource) -&gt; (a, PropertySource) -&gt; Ordering
+forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Ord.html#comparing"><span class="hs-identifier hs-var">Ord.comparing</span></a></span><span> </span><span class="annot"><span class="annottext">(((a, PropertySource) -&gt; LineNo)
+ -&gt; (a, PropertySource) -&gt; (a, PropertySource) -&gt; Ordering)
+-&gt; ((a, PropertySource) -&gt; LineNo)
+-&gt; (a, PropertySource)
+-&gt; (a, PropertySource)
+-&gt; Ordering
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">Position -&gt; LineNo
+</span><a href="Hedgehog.Internal.Discovery.html#posLine"><span class="hs-identifier hs-var">posLine</span></a></span><span> </span><span class="annot"><span class="annottext">(Position -&gt; LineNo)
+-&gt; ((a, PropertySource) -&gt; Position)
+-&gt; (a, PropertySource)
+-&gt; LineNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">Pos String -&gt; Position
+forall a. Pos a -&gt; Position
+</span><a href="Hedgehog.Internal.Discovery.html#posPostion"><span class="hs-identifier hs-var">posPostion</span></a></span><span> </span><span class="annot"><span class="annottext">(Pos String -&gt; Position)
+-&gt; ((a, PropertySource) -&gt; Pos String)
+-&gt; (a, PropertySource)
+-&gt; Position
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-60"></span><span>        </span><span class="annot"><span class="annottext">PropertySource -&gt; Pos String
+</span><a href="Hedgehog.Internal.Discovery.html#propertySource"><span class="hs-identifier hs-var">propertySource</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertySource -&gt; Pos String)
+-&gt; ((a, PropertySource) -&gt; PropertySource)
+-&gt; (a, PropertySource)
+-&gt; Pos String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><span class="annottext">(a, PropertySource) -&gt; PropertySource
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679489799"><span class="annot"><span class="annottext">names :: [TExpQ (PropertyName, Property)]
+</span><a href="#local-6989586621679489799"><span class="hs-identifier hs-var hs-var">names</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">((PropertyName, PropertySource) -&gt; TExpQ (PropertyName, Property))
+-&gt; [(PropertyName, PropertySource)]
+-&gt; [TExpQ (PropertyName, Property)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropertyName -&gt; TExpQ (PropertyName, Property)
+</span><a href="Hedgehog.Internal.TH.html#mkNamedProperty"><span class="hs-identifier hs-var">mkNamedProperty</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyName -&gt; TExpQ (PropertyName, Property))
+-&gt; ((PropertyName, PropertySource) -&gt; PropertyName)
+-&gt; (PropertyName, PropertySource)
+-&gt; TExpQ (PropertyName, Property)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyName, PropertySource) -&gt; PropertyName
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(PropertyName, PropertySource)]
+ -&gt; [TExpQ (PropertyName, Property)])
+-&gt; [(PropertyName, PropertySource)]
+-&gt; [TExpQ (PropertyName, Property)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">((PropertyName, PropertySource)
+ -&gt; (PropertyName, PropertySource) -&gt; Ordering)
+-&gt; [(PropertyName, PropertySource)]
+-&gt; [(PropertyName, PropertySource)]
+forall a. (a -&gt; a -&gt; Ordering) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#sortBy"><span class="hs-identifier hs-var">List.sortBy</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyName, PropertySource)
+-&gt; (PropertyName, PropertySource) -&gt; Ordering
+forall {a}. (a, PropertySource) -&gt; (a, PropertySource) -&gt; Ordering
+</span><a href="#local-6989586621679489790"><span class="hs-identifier hs-var">startLine</span></a></span><span> </span><span class="annot"><span class="annottext">[(PropertyName, PropertySource)]
+</span><a href="#local-6989586621679489784"><span class="hs-identifier hs-var">properties</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">TExpQ Group -&gt; Q (TExpQ Group)
+forall a. a -&gt; Q a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[||</span><span> </span><span class="annot"><span class="annottext">GroupName -&gt; [(PropertyName, Property)] -&gt; Group
+</span><a href="Hedgehog.Internal.Property.html#Group"><span class="hs-identifier hs-var">Group</span></a></span><span> </span><span class="hs-special">$$</span><span class="hs-special">(</span><span class="annot"><span class="annottext">TExpQ GroupName
+</span><a href="Hedgehog.Internal.TH.html#moduleName"><span class="hs-identifier hs-var">moduleName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">$$</span><span class="hs-special">(</span><span class="annot"><span class="annottext">[TExpQ (PropertyName, Property)]
+-&gt; TExpQ [(PropertyName, Property)]
+forall a. [TExpQ a] -&gt; TExpQ [a]
+</span><a href="Hedgehog.Internal.TH.html#listTE"><span class="hs-identifier hs-var">listTE</span></a></span><span> </span><span class="annot"><span class="annottext">[TExpQ (PropertyName, Property)]
+</span><a href="#local-6989586621679489799"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">||]</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Hedgehog.Internal.TH.html#mkNamedProperty"><span class="hs-identifier hs-type">mkNamedProperty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#PropertyName"><span class="hs-identifier hs-type">PropertyName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-type">TExpQ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Property.html#PropertyName"><span class="hs-identifier hs-type">PropertyName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span id="mkNamedProperty"><span class="annot"><span class="annottext">mkNamedProperty :: PropertyName -&gt; TExpQ (PropertyName, Property)
+</span><a href="Hedgehog.Internal.TH.html#mkNamedProperty"><span class="hs-identifier hs-var hs-var">mkNamedProperty</span></a></span></span><span> </span><span id="local-6989586621679489806"><span class="annot"><span class="annottext">PropertyName
+</span><a href="#local-6989586621679489806"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">[||</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropertyName
+</span><a href="#local-6989586621679489806"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">$$</span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropertyName -&gt; TExpQ Property
+</span><a href="Hedgehog.Internal.TH.html#unsafeProperty"><span class="hs-identifier hs-var">unsafeProperty</span></a></span><span> </span><span class="annot"><span class="annottext">PropertyName
+</span><a href="#local-6989586621679489806"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">||]</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Hedgehog.Internal.TH.html#unsafeProperty"><span class="hs-identifier hs-type">unsafeProperty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#PropertyName"><span class="hs-identifier hs-type">PropertyName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-type">TExpQ</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-74"></span><span id="unsafeProperty"><span class="annot"><span class="annottext">unsafeProperty :: PropertyName -&gt; TExpQ Property
+</span><a href="Hedgehog.Internal.TH.html#unsafeProperty"><span class="hs-identifier hs-var hs-var">unsafeProperty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">Q Exp -&gt; TExpQ Property
+forall a (m :: * -&gt; *). Quote m =&gt; m Exp -&gt; Code m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#unsafeCodeCoerce"><span class="hs-identifier hs-var">unsafeCodeCoerce</span></a></span><span> </span><span class="annot"><span class="annottext">(Q Exp -&gt; TExpQ Property)
+-&gt; (PropertyName -&gt; Q Exp) -&gt; PropertyName -&gt; TExpQ Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Exp -&gt; Q Exp
+forall a. a -&gt; Q a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Exp -&gt; Q Exp) -&gt; (PropertyName -&gt; Exp) -&gt; PropertyName -&gt; Q Exp
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Exp
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#VarE"><span class="hs-identifier hs-var">VarE</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; Exp) -&gt; (PropertyName -&gt; Name) -&gt; PropertyName -&gt; Exp
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Name
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#mkName"><span class="hs-identifier hs-var">mkName</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Name)
+-&gt; (PropertyName -&gt; String) -&gt; PropertyName -&gt; Name
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PropertyName -&gt; String
+</span><a href="Hedgehog.Internal.Property.html#unPropertyName"><span class="hs-identifier hs-var">unPropertyName</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span id="local-6989586621679489730"><span class="annot"><a href="Hedgehog.Internal.TH.html#listTE"><span class="hs-identifier hs-type">listTE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-type">TExpQ</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679489730"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-type">TExpQ</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679489730"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-78"></span><span id="listTE"><span class="annot"><span class="annottext">listTE :: forall a. [TExpQ a] -&gt; TExpQ [a]
+</span><a href="Hedgehog.Internal.TH.html#listTE"><span class="hs-identifier hs-var hs-var">listTE</span></a></span></span><span> </span><span id="local-6989586621679489817"><span class="annot"><span class="annottext">[TExpQ a]
+</span><a href="#local-6989586621679489817"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">Q Exp -&gt; Code Q [a]
+forall a (m :: * -&gt; *). Quote m =&gt; m Exp -&gt; Code m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#unsafeCodeCoerce"><span class="hs-identifier hs-var">unsafeCodeCoerce</span></a></span><span> </span><span class="annot"><span class="annottext">(Q Exp -&gt; Code Q [a]) -&gt; Q Exp -&gt; Code Q [a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Exp -&gt; Q Exp
+forall a. a -&gt; Q a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Exp -&gt; Q Exp) -&gt; ([Exp] -&gt; Exp) -&gt; [Exp] -&gt; Q Exp
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Exp] -&gt; Exp
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#ListE"><span class="hs-identifier hs-var">ListE</span></a></span><span> </span><span class="annot"><span class="annottext">([Exp] -&gt; Q Exp) -&gt; Q [Exp] -&gt; Q Exp
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">(TExpQ a -&gt; Q Exp) -&gt; [TExpQ a] -&gt; Q [Exp]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">TExpQ a -&gt; Q Exp
+forall a (m :: * -&gt; *). Quote m =&gt; Code m a -&gt; m Exp
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#unTypeCode"><span class="hs-identifier hs-var">unTypeCode</span></a></span><span> </span><span class="annot"><span class="annottext">[TExpQ a]
+</span><a href="#local-6989586621679489817"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Hedgehog.Internal.TH.html#moduleName"><span class="hs-identifier hs-type">moduleName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.TH.html#TExpQ"><span class="hs-identifier hs-type">TExpQ</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#GroupName"><span class="hs-identifier hs-type">GroupName</span></a></span><span>
+</span><span id="line-82"></span><span id="moduleName"><span class="annot"><span class="annottext">moduleName :: TExpQ GroupName
+</span><a href="Hedgehog.Internal.TH.html#moduleName"><span class="hs-identifier hs-var hs-var">moduleName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Q (TExpQ GroupName) -&gt; TExpQ GroupName
+forall (m :: * -&gt; *) a. Monad m =&gt; m (Code m a) -&gt; Code m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#joinCode"><span class="hs-identifier hs-var">joinCode</span></a></span><span> </span><span class="annot"><span class="annottext">(Q (TExpQ GroupName) -&gt; TExpQ GroupName)
+-&gt; Q (TExpQ GroupName) -&gt; TExpQ GroupName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679489821"><span class="annot"><span class="annottext">GroupName
+</span><a href="#local-6989586621679489821"><span class="hs-identifier hs-var">loc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; GroupName
+</span><a href="Hedgehog.Internal.Property.html#GroupName"><span class="hs-identifier hs-var">GroupName</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; GroupName) -&gt; (Loc -&gt; String) -&gt; Loc -&gt; GroupName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Loc -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_module"><span class="hs-identifier hs-var">loc_module</span></a></span><span> </span><span class="annot"><span class="annottext">(Loc -&gt; GroupName) -&gt; Q Loc -&gt; Q GroupName
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Q Loc
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#location"><span class="hs-identifier hs-var">location</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">TExpQ GroupName -&gt; Q (TExpQ GroupName)
+forall a. a -&gt; Q a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[||</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679489821"><span class="hs-identifier hs-var">loc</span></a></span><span> </span><span class="hs-special">||]</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Hedgehog.Internal.TH.html#getCurrentFile"><span class="hs-identifier hs-type">getCurrentFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Q"><span class="hs-identifier hs-type">Q</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-87"></span><span id="getCurrentFile"><span class="annot"><span class="annottext">getCurrentFile :: Q String
+</span><a href="Hedgehog.Internal.TH.html#getCurrentFile"><span class="hs-identifier hs-var hs-var">getCurrentFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="annottext">Loc -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_filename"><span class="hs-identifier hs-var">loc_filename</span></a></span><span> </span><span class="annot"><span class="annottext">(Loc -&gt; String) -&gt; Q Loc -&gt; Q String
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Q Loc
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#location"><span class="hs-identifier hs-var">location</span></a></span><span>
+</span><span id="line-89"></span></pre></body></html>

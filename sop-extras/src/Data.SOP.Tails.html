@@ -1,0 +1,393 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | Intended for qualified import</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- &gt; import           Data.SOP.Tails (Tails(..))</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- &gt; import qualified Data.SOP.Tails as Tails</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.SOP.Tails</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier">Tails</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Convenience constructors</span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#mk1"><span class="hs-identifier">mk1</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#mk2"><span class="hs-identifier">mk2</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#mk3"><span class="hs-identifier">mk3</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- * SOP-like operators</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#extendWithTails"><span class="hs-identifier">extendWithTails</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#hcmap"><span class="hs-identifier">hcmap</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#hcpure"><span class="hs-identifier">hcpure</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#hmap"><span class="hs-identifier">hmap</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#hpure"><span class="hs-identifier">hpure</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#inPairsToTails"><span class="hs-identifier">inPairsToTails</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Kind.html"><span class="hs-identifier">Data.Kind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.Constraint</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Data.SOP.InPairs.html"><span class="hs-identifier">Data.SOP.InPairs</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">InPairs</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.SOP.Index.html"><span class="hs-identifier">Data.SOP.Index</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.Sing</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.Strict</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">hcmap</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hcpure</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hmap</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hpure</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SOP</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">{-------------------------------------------------------------------------------
+  Tails
+-------------------------------------------------------------------------------}</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | For every tail @(x ': xs)@ of the list, an @f x y@ for every @y@ in @xs@</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679102236"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679102236"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102236"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679102236"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="Tails"><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-var">Tails</span></a></span></span><span> </span><span id="local-6989586621679102237"><span class="annot"><a href="#local-6989586621679102237"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679102238"><span class="annot"><a href="#local-6989586621679102238"><span class="hs-identifier hs-type">xs</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679102035"><span id="TNil"><span class="annot"><a href="Data.SOP.Tails.html#TNil"><span class="hs-identifier hs-var">TNil</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102035"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span></span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679102029"><span id="local-6989586621679102240"><span id="local-6989586621679102241"><span id="TCons"><span class="annot"><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-var">TCons</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NP</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679102029"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102240"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679102241"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102029"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102241"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102029"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679102240"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-glyph">:</span><span> </span><span class="annot"><a href="#local-6989586621679102241"><span class="hs-identifier hs-type">xs</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">{-------------------------------------------------------------------------------
+  Convenience constructors
+-------------------------------------------------------------------------------}</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679102021"><span id="local-6989586621679102022"><span class="annot"><a href="Data.SOP.Tails.html#mk1"><span class="hs-identifier hs-type">mk1</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102021"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679102022"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-57"></span><span id="mk1"><span class="annot"><span class="annottext">mk1 :: forall {k} (f :: k -&gt; k -&gt; *) (x :: k). Tails f '[x]
+</span><a href="Data.SOP.Tails.html#mk1"><span class="hs-identifier hs-var hs-var">mk1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (f x) '[] -&gt; Tails f '[] -&gt; Tails f '[x]
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (xs :: [k]).
+NP (f x) xs -&gt; Tails f xs -&gt; Tails f (x : xs)
+</span><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-var">TCons</span></a></span><span> </span><span class="annot"><span class="annottext">NP (f x) '[]
+forall {k} (f :: k -&gt; *). NP f '[]
+</span><span class="hs-identifier hs-var">Nil</span></span><span> </span><span class="annot"><span class="annottext">Tails f '[]
+forall {k} (f :: k -&gt; k -&gt; *). Tails f '[]
+</span><a href="Data.SOP.Tails.html#TNil"><span class="hs-identifier hs-var">TNil</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span id="local-6989586621679102037"><span id="local-6989586621679102038"><span id="local-6989586621679102039"><span class="annot"><a href="Data.SOP.Tails.html#mk2"><span class="hs-identifier hs-type">mk2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679102037"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102038"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102039"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102037"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679102038"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679102039"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-60"></span><span id="mk2"><span class="annot"><span class="annottext">mk2 :: forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (y :: k).
+f x y -&gt; Tails f '[x, y]
+</span><a href="Data.SOP.Tails.html#mk2"><span class="hs-identifier hs-var hs-var">mk2</span></a></span></span><span> </span><span id="local-6989586621679102244"><span class="annot"><span class="annottext">f x y
+</span><a href="#local-6989586621679102244"><span class="hs-identifier hs-var">xy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (f x) '[y] -&gt; Tails f '[y] -&gt; Tails f '[x, y]
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (xs :: [k]).
+NP (f x) xs -&gt; Tails f xs -&gt; Tails f (x : xs)
+</span><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-var">TCons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f x y
+</span><a href="#local-6989586621679102244"><span class="hs-identifier hs-var">xy</span></a></span><span> </span><span class="annot"><span class="annottext">f x y -&gt; NP (f x) '[] -&gt; NP (f x) '[y]
+forall {k} (f :: k -&gt; *) (x :: k) (xs1 :: [k]).
+f x -&gt; NP f xs1 -&gt; NP f (x : xs1)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">NP (f x) '[]
+forall {k} (f :: k -&gt; *). NP f '[]
+</span><span class="hs-identifier hs-var">Nil</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Tails f '[y]
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k). Tails f '[x]
+</span><a href="Data.SOP.Tails.html#mk1"><span class="hs-identifier hs-var">mk1</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span id="local-6989586621679102047"><span id="local-6989586621679102048"><span id="local-6989586621679102049"><span id="local-6989586621679102050"><span class="annot"><a href="Data.SOP.Tails.html#mk3"><span class="hs-identifier hs-type">mk3</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679102047"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102048"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102049"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102047"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102048"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102050"><span class="hs-identifier hs-type">z</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102047"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102049"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102050"><span class="hs-identifier hs-type">z</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102047"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679102048"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679102049"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679102050"><span class="hs-identifier hs-type">z</span></a></span><span class="hs-special">]</span></span></span></span></span><span>
+</span><span id="line-63"></span><span id="mk3"><span class="annot"><span class="annottext">mk3 :: forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (y :: k) (z :: k).
+f x y -&gt; f x z -&gt; f y z -&gt; Tails f '[x, y, z]
+</span><a href="Data.SOP.Tails.html#mk3"><span class="hs-identifier hs-var hs-var">mk3</span></a></span></span><span> </span><span id="local-6989586621679102246"><span class="annot"><span class="annottext">f x y
+</span><a href="#local-6989586621679102246"><span class="hs-identifier hs-var">xy</span></a></span></span><span> </span><span id="local-6989586621679102247"><span class="annot"><span class="annottext">f x z
+</span><a href="#local-6989586621679102247"><span class="hs-identifier hs-var">xz</span></a></span></span><span> </span><span id="local-6989586621679102248"><span class="annot"><span class="annottext">f y z
+</span><a href="#local-6989586621679102248"><span class="hs-identifier hs-var">yz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (f x) '[y, z] -&gt; Tails f '[y, z] -&gt; Tails f '[x, y, z]
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (xs :: [k]).
+NP (f x) xs -&gt; Tails f xs -&gt; Tails f (x : xs)
+</span><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-var">TCons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f x y
+</span><a href="#local-6989586621679102246"><span class="hs-identifier hs-var">xy</span></a></span><span> </span><span class="annot"><span class="annottext">f x y -&gt; NP (f x) '[z] -&gt; NP (f x) '[y, z]
+forall {k} (f :: k -&gt; *) (x :: k) (xs1 :: [k]).
+f x -&gt; NP f xs1 -&gt; NP f (x : xs1)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">f x z
+</span><a href="#local-6989586621679102247"><span class="hs-identifier hs-var">xz</span></a></span><span> </span><span class="annot"><span class="annottext">f x z -&gt; NP (f x) '[] -&gt; NP (f x) '[z]
+forall {k} (f :: k -&gt; *) (x :: k) (xs1 :: [k]).
+f x -&gt; NP f xs1 -&gt; NP f (x : xs1)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">NP (f x) '[]
+forall {k} (f :: k -&gt; *). NP f '[]
+</span><span class="hs-identifier hs-var">Nil</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f y z -&gt; Tails f '[y, z]
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (y :: k).
+f x y -&gt; Tails f '[x, y]
+</span><a href="Data.SOP.Tails.html#mk2"><span class="hs-identifier hs-var">mk2</span></a></span><span> </span><span class="annot"><span class="annottext">f y z
+</span><a href="#local-6989586621679102248"><span class="hs-identifier hs-var">yz</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">{-------------------------------------------------------------------------------
+  SOP-like operators
+-------------------------------------------------------------------------------}</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span id="local-6989586621679102057"><span id="local-6989586621679102059"><span id="local-6989586621679102062"><span class="annot"><a href="Data.SOP.Tails.html#hmap"><span class="hs-identifier hs-type">hmap</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">SListI</span></span><span> </span><span class="annot"><a href="#local-6989586621679102057"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102060"><span class="annot"><a href="#local-6989586621679102060"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span id="local-6989586621679102061"><span class="annot"><a href="#local-6989586621679102061"><span class="hs-identifier hs-type">y</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621679102059"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102060"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102061"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102062"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102060"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102061"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102059"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102057"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102062"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102057"><span class="hs-identifier hs-type">xs</span></a></span></span></span></span><span>
+</span><span id="line-74"></span><span id="hmap"><span class="annot"><span class="annottext">hmap :: forall {k} (xs :: [k]) (f :: k -&gt; k -&gt; *) (g :: k -&gt; k -&gt; *).
+SListI xs =&gt;
+(forall (x :: k) (y :: k). f x y -&gt; g x y)
+-&gt; Tails f xs -&gt; Tails g xs
+</span><a href="Data.SOP.Tails.html#hmap"><span class="hs-identifier hs-var hs-var">hmap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy Top
+-&gt; (forall (x :: k) (y :: k). (Top x, Top y) =&gt; f x y -&gt; g x y)
+-&gt; Tails f xs
+-&gt; Tails g xs
+forall {k} (proxy :: (k -&gt; Constraint) -&gt; *) (c :: k -&gt; Constraint)
+       (f :: k -&gt; k -&gt; *) (g :: k -&gt; k -&gt; *) (xs :: [k]).
+All c xs =&gt;
+proxy c
+-&gt; (forall (x :: k) (y :: k). (c x, c y) =&gt; f x y -&gt; g x y)
+-&gt; Tails f xs
+-&gt; Tails g xs
+</span><a href="Data.SOP.Tails.html#hcmap"><span class="hs-identifier hs-var">hcmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+forall (t :: k -&gt; Constraint). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Top</span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Data.SOP.Tails.html#hcmap"><span class="hs-identifier hs-type">hcmap</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102077"><span class="annot"><a href="#local-6989586621679102077"><span class="hs-identifier hs-type">proxy</span></a></span></span><span> </span><span id="local-6989586621679102074"><span class="annot"><a href="#local-6989586621679102074"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span id="local-6989586621679102078"><span class="annot"><a href="#local-6989586621679102078"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679102079"><span class="annot"><a href="#local-6989586621679102079"><span class="hs-identifier hs-type">g</span></a></span></span><span> </span><span id="local-6989586621679102075"><span class="annot"><a href="#local-6989586621679102075"><span class="hs-identifier hs-type">xs</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">All</span></span><span> </span><span class="annot"><a href="#local-6989586621679102074"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102075"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="#local-6989586621679102077"><span class="hs-identifier hs-type">proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102074"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102071"><span class="annot"><a href="#local-6989586621679102071"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span id="local-6989586621679102072"><span class="annot"><a href="#local-6989586621679102072"><span class="hs-identifier hs-type">y</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679102074"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102071"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679102074"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102072"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102078"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102071"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102072"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102079"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102071"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102072"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102078"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102075"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102079"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102075"><span class="hs-identifier hs-type">xs</span></a></span><span>
+</span><span id="line-83"></span><span id="hcmap"><span class="annot"><span class="annottext">hcmap :: forall {k} (proxy :: (k -&gt; Constraint) -&gt; *) (c :: k -&gt; Constraint)
+       (f :: k -&gt; k -&gt; *) (g :: k -&gt; k -&gt; *) (xs :: [k]).
+All c xs =&gt;
+proxy c
+-&gt; (forall (x :: k) (y :: k). (c x, c y) =&gt; f x y -&gt; g x y)
+-&gt; Tails f xs
+-&gt; Tails g xs
+</span><a href="Data.SOP.Tails.html#hcmap"><span class="hs-identifier hs-var hs-var">hcmap</span></a></span></span><span> </span><span id="local-6989586621679102256"><span class="annot"><span class="annottext">proxy c
+</span><a href="#local-6989586621679102256"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679102257"><span class="annot"><span class="annottext">forall (x :: k) (y :: k). (c x, c y) =&gt; f x y -&gt; g x y
+</span><a href="#local-6989586621679102257"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tails f xs -&gt; Tails g xs
+forall (xs' :: [k]). All c xs' =&gt; Tails f xs' -&gt; Tails g xs'
+</span><a href="#local-6989586621679102258"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-84"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679102088"><span class="annot"><a href="#local-6989586621679102258"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">All</span></span><span> </span><span class="annot"><a href="#local-6989586621679102074"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102088"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102078"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102088"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102079"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102088"><span class="hs-identifier hs-type">xs'</span></a></span></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679102258"><span class="annot"><span class="annottext">go :: forall (xs' :: [k]). All c xs' =&gt; Tails f xs' -&gt; Tails g xs'
+</span><a href="#local-6989586621679102258"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">Tails f xs'
+</span><a href="Data.SOP.Tails.html#TNil"><span class="hs-identifier hs-var">TNil</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tails g xs'
+Tails g '[]
+forall {k} (f :: k -&gt; k -&gt; *). Tails f '[]
+</span><a href="Data.SOP.Tails.html#TNil"><span class="hs-identifier hs-var">TNil</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="#local-6989586621679102258"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-type">TCons</span></a></span><span> </span><span id="local-6989586621679102271"><span class="annot"><span class="annottext">NP (f x) xs
+</span><a href="#local-6989586621679102271"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679102272"><span class="annot"><span class="annottext">Tails f xs
+</span><a href="#local-6989586621679102272"><span class="hs-identifier hs-var">fss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (g x) xs -&gt; Tails g xs -&gt; Tails g (x : xs)
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (xs :: [k]).
+NP (f x) xs -&gt; Tails f xs -&gt; Tails f (x : xs)
+</span><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-var">TCons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">proxy c
+-&gt; (forall (a :: k). c a =&gt; f x a -&gt; g x a)
+-&gt; NP (f x) xs
+-&gt; NP (g x) xs
+forall {k} {l} (h :: (k -&gt; *) -&gt; l -&gt; *) (c :: k -&gt; Constraint)
+       (xs :: l) (proxy :: (k -&gt; Constraint) -&gt; *) (f :: k -&gt; *)
+       (f' :: k -&gt; *).
+(AllN (Prod h) c xs, HAp h) =&gt;
+proxy c
+-&gt; (forall (a :: k). c a =&gt; f a -&gt; f' a) -&gt; h f xs -&gt; h f' xs
+</span><span class="hs-identifier hs-var">SOP.hcmap</span></span><span> </span><span class="annot"><span class="annottext">proxy c
+</span><a href="#local-6989586621679102256"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">f x a -&gt; g x a
+forall (a :: k). c a =&gt; f x a -&gt; g x a
+forall (x :: k) (y :: k). (c x, c y) =&gt; f x y -&gt; g x y
+</span><a href="#local-6989586621679102257"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">NP (f x) xs
+</span><a href="#local-6989586621679102271"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tails f xs -&gt; Tails g xs
+forall (xs' :: [k]). All c xs' =&gt; Tails f xs' -&gt; Tails g xs'
+</span><a href="#local-6989586621679102258"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Tails f xs
+</span><a href="#local-6989586621679102272"><span class="hs-identifier hs-var">fss</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span id="local-6989586621679102113"><span id="local-6989586621679102114"><span class="annot"><a href="Data.SOP.Tails.html#hpure"><span class="hs-identifier hs-type">hpure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SListI</span></span><span> </span><span class="annot"><a href="#local-6989586621679102113"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102115"><span class="annot"><a href="#local-6989586621679102115"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span id="local-6989586621679102116"><span class="annot"><a href="#local-6989586621679102116"><span class="hs-identifier hs-type">y</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621679102114"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102115"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102116"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102114"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102113"><span class="hs-identifier hs-type">xs</span></a></span></span></span><span>
+</span><span id="line-90"></span><span id="hpure"><span class="annot"><span class="annottext">hpure :: forall {k} (xs :: [k]) (f :: k -&gt; k -&gt; *).
+SListI xs =&gt;
+(forall (x :: k) (y :: k). f x y) -&gt; Tails f xs
+</span><a href="Data.SOP.Tails.html#hpure"><span class="hs-identifier hs-var hs-var">hpure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy Top
+-&gt; (forall (x :: k) (y :: k). (Top x, Top y) =&gt; f x y)
+-&gt; Tails f xs
+forall {k} (proxy :: (k -&gt; Constraint) -&gt; *) (f :: k -&gt; k -&gt; *)
+       (c :: k -&gt; Constraint) (xs :: [k]).
+All c xs =&gt;
+proxy c
+-&gt; (forall (x :: k) (y :: k). (c x, c y) =&gt; f x y) -&gt; Tails f xs
+</span><a href="Data.SOP.Tails.html#hcpure"><span class="hs-identifier hs-var">hcpure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+forall (t :: k -&gt; Constraint). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Top</span></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Data.SOP.Tails.html#hcpure"><span class="hs-identifier hs-type">hcpure</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102127"><span class="annot"><a href="#local-6989586621679102127"><span class="hs-identifier hs-type">proxy</span></a></span></span><span> </span><span id="local-6989586621679102128"><span class="annot"><a href="#local-6989586621679102128"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679102125"><span class="annot"><a href="#local-6989586621679102125"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span id="local-6989586621679102126"><span class="annot"><a href="#local-6989586621679102126"><span class="hs-identifier hs-type">xs</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">All</span></span><span> </span><span class="annot"><a href="#local-6989586621679102125"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102126"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><a href="#local-6989586621679102127"><span class="hs-identifier hs-type">proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102125"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102122"><span class="annot"><a href="#local-6989586621679102122"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span id="local-6989586621679102123"><span class="annot"><a href="#local-6989586621679102123"><span class="hs-identifier hs-type">y</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679102125"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102122"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679102125"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102123"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102128"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102122"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102123"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102128"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102126"><span class="hs-identifier hs-type">xs</span></a></span><span>
+</span><span id="line-98"></span><span id="hcpure"><span class="annot"><span class="annottext">hcpure :: forall {k} (proxy :: (k -&gt; Constraint) -&gt; *) (f :: k -&gt; k -&gt; *)
+       (c :: k -&gt; Constraint) (xs :: [k]).
+All c xs =&gt;
+proxy c
+-&gt; (forall (x :: k) (y :: k). (c x, c y) =&gt; f x y) -&gt; Tails f xs
+</span><a href="Data.SOP.Tails.html#hcpure"><span class="hs-identifier hs-var hs-var">hcpure</span></a></span></span><span> </span><span id="local-6989586621679102285"><span class="annot"><span class="annottext">proxy c
+</span><a href="#local-6989586621679102285"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679102286"><span class="annot"><span class="annottext">forall (x :: k) (y :: k). (c x, c y) =&gt; f x y
+</span><a href="#local-6989586621679102286"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SList xs -&gt; Tails f xs
+forall (xs' :: [k]). All c xs' =&gt; SList xs' -&gt; Tails f xs'
+</span><a href="#local-6989586621679102287"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">SList xs
+forall {k} (xs :: [k]). SListI xs =&gt; SList xs
+</span><span class="hs-identifier hs-var">sList</span></span><span>
+</span><span id="line-99"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679102135"><span class="annot"><a href="#local-6989586621679102287"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">All</span></span><span> </span><span class="annot"><a href="#local-6989586621679102125"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102135"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SList</span></span><span> </span><span class="annot"><a href="#local-6989586621679102135"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102128"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102135"><span class="hs-identifier hs-type">xs'</span></a></span></span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679102287"><span class="annot"><span class="annottext">go :: forall (xs' :: [k]). All c xs' =&gt; SList xs' -&gt; Tails f xs'
+</span><a href="#local-6989586621679102287"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">SList xs'
+</span><span class="hs-identifier hs-var">SNil</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tails f xs'
+Tails f '[]
+forall {k} (f :: k -&gt; k -&gt; *). Tails f '[]
+</span><a href="Data.SOP.Tails.html#TNil"><span class="hs-identifier hs-var">TNil</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><a href="#local-6989586621679102287"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">SList xs'
+</span><span class="hs-identifier hs-var">SCons</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (f x) xs -&gt; Tails f xs -&gt; Tails f (x : xs)
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (xs :: [k]).
+NP (f x) xs -&gt; Tails f xs -&gt; Tails f (x : xs)
+</span><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-var">TCons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">proxy c -&gt; (forall (a :: k). c a =&gt; f x a) -&gt; NP (f x) xs
+forall k l (h :: (k -&gt; *) -&gt; l -&gt; *) (c :: k -&gt; Constraint)
+       (xs :: l) (proxy :: (k -&gt; Constraint) -&gt; *) (f :: k -&gt; *).
+(HPure h, AllN h c xs) =&gt;
+proxy c -&gt; (forall (a :: k). c a =&gt; f a) -&gt; h f xs
+forall (c :: k -&gt; Constraint) (xs :: [k])
+       (proxy :: (k -&gt; Constraint) -&gt; *) (f :: k -&gt; *).
+AllN NP c xs =&gt;
+proxy c -&gt; (forall (a :: k). c a =&gt; f a) -&gt; NP f xs
+</span><span class="hs-identifier hs-var">SOP.hcpure</span></span><span> </span><span class="annot"><span class="annottext">proxy c
+</span><a href="#local-6989586621679102285"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">f x a
+forall (a :: k). c a =&gt; f x a
+forall (x :: k) (y :: k). (c x, c y) =&gt; f x y
+</span><a href="#local-6989586621679102286"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SList xs -&gt; Tails f xs
+forall (xs' :: [k]). All c xs' =&gt; SList xs' -&gt; Tails f xs'
+</span><a href="#local-6989586621679102287"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">SList xs
+forall {k} (xs :: [k]). SListI xs =&gt; SList xs
+</span><span class="hs-identifier hs-var">sList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Data.SOP.Tails.html#inPairsToTails"><span class="hs-identifier hs-type">inPairsToTails</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102154"><span class="annot"><a href="#local-6989586621679102154"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679102153"><span class="annot"><a href="#local-6989586621679102153"><span class="hs-identifier hs-type">xs</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">All</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Top</span></span><span> </span><span class="annot"><a href="#local-6989586621679102153"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-107"></span><span>  </span><span class="annot"><a href="Data.SOP.InPairs.html#InPairs"><span class="hs-identifier hs-type">InPairs.InPairs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-type">InPairs.Fn2</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102154"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679102153"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-type">InPairs.Fn2</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102154"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679102153"><span class="hs-identifier hs-type">xs</span></a></span><span>
+</span><span id="line-109"></span><span id="inPairsToTails"><span class="annot"><span class="annottext">inPairsToTails :: forall {k} (f :: k -&gt; *) (xs :: [k]).
+All Top xs =&gt;
+InPairs (Fn2 f) xs -&gt; Tails (Fn2 f) xs
+</span><a href="Data.SOP.Tails.html#inPairsToTails"><span class="hs-identifier hs-var hs-var">inPairsToTails</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InPairs (Fn2 f) xs -&gt; Tails (Fn2 f) xs
+forall (xs' :: [k]).
+All Top xs' =&gt;
+InPairs (Fn2 f) xs' -&gt; Tails (Fn2 f) xs'
+</span><a href="#local-6989586621679102310"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-110"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><a href="#local-6989586621679102310"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679102160"><span class="annot"><a href="#local-6989586621679102160"><span class="hs-identifier hs-type">xs'</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">All</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Top</span></span><span> </span><span class="annot"><a href="#local-6989586621679102160"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="Data.SOP.InPairs.html#InPairs"><span class="hs-identifier hs-type">InPairs.InPairs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-type">InPairs.Fn2</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102154"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679102160"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-type">InPairs.Fn2</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102154"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679102160"><span class="hs-identifier hs-type">xs'</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679102310"><span class="annot"><span class="annottext">go :: forall (xs' :: [k]).
+All Top xs' =&gt;
+InPairs (Fn2 f) xs' -&gt; Tails (Fn2 f) xs'
+</span><a href="#local-6989586621679102310"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">InPairs (Fn2 f) xs'
+</span><a href="Data.SOP.InPairs.html#PNil"><span class="hs-identifier hs-var">InPairs.PNil</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tails (Fn2 f) xs'
+Tails (Fn2 f) '[x]
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k). Tails f '[x]
+</span><a href="Data.SOP.Tails.html#mk1"><span class="hs-identifier hs-var">mk1</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><a href="#local-6989586621679102310"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#PCons"><span class="hs-identifier hs-type">InPairs.PCons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-type">InPairs.Fn2</span></a></span><span> </span><span id="local-6989586621679102324"><span class="annot"><span class="annottext">f x -&gt; f y
+</span><a href="#local-6989586621679102324"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679102325"><span class="annot"><span class="annottext">InPairs (Fn2 f) (y : zs)
+</span><a href="#local-6989586621679102325"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">InPairs (Fn2 f) (y : zs) -&gt; Tails (Fn2 f) (y : zs)
+forall (xs' :: [k]).
+All Top xs' =&gt;
+InPairs (Fn2 f) xs' -&gt; Tails (Fn2 f) xs'
+</span><a href="#local-6989586621679102310"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">InPairs (Fn2 f) (y : zs)
+</span><a href="#local-6989586621679102325"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-119"></span><span>      </span><span id="local-6989586621679102326"><span class="annot"><span class="annottext">n' :: Tails (Fn2 f) (y : zs)
+</span><a href="#local-6989586621679102326"><span class="hs-identifier hs-var">n'</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-type">TCons</span></a></span><span> </span><span id="local-6989586621679102334"><span class="annot"><span class="annottext">NP (Fn2 f x) xs
+</span><a href="#local-6989586621679102334"><span class="hs-identifier hs-var">np</span></a></span></span><span> </span><span class="annot"><span class="annottext">Tails (Fn2 f) xs
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><span class="annottext">NP (Fn2 f x) (y : xs)
+-&gt; Tails (Fn2 f) (y : xs) -&gt; Tails (Fn2 f) (x : y : xs)
+forall {k} (f :: k -&gt; k -&gt; *) (x :: k) (xs :: [k]).
+NP (f x) xs -&gt; Tails f xs -&gt; Tails f (x : xs)
+</span><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-var">TCons</span></a></span><span>
+</span><span id="line-121"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(f x -&gt; f y) -&gt; Fn2 f x y
+forall {k} (f :: k -&gt; *) (x :: k) (y :: k).
+(f x -&gt; f y) -&gt; Fn2 f x y
+</span><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-var">InPairs.Fn2</span></a></span><span> </span><span class="annot"><span class="annottext">f x -&gt; f y
+</span><a href="#local-6989586621679102324"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-122"></span><span>              </span><span class="annot"><span class="annottext">Fn2 f x y -&gt; NP (Fn2 f x) xs -&gt; NP (Fn2 f x) (y : xs)
+forall {k} (f :: k -&gt; *) (x :: k) (xs1 :: [k]).
+f x -&gt; NP f xs1 -&gt; NP f (x : xs1)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">(forall (a :: k). Fn2 f x a -&gt; Fn2 f x a)
+-&gt; NP (Fn2 f x) xs -&gt; NP (Fn2 f x) xs
+forall {k} {l} (h :: (k -&gt; *) -&gt; l -&gt; *) (xs :: l) (f :: k -&gt; *)
+       (f' :: k -&gt; *).
+(SListIN (Prod h) xs, HAp h) =&gt;
+(forall (a :: k). f a -&gt; f' a) -&gt; h f xs -&gt; h f' xs
+</span><span class="hs-identifier hs-var">SOP.hmap</span></span><span>
+</span><span id="line-123"></span><span>                </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-type">InPairs.Fn2</span></a></span><span> </span><span id="local-6989586621679102335"><span class="annot"><span class="annottext">f y -&gt; f a
+</span><a href="#local-6989586621679102335"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-124"></span><span>                    </span><span class="annot"><span class="annottext">(f x -&gt; f a) -&gt; Fn2 f x a
+forall {k} (f :: k -&gt; *) (x :: k) (y :: k).
+(f x -&gt; f y) -&gt; Fn2 f x y
+</span><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-var">InPairs.Fn2</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f y -&gt; f a
+</span><a href="#local-6989586621679102335"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">(f y -&gt; f a) -&gt; (f x -&gt; f y) -&gt; f x -&gt; f a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">f x -&gt; f y
+</span><a href="#local-6989586621679102324"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>                </span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>                </span><span class="annot"><span class="annottext">NP (Fn2 f x) xs
+</span><a href="#local-6989586621679102334"><span class="hs-identifier hs-var">np</span></a></span><span>
+</span><span id="line-127"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>          </span><span class="annot"><span class="annottext">Tails (Fn2 f) (y : zs)
+Tails (Fn2 f) (y : xs)
+</span><a href="#local-6989586621679102326"><span class="hs-identifier hs-var">n'</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span id="local-6989586621679102185"><span id="local-6989586621679102186"><span id="local-6989586621679102188"><span id="local-6989586621679102189"><span class="annot"><a href="Data.SOP.Tails.html#extendWithTails"><span class="hs-identifier hs-type">extendWithTails</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">SListI</span></span><span> </span><span class="annot"><a href="#local-6989586621679102185"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="Data.SOP.Index.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102185"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102186"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="Data.SOP.Index.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102185"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102188"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="Data.SOP.Tails.html#Tails"><span class="hs-identifier hs-type">Tails</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.InPairs.html#Fn2"><span class="hs-identifier hs-type">InPairs.Fn2</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102189"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679102185"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="#local-6989586621679102189"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102186"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679102189"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102188"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-137"></span><span id="extendWithTails"><span class="annot"><span class="annottext">extendWithTails :: forall {k} (xs :: [k]) (x :: k) (y :: k) (f :: k -&gt; *).
+SListI xs =&gt;
+Index xs x -&gt; Index xs y -&gt; Tails (Fn2 f) xs -&gt; f x -&gt; Maybe (f y)
+</span><a href="Data.SOP.Tails.html#extendWithTails"><span class="hs-identifier hs-var hs-var">extendWithTails</span></a></span></span><span> </span><span class="annot"><span class="annottext">Index xs x
+</span><a href="Data.SOP.Index.html#IZ"><span class="hs-identifier hs-var">IZ</span></a></span><span> </span><span class="annot"><span class="annottext">Index xs y
+</span><a href="Data.SOP.Index.html#IZ"><span class="hs-identifier hs-var">IZ</span></a></span><span> </span><span class="annot"><span class="annottext">Tails (Fn2 f) xs
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f y -&gt; Maybe (f y)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(f y -&gt; Maybe (f y)) -&gt; (f x -&gt; f y) -&gt; f x -&gt; Maybe (f y)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">f x -&gt; f x
+f x -&gt; f y
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Data.SOP.Tails.html#extendWithTails"><span class="hs-identifier hs-var">extendWithTails</span></a></span><span> </span><span class="annot"><span class="annottext">Index xs x
+</span><a href="Data.SOP.Index.html#IZ"><span class="hs-identifier hs-var">IZ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Index.html#IS"><span class="hs-identifier hs-type">IS</span></a></span><span> </span><span id="local-6989586621679102357"><span class="annot"><span class="annottext">Index xs' y
+</span><a href="#local-6989586621679102357"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-type">TCons</span></a></span><span> </span><span id="local-6989586621679102365"><span class="annot"><span class="annottext">NP (Fn2 f x) xs
+</span><a href="#local-6989586621679102365"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="annot"><span class="annottext">Tails (Fn2 f) xs
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f y -&gt; Maybe (f y)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(f y -&gt; Maybe (f y)) -&gt; (f x -&gt; f y) -&gt; f x -&gt; Maybe (f y)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Fn2 f x y -&gt; f x -&gt; f y
+forall {k} (f :: k -&gt; *) (x :: k) (y :: k). Fn2 f x y -&gt; f x -&gt; f y
+</span><a href="Data.SOP.InPairs.html#apFn2"><span class="hs-identifier hs-var">InPairs.apFn2</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Index xs' y -&gt; NP (Fn2 f x) xs' -&gt; Fn2 f x y
+forall {k} (xs :: [k]) (x :: k) (f :: k -&gt; *).
+All Top xs =&gt;
+Index xs x -&gt; NP f xs -&gt; f x
+</span><a href="Data.SOP.Index.html#projectNP"><span class="hs-identifier hs-var">projectNP</span></a></span><span> </span><span class="annot"><span class="annottext">Index xs' y
+</span><a href="#local-6989586621679102357"><span class="hs-identifier hs-var">idx</span></a></span><span> </span><span class="annot"><span class="annottext">NP (Fn2 f x) xs'
+NP (Fn2 f x) xs
+</span><a href="#local-6989586621679102365"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Data.SOP.Tails.html#extendWithTails"><span class="hs-identifier hs-var">extendWithTails</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Index.html#IS"><span class="hs-identifier hs-type">IS</span></a></span><span> </span><span id="local-6989586621679102372"><span class="annot"><span class="annottext">Index xs' x
+</span><a href="#local-6989586621679102372"><span class="hs-identifier hs-var">idx1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Index.html#IS"><span class="hs-identifier hs-type">IS</span></a></span><span> </span><span id="local-6989586621679102378"><span class="annot"><span class="annottext">Index xs' y
+</span><a href="#local-6989586621679102378"><span class="hs-identifier hs-var">idx2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Tails.html#TCons"><span class="hs-identifier hs-type">TCons</span></a></span><span> </span><span class="annot"><span class="annottext">NP (Fn2 f x) xs
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679102384"><span class="annot"><span class="annottext">Tails (Fn2 f) xs
+</span><a href="#local-6989586621679102384"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Index xs' x
+-&gt; Index xs' y -&gt; Tails (Fn2 f) xs' -&gt; f x -&gt; Maybe (f y)
+forall {k} (xs :: [k]) (x :: k) (y :: k) (f :: k -&gt; *).
+SListI xs =&gt;
+Index xs x -&gt; Index xs y -&gt; Tails (Fn2 f) xs -&gt; f x -&gt; Maybe (f y)
+</span><a href="Data.SOP.Tails.html#extendWithTails"><span class="hs-identifier hs-var">extendWithTails</span></a></span><span> </span><span class="annot"><span class="annottext">Index xs' x
+</span><a href="#local-6989586621679102372"><span class="hs-identifier hs-var">idx1</span></a></span><span> </span><span class="annot"><span class="annottext">Index xs' y
+Index xs' y
+</span><a href="#local-6989586621679102378"><span class="hs-identifier hs-var">idx2</span></a></span><span> </span><span class="annot"><span class="annottext">Tails (Fn2 f) xs'
+Tails (Fn2 f) xs
+</span><a href="#local-6989586621679102384"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-140"></span><span class="annot"><a href="Data.SOP.Tails.html#extendWithTails"><span class="hs-identifier hs-var">extendWithTails</span></a></span><span> </span><span class="annot"><a href="Data.SOP.Index.html#IS"><span class="hs-identifier hs-type">IS</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="annot"><span class="annottext">Index xs y
+</span><a href="Data.SOP.Index.html#IZ"><span class="hs-identifier hs-var">IZ</span></a></span><span> </span><span class="annot"><span class="annottext">Tails (Fn2 f) xs
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (f y) -&gt; f x -&gt; Maybe (f y)
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (f y)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-141"></span></pre></body></html>

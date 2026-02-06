@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | API for test providers.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.Providers</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#IsTest"><span class="hs-identifier">IsTest</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.html#testPassed"><span class="hs-identifier">testPassed</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.html#testFailed"><span class="hs-identifier">testFailed</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.html#testFailedDetails"><span class="hs-identifier">testFailedDetails</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#Result"><span class="hs-identifier">Result</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#Progress"><span class="hs-identifier">Progress</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestName"><span class="hs-identifier">TestName</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier">TestTree</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.html#singleTest"><span class="hs-identifier">singleTest</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html"><span class="hs-identifier">Test.Tasty.Core</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html"><span class="hs-identifier">Test.Tasty.Providers.ConsoleFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier">ResultDetailsPrinter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#noResultDetails"><span class="hs-identifier">noResultDetails</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- | Convert a test to a leaf of the 'TestTree'.</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-23"></span><span id="local-6989586621679094639"><span class="annot"><a href="Test.Tasty.Providers.html#singleTest"><span class="hs-identifier hs-type">singleTest</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#IsTest"><span class="hs-identifier hs-type">IsTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094639"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestName"><span class="hs-identifier hs-type">TestName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094639"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span></span><span>
+</span><span id="line-24"></span><span id="singleTest"><span class="annot"><span class="annottext">singleTest :: forall t. IsTest t =&gt; TestName -&gt; t -&gt; TestTree
+</span><a href="Test.Tasty.Providers.html#singleTest"><span class="hs-identifier hs-var hs-var">singleTest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; t -&gt; TestTree
+forall t. IsTest t =&gt; TestName -&gt; t -&gt; TestTree
+</span><a href="Test.Tasty.Core.html#SingleTest"><span class="hs-identifier hs-var">SingleTest</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | 'Result' of a passed test.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- @since 0.8</span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Test.Tasty.Providers.html#testPassed"><span class="hs-identifier hs-type">testPassed</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ description (may be empty)</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span>
+</span><span id="line-32"></span><span id="testPassed"><span class="annot"><span class="annottext">testPassed :: TestName -&gt; Result
+</span><a href="Test.Tasty.Providers.html#testPassed"><span class="hs-identifier hs-var hs-var">testPassed</span></a></span></span><span> </span><span id="local-6989586621679094659"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679094659"><span class="hs-identifier hs-var">desc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">resultOutcome :: Outcome
+</span><a href="Test.Tasty.Core.html#resultOutcome"><span class="hs-identifier hs-var">resultOutcome</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Test.Tasty.Core.html#Success"><span class="hs-identifier hs-var">Success</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultDescription :: TestName
+</span><a href="Test.Tasty.Core.html#resultDescription"><span class="hs-identifier hs-var">resultDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679094659"><span class="hs-identifier hs-var">desc</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultShortDescription :: TestName
+</span><a href="Test.Tasty.Core.html#resultShortDescription"><span class="hs-identifier hs-var">resultShortDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;OK&quot;</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultTime :: Time
+</span><a href="Test.Tasty.Core.html#resultTime"><span class="hs-identifier hs-var">resultTime</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Time
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultDetailsPrinter :: ResultDetailsPrinter
+</span><a href="Test.Tasty.Core.html#resultDetailsPrinter"><span class="hs-identifier hs-var">resultDetailsPrinter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ResultDetailsPrinter
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#noResultDetails"><span class="hs-identifier hs-var">noResultDetails</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | 'Result' of a failed test.</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- @since 0.8</span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Test.Tasty.Providers.html#testFailed"><span class="hs-identifier hs-type">testFailed</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ description</span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span>
+</span><span id="line-46"></span><span id="testFailed"><span class="annot"><span class="annottext">testFailed :: TestName -&gt; Result
+</span><a href="Test.Tasty.Providers.html#testFailed"><span class="hs-identifier hs-var hs-var">testFailed</span></a></span></span><span> </span><span id="local-6989586621679094666"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679094666"><span class="hs-identifier hs-var">desc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">resultOutcome :: Outcome
+</span><a href="Test.Tasty.Core.html#resultOutcome"><span class="hs-identifier hs-var">resultOutcome</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FailureReason -&gt; Outcome
+</span><a href="Test.Tasty.Core.html#Failure"><span class="hs-identifier hs-var">Failure</span></a></span><span> </span><span class="annot"><span class="annottext">FailureReason
+</span><a href="Test.Tasty.Core.html#TestFailed"><span class="hs-identifier hs-var">TestFailed</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultDescription :: TestName
+</span><a href="Test.Tasty.Core.html#resultDescription"><span class="hs-identifier hs-var">resultDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679094666"><span class="hs-identifier hs-var">desc</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultShortDescription :: TestName
+</span><a href="Test.Tasty.Core.html#resultShortDescription"><span class="hs-identifier hs-var">resultShortDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;FAIL&quot;</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultTime :: Time
+</span><a href="Test.Tasty.Core.html#resultTime"><span class="hs-identifier hs-var">resultTime</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Time
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">resultDetailsPrinter :: ResultDetailsPrinter
+</span><a href="Test.Tasty.Core.html#resultDetailsPrinter"><span class="hs-identifier hs-var">resultDetailsPrinter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ResultDetailsPrinter
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#noResultDetails"><span class="hs-identifier hs-var">noResultDetails</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | 'Result' of a failed test with custom details printer</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Test.Tasty.Providers.html#testFailedDetails"><span class="hs-identifier hs-type">testFailedDetails</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>               </span><span class="annot"><span class="hs-comment">-- ^ description</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier hs-type">ResultDetailsPrinter</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ details printer</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span>
+</span><span id="line-61"></span><span id="testFailedDetails"><span class="annot"><span class="annottext">testFailedDetails :: TestName -&gt; ResultDetailsPrinter -&gt; Result
+</span><a href="Test.Tasty.Providers.html#testFailedDetails"><span class="hs-identifier hs-var hs-var">testFailedDetails</span></a></span></span><span> </span><span id="local-6989586621679094669"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679094669"><span class="hs-identifier hs-var">desc</span></a></span></span><span> </span><span id="local-6989586621679094670"><span class="annot"><span class="annottext">ResultDetailsPrinter
+</span><a href="#local-6989586621679094670"><span class="hs-identifier hs-var">printer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestName -&gt; Result
+</span><a href="Test.Tasty.Providers.html#testFailed"><span class="hs-identifier hs-var">testFailed</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679094669"><span class="hs-identifier hs-var">desc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#resultDetailsPrinter"><span class="hs-identifier hs-var">resultDetailsPrinter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679094670"><span class="hs-identifier hs-type">printer</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-63"></span></pre></body></html>
