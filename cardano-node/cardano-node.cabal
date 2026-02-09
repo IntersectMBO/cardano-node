@@ -185,12 +185,12 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus ^>= 0.30
+                      , ouroboros-consensus >=0.30.0.1 && <0.31
                       , ouroboros-consensus-cardano ^>= 0.26
-                      , ouroboros-consensus-diffusion ^>= 0.25
+                      , ouroboros-consensus-diffusion ^>= 0.26
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.16
-                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.4
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.6
                       , ouroboros-network-framework ^>= 0.19.2
                       , ouroboros-network-protocols ^>= 0.15
                       , prettyprinter
