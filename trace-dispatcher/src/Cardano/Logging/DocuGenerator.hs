@@ -11,6 +11,7 @@ module Cardano.Logging.DocuGenerator (
     documentTracer
   , documentTracer'
   , docuResultsToText
+  , docuResultsToNamespaces
   , docuResultsToMetricsHelptext
   -- Callbacks
   , docTracer
@@ -38,7 +39,7 @@ import qualified Control.Tracer as TR
 import           Data.Aeson (ToJSON)
 import qualified Data.Aeson.Encode.Pretty as AE
 import           Data.IORef (modifyIORef, newIORef, readIORef)
-import           Data.List (find, groupBy, intersperse, isPrefixOf, nub, sortBy)
+import           Data.List (find, groupBy, intersperse, isPrefixOf, nub, sort, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromJust, fromMaybe, mapMaybe)
 import           Data.Text (split)
@@ -596,3 +597,14 @@ docuResultsToMetricsHelptext DocTracer{dtBuilderList} =
         , let xs  = T.lines $ toStrict $ toLazyText helpDescr
         , let x   = mconcat $ map (stripPrefix "> ") xs
       ]
+
+docuResultsToNamespaces :: DocTracer -> Text
+docuResultsToNamespaces DocTracer{dtBuilderList} =
+  T.unlines uniqueSorted
+  where
+    namespaces =
+      [ intercalate "." ns
+      | (ns, doc) <- dtBuilderList
+      , DocuResult.isTracer doc || DocuResult.isDatapoint doc
+      ]
+    uniqueSorted = map head $ groupBy (==) $ sort namespaces
