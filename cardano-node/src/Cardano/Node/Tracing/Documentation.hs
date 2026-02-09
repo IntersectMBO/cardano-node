@@ -129,9 +129,10 @@ import           Paths_cardano_node (version)
 
 data TraceDocumentationCmd
   = TraceDocumentationCmd
-    { tdcConfigFile :: FilePath
-    , tdcOutput     :: FilePath
-    , tdMetricsHelp :: Maybe FilePath
+    { tdcConfigFile   :: FilePath
+    , tdcOutput       :: FilePath
+    , tdMetricsHelp   :: Maybe FilePath
+    , tdNamespaceList :: Maybe FilePath
     }
 
 parseTraceDocumentationCmd :: Opt.Parser TraceDocumentationCmd
@@ -160,6 +161,12 @@ parseTraceDocumentationCmd =
                   <> Opt.help "Metrics helptext file for cardano-tracer (JSON)"
                 )
               )
+           <*> Opt.optional (Opt.strOption
+                ( Opt.long "output-namespace-list"
+                  <> Opt.metavar "FILE"
+                  <> Opt.help "Namespace list file (text)"
+                )
+              )
            Opt.<**> Opt.helper)
        $ mconcat [ Opt.progDesc "Generate the trace documentation" ]
      ]
@@ -172,7 +179,7 @@ runTraceDocumentationCmd
   :: TraceDocumentationCmd
   -> IO ()
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
-  docTracers tdcConfigFile tdcOutput tdMetricsHelp
+  docTracers tdcConfigFile tdcOutput tdMetricsHelp tdNamespaceList
 
 -- Have to repeat the construction of the tracers here,
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
@@ -181,10 +188,11 @@ docTracers ::
   FilePath
   -> FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> IO ()
-docTracers configFileName outputFileName mbMetricsHelpFilename = do
+docTracers configFileName outputFileName mbMetricsHelpFilename mbNamespaceList = do
     (bl, trConfig) <- docTracersFirstPhase (Just configFileName)
-    docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl
+    docTracersSecondPhase outputFileName mbMetricsHelpFilename mbNamespaceList trConfig bl
 
 
 -- Have to repeat the construction of the tracers here,
@@ -773,10 +781,11 @@ docTracersFirstPhase condConfigFileName = do
 docTracersSecondPhase ::
      FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> TraceConfig
   -> DocTracer
   -> IO ()
-docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl = do
+docTracersSecondPhase outputFileName mbMetricsHelpFilename mbNamespaceList trConfig bl = do
     let text = docuResultsToText bl trConfig
     time <- getZonedTime
     let stamp = "Generated at "
@@ -788,6 +797,8 @@ docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl = do
     doWrite outputFileName (text <> stamp)
     forM_ mbMetricsHelpFilename $ \f ->
        doWrite f (docuResultsToMetricsHelptext bl)
+    forM_ mbNamespaceList $ \f ->
+       doWrite f (docuResultsToNamespaces bl)
   where
     doWrite outfile text =
       withFile outfile WriteMode $ \handle ->
