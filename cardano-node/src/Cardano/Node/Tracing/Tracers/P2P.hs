@@ -28,7 +28,7 @@ import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
-import qualified Ouroboros.Network.NodeToNode as NtN
+import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),

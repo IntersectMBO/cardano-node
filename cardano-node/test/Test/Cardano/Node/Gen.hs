@@ -29,7 +29,7 @@ import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..
                    PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
 import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Network.NodeToNode.Version
+import           Cardano.Network.NodeToNode.Version
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))

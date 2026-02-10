@@ -76,7 +76,7 @@ import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService as Nix (NixServiceOptions)
 import           Cardano.TxGenerator.Types (TxGenError (..))
-import           Ouroboros.Network.NodeToClient (IOManager)
+import           Cardano.Network.NodeToClient (IOManager)
 
 import           Prelude
 
