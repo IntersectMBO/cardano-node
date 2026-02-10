@@ -18,6 +18,7 @@ import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
 import           Control.Tracer (nullTracer)
 import           Network.TypedProtocol.Codec
+import           Network.TypedProtocol.Codec.Properties
 import           Network.TypedProtocol.Proofs
 
 import           Test.Tasty
@@ -45,7 +46,7 @@ tests = testGroup "Trace.Forward.Protocol.DataPoint"
 
 prop_codec_DataPointForward
   :: AnyMessage DataPointForward
-  -> Bool
+  -> Property
 prop_codec_DataPointForward msg = runST $
   prop_codecM
     (codecDataPointForward CBOR.encode CBOR.decode
@@ -54,7 +55,7 @@ prop_codec_DataPointForward msg = runST $
 
 prop_codec_splits2_DataPointForward
   :: AnyMessage DataPointForward
-  -> Bool
+  -> Property
 prop_codec_splits2_DataPointForward msg = runST $
   prop_codec_splitsM
     splits2
@@ -65,7 +66,7 @@ prop_codec_splits2_DataPointForward msg = runST $
 
 prop_codec_splits3_DataPointForward
   :: AnyMessage DataPointForward
-  -> Bool
+  -> Property
 prop_codec_splits3_DataPointForward msg = runST $
   prop_codec_splitsM
     splits3

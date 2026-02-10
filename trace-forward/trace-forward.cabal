@@ -64,6 +64,7 @@ library
                       , cborg
                       , containers
                       , contra-tracer
+                      , deepseq
                       , extra
                       , io-classes
                       , network
