@@ -23,7 +23,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapsh
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 

@@ -9,7 +9,7 @@ import           Cardano.Tracer.Test.ForwardingStressTest.Script
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
 import           Cardano.Tracer.Test.Utils
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (withIOManager)
+import           Cardano.Network.NodeToClient (withIOManager)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception
