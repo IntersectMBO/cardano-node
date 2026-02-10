@@ -39,7 +39,7 @@ import           Cardano.TxGenerator.Types (TPSRate)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Network.Driver (TraceSendRecv (..))
 import           Ouroboros.Network.IOManager (IOManager)
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
+import           Cardano.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
