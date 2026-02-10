@@ -47,7 +47,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 
 import           Control.Exception
 import           Data.Aeson

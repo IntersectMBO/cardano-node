@@ -26,7 +26,7 @@ import qualified Network.Socket as Socket
 
 import           Cardano.Node.Configuration.NodeAddress
 
-import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
+import           Cardano.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 
 #if !defined(mingw32_HOST_OS)
 import           System.Directory (removeFile)
