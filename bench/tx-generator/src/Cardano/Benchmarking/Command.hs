@@ -37,7 +37,7 @@ import           Data.Maybe (catMaybes)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Options.Applicative as Opt
-import           Ouroboros.Network.NodeToClient (IOManager, withIOManager)
+import           Cardano.Network.NodeToClient (IOManager, withIOManager)
 
 import           System.Exit
 

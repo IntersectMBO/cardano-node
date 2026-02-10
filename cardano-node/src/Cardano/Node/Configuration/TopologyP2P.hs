@@ -47,7 +47,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
                    UseLedgerPeers (..), RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),

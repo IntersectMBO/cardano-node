@@ -23,7 +23,7 @@ module Cardano.Tracing.OrphanInstances.Network
 
 import           Cardano.Network.Diffusion (CardanoDebugPeerSelection, CardanoPeerSelectionCounters,
                    CardanoTraceLocalRootPeers, CardanoTracePeerSelection, TraceChurnMode (..))
-import           Cardano.Network.OrphanInstances ()
+import           Ouroboros.Network.OrphanInstances ()
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
@@ -55,11 +55,11 @@ import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import qualified Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion (..), RemoteAddress,
+import           Cardano.Network.NodeToClient (NodeToClientVersion (..))
+import qualified Cardano.Network.NodeToClient as NtC
+import           Cardano.Network.NodeToNode (NodeToNodeVersion (..), RemoteAddress,
                    TraceSendRecv (..))
-import qualified Ouroboros.Network.NodeToNode as NtN
+import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),

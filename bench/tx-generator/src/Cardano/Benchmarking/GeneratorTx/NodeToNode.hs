@@ -48,9 +48,9 @@ import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (MiniProtocolCb (..),
                    OuroborosApplication (..), OuroborosBundle, RunMiniProtocol (..))
-import           Ouroboros.Network.NodeToClient (chainSyncPeerNull)
-import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
-import qualified Ouroboros.Network.NodeToNode as NtN
+import           Cardano.Network.NodeToClient (chainSyncPeerNull)
+import           Cardano.Network.NodeToNode (NetworkConnectTracers (..))
+import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing.Codec (decodeRemoteAddress,
                    encodeRemoteAddress)

@@ -69,7 +69,7 @@ import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Cardano.Node.Configuration.TopologyP2P as Topology
 import           Cardano.Tracing.Config
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection (AfterSlot (..), PeerAdvertise (..),
                    RelayAccessPoint (..), UseLedgerPeers (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
