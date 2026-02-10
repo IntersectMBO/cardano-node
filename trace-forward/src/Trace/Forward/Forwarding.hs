@@ -328,6 +328,8 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
                    ekgConfig tfConfig dpfConfig sink ekgStore dpStore =
   void $ Server.with
     snocket
+    undefined -- TODO(10.7) -- Tracer m (ServerTracer addr)
+    undefined -- TODO(10.7) -- Mx.TracersWithBearer (ConnectionId addr) m
     makeBearer
     configureSocket
     address
