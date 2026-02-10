@@ -250,7 +250,7 @@ There is another way to connect `cardano-tracer` to your nodes: the `cardano-tra
 
 As you see, the tag in `network` field is `ConnectTo` now, which means that `cardano-tracer` works as a client: it _establishes_ network connections with your local nodes via the local sockets `/tmp/cardano-node-*.sock`. In this case each socket is used by a particular node.
 
-`AcceptTo` and `ConnectTo` are mirrored by the reciprocal CLI option on the node `--tracer-socket-path-connect` / `--tracer-socket-path-accept`. If you choose one on the node, you choose the opposite on the tracer. This only makes a difference to which entity initiates the handshake; after the handshake the configuration is identical
+`AcceptAt` and `ConnectTo` are mirrored by the reciprocal CLI option on the node `--tracer-socket-path-connect` / `--tracer-socket-path-accept`. If you choose one on the node, you choose the opposite on the tracer. This only makes a difference to which entity initiates the handshake; after the handshake the configuration is identical
 
 Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario. The reason is easier maintenance. Suppose you have 3 working nodes, and they are connected to the same `cardano-tracer`. And then you want to connect 4-th node to it. If `cardano-tracer` is configured using `AcceptAt`, you shouldn't change its configuration - you just connect your 4-th node to it. But if `cardano-tracer` is configured using `ConnectTo`, you should add path to 4-th socket in its configuration file and then restart `cardano-tracer` process.
 
@@ -367,7 +367,7 @@ The fields `rpMaxAgeMinutes`, `rpMaxAgeHours` specify the lifetime of the log fi
 
 ## Prometheus
 
-At top-level route `/` Promtheus gives a list of connected nodes.
+At top-level route `/` Prometheus gives a list of connected nodes.
 
 The responses are either human-readable names (HTML) with clickable
 links, or JSON mapping from connected node names to relative URLs,
