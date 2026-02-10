@@ -24,7 +24,7 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.MetaTrace
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (withIOManager)
+import           Cardano.Network.NodeToClient (withIOManager)
 
 import           Control.Exception (SomeException (..))
 import           Control.Monad (when)
