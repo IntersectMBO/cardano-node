@@ -17,6 +17,7 @@ import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
 import           Control.Tracer (nullTracer)
 import           Network.TypedProtocol.Codec
+import           Network.TypedProtocol.Codec.Properties
 import           Network.TypedProtocol.Proofs
 
 import           Test.Tasty
@@ -43,7 +44,7 @@ tests = testGroup "Trace.Forward.Protocol.TraceObject"
   , testProperty "channel IO"     prop_channel_IO_TraceObjectForward
   ]
 
-prop_codec_TraceObjectForward :: AnyMessage (TraceObjectForward TraceItem) -> Bool
+prop_codec_TraceObjectForward :: AnyMessage (TraceObjectForward TraceItem) -> Property
 prop_codec_TraceObjectForward msg = runST $
   prop_codecM
     (codecTraceObjectForward CBOR.encode CBOR.decode
@@ -52,7 +53,7 @@ prop_codec_TraceObjectForward msg = runST $
 
 prop_codec_splits2_TraceObjectForward
   :: AnyMessage (TraceObjectForward TraceItem)
-  -> Bool
+  -> Property
 prop_codec_splits2_TraceObjectForward msg = runST $
   prop_codec_splitsM
     splits2
@@ -62,7 +63,7 @@ prop_codec_splits2_TraceObjectForward msg = runST $
 
 prop_codec_splits3_TraceObjectForward
   :: AnyMessage (TraceObjectForward TraceItem)
-  -> Bool
+  -> Property
 prop_codec_splits3_TraceObjectForward msg = runST $
   prop_codec_splitsM
     splits3
