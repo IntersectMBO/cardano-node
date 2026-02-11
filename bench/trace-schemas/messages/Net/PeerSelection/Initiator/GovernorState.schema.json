@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"blockedAt":{},"counters":{},"kind":{"type":"string"},"peerSelectionState":{"$ref":"types/PeerSelectionState.schema.json"},"targets":{},"wakeupAfter":{}},"type":"object"},"ns":"Net.PeerSelection.Initiator.GovernorState"}

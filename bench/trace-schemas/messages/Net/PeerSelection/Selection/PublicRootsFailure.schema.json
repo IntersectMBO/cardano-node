@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"diffTime":{},"group":{},"kind":{"type":"string"},"reason":{}},"type":"object"},"ns":"Net.PeerSelection.Selection.PublicRootsFailure"}

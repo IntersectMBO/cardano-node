@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"blockOffset":{},"file":{},"kind":{"type":"string"},"parserError":{}},"type":"object"},"ns":"ChainDB.VolatileDbEvent.Truncate"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"enabled":{"$ref":"types/EnabledBlockForging.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"Startup.BlockForgingUpdate"}

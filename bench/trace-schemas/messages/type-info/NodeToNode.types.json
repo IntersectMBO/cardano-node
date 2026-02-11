@@ -1,0 +1,272 @@
+{
+  "results": [
+    {
+      "pattern": "AnyMessageAndAgency stok (MsgBlock blk)",
+      "vars": [
+        "stok",
+        "blk"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFStreaming",
+        "blk": "block"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok (MsgBlock blk)",
+      "vars": [
+        "stok",
+        "blk"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFStreaming",
+        "blk": "block"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgRequestRange{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFIdle"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgStartBatch{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFBusy"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgNoBlocks{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFBusy"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgBatchDone{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFStreaming"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgClientDone{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFIdle"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok (MsgBlock blk')",
+      "vars": [
+        "stok",
+        "blk"
+      ],
+      "varTypes": {},
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgRequestRange{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFIdle"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgStartBatch{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFBusy"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgNoBlocks{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFBusy"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgBatchDone{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFStreaming"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok MsgClientDone{}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken BFIdle"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok STX.MsgInit",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken StInit"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok (STX.MsgRequestTxs txids)",
+      "vars": [
+        "stok",
+        "txids"
+      ],
+      "varTypes": {
+        "stok": "StateToken st",
+        "txids": "[txid]"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok (STX.MsgReplyTxs txs)",
+      "vars": [
+        "stok",
+        "txs"
+      ],
+      "varTypes": {
+        "stok": "StateToken StTxs",
+        "txs": "[tx]"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok STX.MsgRequestTxIds {}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken st"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok (STX.MsgReplyTxIds _)",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken StTxIds"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok STX.MsgDone",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken StTxIds"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok KA.MsgKeepAlive {}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {},
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok KA.MsgKeepAliveResponse {}",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {},
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok KA.MsgDone",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {},
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok (PS.MsgShareRequest num)",
+      "vars": [
+        "stok",
+        "num"
+      ],
+      "varTypes": {
+        "stok": "StateToken st"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok (PS.MsgSharePeers peers)",
+      "vars": [
+        "stok",
+        "peers"
+      ],
+      "varTypes": {
+        "stok": "StateToken StBusy",
+        "peers": "[peerAddress]"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AnyMessageAndAgency stok PS.MsgDone",
+      "vars": [
+        "stok"
+      ],
+      "varTypes": {
+        "stok": "StateToken st"
+      },
+      "typeSig": null
+    },
+    {
+      "pattern": "AddSample peer rtt pgsv",
+      "vars": [
+        "peer",
+        "rtt",
+        "pgsv"
+      ],
+      "varTypes": {
+        "peer": "a",
+        "rtt": "DiffTime",
+        "pgsv": "PeerGSV"
+      },
+      "typeSig": ":: TraceKeepAliveClient a -> (a, DiffTime, PeerGSV)"
+    }
+  ]
+}

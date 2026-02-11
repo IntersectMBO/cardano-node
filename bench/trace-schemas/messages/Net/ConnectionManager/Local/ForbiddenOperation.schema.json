@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"connectionState":{},"kind":{"type":"string"},"remoteAddress":{}},"type":"object"},"ns":"Net.ConnectionManager.Local.ForbiddenOperation"}

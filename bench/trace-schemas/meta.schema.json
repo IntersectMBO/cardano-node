@@ -1,0 +1,65 @@
+{
+  "$id": "io.example.tracing/generated-schema-entry.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "not": {
+        "required": [
+          "variants"
+        ]
+      },
+      "required": [
+        "data"
+      ]
+    },
+    {
+      "not": {
+        "required": [
+          "data"
+        ]
+      },
+      "required": [
+        "variants"
+      ]
+    }
+  ],
+  "properties": {
+    "data": {
+      "type": "object"
+    },
+    "ns": {
+      "type": "string"
+    },
+    "variants": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "detailLevel": {
+            "enum": [
+              "Minimal",
+              "Normal",
+              "Detailed",
+              "Maximum"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "detailLevel",
+          "data"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "ns"
+  ],
+  "title": "GeneratedTraceSchemaEntry",
+  "type": "object"
+}

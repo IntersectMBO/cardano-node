@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"agency":{"$ref":"types/StateToken.schema.json"},"amount":{},"blockHash":{},"blockSize":{},"bytes":{},"kind":{"type":"string"},"msg":{},"peers":{"items":{},"type":"array"},"txIds":{"items":{},"type":"array"},"txs":{"items":{},"type":"array"}},"type":"object"},"ns":"BlockFetch.Remote.Serialised.Send.ClientDone"}

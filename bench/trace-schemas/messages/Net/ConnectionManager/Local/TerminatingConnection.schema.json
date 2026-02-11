@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"connectionId":{},"kind":{"type":"string"},"provenance":{}},"type":"object"},"ns":"Net.ConnectionManager.Local.TerminatingConnection"}

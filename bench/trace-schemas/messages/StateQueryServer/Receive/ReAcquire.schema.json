@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"agency":{"$ref":"types/StateToken.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"StateQueryServer.Receive.ReAcquire"}

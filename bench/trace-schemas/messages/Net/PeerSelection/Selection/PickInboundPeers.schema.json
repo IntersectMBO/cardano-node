@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"actualKnown":{},"available":{},"kind":{"type":"string"},"selected":{},"targetKnown":{}},"type":"object"},"ns":"Net.PeerSelection.Selection.PickInboundPeers"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"immTipBlockNo":{"$ref":"types/WithOrigin.schema.json"},"immTipHash":{"$ref":"types/WithOrigin.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.ImmDbEvent.DeletingAfter"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"actualActive":{},"kind":{"type":"string"},"peer":{},"reason":{},"targetActive":{}},"type":"object"},"ns":"Net.PeerSelection.Selection.DemoteHotBigLedgerPeerFailed"}

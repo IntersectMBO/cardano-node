@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"blockHash":{},"blockSize":{},"kind":{"type":"string"},"slot":{"type":"integer"}},"type":"object"},"ns":"Forge.Loop.AdoptionThreadDied"}

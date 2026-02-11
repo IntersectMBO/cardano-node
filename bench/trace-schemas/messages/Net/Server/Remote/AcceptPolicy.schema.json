@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"policy":{"$ref":"types/AcceptConnectionsPolicyTrace.schema.json"}},"type":"object"},"ns":"Net.Server.Remote.AcceptPolicy"}

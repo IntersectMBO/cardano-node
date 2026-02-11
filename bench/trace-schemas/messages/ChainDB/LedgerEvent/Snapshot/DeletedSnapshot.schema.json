@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"snapshot":{"$ref":"types/LedgerDB.DiskSnapshot.schema.json"}},"type":"object"},"ns":"ChainDB.LedgerEvent.Snapshot.DeletedSnapshot"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"block":{},"kind":{"type":"string"}},"type":"object"},"ns":"BlockFetch.Server.SendBlock"}

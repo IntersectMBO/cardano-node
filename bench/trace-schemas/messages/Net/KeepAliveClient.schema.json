@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"address":{},"inboundG":{"$ref":"types/PeerGSV.schema.json"},"kind":{"type":"string"},"outboundG":{"$ref":"types/PeerGSV.schema.json"},"rtt":{"type":"number"},"sampleTime":{"$ref":"types/PeerGSV.schema.json"}},"type":"object"},"ns":"Net.KeepAliveClient"}

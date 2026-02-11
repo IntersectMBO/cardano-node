@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"count":{"type":"integer"},"kind":{"type":"string"}},"type":"object"},"ns":"TxSubmission.TxInbound.Collected"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"from":{"$ref":"types/ChainDB.TraceIteratorEvent.schema.json"},"kind":{"type":"string"},"point":{},"to":{}},"type":"object"},"ns":"ChainDB.IteratorEvent.StreamFromBoth"}

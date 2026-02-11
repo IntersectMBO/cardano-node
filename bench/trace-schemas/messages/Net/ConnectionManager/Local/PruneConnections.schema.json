@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"choiceSet":{},"kind":{"type":"string"},"numberPrunedPeers":{},"prunedPeers":{}},"type":"object"},"ns":"Net.ConnectionManager.Local.PruneConnections"}

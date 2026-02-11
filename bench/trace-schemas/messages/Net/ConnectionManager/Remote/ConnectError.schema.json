@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"connectionId":{},"kind":{"type":"string"},"reason":{},"remoteAddress":{}},"type":"object"},"ns":"Net.ConnectionManager.Remote.ConnectError"}

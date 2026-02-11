@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"epochLength":{},"kind":{"type":"string"},"slotLength":{},"systemStartTime":{}},"type":"object"},"ns":"Startup.Byron"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"chunkNo":{"$ref":"types/ImmDB.ChunkNo.schema.json"},"kind":{"type":"string"},"noPastChunks":{"$ref":"types/GHC.Word.Word32.schema.json"}},"type":"object"},"ns":"ChainDB.ImmDbEvent.CacheEvent.PastChunkHit"}

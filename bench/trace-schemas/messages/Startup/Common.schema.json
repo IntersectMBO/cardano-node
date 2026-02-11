@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"commit":{},"configPath":{},"kind":{"type":"string"},"networkMagic":{},"nodeStartTime":{},"protocol":{},"version":{}},"type":"object"},"ns":"Startup.Common"}

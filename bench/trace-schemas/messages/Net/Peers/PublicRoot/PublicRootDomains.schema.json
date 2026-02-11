@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"domainAddresses":{"$ref":"types/TracePublicRootPeers.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"Net.Peers.PublicRoot.PublicRootDomains"}

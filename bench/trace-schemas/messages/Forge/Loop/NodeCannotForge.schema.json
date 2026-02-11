@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"reason":{},"slot":{"type":"integer"}},"type":"object"},"ns":"Forge.Loop.NodeCannotForge"}

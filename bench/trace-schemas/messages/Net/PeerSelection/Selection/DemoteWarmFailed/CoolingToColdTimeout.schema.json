@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"actualEstablished":{},"kind":{"type":"string"},"peer":{},"reason":{},"targetEstablished":{}},"type":"object"},"ns":"Net.PeerSelection.Selection.DemoteWarmFailed.CoolingToColdTimeout"}

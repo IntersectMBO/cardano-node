@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"block":{},"blockNo":{},"blockPrev":{},"kind":{"type":"string"},"slot":{"type":"integer"}},"type":"object"},"ns":"Forge.Loop.ForgedBlock"}

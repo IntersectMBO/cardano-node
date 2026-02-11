@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"localRoots":{},"peerSnapshotFile":{},"publicRoots":{},"useLedgerAfter":{}},"type":"object"},"ns":"Startup.NetworkConfig"}
