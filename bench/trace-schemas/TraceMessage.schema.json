@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "io.example.tracing/TraceMessage.schema.json",
+  "title": "TraceMessage",
+  "description": "Common envelope for trace messages.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "at",
+    "ns",
+    "sev",
+    "thread",
+    "host",
+    "data"
+  ],
+  "properties": {
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the trace event (RFC 3339 / ISO 8601)."
+    },
+    "ns": {
+      "type": "string",
+      "description": "Trace namespace."
+    },
+    "sev": {
+      "type": "string",
+      "description": "Severity level.",
+      "enum": [
+        "Debug",
+        "Info",
+        "Warning",
+        "Error",
+        "Critical"
+      ]
+    },
+    "thread": {
+      "type": "integer",
+      "description": "Thread identifier."
+    },
+    "host": {
+      "type": "string",
+      "description": "Host name or node identifier."
+    },
+    "data": {
+      "description": "Payload of the trace message.",
+      "type": "object"
+    }
+  }
+}

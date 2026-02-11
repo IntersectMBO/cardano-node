@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"exception":{},"kind":{},"miniProtocolDir":{},"miniProtocolNum":{"$ref":"types/Mux.Trace.schema.json"},"msg":{}},"type":"object"},"ns":"Net.Mux.Remote.ExceptionExit"}

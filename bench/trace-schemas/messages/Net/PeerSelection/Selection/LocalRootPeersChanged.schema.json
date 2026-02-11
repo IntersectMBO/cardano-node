@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"current":{},"kind":{"type":"string"},"previous":{}},"type":"object"},"ns":"Net.PeerSelection.Selection.LocalRootPeersChanged"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"peerStatusChangeType":{}},"type":"object"},"ns":"Net.PeerSelection.Actions.StatusChanged"}

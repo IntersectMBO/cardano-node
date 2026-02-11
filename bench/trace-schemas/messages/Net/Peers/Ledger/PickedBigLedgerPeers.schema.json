@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"addresses":{},"count":{},"desiredCount":{},"kind":{"type":"string"}},"type":"object"},"ns":"Net.Peers.Ledger.PickedBigLedgerPeers"}

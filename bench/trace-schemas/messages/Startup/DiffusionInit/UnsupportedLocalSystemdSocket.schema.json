@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"path":{"$ref":"types/Diff.DiffusionTracer.schema.json"}},"type":"object"},"ns":"Startup.DiffusionInit.UnsupportedLocalSystemdSocket"}

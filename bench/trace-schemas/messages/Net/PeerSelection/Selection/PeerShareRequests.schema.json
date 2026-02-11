@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"actualKnown":{},"availablePeers":{},"kind":{"type":"string"},"numRequested":{},"selectedPeers":{},"targetKnown":{}},"type":"object"},"ns":"Net.PeerSelection.Selection.PeerShareRequests"}

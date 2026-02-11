@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"blockNo":{},"chunkNo":{"$ref":"types/ChunkNo.schema.json"},"immTip":{},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.ImmDbEvent.ValidatedLastLocation"}

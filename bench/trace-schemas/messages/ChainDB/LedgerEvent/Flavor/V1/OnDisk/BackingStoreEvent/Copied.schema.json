@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"path":{"$ref":"types/V1.BackingStoreTrace.schema.json"}},"type":"object"},"ns":"ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent.Copied"}

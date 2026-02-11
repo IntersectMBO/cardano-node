@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"address":{},"kind":{"type":"string"},"relativeStake":{}},"type":"object"},"ns":"Net.Peers.Ledger.PickedBigLedgerPeer"}

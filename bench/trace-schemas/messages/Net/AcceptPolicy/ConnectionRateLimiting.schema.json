@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"delay":{"$ref":"types/AcceptConnectionsPolicyTrace.schema.json"},"kind":{"type":"string"},"numberOfConnection":{"type":"integer"}},"type":"object"},"ns":"Net.AcceptPolicy.ConnectionRateLimiting"}

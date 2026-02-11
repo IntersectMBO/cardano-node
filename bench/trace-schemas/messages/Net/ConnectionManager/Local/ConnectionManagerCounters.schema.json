@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"state":{}},"type":"object"},"ns":"Net.ConnectionManager.Local.ConnectionManagerCounters"}

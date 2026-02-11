@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"addBlock":{},"blockingRead":{},"kind":{"type":"string"},"risingEdge":{},"rollBackTo":{},"tip":{"$ref":"types/TraceChainSyncServerEvent.schema.json"}},"type":"object"},"ns":"ChainSync.ServerHeader.Update"}

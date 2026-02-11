@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"command":{},"context":{"$ref":"types/ConnectionHandlerTrace.schema.json"},"kind":{"type":"string"},"reason":{}},"type":"object"},"ns":"Net.Server.Remote.Error"}

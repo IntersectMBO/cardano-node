@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"address":{"$ref":"types/ConnectionManager.TransitionTrace'.schema.json"},"from":{"$ref":"types/Transition.schema.json"},"kind":{"type":"string"},"to":{"$ref":"types/Transition.schema.json"}},"type":"object"},"ns":"Net.InboundGovernor.Transition.Transition"}

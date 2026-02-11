@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"epochLength":{},"era":{},"kind":{"type":"string"},"slotLength":{},"slotsPerKESPeriod":{},"systemStartTime":{}},"type":"object"},"ns":"Startup.ShelleyBased"}

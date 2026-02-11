@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"connectionId":{"$ref":"types/PeerSelectionActionsTrace.schema.json"},"kind":{"type":"string"},"withProtocolTemp":{}},"type":"object"},"ns":"Net.PeerSelection.Actions.MonitoringResult"}

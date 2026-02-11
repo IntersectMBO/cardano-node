@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"diffTime":{},"kind":{"type":"string"}},"type":"object"},"ns":"Net.PeerSelection.Selection.ChurnWait"}

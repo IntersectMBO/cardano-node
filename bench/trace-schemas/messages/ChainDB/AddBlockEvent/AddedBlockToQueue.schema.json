@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"block":{"$ref":"types/ChainDB.TraceAddBlockEvent.schema.json"},"kind":{"type":"string"},"queueSize":{},"risingEdge":{}},"type":"object"},"ns":"ChainDB.AddBlockEvent.AddedBlockToQueue"}

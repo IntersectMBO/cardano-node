@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"chunkNo":{"$ref":"types/ImmDB.ChunkNo.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.ImmDbEvent.ChunkValidation.MissingPrimaryIndex"}

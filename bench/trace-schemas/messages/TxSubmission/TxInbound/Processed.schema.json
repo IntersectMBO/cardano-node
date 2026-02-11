@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"accepted":{},"kind":{"type":"string"},"rejected":{}},"type":"object"},"ns":"TxSubmission.TxInbound.Processed"}

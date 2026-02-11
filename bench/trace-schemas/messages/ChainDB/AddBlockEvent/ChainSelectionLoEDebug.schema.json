@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"anchor":{},"curChain":{"$ref":"types/ChainDB.TraceAddBlockEvent.schema.json"},"head":{},"kind":{"type":"string"},"loeFrag":{}},"type":"object"},"ns":"ChainDB.AddBlockEvent.ChainSelectionLoEDebug"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"current slot":{},"kind":{"type":"string"},"tip":{},"tipBlockNo":{}},"type":"object"},"ns":"Forge.Loop.BlockContext"}

@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"message":{"$ref":"types/Cardano.Slotting.Slot.WithOrigin.schema.json"}},"type":"object"},"ns":"Startup.LedgerPeerSnapshot"}

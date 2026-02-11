@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"softLimit":{"$ref":"types/GHC.Word.Word32.schema.json"}},"type":"object"},"ns":"Net.AcceptPolicy.ConnectionHardLimit"}

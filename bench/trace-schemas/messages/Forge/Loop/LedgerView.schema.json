@@ -1,0 +1,1 @@
+{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"slot":{"type":"integer"}},"type":"object"},"ns":"Forge.Loop.LedgerView"}
