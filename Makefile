@@ -38,6 +38,18 @@ cli node:
 trace-documentation:
 	cabal run -- exe:cardano-node trace-documentation --config 'configuration/cardano/mainnet-config.yaml' --output-file 'doc/new-tracing/tracers_doc_generated.md'
 
+trace-schemas-regenerate: ## Regenerate trace schemas, apply overrides, validate
+	bash bench/trace-schemas/scripts/schema-gen/RegenerateTraceSchemas.sh
+
+trace-schemas-overrides-check: ## Check whether all schema overrides are applied
+	nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --check --verbose"
+
+trace-schemas-overrides-coverage: ## Fail when generated schema files change without matching override sidecars (use RANGE=origin/master...HEAD in CI)
+	nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/CheckOverrideCoverage.hs ${if ${RANGE},--range ${RANGE}}"
+
+trace-schemas-validate: ## Validate trace message schemas against meta.schema.json
+	nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"
+
 ###
 ### Workbench
 ###
