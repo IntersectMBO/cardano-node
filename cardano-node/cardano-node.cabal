@@ -146,7 +146,7 @@ library
                       , cardano-ledger-allegra
                       , cardano-ledger-api
                       , cardano-ledger-babbage
-                      , cardano-ledger-binary
+                      , cardano-ledger-binary >= 1.7.1
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-core
