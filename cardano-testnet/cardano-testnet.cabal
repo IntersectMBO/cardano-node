@@ -83,7 +83,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.22.4
+                      , ouroboros-network ^>= 0.22.6
                       , ouroboros-network-api
                       , prettyprinter
                       , process
