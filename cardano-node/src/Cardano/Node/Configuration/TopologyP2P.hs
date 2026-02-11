@@ -320,7 +320,7 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
                      "Bootstrap peers (field 'bootstrapPeers') are not compatible "
                   <> "with Genesis syncing mode, reverting to 'DontUseBootstrapPeers'. "
                   <> "Big ledger peers will be leveraged for decentralized syncing - it "
-                  <> "is recommened to provide an up-to-date big ledger peer snapshot file "
+                  <> "is recommended to provide an up-to-date big ledger peer snapshot file "
                   <> "(field 'peerSnapshotFile' in topology configuration) to facilitate "
                   <> "this process."
     handlerBootstrap :: Text
