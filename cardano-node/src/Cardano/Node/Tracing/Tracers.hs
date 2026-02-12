@@ -18,6 +18,8 @@ module Cardano.Node.Tracing.Tracers
 
 import           Cardano.Logging
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
+import           Cardano.Network.NodeToClient (LocalAddress)
+import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
@@ -35,7 +37,6 @@ import           Cardano.Node.Tracing.Tracers.LedgerMetrics ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
-import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
@@ -57,8 +58,11 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
 import           "contra-tracer" Control.Tracer (Tracer (..))
+import           Data.Aeson (ToJSON)
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
+import qualified Network.Mux.Trace as Mux
+import           Network.Mux.Tracing ()
 
 -- | Construct tracers for all system components.
 --
@@ -72,6 +76,7 @@ mkDispatchTracers
       (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   , LogFormatting (TraceGsmEvent (Tip blk))
   , MetaTrace (TraceGsmEvent (Tip blk))
+  , ToJSON (HeaderHash blk)
   )
   => NodeKernelData blk
   -> Trace IO FormattedMessage
@@ -190,6 +195,7 @@ mkConsensusTracers :: forall blk.
                     (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   , LogFormatting (TraceGsmEvent (Tip blk))
   , MetaTrace (TraceGsmEvent (Tip blk))
+  , ToJSON (HeaderHash blk)
   )
   => ConfigReflection
   -> Trace IO FormattedMessage
@@ -331,6 +337,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "DevotedBlockFetch"]
     configureTracers configReflection trConfig [consensusDbfTr]
 
+    !txLogicTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txLogic", "Remote"]
+    configureTracers configReflection trConfig [txLogicTracer]
+
+    !txCountersTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txCounters", "Remote"]
+    configureTracers configReflection trConfig [txCountersTracer]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -379,6 +395,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusDbfTr
       , Consensus.kesAgentTracer = Tracer $
           traceWith consensusKesAgentTr
+      , Consensus.txLogicTracer = Tracer $
+          traceWith txLogicTracer
+      , Consensus.txCountersTracer = Tracer $
+          traceWith txCountersTracer
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -473,6 +493,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["PeerSharing", "Remote"]
     configureTracers configReflection trConfig [peerSharingTracer]
 
+    !txLogicTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txLogic", "Remote"]
+    configureTracers configReflection trConfig [txLogicTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -488,16 +513,24 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith keepAliveTracer
       , NtN.tPeerSharingTracer = Tracer $
           traceWith peerSharingTracer
+      , NtN.tTxLogicTracer = Tracer $
+          traceWith txLogicTracer
       }
 
-mkDiffusionTracers
-  :: ConfigReflection
-  -> Trace IO FormattedMessage
-  -> Trace IO FormattedMessage
-  -> Maybe (Trace IO FormattedMessage)
-  -> Trace IO DataPoint
-  -> TraceConfig
-  -> IO (Cardano.Diffusion.CardanoTracers IO)
+mkDiffusionTracers ::
+    ( LogFormatting
+        ( Mux.WithBearer
+            (ConnectionId RemoteAddress)
+            Mux.Trace
+        )
+    ) =>
+    ConfigReflection ->
+    Trace IO FormattedMessage ->
+    Trace IO FormattedMessage ->
+    Maybe (Trace IO FormattedMessage) ->
+    Trace IO DataPoint ->
+    TraceConfig ->
+    IO (Cardano.Diffusion.CardanoTracers IO)
 mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
 
     !dtMuxTr   <-  mkCardanoTracer
@@ -565,20 +598,10 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       ["Net", "PeerSelection", "Initiator"]
     configureTracers configReflection trConfig [debugPeerSelectionTr]
 
-    !debugPeerSelectionResponderTr  <-  mkCardanoTracer
-      trBase trForward mbTrEKG
-      ["Net", "PeerSelection", "Responder"]
-    configureTracers configReflection trConfig [debugPeerSelectionResponderTr]
-
     !peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection"]
     configureTracers configReflection trConfig [peerSelectionCountersTr]
-
-    !churnCountersTr  <-  mkCardanoTracer
-      trBase trForward mbTrEKG
-      ["Net", "Churn"]
-    configureTracers configReflection trConfig [churnCountersTr]
 
     !peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -660,14 +683,10 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            traceWith publicRootPeersTr
        , Diffusion.dtTracePeerSelectionTracer = Tracer $
            traceWith peerSelectionTr
-       , Diffusion.dtDebugPeerSelectionInitiatorTracer = Tracer $
+       , Diffusion.dtDebugPeerSelectionTracer = Tracer $
            traceWith debugPeerSelectionTr
-       , Diffusion.dtDebugPeerSelectionInitiatorResponderTracer = Tracer $
-           traceWith debugPeerSelectionResponderTr
        , Diffusion.dtTracePeerSelectionCounters = Tracer $
            traceWith peerSelectionCountersTr
-       , Diffusion.dtTraceChurnCounters = Tracer $
-           traceWith churnCountersTr
        , Diffusion.dtPeerSelectionActionsTracer = Tracer $
            traceWith peerSelectionActionsTr
        , Diffusion.dtConnectionManagerTracer = Tracer $

@@ -19,11 +19,13 @@
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
+import Ouroboros.Consensus.Peras.SelectView
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Prelude (Typeable, maximumDef)
 import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Network.OrphanInstances ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderHeaderHash,
                    renderHeaderHashForVerbosity, renderPointAsPhrase, renderPointForVerbosity,
@@ -31,7 +33,7 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader (..),
-                   Header, RealPoint (..), blockNo, blockPoint, blockPrevHash, getHeader, pointHash,
+                   Header, HeaderHash, RealPoint (..), blockNo, blockPoint, blockPrevHash, getHeader, pointHash,
                    realPointHash, realPointSlot, withOriginToMaybe)
 import           Ouroboros.Consensus.Block.SupportsSanityCheck
 import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
@@ -162,9 +164,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.TrySwitchToAFork {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
     ChainDB.ChangingSelection {} -> Debug
-    ChainDB.AddedToCurrentChain events _ _ _ ->
+    ChainDB.AddedToCurrentChain events _ _ _ _ ->
       maximumDef Notice (map getSeverityAnnotation events)
-    ChainDB.SwitchedToAFork events _ _ _ ->
+    ChainDB.SwitchedToAFork events _ _ _ _ ->
       maximumDef Notice (map getSeverityAnnotation events)
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
@@ -174,7 +176,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.AddedReprocessLoEBlocksToQueue {} -> Debug
     ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
     ChainDB.ChainSelectionLoEDebug _ _ -> Debug
-
 
   getSeverityAnnotation (ChainDB.TraceLedgerDBEvent ev) = case ev of
     LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
@@ -252,6 +253,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
 
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
+
+  getSeverityAnnotation ChainDB.TracePerasCertDbEvent{} = Info
+  getSeverityAnnotation ChainDB.TraceAddPerasCertEvent{} = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -361,7 +365,7 @@ instance HasTextFormatter (TraceLabelPeer peer (TraceBlockFetchServerEvent blk))
   formatText _ = pack . show . toList
 
 
-instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, LedgerSupportsProtocol blk, ToJSON (HeaderHash blk))
       => Transformable Text IO (TraceChainSyncClientEvent blk) where
   trTransformer = trStructured
 
@@ -378,9 +382,11 @@ instance (StandardHash blk, Show peer)
   formatText a _ = pack $ show a
 
 
-instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
-           ToJSON (GenTxId blk), LedgerSupportsMempool blk,
-           ConvertRawHash blk)
+instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk)
+         , ToJSON (GenTxId blk), LedgerSupportsMempool blk
+         , ConvertRawHash blk
+         , ToJSON (HeaderHash blk)
+         )
       => Transformable Text IO (TraceEventMempool blk) where
   trTransformer = trStructured
 
@@ -521,7 +527,9 @@ instance ( ConvertRawHash blk
          , InspectLedger blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk))
+         , ToJSON (HeaderHash blk)
+         )
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -562,10 +570,10 @@ instance ( ConvertRawHash blk
           "Block fits onto some fork: " <> renderRealPointAsPhrase pt
         ChainDB.ChangingSelection pt ->
           "Changing selection to: " <> renderPointAsPhrase pt
-        ChainDB.AddedToCurrentChain es _ _ c ->
+        ChainDB.AddedToCurrentChain es _ _ c _ ->
           "Chain extended, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
-        ChainDB.SwitchedToAFork es _ _ c ->
+        ChainDB.SwitchedToAFork es _ _ c _ ->
           "Switched to a fork, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
         ChainDB.AddBlockValidation ev' -> case ev' of
@@ -786,9 +794,13 @@ instance ( ConvertRawHash blk
       ChainDB.TraceChainSelStarvationEvent ev -> case ev of
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
+      ChainDB.TracePerasCertDbEvent ev -> showT ev
+      ChainDB.TraceAddPerasCertEvent ev -> showT ev
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
+
+
 
 --
 -- | instances of @ToObject@
@@ -925,9 +937,10 @@ instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
 
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
+         , ToJSON (HeaderHash blk)
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
-         , ToObject (SelectView (BlockProtocol blk)))
+         , ToObject (WeightedSelectView (BlockProtocol blk)))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject _verb ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
@@ -967,31 +980,31 @@ instance ( ConvertRawHash blk
     ChainDB.ChangingSelection pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChangingSelection"
                , "block" .= toObject verb pt ]
-    ChainDB.AddedToCurrentChain events selChangedInfo base extended ->
+    ChainDB.AddedToCurrentChain events selChangedInfo base extended _ ->
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint extended)
                , "chainLengthDelta" .= extended `chainLengthΔ` base
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
             ++ [ "events" .= toJSON (map (toObject verb) events)
                | not (null events) ]
-    ChainDB.SwitchedToAFork events selChangedInfo old new ->
+    ChainDB.SwitchedToAFork events selChangedInfo old new _ ->
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint new)
                , "chainLengthDelta" .= new `chainLengthΔ` old
                -- Check that the SwitchedToAFork event was triggered by a proper fork.
                , "realFork" .= not (AF.withinFragmentBounds (AF.headPoint old) new)
-               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               , "newSuffixSelectView" .= toObject verb (ChainDB.newSuffixSelectView selChangedInfo)
                ]
-            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
-               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+            ++ [ "oldSuffixSelectView" .= toObject verb oldSuffixSelectView
+               | Just oldSuffixSelectView <- [ChainDB.oldSuffixSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
@@ -1065,6 +1078,15 @@ instance ( ConvertRawHash blk
          Nothing -> [] -- No sense to do validation here.
      chainLengthΔ :: AF.AnchoredFragment (Header blk) -> AF.AnchoredFragment (Header blk) -> Int
      chainLengthΔ = on (-) (fromWithOrigin (-1) . fmap (fromIntegral . unBlockNo) . AF.headBlockNo)
+
+  toObject _verb (ChainDB.TracePerasCertDbEvent ev) =
+    mconcat [ "kind" .= String "TracePerasCertDbEvent"
+            , "event" .= show ev
+            ]
+  toObject _verb (ChainDB.TraceAddPerasCertEvent ev) =
+    mconcat [ "kind" .= String "TraceAddPerasCertEvent"
+            , "event" .= show ev
+            ]
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerDBEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceLedgerDBEvent ev) = case ev of
@@ -1365,7 +1387,7 @@ tipToObject = \case
     , "blockNo" .= blockno
     ]
 
-instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, LedgerSupportsProtocol blk, ToJSON (HeaderHash blk))
       => ToObject (TraceChainSyncClientEvent blk) where
   toObject verb ev = case ev of
     TraceDownloadedHeader h ->
@@ -1424,8 +1446,9 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                , "n" .= natToInt n
                ]
 
-instance ( LedgerSupportsProtocol blk,
-           ConvertRawHash blk
+instance ( LedgerSupportsProtocol blk
+         , ConvertRawHash blk
+         , ToJSON (HeaderHash blk)
          ) => ToObject (ChainSync.Client.Instruction blk) where
   toObject verb = \case
     ChainSync.Client.RunNormally ->
@@ -1437,8 +1460,9 @@ instance ( LedgerSupportsProtocol blk,
               , "payload" .= toObject verb info
               ]
 
-instance ( LedgerSupportsProtocol blk,
-           ConvertRawHash blk
+instance ( LedgerSupportsProtocol blk
+         , ConvertRawHash blk
+         , ToJSON (HeaderHash blk)
          ) => ToObject (ChainSync.Client.JumpInstruction blk) where
   toObject verb = \case
     ChainSync.Client.JumpTo info ->
@@ -1448,8 +1472,9 @@ instance ( LedgerSupportsProtocol blk,
       mconcat [ "kind" .= String "JumpToGoodPoint"
                 , "info" .= toObject verb info ]
 
-instance ( LedgerSupportsProtocol blk,
-           ConvertRawHash blk
+instance ( LedgerSupportsProtocol blk
+         ,  ConvertRawHash blk
+         , ToJSON (HeaderHash blk)
          ) => ToObject (ChainSync.Client.JumpInfo blk) where
   toObject verb info =
     mconcat [ "kind" .= String "JumpInfo"
@@ -1461,10 +1486,10 @@ instance ( LedgerSupportsProtocol blk,
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
 instance HasSeverityAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
   getSeverityAnnotation _ = Debug
-instance (ToObject peer, ConvertRawHash blk)
+instance (ToObject peer, ConvertRawHash blk, ToJSON (HeaderHash blk))
       => Transformable Text IO (TraceLabelPeer peer (ChainSync.Client.TraceEventCsj peer blk)) where
   trTransformer = trStructured
-instance (ToObject peer, ConvertRawHash blk)
+instance (ToObject peer, ConvertRawHash blk, ToJSON (HeaderHash blk))
       => ToObject (ChainSync.Client.TraceEventCsj peer blk) where
     toObject verb = \case
       ChainSync.Client.BecomingObjector prevObjector ->
@@ -1534,9 +1559,10 @@ instance ConvertRawHash blk
         ]
         <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
-instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
-           ToJSON (GenTxId blk), LedgerSupportsMempool blk,
-           ConvertRawHash blk
+instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk)
+         , ToJSON (GenTxId blk), LedgerSupportsMempool blk
+         , ConvertRawHash blk
+         , ToJSON (HeaderHash blk)
          ) => ToObject (TraceEventMempool blk) where
   toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mconcat
@@ -1803,10 +1829,10 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
 instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
 instance HasSeverityAnnotation (TraceGDDEvent peer blk) where
   getSeverityAnnotation _ = Debug
-instance (Typeable blk, ToObject peer, ConvertRawHash blk, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
+instance (Typeable blk, ToObject peer, ConvertRawHash blk, GetHeader blk, ToJSON (HeaderHash blk)) => Transformable Text IO (TraceGDDEvent peer blk) where
   trTransformer = trStructured
 
-instance (Typeable blk, ToObject peer, ConvertRawHash blk, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
+instance (Typeable blk, ToObject peer, ConvertRawHash blk, GetHeader blk, ToJSON (HeaderHash blk)) => ToObject (TraceGDDEvent peer blk) where
   toObject verb (TraceGDDDebug (GDDDebugInfo {..})) = mconcat $
     [ "kind" .= String "TraceGDDEvent"
     , "losingPeers".= toJSON (map (toObject verb) losingPeers)
@@ -1852,7 +1878,9 @@ instance (Typeable blk, ToObject peer, ConvertRawHash blk, GetHeader blk) => ToO
     , "peer" .= toJSON (map (toObject verb) $ toList peer)
     ]
 
-instance (Typeable blk, ConvertRawHash blk, GetHeader blk) => ToObject (DensityBounds blk) where
+instance
+    (Typeable blk, ConvertRawHash blk, GetHeader blk, ToJSON (HeaderHash blk)) =>
+    ToObject (DensityBounds blk) where
   toObject verb DensityBounds {..} = mconcat
     [ "kind" .= String "DensityBounds"
     , "clippedFragment" .= toObject verb clippedFragment

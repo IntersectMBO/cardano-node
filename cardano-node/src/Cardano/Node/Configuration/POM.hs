@@ -28,7 +28,8 @@ where
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
-import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode(..), defaultConsensusMode)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -500,9 +501,6 @@ instance FromJSON PartialNodeConfiguration where
              qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
              backend         <- o .:? "Backend" .!= "V2InMemory"
              selector        <- case backend of
-               "V1InMemory" -> do
-                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
-                 return $ V1InMemory flush
                "V1LMDB"     -> do
                  flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
                  mapSize :: Maybe Gigabytes <- o .:? "MapSize"
@@ -510,6 +508,9 @@ instance FromJSON PartialNodeConfiguration where
                  mxReaders :: Maybe Int <- o .:? "MaxReaders"
                  return $ V1LMDB flush lmdbPath mapSize mxReaders
                "V2InMemory" -> return V2InMemory
+               "V2LSM" -> do
+                 lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
+                 pure $ V2LSM lsmPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
              pure $ Just $ LedgerDbConfiguration ldbSnapNum ldbSnapInterval qsize selector deprecatedOpts
 
@@ -717,7 +718,7 @@ defaultPartialNodeConfiguration =
 
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultNumberOfBigLedgerPeers
-    , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
+    , pncConsensusMode = Last (Just defaultConsensusMode)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
     , pncPeerSharing   = mempty
       -- the default is defined in `makeNodeConfiguration`
@@ -821,7 +822,7 @@ makeNodeConfiguration pnc = do
                         , getLast (pncMempoolTimeoutHard pnc)
                         , getLast (pncMempoolTimeoutCapacity pnc)
                         )
-  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <- 
+  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <-
     case mempoolTimeouts of
       (Just s, Just h, Just c) -> pure (s, h, c)
       (Nothing, Nothing, Nothing) -> pure (1, 1.5, 5)

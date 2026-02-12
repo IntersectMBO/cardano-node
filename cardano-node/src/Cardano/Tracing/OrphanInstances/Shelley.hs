@@ -19,6 +19,8 @@
 
 module Cardano.Tracing.OrphanInstances.Shelley () where
 
+import           Cardano.Node.Tracing.Render (renderIncompleteWithdrawals)
+
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
 
@@ -38,6 +40,7 @@ import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import           Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Hashes as Hashes
@@ -73,15 +76,18 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson (Value (..))
-import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Set.NonEmpty as NonEmptySet
 
 {- HLINT ignore "Use :" -}
 
@@ -109,9 +115,8 @@ instance ShelleyCompatible protocol era => ToObject (Header (ShelleyBlock protoc
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "LEDGER" ledgerera))
+  , ToJSON (ApplyTxError ledgerera) -- provided by cardano-api
   ) => ToObject (ApplyTxError ledgerera) where
-  toObject verb (ApplyTxError predicateFailures) =
-    mconcat $ NonEmpty.toList $ fmap (toObject verb) predicateFailures
 
 instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
@@ -214,7 +219,7 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "amount" .= String (textShow credential)
       , "error" .= String "Stake key not registered"
       ]
-    Conway.StakeKeyHasNonZeroRewardAccountBalanceDELEG coin ->
+    Conway.StakeKeyHasNonZeroAccountBalanceDELEG coin ->
       [ "kind" .= String "StakeKeyHasNonZeroAccountBalanceDELEG"
       , "amount" .= coin
       , "error" .= String "Stake key has non-zero account balance"
@@ -237,13 +242,13 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "error" .= String "Refund mismatch"
       ]
 
-instance ToObject (Set (Credential 'Staking)) where
+instance ToObject (Set (Credential Staking)) where
   toObject _verb creds =
     mconcat [ "kind" .= String "StakeCreds"
              , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
 
-instance ToObject (NonEmpty.NonEmpty (KeyHash 'Staking)) where
+instance ToObject (NonEmpty.NonEmpty (KeyHash Staking)) where
   toObject _verb keyHashes =
     mconcat [ "kind" .= String "StakeKeyHashes"
              , "stakeKeyHashes" .= toJSON keyHashes
@@ -320,6 +325,15 @@ instance
   ) => ToObject (ShelleyLedgersPredFailure ledgerera) where
   toObject verb (LedgerFailure f) = toObject verb f
 
+instance ToObject Withdrawals where
+  toObject _verb (Withdrawals ws) =
+    mconcat ["kind" .= String "Withdrawals"
+             , "withdrawals" .= Aeson.object (map renderTuple $ Map.toList ws)
+             ]
+    where
+      renderTuple :: (Ledger.AccountAddress, Coin) -> Aeson.Pair
+      renderTuple (address, mismatch) =
+        Aeson.fromText (Api.serialiseAddress $ Api.fromShelleyStakeAddr address) .= show mismatch
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "DELEGS" ledgerera))
@@ -327,6 +341,11 @@ instance
   ) => ToObject (ShelleyLedgerPredFailure ledgerera) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
+  toObject verb (ShelleyWithdrawalsMissingAccounts withdrawals) = toObject verb withdrawals
+  toObject _verb (ShelleyIncompleteWithdrawals payload) =
+      mconcat ["kind" .= String "ShelleyIncompleteWithdrawals"
+               , "withdrawals" .= renderIncompleteWithdrawals payload]
+
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
@@ -334,6 +353,14 @@ instance
   , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
+  toObject _ (Conway.ConwayWithdrawalsMissingAccounts missingWithdrawals) =
+    mconcat [ "kind" .= String "ConwayWithdrawalsMissingAccounts"
+            , "withdrawals" .= unWithdrawals missingWithdrawals
+            ]
+  toObject _ (Conway.ConwayIncompleteWithdrawals incompleteWithdrawals) =
+    mconcat [ "kind" .= String "ConwayIncompleteWithdrawals"
+            , "withdrawals" .= renderIncompleteWithdrawals incompleteWithdrawals
+            ]
   toObject _    (Conway.ConwayTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
             , "actual" .= mismatchSupplied
@@ -407,11 +434,6 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
             , "protVer" .= mismatchSupplied
             , "prevProtVer" .= mismatchExpected
             ]
-  toObject _ (Conway.InvalidPolicyHash actualPolicyHash expectedPolicyHash) =
-    mconcat [ "kind" .= String "InvalidPolicyHash"
-            , "actualPolicyHash" .= actualPolicyHash
-            , "expectedPolicyHash" .= expectedPolicyHash
-            ]
   toObject _ (Conway.DisallowedProposalDuringBootstrap proposal) =
     mconcat [ "kind" .= String "DisallowedProposalDuringBootstrap"
             , "proposal" .= proposal
@@ -440,7 +462,11 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
     mconcat [ "kind" .= String "UnelectedCommitteeVoters"
             , "unelectedCommitteeVoters" .= creds
             ]
-
+  toObject _ (Conway.InvalidGuardrailsScriptHash actualScriptHash expectedScriptHash) =
+    mconcat [ "kind" .= String "InvalidGuardrailsScriptHash"
+            , "actualGuardrailsScriptHash" .= actualScriptHash
+            , "expectedGuardrailsScriptHash" .= expectedScriptHash
+            ]
 
 instance
   ( ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
@@ -450,6 +476,37 @@ instance
       mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS" , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals ]
     Conway.CertFailure f -> toObject verb f
 
+instance
+  ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
+  toObject _verb = error "Dijkstra era is not active yet"
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
+  toObject _verb = error "Dijkstra era is not active yet"
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraGovPredFailure ledgerera) where
+  toObject _verb = error "Dijkstra era is not active yet"
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
+  toObject _verb = error "Dijkstra era is not active yet"
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
+  toObject _verb = error "Dijkstra era is not active yet"
+
+instance
+  (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
+  ) => ToObject (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
+  toObject _verb = error "Dijkstra era is not active yet"
 
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
@@ -469,7 +526,7 @@ instance
   toObject _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
              , "required" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
-                                 (Set.toList required)
+                                 (NonEmptySet.toList required)
              , "received" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                  (Set.toList received)
              ]
@@ -480,11 +537,11 @@ instance
              ]
   toObject _ (UnspendableUTxONoDatumHash txins) =
     mconcat [ "kind" .= String "MissingRequiredSigners"
-             , "txins" .= Set.toList txins
+             , "txins" .= NonEmptySet.toList txins
              ]
   toObject _ (NotAllowedSupplementalDatums disallowed acceptable) =
     mconcat [ "kind" .= String "NotAllowedSupplementalDatums"
-             , "disallowed" .= Set.toList disallowed
+             , "disallowed" .= NonEmptySet.toList disallowed
              , "acceptable" .= Set.toList acceptable
              ]
   toObject _ (ExtraRedeemers rdmrs) =
@@ -493,7 +550,7 @@ instance
       (\alonzoOnwards ->
          mconcat
            [ "kind" .= String "ExtraRedeemers"
-           , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) rdmrs
+           , "rdmrs" .= map (Api.toScriptIndex alonzoOnwards) (NonEmpty.toList rdmrs)
            ]
       )
       (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
@@ -509,11 +566,11 @@ instance
   ) => ToObject (ShelleyUtxowPredFailure ledgerera) where
   toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
     mconcat [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
-             , "extraneousScripts" .= Set.map renderScriptHash extraneousScripts
+             , "extraneousScripts" .= map renderScriptHash (NonEmptySet.toList extraneousScripts)
              ]
   toObject _verb (InvalidWitnessesUTXOW wits') =
     mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
-             , "invalidWitnesses" .= map textShow wits'
+             , "invalidWitnesses" .= map textShow (NonEmpty.toList wits')
              ]
   toObject _verb (MissingVKeyWitnessesUTXOW wits') =
     mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
@@ -560,7 +617,7 @@ instance
   toObject _verb (BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
-             , "error" .= renderBadInputsUTxOErr badInputs
+             , "error" .= renderBadInputsUTxOErr (NonEmptySet.toSet badInputs)
              ]
   toObject _verb (ExpiredUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ExpiredUTxO"
@@ -622,7 +679,7 @@ instance
   toObject _verb (Allegra.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
-             , "error" .= renderBadInputsUTxOErr badInputs
+             , "error" .= renderBadInputsUTxOErr (NonEmptySet.toSet badInputs)
              ]
   toObject _verb (Allegra.OutsideValidityIntervalUTxO validityInterval slot) =
     mconcat [ "kind" .= String "ExpiredUTxO"
@@ -706,14 +763,6 @@ instance Ledger.Era era => ToObject (ShelleyPpupPredFailure era) where
 instance
   ( ToObject (PredicateFailure (Core.EraRule "DELPL" ledgerera))
   ) => ToObject (ShelleyDelegsPredFailure ledgerera) where
-  toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
-    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
-             , "targetPool" .= targetPool
-             ]
-  toObject _verb (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "incorrectWithdrawals" .= unWithdrawals incorrectWithdrawals
-             ]
   toObject verb (DelplFailure f) = toObject verb f
 
 
@@ -797,6 +846,10 @@ instance Ledger.Era era => ToObject (ShelleyDelegPredFailure era) where
                                   ReservesMIR -> "Reserves"
                                   TreasuryMIR -> "Treasury")
              , "amount" .= coin
+             ]
+  toObject _verb (DelegateeNotRegisteredDELEG keyHash) =
+    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
+             , "unregisteredKeyHash" .= keyHash
              ]
 
 instance ToObject (ShelleyPoolPredFailure era) where
@@ -1029,7 +1082,7 @@ instance
   toObject _verb (Alonzo.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
-             , "error" .= renderBadInputsUTxOErr badInputs
+             , "error" .= renderBadInputsUTxOErr (NonEmptySet.toSet badInputs)
              ]
   toObject _verb (Alonzo.OutsideValidityIntervalUTxO validtyInterval slot) =
     mconcat [ "kind" .= String "ExpiredUTxO"
@@ -1316,6 +1369,7 @@ instance ToJSON ShelleyNodeToClientVersion where
   toJSON ShelleyNodeToClientVersion12 = String "ShelleyNodeToClientVersion12"
   toJSON ShelleyNodeToClientVersion13 = String "ShelleyNodeToClientVersion13"
   toJSON ShelleyNodeToClientVersion14 = String "ShelleyNodeToClientVersion14"
+  toJSON ShelleyNodeToClientVersion15 = String "ShelleyNodeToClientVersion15"
 
 --------------------------------------------------------------------------------
 -- Conway related
@@ -1360,7 +1414,7 @@ instance
     Conway.BadInputsUTxO badInputs ->
       mconcat [ "kind" .= String "BadInputsUTxO"
               , "badInputs" .= badInputs
-              , "error" .= renderBadInputsUTxOErr badInputs
+              , "error" .= renderBadInputsUTxOErr (NonEmptySet.toSet badInputs)
               ]
     Conway.OutsideValidityIntervalUTxO validityInterval slot ->
       mconcat [ "kind" .= String "ExpiredUTxO"
@@ -1476,7 +1530,7 @@ instance
     Conway.UtxoFailure utxoPredFail -> toObject v utxoPredFail
     Conway.InvalidWitnessesUTXOW ws ->
       mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
-              , "invalidWitnesses" .= map textShow ws
+              , "invalidWitnesses" .= map textShow (NonEmpty.toList ws)
               ]
     Conway.MissingVKeyWitnessesUTXOW ws ->
       mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
@@ -1508,7 +1562,7 @@ instance
               ]
     Conway.ExtraneousScriptWitnessesUTXOW scripts ->
       mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
-              , "extraneousScripts" .= Set.map renderScriptHash scripts
+              , "extraneousScripts" .= Set.map renderScriptHash (NonEmptySet.toSet scripts)
               ]
     Conway.MissingRedeemers scripts ->
       mconcat [ "kind" .= String "MissingRedeemers"
@@ -1517,13 +1571,13 @@ instance
     Conway.MissingRequiredDatums required received ->
       mconcat [ "kind" .= String "MissingRequiredDatums"
               , "required" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
-                                      (Set.toList required)
+                                      (NonEmptySet.toList required)
               , "received" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                       (Set.toList received)
               ]
     Conway.NotAllowedSupplementalDatums disallowed acceptable ->
       mconcat [ "kind" .= String "NotAllowedSupplementalDatums"
-              , "disallowed" .= Set.toList disallowed
+              , "disallowed" .= NonEmptySet.toList disallowed
               , "acceptable" .= Set.toList acceptable
               ]
     Conway.PPViewHashesDontMatch Mismatch {mismatchSupplied, mismatchExpected} ->
@@ -1533,7 +1587,7 @@ instance
               ]
     Conway.UnspendableUTxONoDatumHash ins ->
       mconcat [ "kind" .= String "MissingRequiredSigners"
-              , "txins" .= Set.toList ins
+              , "txins" .= NonEmptySet.toList ins
               ]
     Conway.ExtraRedeemers rs ->
       Api.caseShelleyToMaryOrAlonzoEraOnwards
@@ -1541,7 +1595,7 @@ instance
         (\alonzoOnwards ->
            mconcat
              [ "kind" .= String "ExtraRedeemers"
-             , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) rs
+             , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) (NonEmpty.toList rs)
              ]
         )
         (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
