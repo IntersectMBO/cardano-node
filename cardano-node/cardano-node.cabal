@@ -139,6 +139,7 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 10.24
+                      , cardano-data
                       , cardano-crypto-class ^>=2.3
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -165,7 +166,6 @@ library
                       , ekg-wai
                       , ekg-core
                       , filepath
-                      , formatting
                       , generic-data
                       , hashable
                       , hostname
@@ -185,12 +185,12 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus >=0.30.0.1 && <0.31
+                      , ouroboros-consensus:{ouroboros-consensus, ouroboros-consensus-lmdb, ouroboros-consensus-lsm} ^>= 0.28
                       , ouroboros-consensus-cardano ^>= 0.26
                       , ouroboros-consensus-diffusion ^>= 0.24
                       , ouroboros-consensus-protocol
-                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols} ^>= 0.24
-                      , cardano-diffusion:{api, cardano-diffusion} ^>=0.1
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, framework-tracing, tracing} ^>= 0.24
+                      , cardano-diffusion:{api, cardano-diffusion, orphan-instances} ^>=0.1
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues

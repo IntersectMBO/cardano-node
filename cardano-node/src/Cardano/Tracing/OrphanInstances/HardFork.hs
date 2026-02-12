@@ -22,7 +22,7 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
-                   ForgeStateUpdateError)
+                   ForgeStateUpdateError, PerasWeight (..))
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
@@ -43,7 +43,7 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, SelectView (svTiebreakerView, svBlockNo), ConsensusProtocol (TiebreakerView))
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, ConsensusProtocol (TiebreakerView))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -53,6 +53,7 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Proxy (Proxy (..))
 import           Data.SOP (All, Compose, K (..))
 import           Data.SOP.Strict
+import Ouroboros.Consensus.Peras.SelectView
 
 
 --
@@ -434,10 +435,11 @@ instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion 
 instance All (ToObject `Compose` WrapTiebreakerView) xs => ToObject (HardForkTiebreakerView xs) where
     toObject verb = toObject verb . getHardForkTiebreakerView
 
-instance ToObject (TiebreakerView protocol) => ToObject (SelectView protocol) where
+instance ToObject (TiebreakerView protocol) => ToObject (WeightedSelectView protocol) where
     toObject verb sv = mconcat
-        [ "blockNo"  .= svBlockNo sv
-        , toObject verb (svTiebreakerView sv)
+        [ "blockNo"  .= wsvBlockNo sv
+        , "weightBoost" .= unPerasWeight (wsvWeightBoost sv)
+        , toObject verb (wsvTiebreaker sv)
         ]
 
 instance All (ToObject `Compose` WrapTiebreakerView) xs => ToObject (OneEraTiebreakerView xs) where
