@@ -105,7 +105,7 @@ traceLedgerMetrics nodeKern slotNo tracer = do
   query <- mapNodeKernelDataIO
               (\nk ->
                 (,,) -- (,,,,)
-                  <$> fmap (maybe 0 LedgerDB.ledgerTableSize) (ChainDB.getStatistics $ getChainDB nk)
+                  <$> ChainDB.getStatistics (getChainDB nk)
                   <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                   <*> nkQueryChain fragmentChainDensity nk
 {- see Note [GovMetrics]
@@ -116,10 +116,10 @@ traceLedgerMetrics nodeKern slotNo tracer = do
               nodeKern
   case query of
     SNothing -> pure ()
-    SJust (utxoSize, delegMapSize, {- drepCount, drepMapSize, -} chainDensity) ->
+    SJust (ledgerStatistics, delegMapSize, {- drepCount, drepMapSize, -} chainDensity) ->
         let msg = LedgerMetrics
                     slotNo
-                    utxoSize
+                    (LedgerDB.ledgerTableSize ledgerStatistics)
                     delegMapSize
 {- see Note [GovMetrics]
                     drepCount

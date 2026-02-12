@@ -68,7 +68,7 @@ import           Cardano.Tracing.Tracers
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
-                   NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
+                   NodeDatabasePaths (..), nonImmutableDbPath, RunNodeArgs (..), StdRunNodeArgs (..))
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Node (RunNodeArgs (..),
@@ -79,7 +79,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Args as LDBArgs
-import           Ouroboros.Consensus.Storage.LedgerDB.V2.Args
 import           Ouroboros.Consensus.Util.Args
 import           Ouroboros.Consensus.Util.Orphans ()
 
@@ -569,7 +568,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
           , srnSnapshotPolicyArgs           = snapshotPolicyArgs
           , srnQueryBatchSize               = queryBatchSize
-          , srnLdbFlavorArgs                = selectorToArgs ldbBackend
+          , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
           }
  where
   customizeChainSyncTimeout :: ChainSyncIdleTimeout
