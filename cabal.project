@@ -129,8 +129,10 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 92bcc0f6e4db68bd5a6026d5c81d18e418ae44b4
-  --sha256: sha256-yzqbtc3yvWXjAi8MVe+Gu7rHP3SrZ19d4ZqGJvf0SkY=
+  -- Branch "fmaste/cardano-logging" on top of "main".
+  -- Extracts "network-mux" and "ouroboros-network" tracing instances from "cardano-node".
+  tag: 61f97b025793b2c2e70540d5b2663660328e897b
+  --sha256: sha256-CPNrHV5ktJrHeGmjHNveiTq1KbAy1EG2DVxOLabbvh4=
   subdir:
     ouroboros-network
     cardano-diffusion
