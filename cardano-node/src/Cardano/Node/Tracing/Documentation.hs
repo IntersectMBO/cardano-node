@@ -84,9 +84,8 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import qualified Cardano.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters, TracePeerSelection (..))
+                   PeerSelectionCounters, TracePeerSelection)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -104,8 +103,11 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
+import           Ouroboros.Network.Tracing ()
+import           Network.Mux.Tracing ()
+import qualified Network.Mux as Mux
 
 import           Control.Monad (forM_)
 import           Data.Aeson.Types (ToJSON)
@@ -114,8 +116,6 @@ import           Data.Text (pack)
 import qualified Data.Text.IO as T
 import           Data.Time (getZonedTime)
 import           Data.Version (showVersion)
-import           GHC.Generics (Generic)
-import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
@@ -160,9 +160,6 @@ parseTraceDocumentationCmd =
        $ mconcat [ Opt.progDesc "Generate the trace documentation" ]
      ]
     )
-
-deriving instance Generic UnversionedProtocol
-deriving instance Generic UnversionedProtocolData
 
 instance ToJSON UnversionedProtocol
 instance ToJSON UnversionedProtocolData
@@ -585,7 +582,7 @@ docTracersFirstPhase condConfigFileName = do
       ["Net", "PeerSelection", "Selection"]
     configureTracers configReflection trConfig [peerSelectionTr]
     peerSelectionTrDoc <- documentTracer (peerSelectionTr ::
-      Logging.Trace IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr))
+      Logging.Trace IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Cardano.ExtraTrace Socket.SockAddr))
 
     debugPeerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -607,12 +604,6 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [peerSelectionCountersTr]
     peerSelectionCountersTrDoc <- documentTracer (peerSelectionCountersTr ::
       Logging.Trace IO (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes Socket.SockAddr)))
-
-    churnCountersTr  <-  mkCardanoTracer
-      trBase trForward mbTrEKG
-      ["Net", "Churn"]
-    configureTracers configReflection trConfig [churnCountersTr]
-    churnCountersTrDoc <- documentTracer (churnCountersTr :: Logging.Trace IO ChurnCounters)
 
     peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -756,7 +747,6 @@ docTracersFirstPhase condConfigFileName = do
             <> debugPeerSelectionTrDoc
             <> debugPeerSelectionResponderTrDoc
             <> peerSelectionCountersTrDoc
-            <> churnCountersTrDoc
             <> peerSelectionActionsTrDoc
             <> connectionManagerTrDoc
             <> connectionManagerTransitionsTrDoc

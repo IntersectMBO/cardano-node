@@ -69,8 +69,8 @@ instance
       -- We don't support a "block issuer" key role in @cardano-api@, so we'll
       -- just convert it to a stake pool key.
       toStakePoolKey
-        :: Shelley.VKey 'Shelley.BlockIssuer
-        -> Shelley.VKey 'Shelley.StakePool
+        :: Shelley.VKey Shelley.BlockIssuer
+        -> Shelley.VKey Shelley.StakePool
       toStakePoolKey vk = Shelley.VKey (Shelley.unVKey vk)
 
       issuer = pHeaderIssuer (shelleyHeaderRaw shelleyBlkHdr)
