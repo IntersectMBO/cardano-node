@@ -71,6 +71,7 @@ import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
+import           Ouroboros.Network.Tracing ()
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
@@ -86,15 +87,6 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
-
-instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
-  forMachine _dtal (ConnectionId local' remote) =
-    mconcat [ "connectionId" .= String (showT local'
-                                          <> " "
-                                          <> showT remote)
-    ]
-  forHuman (ConnectionId local' remote) =
-    "ConnectionId " <>  showT local' <> " " <> showT remote
 
 --------------------------------------------------------------------------------
 --   TraceLabelCreds peer a
