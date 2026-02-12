@@ -43,7 +43,7 @@ library
                       , bytestring
                       , cardano-api ^>= 10.23
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.15
-                      , cardano-crypto-class ^>=2.2.3.2
+                      , cardano-crypto-class ^>=2.3
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
@@ -150,7 +150,7 @@ executable cardano-testnet
 
   main-is:              cardano-testnet.hs
 
-  build-depends:        cardano-crypto-class ^>=2.2.3.2
+  build-depends:        cardano-crypto-class ^>=2.3
                       , cardano-cli
                       , cardano-testnet
                       , optparse-applicative-fork
