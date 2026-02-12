@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -31,6 +32,7 @@ import           Cardano.Ledger.BaseTypes (unsafeNonZero)
 import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import           Cardano.Node.Protocol.Byron
 
+import           Control.Concurrent (threadDelay)
 import           Control.Exception
 import           Control.Monad
 import           Control.Monad.Extra
@@ -48,11 +50,12 @@ import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import qualified Network.HTTP.Simple as HTTP
 import           RIO ( MonadThrow, throwM)
+import           System.IO (hPutStrLn, stderr)
 import qualified System.Directory as System
 import           System.FilePath.Posix (takeDirectory, (</>))
 
 
-import           Testnet.Blockfrost (blockfrostToGenesis)
+import           Testnet.Blockfrost (BlockfrostParams, blockfrostToGenesis)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
 import           Testnet.Process.RunIO (execCli_, liftIOAnnotated)
@@ -102,7 +105,7 @@ getByronGenesisHash
   -> m (KeyMap Aeson.Value)
 getByronGenesisHash path = do
   e <- runExceptT $ readGenesisData path
-  case e of 
+  case e of
     Left err -> throwM $ GenesisReadError path err
     Right (_, genesisHash) -> do
       let genesisHash' = unGenesisHash genesisHash
@@ -141,7 +144,7 @@ getDefaultAlonzoGenesis :: ()
   => MonadThrow m
   => m AlonzoGenesis
 getDefaultAlonzoGenesis =
-  case Defaults.defaultAlonzoGenesis of 
+  case Defaults.defaultAlonzoGenesis of
     Right genesis -> return genesis
     Left err -> throwM err
 
@@ -164,9 +167,9 @@ createSPOGenesisAndFiles
   (TmpAbsolutePath tempAbsPath) =  do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
 
-  
+
   let genesisShelleyDir = takeDirectory inputGenesisShelleyFp
-  
+
   liftIOAnnotated $ System.createDirectoryIfMissing True genesisShelleyDir
 
   let -- At least there should be a delegator per DRep
@@ -185,7 +188,7 @@ createSPOGenesisAndFiles
   let conwayGenesis' = Defaults.defaultConwayGenesis
       dijkstraGenesis' = dijkstraGenesisDefaults
 
-  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)   
+  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)
      <- resolveOnChainParams onChainParams
      (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGenesis')
 
@@ -243,12 +246,20 @@ createSPOGenesisAndFiles
 data BlockfrostParamsError = BlockfrostParamsDecodeError FilePath String
   deriving Show
 
-instance Exception BlockfrostParamsError where 
+instance Exception BlockfrostParamsError where
   displayException (BlockfrostParamsDecodeError fp err) =
     "Failed to decode Blockfrost on-chain parameters from file "
       <> fp
       <> ": "
       <> err
+
+newtype MainnetParamsFetchError = MainnetParamsFetchError SomeException
+  deriving Show
+
+instance Exception MainnetParamsFetchError where
+  displayException (MainnetParamsFetchError exc) =
+    "Failed to fetch mainnet on-chain parameters from GitHub after retries: "
+      <> displayException exc
 
 -- | Resolves different kinds of user-provided on-chain parameters
 -- into a unified, consistent set of Genesis files
@@ -261,15 +272,35 @@ resolveOnChainParams :: ()
  -> m (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
 resolveOnChainParams onChainParams geneses = case onChainParams of
 
-  DefaultParams -> do 
+  DefaultParams -> do
     pure geneses
 
   OnChainParamsFile file -> do
     eParams <- eitherDecode <$> liftIOAnnotated (LBS.readFile file)
-    case eParams of 
+    case eParams of
       Right params -> pure $ blockfrostToGenesis geneses params
       Left err -> throwM $ BlockfrostParamsDecodeError file err
 
   OnChainParamsMainnet -> do
-    mainnetParams <- liftIOAnnotated $ HTTP.getResponseBody <$> HTTP.httpJSON mainnetParamsRequest
-    pure $ blockfrostToGenesis geneses mainnetParams
+    blockfrostToGenesis geneses <$> fetchMainnetParams
+  where
+    maxRetries = 3 :: Int
+    retryDelaySec = 2_000_000 -- 2 seconds in microseconds
+    fetchMainnetParams :: (MonadIO m, MonadThrow m) => m BlockfrostParams
+    fetchMainnetParams = go maxRetries
+      where
+        go n = do
+          result <- liftIO $ try @HTTP.HttpException $
+            HTTP.getResponseBody <$> HTTP.httpJSON mainnetParamsRequest
+          case result of
+            Right params -> pure params
+            Left exc
+              | n > 0 -> do
+                  liftIO $ hPutStrLn stderr $
+                    displayException exc
+                    <> "\n\nFailed to fetch mainnet parameters (retrying, "
+                    <> show n <> " attempts left)"
+                  liftIO $ threadDelay retryDelaySec
+                  go (n - 1)
+              | otherwise ->
+                  throwM $ MainnetParamsFetchError (toException exc)
