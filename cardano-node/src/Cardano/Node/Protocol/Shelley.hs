@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -42,6 +43,7 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..), PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 
 import           Control.Exception (IOException)
 import           Control.Monad
@@ -50,6 +52,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import           System.Directory (getFileSize)
 import qualified System.IO.MMap as MMap
+
 
 ------------------------------------------------------------------------------
 -- Shelley protocol

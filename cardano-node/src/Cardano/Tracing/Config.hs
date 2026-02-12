@@ -197,6 +197,8 @@ type TraceKesAgent = ("TraceKesAgent" :: Symbol)
 type TraceDevotedBlockFetch = ("TraceDevotedBlockFetch" :: Symbol)
 type TraceChurnMode = ("TraceChurnMode" :: Symbol)
 type TraceDNS = ("TraceDNS" :: Symbol)
+type TraceTxLogic = ("TraceTxLogic" :: Symbol)
+type TraceTxCounters = ("TraceTxCounters" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -280,6 +282,8 @@ data TraceSelection
   , traceDevotedBlockFetch :: OnOff TraceDevotedBlockFetch
   , traceChurnMode :: OnOff TraceChurnMode
   , traceDNS :: OnOff TraceDNS
+  , traceTxLogic :: OnOff TraceTxLogic
+  , traceTxCounters :: OnOff TraceTxCounters
   } deriving (Eq, Show)
 
 
@@ -357,6 +361,8 @@ data PartialTraceSelection
       , pTraceChurnMode :: Last (OnOff TraceChurnMode)
       , pTraceDNS :: Last (OnOff TraceDNS)
       , pTraceKesAgent :: Last (OnOff TraceKesAgent)
+      , pTraceTxLogic :: Last (OnOff TraceTxLogic)
+      , pTraceTxCounters :: Last (OnOff TraceTxCounters)
       } deriving (Eq, Generic, Show)
 
 
@@ -435,6 +441,8 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceChurnMode) v
       <*> parseTracer (Proxy @TraceDNS) v
       <*> parseTracer (Proxy @TraceKesAgent) v
+      <*> parseTracer (Proxy @TraceTxLogic) v
+      <*> parseTracer (Proxy @TraceTxCounters) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -510,6 +518,8 @@ defaultPartialTraceConfiguration =
     , pTraceChurnMode = pure $ OnOff True
     , pTraceDNS = pure $ OnOff True
     , pTraceKesAgent = pure $ OnOff False
+    , pTraceTxLogic = pure $ OnOff False
+    , pTraceTxCounters = pure $ OnOff False
     }
 
 
@@ -587,6 +597,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
    traceChurnMode <- proxyLastToEither (Proxy @TraceChurnMode) pTraceChurnMode
    traceDNS <- proxyLastToEither (Proxy @TraceDNS) pTraceDNS
+   traceTxLogic <- proxyLastToEither (Proxy @TraceTxLogic) pTraceTxLogic
+   traceTxCounters <- proxyLastToEither (Proxy @TraceTxCounters) pTraceTxCounters
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -657,6 +669,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceChurnMode
              , traceDNS
              , traceKesAgent = traceKesAgent
+             , traceTxLogic
+             , traceTxCounters
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -731,6 +745,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
   traceChurnMode <- proxyLastToEither (Proxy @TraceChurnMode) pTraceChurnMode
   traceDNS <- proxyLastToEither (Proxy @TraceDNS) pTraceDNS
+  traceTxLogic <- proxyLastToEither (Proxy @TraceTxLogic) pTraceTxLogic
+  traceTxCounters <- proxyLastToEither (Proxy @TraceTxCounters) pTraceTxCounters
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -801,6 +817,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceChurnMode
             , traceDNS
             , traceKesAgent = traceKesAgent
+            , traceTxLogic
+            , traceTxCounters
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)

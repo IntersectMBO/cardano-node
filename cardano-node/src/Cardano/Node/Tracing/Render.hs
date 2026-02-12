@@ -60,6 +60,9 @@ import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.List.NonEmpty as NonEmpty
+import           Data.List.NonEmpty (NonEmpty)
+
 
 condenseT :: Condense a => a -> Text
 condenseT = Text.pack . condense
@@ -184,9 +187,9 @@ renderScriptIntegrityHash Nothing = Aeson.Null
 
 renderMissingRedeemers :: forall era. ()
   => Api.ShelleyBasedEra era
-  -> [(PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash)]
+  -> NonEmpty (PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash)
   -> Aeson.Value
-renderMissingRedeemers sbe scripts = Aeson.object $ map renderTuple  scripts
+renderMissingRedeemers sbe scripts = Aeson.object $ NonEmpty.toList $ NonEmpty.map renderTuple scripts
   where
     renderTuple :: ()
       => (PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash)
