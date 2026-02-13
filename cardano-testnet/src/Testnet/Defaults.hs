@@ -108,13 +108,13 @@ newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
 
-instance Exception AlonzoGenesisError where 
+instance Exception AlonzoGenesisError where
   displayException = Api.docToString . Api.prettyError
 
 
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis = do
-  let genesis = Api.alonzoGenesisDefaults  
+  let genesis = Api.alonzoGenesisDefaults
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
@@ -325,6 +325,9 @@ defaultYamlConfig =
 
     -- Turn logging on or off
     , ("EnableLogging", Aeson.Bool True)
+
+    -- Configuration for the node's P2P network topology
+    , ("EnableP2P", Aeson.Bool True)
 
     -- Genesis filepaths
     , ("ByronGenesisFile", genesisPath ByronEra)

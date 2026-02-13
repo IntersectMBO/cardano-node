@@ -12,13 +12,17 @@ module Parsers.Run
   ) where
 import           Cardano.CLI.Environment
 
-import           Control.Monad (void)
+import           Control.Monad (forM_)
 import           Data.Default.Class (def)
+import qualified Data.Text as Text
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
+import           Testnet.Types (TestnetNode (..))
+
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 
 import           Parsers.Cardano
 import           Parsers.Help
@@ -85,22 +89,38 @@ runCardanoOptions CardanoTestnetCliOptions
         runSimpleApp . runResourceT $ do
           logInfo $ "Creating environment: " <> display (tempAbsPath conf)
           createTestnetEnv testnetOptions genesisOptions def conf
-          logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-          void $ cardanoTestnet testnetOptions conf
-          logInfo "Testnet started"
+          testnetRuntime <- cardanoTestnet testnetOptions conf
+          logTestnetInfo conf testnetRuntime
           waitForShutdown
       UserProvidedEnv nodeEnvPath -> do
         -- Run cardano-testnet in the sandbox provided by the user
         -- In that case, 'cardanoOutputDir' is not used
         conf <- mkConfigAbs nodeEnvPath
         runSimpleApp . runResourceT $ do
-          logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-          void $ cardanoTestnet
+          testnetRuntime <- cardanoTestnet
             testnetOptions
             conf{updateTimestamps=updateTimestamps'}
-          logInfo "Testnet started"
+          logTestnetInfo conf testnetRuntime
           waitForShutdown
   where
+    logTestnetInfo conf testnetRuntime = do
+      let nodes = testnetNodes testnetRuntime
+      logInfo ""
+      logInfo $ "Testnet started in " <> display (tempAbsPath conf)
+                <> " with " <> display (length nodes) <> " nodes."
+      logInfo ""
+      case nodes of
+        (firstNode:_) -> do
+          logInfo "To interact with the testnet using cardano-cli:"
+          logInfo $ "  export CARDANO_NODE_NETWORK_ID=" <> display (testnetMagic testnetRuntime)
+          logInfo $ "  export CARDANO_NODE_SOCKET_PATH=" <> display (Text.pack (H.sprocketSystemName (nodeSprocket firstNode)))
+          logInfo ""
+        [] -> pure ()
+      logInfo "Node sockets:"
+      forM_ nodes $ \node ->
+        logInfo $ "  " <> display (Text.pack (nodeName node)) <> "  " <> display (Text.pack (H.sprocketSystemName (nodeSprocket node)))
+      logInfo ""
+
     waitForShutdown = do
-      logInfo "Waiting for shutdown (Ctrl+C)"
+      logInfo "Press Ctrl+C to stop all nodes."
       forever (threadDelay 100_000)

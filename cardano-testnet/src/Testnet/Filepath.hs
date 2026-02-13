@@ -38,11 +38,12 @@ newtype TmpAbsolutePath = TmpAbsolutePath
 instance Display TmpAbsolutePath where
   textDisplay = fromString . unTmpAbsPath
 
-makeTmpRelPath :: TmpAbsolutePath -> FilePath
-makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp
-
 makeSocketDir :: TmpAbsolutePath -> FilePath
-makeSocketDir fp = makeTmpRelPath fp </> "socket"
+makeSocketDir (TmpAbsolutePath fp) =
+  let relPath = makeRelative (takeDirectory fp) fp
+  in if relPath == "."
+     then "socket"
+     else relPath </> "socket"
 
 makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
 makeTmpBaseAbsPath (TmpAbsolutePath fp) = addTrailingPathSeparator $ takeDirectory fp
