@@ -70,11 +70,13 @@ library
   other-modules:
     Cardano.Benchmarking.PlutusScripts.CustomCall
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop
+    Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1LoopV3
     Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd
     Cardano.Benchmarking.PlutusScripts.Loop2024
     Cardano.Benchmarking.PlutusScripts.LoopV3
     Cardano.Benchmarking.PlutusScripts.Ripemd160
     Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop
+    Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1LoopV3
     Cardano.Benchmarking.PlutusScripts.SupplementalDatum
 
   --------------------------
