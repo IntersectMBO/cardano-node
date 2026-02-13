@@ -6,6 +6,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions (..)
@@ -35,7 +36,7 @@ import           Data.Aeson.Types as Aeson
 import           Data.Foldable (find)
 import           Data.Function (on)
 import           Data.List.NonEmpty (NonEmpty (..))
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (catMaybes, fromMaybe)
 import qualified Data.Time.Clock as Clock (DiffTime, secondsToDiffTime)
 import           GHC.Generics (Generic)
 
@@ -119,6 +120,10 @@ jsonOptions = Aeson.defaultOptions { fieldLabelModifier = drop 5 }
 instance FromJSON NixServiceOptions where
   parseJSON = Aeson.genericParseJSON jsonOptions
 
+
+instance ToJSON NixServiceOptions where
+  toJSON = Aeson.genericToJSON jsonOptions
+
 instance AdjustFilePaths NixServiceOptions where
   adjustFilePaths f opts
     = opts {
@@ -139,6 +144,21 @@ instance FromJSON TxGenPlutusParams where
       <*> o .:? "limitExecutionMem"
       <*> o .:? "limitExecutionSteps"
 
+instance ToJSON TxGenPlutusParams where
+  toJSON PlutusOn{ plutusType
+                 , plutusScript
+                 , plutusDatum
+                 , plutusRedeemer
+                 , plutusExecMemory
+                 , plutusExecSteps} = object $ catMaybes
+    [ Just ("type" .= plutusType)
+    , Just ("script" .= plutusScript)
+    , ("datum" .=) <$> plutusDatum
+    , ("redeemer" .=) <$> plutusRedeemer
+    , ("limitExecutionMem" .=) <$> plutusExecMemory
+    , ("limitExecutionSteps" .=) <$> plutusExecSteps
+    ]
+  toJSON PlutusOff = Aeson.Null
 
 ---- mapping of Nix service options to API types
 

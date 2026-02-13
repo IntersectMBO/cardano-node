@@ -34,7 +34,7 @@ import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Prelude (canonicalEncodePretty)
+import           Cardano.Prelude (canonicalEncodePretty, NonEmpty)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
@@ -43,6 +43,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
+import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..), NodeDescription)
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as LBS
@@ -78,6 +79,7 @@ import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString)
 import           RIO.Orphans (ResourceMap)
 import           UnliftIO.Async
 import           UnliftIO.Exception (stringException)
+import Cardano.CLI.Type.Common (SigningKeyFile)
 
 
 -- | There are certain conditions that need to be met in order to run
@@ -211,7 +213,7 @@ createTestnetEnv
 -- > ├── current-stake-pools.json
 -- > └── module
 cardanoTestnet
-  :: HasCallStack
+  :: (HasCallStack)
   => MonadUnliftIO m
   => MonadResource m
   => MonadCatch m
@@ -355,6 +357,11 @@ cardanoTestnet
   forM_ testnetNodes' $ \nodeStdoutFile -> do
     assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
+  let node1SocketPath = tmpAbsPath </> "socket" </> "node1" </> "sock"
+      utxoSigningKeyFile = File $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
+
+  generateTxGenConfig tmpAbsPath nodeConfigFile node1SocketPath utxoSigningKeyFile node1SocketPath undefined
+
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
         , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
@@ -396,6 +403,30 @@ cardanoTestnet
     makePathsAbsolute = omap (tmpAbsPath </>)
     mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
     mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
+
+    generateTxGenConfig :: MonadUnliftIO m => FilePath -> FilePath -> SigningKeyFile 'In -> String -> NonEmpty NodeDescription -> m ()
+    generateTxGenConfig basePath nodeConfigFilePath utxoSigningKeyFile localNodeSocketPath nodeTopology = do
+      let nixServiceOptions = NixServiceOptions {
+            _nix_debugMode        = False
+          , _nix_tx_count         = 100
+          , _nix_tps              = 10
+          , _nix_inputs_per_tx    = 2
+          , _nix_outputs_per_tx   = 2
+          , _nix_tx_fee           = 212_345
+          , _nix_min_utxo_value   = 1_000_000
+          , _nix_add_tx_size      = 39
+          , _nix_init_cooldown    = 50
+          , _nix_era              = AnyCardanoEra ConwayEra
+          , _nix_plutus           = Nothing
+          , _nix_keepalive        = Just 30
+          , _nix_nodeConfigFile       = Just nodeConfigFilePath
+          , _nix_cardanoTracerSocket  = Nothing
+          , _nix_sigKey               = utxoSigningKeyFile
+          , _nix_localNodeSocketPath  = localNodeSocketPath
+          , _nix_targetNodes          = nodeTopology
+          }
+      liftIOAnnotated . LBS.writeFile (basePath </> "tx-generator-config.json") $ A.encodePretty nixServiceOptions
+      pure ()
 
 -- | A convenience wrapper around `createTestnetEnv` and `cardanoTestnet`
 createAndRunTestnet :: ()

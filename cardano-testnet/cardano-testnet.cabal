@@ -102,6 +102,7 @@ library
                       , time
                       , transformers
                       , transformers-except
+                      , tx-generator
                       , unliftio
                       , yaml
 
