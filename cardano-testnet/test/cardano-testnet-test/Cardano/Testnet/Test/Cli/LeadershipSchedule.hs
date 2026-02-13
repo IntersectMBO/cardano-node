@@ -30,6 +30,7 @@ import           Data.Default.Class
 import qualified Data.IP as IP
 import           Data.List ((\\))
 import qualified Data.List as L
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
@@ -70,8 +71,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       cTestnetOptions = def
         { cardanoNodeEra = asbe
         , cardanoNodes =
+            SpoNodeOptions [] :|
           [ SpoNodeOptions []
-          , SpoNodeOptions []
           , SpoNodeOptions []
           ]
         }

@@ -33,14 +33,18 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
+import           Cardano.CLI.Type.Common (SigningKeyFile)
+import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
+                   NodeHostIPv4Address (..))
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Prelude (canonicalEncodePretty)
+import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty)
+import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..), NodeDescription (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
 
 import           Control.Concurrent (threadDelay)
-import           Control.Monad
+import           Control.Monad (forM, forM_, unless, when)
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
@@ -49,7 +53,10 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class (def)
 import           Data.Either
 import           Data.Functor
+import           Data.IP (fromHostAddress)
 import           Data.List (uncons)
+import qualified Data.List.NonEmpty as NEL
+import qualified Data.Map as Map
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
@@ -79,7 +86,6 @@ import           RIO.Orphans (ResourceMap)
 import           RIO.State (put)
 import           UnliftIO.Async
 import           UnliftIO.Exception (stringException)
-
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
@@ -136,12 +142,12 @@ createTestnetEnv
   liftIOAnnotated . LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
   -- Create network topology, with abstract IDs in lieu of addresses
-  let nodeIds = fst <$> zip [1..] cardanoNodes
+  let nodeIds = fst <$> NEL.zip (1 :| [2..]) cardanoNodes
   forM_ nodeIds $ \i -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
 
-    let producers = NodeId <$> filter (/= i) nodeIds
+    let producers = NodeId <$> NEL.filter (/= i) nodeIds
         topology = Defaults.defaultP2PTopology producers
     liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
@@ -212,7 +218,7 @@ createTestnetEnv
 -- > ├── current-stake-pools.json
 -- > └── module
 cardanoTestnet
-  :: HasCallStack
+  :: (HasCallStack)
   => MonadUnliftIO m
   => MonadResource m
   => MonadCatch m
@@ -263,13 +269,14 @@ cardanoTestnet
   portNumbersWithNodeOptions <- forM cardanoNodes
     (\nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address)
 
-  let portNumbers = zip [1..] $ snd <$> portNumbersWithNodeOptions
+  let portNumbers = NEL.zip (1 :| [2..]) $ snd <$> portNumbersWithNodeOptions
+      portNumbersMap = Map.fromList (NEL.toList portNumbers)
 
       idToRemoteAddressP2P :: ()
         => MonadIO m
         => HasCallStack
         => NodeId -> m RelayAccessPoint
-      idToRemoteAddressP2P (NodeId i) = case lookup i portNumbers of
+      idToRemoteAddressP2P (NodeId i) = case Map.lookup i portNumbersMap of
         Just port -> pure $ RelayAccessAddress
             (showIpv4Address testnetDefaultIpv4Address)
             port
@@ -312,7 +319,7 @@ cardanoTestnet
     let shelleyGenesis' = shelleyGenesis{sgSystemStart = startTime}
     liftIOAnnotated . LBS.writeFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
 
-  eTestnetNodes <- forConcurrently (zip [1..] portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
+  eTestnetNodes <- forConcurrently (NEL.zip (1 :| [2..]) portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
     let nodeName = Defaults.defaultNodeName i
         nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
         nodePoolKeysDir = tmpAbsPath </> Defaults.defaultSpoKeysDir i
@@ -342,7 +349,7 @@ cardanoTestnet
 
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
-  let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
+  let (failedNodes, testnetNodes') = partitionEithers (NEL.toList eTestnetNodes)
   unless (null failedNodes) $ do
     throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
 
@@ -351,6 +358,12 @@ cardanoTestnet
 
   -- Make sure that all nodes are healthy by waiting for a chain extension
   mapConcurrently_ (waitForBlockThrow 45 (File nodeConfigFile)) testnetNodes'
+
+  let node1SocketPath = tmpAbsPath </> "socket" </> "node1" </> "sock"
+      utxoSigningKeyFile = File $ (tmpAbsPath </>) $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
+      nodeDescriptions = NEL.map (\(i, port) -> NodeDescription (NodeAddress (NodeHostIPv4Address (fromHostAddress testnetDefaultIpv4Address)) port) (Defaults.defaultNodeName i) ) portNumbers
+
+  generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
@@ -393,6 +406,30 @@ cardanoTestnet
     makePathsAbsolute = omap (tmpAbsPath </>)
     mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
     mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
+
+    generateTxGenConfig :: MonadUnliftIO m => FilePath -> FilePath -> SigningKeyFile 'In -> String -> NonEmpty NodeDescription -> m ()
+    generateTxGenConfig basePath nodeConfigFilePath utxoSigningKeyFile localNodeSocketPath nodeTopology = do
+      let nixServiceOptions = NixServiceOptions {
+            _nix_debugMode        = False
+          , _nix_tx_count         = 100
+          , _nix_tps              = 10
+          , _nix_inputs_per_tx    = 2
+          , _nix_outputs_per_tx   = 2
+          , _nix_tx_fee           = 212_345
+          , _nix_min_utxo_value   = 1_000_000
+          , _nix_add_tx_size      = 39
+          , _nix_init_cooldown    = 50
+          , _nix_era              = AnyCardanoEra ConwayEra
+          , _nix_plutus           = Nothing
+          , _nix_keepalive        = Just 30
+          , _nix_nodeConfigFile       = Just nodeConfigFilePath
+          , _nix_cardanoTracerSocket  = Nothing
+          , _nix_sigKey               = utxoSigningKeyFile
+          , _nix_localNodeSocketPath  = localNodeSocketPath
+          , _nix_targetNodes          = nodeTopology
+          }
+      liftIOAnnotated . LBS.writeFile (basePath </> "tx-generator-config.json") $ A.encodePretty nixServiceOptions
+      pure ()
 
     -- wait for new blocks or throw an exception if there are none in the timeout period
     waitForBlockThrow :: MonadUnliftIO m
