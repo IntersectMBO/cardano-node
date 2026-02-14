@@ -67,6 +67,8 @@ import           Testnet.Filepath
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NEL
 
 -- | The default value for the --testnet-magic option for `cardano-testnet`
 defaultTestnetMagic :: Int
@@ -168,7 +170,7 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
 -- by tuning the genesis files.
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | Options controlling how many nodes to create and of which type.
-    cardanoNodes :: [NodeOption]
+    cardanoNodes :: NonEmpty NodeOption
   , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
@@ -184,11 +186,11 @@ newtype InputNodeConfigFile = InputNodeConfigFile FilePath
 
 cardanoNumPools :: CardanoTestnetOptions -> NumPools
 cardanoNumPools CardanoTestnetOptions{cardanoNodes} =
-  NumPools $ length $ filter isSpoNodeOptions cardanoNodes
+  NumPools $ length $ NEL.filter isSpoNodeOptions cardanoNodes
 
 cardanoNumRelays :: CardanoTestnetOptions -> NumRelays
 cardanoNumRelays CardanoTestnetOptions{cardanoNodes} =
-  NumRelays $ length $ filter isRelayNodeOptions cardanoNodes
+  NumRelays $ length $ NEL.filter isRelayNodeOptions cardanoNodes
 
 -- | Number of stake pool nodes
 newtype NumPools = NumPools Int
@@ -254,12 +256,11 @@ isRelayNodeOptions :: NodeOption -> Bool
 isRelayNodeOptions SpoNodeOptions{} = False
 isRelayNodeOptions RelayNodeOptions{} = True
 
-cardanoDefaultTestnetNodeOptions :: [NodeOption]
+cardanoDefaultTestnetNodeOptions :: NonEmpty NodeOption
 cardanoDefaultTestnetNodeOptions =
-  [ SpoNodeOptions []
-  , RelayNodeOptions []
-  , RelayNodeOptions []
-  ]
+  SpoNodeOptions [] :| [ RelayNodeOptions []
+                       , RelayNodeOptions []
+                       ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 

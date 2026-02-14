@@ -33,6 +33,7 @@ import qualified Data.List as L
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
@@ -70,8 +71,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       cTestnetOptions = def
         { cardanoNodeEra = asbe
         , cardanoNodes =
+            SpoNodeOptions [] :|
           [ SpoNodeOptions []
-          , SpoNodeOptions []
           , SpoNodeOptions []
           ]
         }

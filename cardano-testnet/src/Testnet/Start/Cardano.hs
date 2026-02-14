@@ -32,18 +32,20 @@ module Testnet.Start.Cardano
 import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
+import           Cardano.CLI.Type.Common (SigningKeyFile)
 
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Prelude (canonicalEncodePretty, NonEmpty)
+import           Cardano.Prelude (canonicalEncodePretty, NonEmpty ((:|)))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
 
 import           Control.Concurrent (threadDelay)
-import           Control.Monad
+import           Control.Monad ( when, forM_, forM, unless )
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
-import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..), NodeDescription)
+import           Cardano.Node.Configuration.NodeAddress (NodeHostIPv4Address(..), NodeAddress'(..))
+import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..), NodeDescription(..))
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as LBS
@@ -51,6 +53,9 @@ import           Data.Default.Class (def)
 import           Data.Either
 import           Data.Functor
 import           Data.List (uncons)
+import qualified Data.List.NonEmpty as NEL
+import           Data.IP (fromHostAddress)
+import qualified Data.Map as Map
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
@@ -79,8 +84,6 @@ import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString)
 import           RIO.Orphans (ResourceMap)
 import           UnliftIO.Async
 import           UnliftIO.Exception (stringException)
-import Cardano.CLI.Type.Common (SigningKeyFile)
-
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
@@ -137,12 +140,12 @@ createTestnetEnv
   liftIOAnnotated . LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
   -- Create network topology, with abstract IDs in lieu of addresses
-  let nodeIds = fst <$> zip [1..] cardanoNodes
+  let nodeIds = fst <$> NEL.zip (1 :| [2..]) cardanoNodes
   forM_ nodeIds $ \i -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
 
-    let producers = NodeId <$> filter (/= i) nodeIds
+    let producers = NodeId <$> NEL.filter (/= i) nodeIds
         topology = Defaults.defaultP2PTopology producers
     liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
@@ -265,13 +268,14 @@ cardanoTestnet
   portNumbersWithNodeOptions <- forM cardanoNodes
     (\nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address)
 
-  let portNumbers = zip [1..] $ snd <$> portNumbersWithNodeOptions
+  let portNumbers = NEL.zip (1 :| [2..]) $ snd <$> portNumbersWithNodeOptions
+      portNumbersMap = Map.fromList (NEL.toList portNumbers)
 
       idToRemoteAddressP2P :: ()
         => MonadIO m
         => HasCallStack
         => NodeId -> m RelayAccessPoint
-      idToRemoteAddressP2P (NodeId i) = case lookup i portNumbers of
+      idToRemoteAddressP2P (NodeId i) = case Map.lookup i portNumbersMap of
         Just port -> pure $ RelayAccessAddress
             (showIpv4Address testnetDefaultIpv4Address)
             port
@@ -314,7 +318,7 @@ cardanoTestnet
     let shelleyGenesis' = shelleyGenesis{sgSystemStart = startTime}
     liftIOAnnotated . LBS.writeFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
 
-  eTestnetNodes <- forConcurrently (zip [1..] portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
+  eTestnetNodes <- forConcurrently (NEL.zip (1 :| [2..]) portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
     let nodeName = Defaults.defaultNodeName i
         nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
         nodePoolKeysDir = tmpAbsPath </> Defaults.defaultSpoKeysDir i
@@ -344,7 +348,7 @@ cardanoTestnet
 
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
-  let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
+  let (failedNodes, testnetNodes') = partitionEithers (NEL.toList eTestnetNodes)
   unless (null failedNodes) $ do
     throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
 
@@ -358,9 +362,10 @@ cardanoTestnet
     assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   let node1SocketPath = tmpAbsPath </> "socket" </> "node1" </> "sock"
-      utxoSigningKeyFile = File $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
+      utxoSigningKeyFile = File $ (tmpAbsPath </>) $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
+      nodeDescriptions = NEL.map (\(i, port) -> NodeDescription (NodeAddress (NodeHostIPv4Address (fromHostAddress testnetDefaultIpv4Address)) port) (Defaults.defaultNodeName i) ) portNumbers
 
-  generateTxGenConfig tmpAbsPath nodeConfigFile node1SocketPath utxoSigningKeyFile node1SocketPath undefined
+  generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile

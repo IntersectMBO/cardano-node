@@ -23,6 +23,9 @@ import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
+import           Data.List.NonEmpty (NonEmpty ((:|)))
+import           Cardano.Prelude (readMaybe)
+import           Options.Applicative.Types (readerAsk)
 
 optsTestnet :: Parser CardanoTestnetCliOptions
 optsTestnet = CardanoTestnetCliOptions
@@ -74,18 +77,24 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.metavar "DIRECTORY"
       )))
 
-pTestnetNodeOptions :: Parser [NodeOption]
+pTestnetNodeOptions :: Parser (NonEmpty NodeOption)
 pTestnetNodeOptions =
   -- If `--num-pool-nodes N` is present, return N nodes with option `SpoNodeOptions []`.
   -- Otherwise, return `cardanoDefaultTestnetNodeOptions`
-  fmap (maybe cardanoDefaultTestnetNodeOptions (`L.replicate` defaultSpoOptions)) <$>
-    optional $ OA.option OA.auto
+  fmap (maybe cardanoDefaultTestnetNodeOptions (\num -> defaultSpoOptions :| L.replicate (num - 1) defaultSpoOptions)) <$>
+    optional $ OA.option ensureAtLeastOne
       (   OA.long "num-pool-nodes"
       <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
       <>  OA.metavar "COUNT"
       )
   where
     defaultSpoOptions = SpoNodeOptions []
+
+    ensureAtLeastOne :: OA.ReadM Int
+    ensureAtLeastOne = readerAsk >>= \arg ->
+      case readMaybe arg of
+        Just n | n >= 1 -> pure n
+        _ -> fail "Need at least one SPO node to produce blocks, but got none."
 
 pNodeEnvironment :: Parser UserProvidedEnv
 pNodeEnvironment = fmap (maybe NoUserProvidedEnv UserProvidedEnv) <$>

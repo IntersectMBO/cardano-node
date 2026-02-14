@@ -84,12 +84,12 @@ instance FromJSON NodeDescription where
     pure $ NodeDescription {..}
 
 instance ToJSON NodeDescription where
-  toJSON NodeDescription {..} = object
+  toJSON NodeDescription {ndAddr, ndName} = object
        [ "name" .= ndName
        , "addr" .= unNodeHostIPv4Address
        , "port" .= fromEnum naPort ] where
-    _addr@NodeAddress {..} = ndAddr
-    _hostAddr@NodeHostIPv4Address {..} = naHostAddress
+    _addr@NodeAddress {naHostAddress, naPort} = ndAddr
+    _hostAddr@NodeHostIPv4Address {unNodeHostIPv4Address} = naHostAddress
 
 
 -- Long GC pauses on target nodes can trigger spurious MVar deadlock

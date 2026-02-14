@@ -75,6 +75,7 @@ library
                       , hedgehog-extras ^>= 0.10
                       , http-conduit
                       , io-classes:{si-timers}
+                      , iproute
                       , lens-aeson
                       , microlens
                       , monad-control
