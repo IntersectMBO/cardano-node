@@ -69,6 +69,7 @@ library
 
   other-modules:
     Cardano.Benchmarking.PlutusScripts.CustomCall
+    Cardano.Benchmarking.PlutusScripts.CustomCallV3
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1LoopV3
     Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd

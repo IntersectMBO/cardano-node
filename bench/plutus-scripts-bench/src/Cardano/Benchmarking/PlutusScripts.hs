@@ -23,6 +23,7 @@ import           System.FilePath (takeBaseName)
 import           Cardano.Api
 
 import qualified Cardano.Benchmarking.PlutusScripts.CustomCall as CustomCall
+import qualified Cardano.Benchmarking.PlutusScripts.CustomCallV3 as CustomCallV3
 import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop as ECDSA
 import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1LoopV3 as ECDSAV3
 import qualified Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd as HashG2Add
@@ -38,6 +39,7 @@ import           Cardano.Benchmarking.ScriptAPI
 getAllScripts :: [PlutusBenchScript]
 getAllScripts =
   [ CustomCall.script
+  , CustomCallV3.script
   , ECDSA.script
   , ECDSAV3.script
   , HashG2Add.script
