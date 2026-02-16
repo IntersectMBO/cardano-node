@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"action":{"$ref":"types/ChurnCounters.schema.json"},"counter":{"type":"integer"},"kind":{"type":"string"}},"type":"object"},"ns":"Net.Churn.ChurnCounters"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "action": {
+                "$ref": "types/ChurnCounters.schema.json"
+            },
+            "counter": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Churn.ChurnCounters"
+}

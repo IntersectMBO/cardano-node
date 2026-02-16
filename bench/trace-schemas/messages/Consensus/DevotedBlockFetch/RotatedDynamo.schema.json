@@ -1,1 +1,14 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"Consensus.DevotedBlockFetch.RotatedDynamo"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "newTime": {},
+            "prevTime": {}
+        },
+        "type": "object"
+    },
+    "ns": "Consensus.DevotedBlockFetch.RotatedDynamo"
+}

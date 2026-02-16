@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"address":{},"kind":{"type":"string"},"relativeStake":{}},"type":"object"},"ns":"Net.Peers.Ledger.PickedLedgerPeer"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "address": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "relativeStake": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Peers.Ledger.PickedLedgerPeer"
+}

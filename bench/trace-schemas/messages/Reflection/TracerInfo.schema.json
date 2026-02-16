@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"allTracers":{},"kind":{"type":"string"},"noMetrics":{},"silentTracers":{}},"type":"object"},"ns":"Reflection.TracerInfo"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "allTracers": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "noMetrics": {
+                "type": "string"
+            },
+            "silentTracers": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Reflection.TracerInfo"
+}

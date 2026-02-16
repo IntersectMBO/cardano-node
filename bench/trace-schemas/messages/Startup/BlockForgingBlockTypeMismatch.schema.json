@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"expected":{"$ref":"types/Api.SomeBlockType.schema.json"},"kind":{"type":"string"},"provided":{"$ref":"types/Api.SomeBlockType.schema.json"}},"type":"object"},"ns":"Startup.BlockForgingBlockTypeMismatch"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "expected": {
+                "$ref": "types/Api.SomeBlockType.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "provided": {
+                "$ref": "types/Api.SomeBlockType.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.BlockForgingBlockTypeMismatch"
+}

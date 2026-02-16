@@ -1,1 +1,16 @@
-{"data":{"additionalProperties":true,"properties":{"current slot":{},"kind":{"type":"string"},"tip":{}},"type":"object"},"ns":"Forge.Loop.BlockFromFuture"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "blockSize": {},
+            "kind": {
+                "type": "string"
+            },
+            "slot": {
+                "type": "integer"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Forge.Loop.BlockFromFuture"
+}

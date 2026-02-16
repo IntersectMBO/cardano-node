@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"snapshot":{"$ref":"types/LedgerDB.TraceReplayStartEvent.schema.json"},"tip":{}},"type":"object"},"ns":"ChainDB.LedgerEvent.Replay.ReplayStart.ReplayFromSnapshot"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.LedgerEvent.Replay.ReplayStart.ReplayFromSnapshot"
+}

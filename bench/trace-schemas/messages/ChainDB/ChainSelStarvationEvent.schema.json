@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"fallingEdge":{},"kind":{"type":"string"},"risingEdge":{}},"type":"object"},"ns":"ChainDB.ChainSelStarvationEvent"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.ChainSelStarvationEvent"
+}

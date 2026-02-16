@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"BlockFetch.Decision.EmptyPeersFetch"}
+{
+    "data": {},
+    "ns": "BlockFetch.Decision.EmptyPeersFetch"
+}

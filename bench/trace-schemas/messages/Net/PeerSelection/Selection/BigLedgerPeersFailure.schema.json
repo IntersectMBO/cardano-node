@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"diffTime":{},"group":{},"kind":{"type":"string"},"reason":{}},"type":"object"},"ns":"Net.PeerSelection.Selection.BigLedgerPeersFailure"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "diffTime": {
+                "type": "string"
+            },
+            "group": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.PeerSelection.Selection.BigLedgerPeersFailure"
+}

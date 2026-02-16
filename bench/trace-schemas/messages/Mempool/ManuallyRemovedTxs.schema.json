@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"mempoolSize":{},"txsInvalidated":{},"txsRemoved":{}},"type":"object"},"ns":"Mempool.ManuallyRemovedTxs"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "txsRemoved": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Mempool.ManuallyRemovedTxs"
+}

@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{"currentBlock":{},"kind":{"type":"string"},"startingBlock":{},"targetBlock":{}},"type":"object"},"ns":"ChainDB.InitChainSelEvent.Validation.UpdateLedgerDb"}
+{
+    "data": {},
+    "ns": "ChainDB.InitChainSelEvent.Validation.UpdateLedgerDb"
+}

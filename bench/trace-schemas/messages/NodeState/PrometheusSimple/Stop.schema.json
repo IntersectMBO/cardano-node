@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"NodeState.PrometheusSimple.Stop"}
+{
+    "data": {},
+    "ns": "NodeState.PrometheusSimple.Stop"
+}

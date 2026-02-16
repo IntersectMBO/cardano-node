@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"block":{},"kind":{"type":"string"}},"type":"object"},"ns":"BlockFetch.Server.SendBlock"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "BlockFetch.Server.SendBlock"
+}

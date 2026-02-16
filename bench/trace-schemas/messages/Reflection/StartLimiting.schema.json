@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"Reflection.StartLimiting"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Reflection.StartLimiting"
+}

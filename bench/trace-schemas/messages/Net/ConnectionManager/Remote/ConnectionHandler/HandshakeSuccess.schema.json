@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"connectionHandler":{},"connectionId":{},"kind":{"type":"string"}},"type":"object"},"ns":"Net.ConnectionManager.Remote.ConnectionHandler.HandshakeSuccess"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "command": {
+                "type": "string"
+            },
+            "context": {
+                "$ref": "types/ConnectionHandlerTrace.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.ConnectionManager.Remote.ConnectionHandler.HandshakeSuccess"
+}

@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"BlockFetch.Client.StartedFetchBatch"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "outstanding": {
+                "type": "integer"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "BlockFetch.Client.StartedFetchBatch"
+}

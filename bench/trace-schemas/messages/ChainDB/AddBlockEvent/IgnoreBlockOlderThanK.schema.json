@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"anchor":{},"curChain":{"$ref":"types/ChainDB.TraceAddBlockEvent.schema.json"},"head":{},"kind":{"type":"string"},"loeFrag":{}},"type":"object"},"ns":"ChainDB.AddBlockEvent.IgnoreBlockOlderThanK"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "curChain": {
+                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "loeFrag": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.AddBlockEvent.IgnoreBlockOlderThanK"
+}

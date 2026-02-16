@@ -1,1 +1,12 @@
-{"data":{},"ns":"ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent.Opened"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "path": {
+                "$ref": "types/V1.BackingStoreTrace.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent.Opened"
+}

@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"message":{},"versions":{}},"type":"object"},"ns":"Startup.WarningDevelopmentNodeToNodeVersions"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "option": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.WarningDevelopmentNodeToNodeVersions"
+}

@@ -1,1 +1,13 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"path":{}},"type":"object"},"ns":"Startup.DiffusionInit.CreatedLocalSocket"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "path": {}
+        },
+        "type": "object"
+    },
+    "ns": "Startup.DiffusionInit.CreatedLocalSocket"
+}

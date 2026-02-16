@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"block":{"$ref":"types/AnchoredFragment.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "curChain": {
+                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "loeFrag": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
+}

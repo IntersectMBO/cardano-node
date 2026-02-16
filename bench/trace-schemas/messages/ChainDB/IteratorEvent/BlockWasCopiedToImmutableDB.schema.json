@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"point":{"$ref":"types/RealPoint.schema.json"}},"type":"object"},"ns":"ChainDB.IteratorEvent.BlockWasCopiedToImmutableDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "point": {
+                "$ref": "types/RealPoint.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.IteratorEvent.BlockWasCopiedToImmutableDB"
+}

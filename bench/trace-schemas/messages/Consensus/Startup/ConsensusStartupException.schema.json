@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"error":{},"kind":{"type":"string"}},"type":"object"},"ns":"Consensus.Startup.ConsensusStartupException"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "error": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Consensus.Startup.ConsensusStartupException"
+}

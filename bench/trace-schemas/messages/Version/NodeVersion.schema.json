@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"Version.NodeVersion"}
+{
+    "data": {},
+    "ns": "Version.NodeVersion"
+}

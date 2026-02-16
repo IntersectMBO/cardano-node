@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"connectionId":{"$ref":"types/PeerSelectionActionsTrace.schema.json"},"kind":{"type":"string"},"reason":{}},"type":"object"},"ns":"Net.PeerSelection.Actions.MonitoringError"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "connectionId": {
+                "$ref": "types/PeerSelectionActionsTrace.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "time": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.PeerSelection.Actions.MonitoringError"
+}

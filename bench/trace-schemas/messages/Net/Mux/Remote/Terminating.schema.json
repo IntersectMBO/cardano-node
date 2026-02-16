@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{},"miniProtocolDir":{},"miniProtocolNum":{},"msg":{}},"type":"object"},"ns":"Net.Mux.Remote.Terminating"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "msg": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Remote.Terminating"
+}

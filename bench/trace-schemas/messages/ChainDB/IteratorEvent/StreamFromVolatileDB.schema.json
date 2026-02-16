@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"from":{"$ref":"types/ChainDB.TraceIteratorEvent.schema.json"},"kind":{"type":"string"},"point":{},"to":{}},"type":"object"},"ns":"ChainDB.IteratorEvent.StreamFromVolatileDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "from": {
+                "$ref": "types/ChainDB.TraceIteratorEvent.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "point": {
+                "type": "string"
+            },
+            "to": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.IteratorEvent.StreamFromVolatileDB"
+}

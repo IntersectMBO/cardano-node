@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"addresses":{},"diffusionMode":{},"kind":{"type":"string"}},"type":"object"},"ns":"Startup.Network"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.Network"
+}

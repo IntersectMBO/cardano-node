@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"block":{"$ref":"types/Point.schema.json"},"chunkNo":{"$ref":"types/ChunkNo.schema.json"},"error":{},"hashPrevBlock":{},"kind":{"type":"string"},"prevHashOfBlock":{}},"type":"object"},"ns":"ChainDB.ImmDbEvent.ChunkValidation.InvalidChunkFile"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "block": {
+                "type": "string"
+            },
+            "chunkNo": {
+                "type": "string"
+            },
+            "error": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.ImmDbEvent.ChunkValidation.InvalidChunkFile"
+}

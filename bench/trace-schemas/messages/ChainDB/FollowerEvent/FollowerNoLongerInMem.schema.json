@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.FollowerEvent.FollowerNoLongerInMem"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.FollowerEvent.FollowerNoLongerInMem"
+}

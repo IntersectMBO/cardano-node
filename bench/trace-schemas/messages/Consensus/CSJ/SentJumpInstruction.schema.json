@@ -1,1 +1,14 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"Consensus.CSJ.SentJumpInstruction"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "newTime": {},
+            "prevTime": {}
+        },
+        "type": "object"
+    },
+    "ns": "Consensus.CSJ.SentJumpInstruction"
+}

@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"addresses":{},"count":{},"desiredCount":{},"kind":{"type":"string"}},"type":"object"},"ns":"Net.Peers.Ledger.PickedBigLedgerPeers"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "desiredCount": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Peers.Ledger.PickedBigLedgerPeers"
+}

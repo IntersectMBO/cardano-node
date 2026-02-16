@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"tx":{}},"type":"object"},"ns":"Mempool.AttemptAdd"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Mempool.AttemptAdd"
+}

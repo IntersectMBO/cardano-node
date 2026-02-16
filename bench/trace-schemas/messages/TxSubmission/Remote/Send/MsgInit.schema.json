@@ -1,1 +1,39 @@
-{"data":{"additionalProperties":true,"properties":{"agency":{"$ref":"types/StateToken.schema.json"},"amount":{},"blockHash":{},"blockSize":{},"bytes":{},"kind":{"type":"string"},"msg":{},"peers":{"items":{},"type":"array"},"txIds":{"items":{},"type":"array"},"txs":{"items":{},"type":"array"}},"type":"object"},"ns":"TxSubmission.Remote.Send.MsgInit"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "agency": {
+                "type": "string"
+            },
+            "amount": {
+                "type": "string"
+            },
+            "blockHash": {
+                "type": "string"
+            },
+            "blockSize": {
+                "type": "string"
+            },
+            "bytes": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "msg": {
+                "type": "string"
+            },
+            "peers": {
+                "type": "string"
+            },
+            "txIds": {
+                "type": "string"
+            },
+            "txs": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "TxSubmission.Remote.Send.MsgInit"
+}

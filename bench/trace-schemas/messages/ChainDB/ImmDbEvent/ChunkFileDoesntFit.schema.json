@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"actualPrevHash":{},"expectedPrevHash":{},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.ImmDbEvent.ChunkFileDoesntFit"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.ImmDbEvent.ChunkFileDoesntFit"
+}

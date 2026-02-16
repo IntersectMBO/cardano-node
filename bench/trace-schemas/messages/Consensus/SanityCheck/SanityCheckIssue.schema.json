@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"error":{"$ref":"types/GHC.Base.NonEmpty.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"Consensus.SanityCheck.SanityCheckIssue"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "error": {
+                "$ref": "types/GHC.Base.NonEmpty.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Consensus.SanityCheck.SanityCheckIssue"
+}

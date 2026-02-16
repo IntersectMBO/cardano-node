@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"ChainDB.LedgerEvent.Forker.FinishRead"}
+{
+    "data": {},
+    "ns": "ChainDB.LedgerEvent.Forker.FinishRead"
+}

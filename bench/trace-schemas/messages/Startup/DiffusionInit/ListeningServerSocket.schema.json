@@ -1,1 +1,13 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"socket":{}},"type":"object"},"ns":"Startup.DiffusionInit.ListeningServerSocket"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "socket": {}
+        },
+        "type": "object"
+    },
+    "ns": "Startup.DiffusionInit.ListeningServerSocket"
+}

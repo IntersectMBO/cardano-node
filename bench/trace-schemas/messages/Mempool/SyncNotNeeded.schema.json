@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"tip":{}},"type":"object"},"ns":"Mempool.SyncNotNeeded"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Mempool.SyncNotNeeded"
+}

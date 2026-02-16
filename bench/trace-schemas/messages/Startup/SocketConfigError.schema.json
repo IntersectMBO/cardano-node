@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"error":{},"kind":{"type":"string"}},"type":"object"},"ns":"Startup.SocketConfigError"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "option": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.SocketConfigError"
+}

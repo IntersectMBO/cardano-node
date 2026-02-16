@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"slot":{"$ref":"types/Point.schema.json"}},"type":"object"},"ns":"ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"
+}

@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"ChainDB.InitChainSelEvent.InitialChainSelected"}
+{
+    "data": {},
+    "ns": "ChainDB.InitChainSelEvent.InitialChainSelected"
+}

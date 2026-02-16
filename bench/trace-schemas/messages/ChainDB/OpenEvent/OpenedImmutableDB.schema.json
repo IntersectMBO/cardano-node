@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"epoch":{"$ref":"types/ImmDB.ChunkNo.schema.json"},"immtip":{"$ref":"types/Point.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.OpenEvent.OpenedImmutableDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.OpenEvent.OpenedImmutableDB"
+}

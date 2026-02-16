@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"legalNamespace":{},"querying":{},"unknownNamespace":{}},"type":"object"},"ns":"Reflection.UnknownNamespace"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "conf": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Reflection.UnknownNamespace"
+}

@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"domainAccessPoints":{},"kind":{"type":"string"}},"type":"object"},"ns":"Net.Peers.Ledger.TraceLedgerPeersDomains"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "domainAccessPoints": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Peers.Ledger.TraceLedgerPeersDomains"
+}

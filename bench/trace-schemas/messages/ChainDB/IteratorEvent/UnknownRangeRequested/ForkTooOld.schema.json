@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"from":{"$ref":"types/ChainDB.StreamFrom.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.IteratorEvent.UnknownRangeRequested.ForkTooOld"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "from": {
+                "$ref": "types/ChainDB.StreamFrom.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.IteratorEvent.UnknownRangeRequested.ForkTooOld"
+}

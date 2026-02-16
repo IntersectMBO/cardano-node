@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"info":{"type":"string"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.ImmDbEvent.Migrating"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "info": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.ImmDbEvent.Migrating"
+}
