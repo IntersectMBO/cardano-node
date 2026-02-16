@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"path":{"$ref":"types/Diff.DiffusionTracer.schema.json"},"socket":{}},"type":"object"},"ns":"Startup.DiffusionInit.LocalSocketUp"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "path": {
+                "$ref": "types/Diff.DiffusionTracer.schema.json"
+            },
+            "socket": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.DiffusionInit.LocalSocketUp"
+}

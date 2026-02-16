@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"queueSize":{},"risingEdge":{}},"type":"object"},"ns":"ChainDB.AddBlockEvent.AddedReprocessLoEBlocksToQueue"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.AddBlockEvent.AddedReprocessLoEBlocksToQueue"
+}

@@ -1,1 +1,16 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"prev":{},"slot":{"type":"integer"}},"type":"object"},"ns":"Forge.Loop.ForgeTickedLedgerState"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "blockSize": {},
+            "kind": {
+                "type": "string"
+            },
+            "slot": {
+                "type": "integer"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Forge.Loop.ForgeTickedLedgerState"
+}

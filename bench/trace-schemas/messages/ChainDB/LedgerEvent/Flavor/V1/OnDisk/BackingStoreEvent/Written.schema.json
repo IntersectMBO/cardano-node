@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{"new":{},"old":{}},"type":"object"},"ns":"ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent.Written"}
+{
+    "data": {},
+    "ns": "ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent.Written"
+}

@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"blockId":{"$ref":"types/HeaderHash.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.VolatileDbEvent.BlockAlreadyHere"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "blockId": {
+                "$ref": "types/HeaderHash.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.VolatileDbEvent.BlockAlreadyHere"
+}

@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"immtip":{"$ref":"types/Point.schema.json"},"kind":{"type":"string"},"tip":{"$ref":"types/Point.schema.json"}},"type":"object"},"ns":"ChainDB.OpenEvent.OpenedDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.OpenEvent.OpenedDB"
+}

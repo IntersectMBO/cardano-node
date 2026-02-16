@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"conf":{}},"type":"object"},"ns":"Reflection.TracerConfigInfo"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "conf": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Reflection.TracerConfigInfo"
+}

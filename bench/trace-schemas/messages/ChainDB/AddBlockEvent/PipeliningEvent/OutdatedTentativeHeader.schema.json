@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"block":{"$ref":"types/Header.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.AddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "block": {
+                "$ref": "types/Header.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.AddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
+}

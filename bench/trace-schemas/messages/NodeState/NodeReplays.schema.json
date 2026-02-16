@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"NodeState.NodeReplays"}
+{
+    "data": {},
+    "ns": "NodeState.NodeReplays"
+}

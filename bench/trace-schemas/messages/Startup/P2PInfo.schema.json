@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"diffusionMode":{},"kind":{"type":"string"}},"type":"object"},"ns":"Startup.P2PInfo"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "option": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.P2PInfo"
+}

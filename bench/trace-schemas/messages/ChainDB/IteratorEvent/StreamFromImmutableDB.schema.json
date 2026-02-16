@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"from":{"$ref":"types/ChainDB.TraceIteratorEvent.schema.json"},"kind":{"type":"string"},"to":{}},"type":"object"},"ns":"ChainDB.IteratorEvent.StreamFromImmutableDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "from": {
+                "$ref": "types/ChainDB.TraceIteratorEvent.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "to": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.IteratorEvent.StreamFromImmutableDB"
+}

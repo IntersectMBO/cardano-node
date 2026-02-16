@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"point":{}},"type":"object"},"ns":"ChainDB.IteratorEvent.UnknownRangeRequested.MissingBlock"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "from": {
+                "$ref": "types/ChainDB.StreamFrom.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.IteratorEvent.UnknownRangeRequested.MissingBlock"
+}

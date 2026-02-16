@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"command":{},"context":{"$ref":"types/ConnectionHandlerTrace.schema.json"},"kind":{"type":"string"},"reason":{}},"type":"object"},"ns":"Net.Server.Remote.Error"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "command": {
+                "type": "string"
+            },
+            "context": {
+                "$ref": "types/ConnectionHandlerTrace.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Server.Remote.Error"
+}

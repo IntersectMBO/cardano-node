@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"socketAddress":{"$ref":"types/Diff.DiffusionTracer.schema.json"}},"type":"object"},"ns":"Startup.DiffusionInit.RunServer"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "socketAddress": {
+                "$ref": "types/Diff.DiffusionTracer.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.DiffusionInit.RunServer"
+}

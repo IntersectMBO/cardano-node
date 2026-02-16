@@ -1,1 +1,12 @@
-{"ns":"ChainDB.GCEvent.ScheduledGC","variants":[{"data":{"additionalProperties":true,"properties":{"difft":{},"kind":{"type":"string"},"slot":{"$ref":"types/ChainDB.TraceGCEvent.schema.json"}},"type":"object"},"detailLevel":"Minimal"},{"data":{"additionalProperties":true,"properties":{"difft":{},"kind":{"type":"string"},"slot":{"$ref":"types/ChainDB.TraceGCEvent.schema.json"}},"type":"object"},"detailLevel":"Normal"},{"data":{"additionalProperties":true,"properties":{"difft":{},"kind":{"type":"string"},"slot":{"$ref":"types/ChainDB.TraceGCEvent.schema.json"}},"type":"object"},"detailLevel":"Detailed"},{"data":{"additionalProperties":true,"properties":{"difft":{},"kind":{"type":"string"},"slot":{"$ref":"types/ChainDB.TraceGCEvent.schema.json"}},"type":"object"},"detailLevel":"Maximum"}]}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.GCEvent.ScheduledGC"
+}

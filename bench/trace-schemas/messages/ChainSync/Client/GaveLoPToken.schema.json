@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"ChainSync.Client.GaveLoPToken"}
+{
+    "data": {},
+    "ns": "ChainSync.Client.GaveLoPToken"
+}

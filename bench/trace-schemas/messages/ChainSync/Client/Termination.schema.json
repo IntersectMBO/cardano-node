@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"ChainSync.Client.Termination"}
+{
+    "data": {},
+    "ns": "ChainSync.Client.Termination"
+}

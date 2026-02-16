@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"chunkNos":{"items":{"$ref":"types/ImmDB.ChunkNo.schema.json"},"type":"array"},"kind":{"type":"string"},"noPastChunks":{"$ref":"types/GHC.Word.Word32.schema.json"}},"type":"object"},"ns":"ChainDB.ImmDbEvent.CacheEvent.PastChunkExpired"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "chunkNos": {
+                "items": {
+                    "$ref": "types/ImmDB.ChunkNo.schema.json"
+                },
+                "type": "array"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "noPastChunks": {
+                "$ref": "types/GHC.Word.Word32.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.ImmDbEvent.CacheEvent.PastChunkExpired"
+}

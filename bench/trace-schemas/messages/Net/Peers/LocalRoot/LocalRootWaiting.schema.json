@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"Net.Peers.LocalRoot.LocalRootWaiting"}
+{
+    "data": {},
+    "ns": "Net.Peers.LocalRoot.LocalRootWaiting"
+}

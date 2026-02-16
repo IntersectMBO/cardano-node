@@ -1,1 +1,21 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{},"miniProtocolDir":{},"miniProtocolNum":{"$ref":"types/Mux.Trace.schema.json"},"msg":{}},"type":"object"},"ns":"Net.Mux.Remote.CleanExit"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "miniProtocolDir": {
+                "type": "string"
+            },
+            "miniProtocolNum": {
+                "$ref": "types/Mux.Trace.schema.json"
+            },
+            "msg": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Remote.CleanExit"
+}

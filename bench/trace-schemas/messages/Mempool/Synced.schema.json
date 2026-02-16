@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"enclosingTime":{},"kind":{"type":"string"}},"type":"object"},"ns":"Mempool.Synced"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "enclosingTime": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Mempool.Synced"
+}

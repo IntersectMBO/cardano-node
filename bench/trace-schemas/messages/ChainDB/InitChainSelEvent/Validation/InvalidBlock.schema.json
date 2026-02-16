@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"block":{"$ref":"types/AnchoredFragment.schema.json"},"error":{"$ref":"types/ChainDB.TraceValidationEvent.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.InitChainSelEvent.Validation.InvalidBlock"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.InitChainSelEvent.Validation.InvalidBlock"
+}

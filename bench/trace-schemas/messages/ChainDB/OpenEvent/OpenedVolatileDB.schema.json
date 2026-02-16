@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"maxSlotNo":{"$ref":"types/MaxSlotNo.schema.json"}},"type":"object"},"ns":"ChainDB.OpenEvent.OpenedVolatileDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "maxSlotNo": {
+                "$ref": "types/MaxSlotNo.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.OpenEvent.OpenedVolatileDB"
+}

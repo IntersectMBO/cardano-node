@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"peerStatusChangeType":{}},"type":"object"},"ns":"Net.PeerSelection.Actions.StatusChanged"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "connectionId": {
+                "$ref": "types/PeerSelectionActionsTrace.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "time": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.PeerSelection.Actions.StatusChanged"
+}

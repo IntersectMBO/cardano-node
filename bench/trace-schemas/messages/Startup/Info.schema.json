@@ -1,1 +1,15 @@
-{"ns":"Startup.Info","variants":[{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"localSocket":{},"nodeAddresses":{}},"type":"object"},"detailLevel":"Minimal"},{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"localSocket":{},"nodeAddresses":{}},"type":"object"},"detailLevel":"Normal"},{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"localSocket":{},"nodeAddresses":{}},"type":"object"},"detailLevel":"Detailed"},{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"localSocket":{},"maxNodeToClientVersion":{},"maxNodeToNodeVersion":{},"nodeAddresses":{},"nodeToClientVersions":{},"nodeToNodeVersions":{}},"type":"object"},"detailLevel":"Maximum"}]}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "option": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.Info"
+}

@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"agency":{"$ref":"types/StateToken.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"TxSubmission.MonitorClient.Send.ReplyGetSizes"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "agency": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "TxSubmission.MonitorClient.Send.ReplyGetSizes"
+}

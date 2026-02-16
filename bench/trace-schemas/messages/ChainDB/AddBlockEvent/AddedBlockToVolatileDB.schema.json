@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"block":{"$ref":"types/AnchoredFragment.schema.json"},"blockNo":{},"kind":{"type":"string"},"risingEdge":{}},"type":"object"},"ns":"ChainDB.AddBlockEvent.AddedBlockToVolatileDB"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.AddBlockEvent.AddedBlockToVolatileDB"
+}

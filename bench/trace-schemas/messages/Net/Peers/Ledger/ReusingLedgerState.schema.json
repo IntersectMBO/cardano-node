@@ -1,1 +1,18 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"ledgerStateAge":{},"numberOfPools":{}},"type":"object"},"ns":"Net.Peers.Ledger.ReusingLedgerState"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "ledgerStateAge": {
+                "type": "string"
+            },
+            "numberOfPools": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Peers.Ledger.ReusingLedgerState"
+}

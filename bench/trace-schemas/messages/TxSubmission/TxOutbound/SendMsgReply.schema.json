@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"txs":{}},"type":"object"},"ns":"TxSubmission.TxOutbound.SendMsgReply"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "TxSubmission.TxOutbound.SendMsgReply"
+}

@@ -1,1 +1,12 @@
-{"ns":"Mempool.RejectedTx","variants":[{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"mempoolSize":{},"tx":{}},"type":"object"},"detailLevel":"Minimal"},{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"mempoolSize":{},"tx":{}},"type":"object"},"detailLevel":"Normal"},{"data":{"additionalProperties":true,"properties":{"err":{},"errdetails":{},"kind":{"type":"string"},"mempoolSize":{},"tx":{}},"type":"object"},"detailLevel":"Detailed"},{"data":{"additionalProperties":true,"properties":{"err":{},"errdetails":{},"kind":{"type":"string"},"mempoolSize":{},"tx":{}},"type":"object"},"detailLevel":"Maximum"}]}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Mempool.RejectedTx"
+}

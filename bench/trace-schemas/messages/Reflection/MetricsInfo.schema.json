@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"metrics count":{}},"type":"object"},"ns":"Reflection.MetricsInfo"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "metrics count": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Reflection.MetricsInfo"
+}

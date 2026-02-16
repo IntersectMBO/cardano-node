@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"addresses":{"items":{},"type":"array"},"kind":{"type":"string"}},"type":"object"},"ns":"Net.Server.Remote.Started"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Server.Remote.Started"
+}

@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"files":{},"kind":{"type":"string"}},"type":"object"},"ns":"ChainDB.VolatileDbEvent.InvalidFileNames"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.VolatileDbEvent.InvalidFileNames"
+}

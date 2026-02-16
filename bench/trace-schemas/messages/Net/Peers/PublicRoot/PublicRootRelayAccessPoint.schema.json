@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"relayAddresses":{}},"type":"object"},"ns":"Net.Peers.PublicRoot.PublicRootRelayAccessPoint"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "domainAddresses": {
+                "$ref": "types/TracePublicRootPeers.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Peers.PublicRoot.PublicRootRelayAccessPoint"
+}

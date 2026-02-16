@@ -1,1 +1,16 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"reason":{},"slot":{"type":"integer"}},"type":"object"},"ns":"Forge.Loop.ForgedInvalidBlock"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "blockSize": {},
+            "kind": {
+                "type": "string"
+            },
+            "slot": {
+                "type": "integer"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Forge.Loop.ForgedInvalidBlock"
+}

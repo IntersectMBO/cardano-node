@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"error":{"$ref":"types/Diff.DiffusionTracer.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"Startup.DiffusionInit.DiffusionErrored"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "error": {
+                "$ref": "types/Diff.DiffusionTracer.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Startup.DiffusionInit.DiffusionErrored"
+}

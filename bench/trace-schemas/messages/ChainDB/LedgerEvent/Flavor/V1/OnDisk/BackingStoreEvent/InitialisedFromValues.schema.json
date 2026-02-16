@@ -1,1 +1,12 @@
-{"data":{"additionalProperties":true,"properties":{"slot":{"$ref":"types/WithOrigin.schema.json"}},"type":"object"},"ns":"ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent.InitialisedFromValues"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "slot": {
+                "$ref": "types/WithOrigin.schema.json"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent.InitialisedFromValues"
+}

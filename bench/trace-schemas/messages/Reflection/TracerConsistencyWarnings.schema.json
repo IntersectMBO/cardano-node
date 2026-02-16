@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"errors":{},"kind":{"type":"string"}},"type":"object"},"ns":"Reflection.TracerConsistencyWarnings"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "errors": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Reflection.TracerConsistencyWarnings"
+}

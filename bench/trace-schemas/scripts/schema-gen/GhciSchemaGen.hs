@@ -11,7 +11,7 @@ import qualified Data.Set as Set
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Aeson.Key as K
 import qualified Data.Vector as V
-import Data.Char (isAlphaNum, isLower, isUpper)
+import Data.Char (isAlphaNum, isLower, isUpper, isSpace)
 import Data.List (isPrefixOf, isSuffixOf)
 import Data.Maybe (catMaybes, mapMaybe)
 import System.Directory
@@ -22,7 +22,12 @@ import System.IO
 import Control.Exception (catch, IOException)
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Lazy as BL
+
+--------------------------------------------------------------------------------
+-- Entry point / high-level flow
+--------------------------------------------------------------------------------
 
 rootDirs :: [FilePath]
 rootDirs =
@@ -45,11 +50,14 @@ main = do
   namespaces <- filter (not . null) . map T.unpack . T.lines <$> T.readFile nsFile
   hsFiles <- collectTargets rootDirs
 
+  -- Build constructor -> namespace map from namespaceFor clauses
   let nsMap = foldl' mergeNs Map.empty (map parseNamespaceMap (map readFileSafe hsFiles))
+  -- Parse forMachine clauses and map their field bindings to variables
   let clausesByFile = map (\fp -> (fp, parseForMachineClauses (readFileSafe fp))) hsFiles
 
   let fieldVarMap = foldl' (Map.unionWith (Map.unionWith Map.union)) Map.empty (map (parseFieldVarMap . snd) clausesByFile)
 
+  -- Ask GHCi for variable types used in forMachine patterns
   varTypesMaps <- mapM (\(fp, clauses) -> ghciTypesForFile fp clauses) clausesByFile
   let varTypes = foldl' (Map.unionWith Map.union) Map.empty varTypesMaps
 
@@ -65,6 +73,7 @@ main = do
 foldl' :: (b -> a -> b) -> b -> [a] -> b
 foldl' f z xs = go z xs where go acc [] = acc; go acc (y:ys) = let acc' = f acc y in acc' `seq` go acc' ys
 
+-- Read file for quick text parsing; tolerate missing files.
 readFileSafe :: FilePath -> String
 readFileSafe fp = unsafePerformIO (readFile fp `catch` (\(_e :: IOException) -> pure ""))
 
@@ -96,6 +105,7 @@ mergeNs :: Map.Map ConstructorName [NamespaceParts]
         -> Map.Map ConstructorName [NamespaceParts]
 mergeNs = Map.unionWith (++)
 
+-- Parse namespaceFor clauses and collect constructor -> namespace mappings.
 parseNamespaceMap :: String -> Map.Map ConstructorName [NamespaceParts]
 parseNamespaceMap src = snd (foldl' step (Nothing, Map.empty) (lines src))
   where
@@ -148,10 +158,11 @@ data Clause = Clause
   , clauseBody :: [String]
   }
 
+-- Extract forMachine function clauses with their patterns and bodies.
 parseForMachineClauses :: String -> [Clause]
 parseForMachineClauses src = go (lines src)
   where
-    isHeader line = "forMachine" `isInfix` line && "(" `isInfix` line && ")" `isInfix` line && "=" `isInfix` line
+    isHeader line = "forMachine" `isInfix` line && "=" `isInfix` line
     go [] = []
     go (l:ls)
       | isHeader l =
@@ -166,7 +177,14 @@ parseHeader line =
       lvl = case dropWhile (/= "forMachine") ws of
         (_:l:_) -> l
         _ -> "_"
-      pat = extractBetween '(' ')' line
+      pat0 = extractBetween '(' ')' line
+      pat = if null pat0
+        then case breakSub "forMachine" line of
+          Just (_, rest) ->
+            let rhs = dropWhile isSpace rest
+            in trim (takeWhile (/= '=') rhs)
+          Nothing -> ""
+        else pat0
   in (lvl, pat)
 
 extractBetween :: Char -> Char -> String -> String
@@ -175,6 +193,7 @@ extractBetween a b s =
     [] -> ""
     (_:rest) -> takeWhile (/= b) rest
 
+-- Variables that appear in a forMachine pattern.
 extractVars :: String -> [String]
 extractVars s = filter (not . null) $ filter isVarToken (tokenize s)
   where
@@ -199,6 +218,7 @@ ctorFromPattern pat = case filter isCtorToken (tokenize pat) of
     isCtorToken (c:_) = isUpper c
     isCtorToken _ = False
 
+-- Map JSON field keys to the pattern variable they come from.
 parseFieldVarMap :: [Clause] -> Map.Map ConstructorName (Map.Map DetailLevel (Map.Map String String))
 parseFieldVarMap clauses = foldl' step Map.empty clauses
   where
@@ -225,7 +245,19 @@ parseFieldLine vars line = do
   let hits = filter (`Set.member` rhsTokens) (Set.toList vars)
   case hits of
     [v] -> Just (key, v)
-    _ -> Nothing
+    _ ->
+      if isStringLiteral rhs
+        then Just (key, literalStringVar)
+        else Nothing
+
+-- Special marker for string literals (e.g. "kind" .= String "...").
+literalStringVar :: String
+literalStringVar = "__literal_string__"
+
+-- Heuristic detection for String-literal RHS.
+isStringLiteral :: String -> Bool
+isStringLiteral s =
+  "String \"" `isInfix` s || "String '" `isInfix` s
 
 parseQuotedKey :: String -> Maybe String
 parseQuotedKey s = case dropWhile (/= '"') s of
@@ -252,6 +284,7 @@ breakOn needle hay =
 
 type VarTypes = Map.Map ConstructorName (Map.Map String String)
 
+-- For each file, ask GHCi for the types of variables extracted from forMachine clauses.
 ghciTypesForFile :: FilePath -> [Clause] -> IO VarTypes
 ghciTypesForFile fp clauses = do
   let imports = extractImports (readFileSafe fp)
@@ -363,6 +396,7 @@ splitTopLevelCommas s = go 0 "" [] s
       | c == ',' && depth == 0 = go depth "" (trim cur : acc) cs
       | otherwise = go depth (cur ++ [c]) acc cs
 
+-- Parse "x :: T" bindings (and constraints) emitted by GHCi on errors.
 parseBindings :: String -> Maybe (Map.Map String String)
 parseBindings out =
   let constraints = parseConstraints out
@@ -382,6 +416,7 @@ parseConstraints out = mapMaybe parseConstraintLine (lines out)
               r = headWord rhs
           in if null v || null r then Nothing else Just (v, r)
 
+-- Parse a single binding line "x :: T".
 parseBindingLine :: String -> Maybe (String, String)
 parseBindingLine l =
   case breakSub "::" l of
@@ -425,6 +460,7 @@ isInfix needle hay = T.isInfixOf (T.pack needle) (T.pack hay)
 
 type FieldVarMap = Map.Map ConstructorName (Map.Map DetailLevel (Map.Map String String))
 
+-- Update a single namespace schema on disk.
 updateSchemaForNamespace :: FilePath
                          -> FilePath
                          -> Map.Map ConstructorName [NamespaceParts]
@@ -436,6 +472,8 @@ updateSchemaForNamespace msgOutDir typeOutDir nsMap fieldVarMap varTypes ns = do
   let parts = splitDot ns
   let ctor = findCtor nsMap parts
   let out = msgOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
+  let histOutDir = "bench/trace-schemas/messages-hist"
+  let histOut = histOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
   exists <- doesFileExist out
   schema <- if exists
     then do
@@ -445,8 +483,40 @@ updateSchemaForNamespace msgOutDir typeOutDir nsMap fieldVarMap varTypes ns = do
         Nothing -> pure (baseSchema ns)
     else pure (baseSchema ns)
   schema' <- updateSchema typeOutDir ctor fieldVarMap varTypes schema
+  -- If we couldn't infer any data properties, fall back to messages-hist.
+  schema'' <- mergeHistDataIfEmpty histOut schema'
   createDirectoryIfMissing True (takeDirectory out)
-  BL.writeFile out (A.encode schema')
+  BL.writeFile out (AP.encodePretty schema'')
+
+-- Merge "data" from messages-hist when we couldn't infer any properties.
+mergeHistDataIfEmpty :: FilePath -> A.Value -> IO A.Value
+mergeHistDataIfEmpty histOut v@(A.Object o) = do
+  hasProps <- pure (hasDataProps o)
+  if hasProps
+    then pure v
+    else do
+      histExists <- doesFileExist histOut
+      if not histExists
+        then pure v
+        else do
+          bs <- BL.readFile histOut
+          case A.decode bs of
+            Just (A.Object ho) ->
+              case KM.lookup (K.fromString "data") ho of
+                Just d -> pure (A.Object (KM.insert (K.fromString "data") d o))
+                Nothing -> pure v
+            _ -> pure v
+mergeHistDataIfEmpty _ v = pure v
+
+-- True if data.properties exists and is non-empty.
+hasDataProps :: A.Object -> Bool
+hasDataProps o =
+  case KM.lookup (K.fromString "data") o of
+    Just (A.Object d) ->
+      case KM.lookup (K.fromString "properties") d of
+        Just (A.Object props) -> not (null (KM.toList props))
+        _ -> False
+    _ -> False
 
 baseSchema :: String -> A.Value
 baseSchema ns = A.object ["ns" A..= ns, "data" A..= A.object []]
@@ -482,6 +552,7 @@ updateVariant typeOutDir ctor fieldVarMap varTypes (A.Object o) =
     _ -> pure (A.Object o)
 updateVariant _ _ _ _ v = pure v
 
+-- Update or synthesize the "data" schema from forMachine mapping + type info.
 updateData :: FilePath
            -> ConstructorName
            -> FieldVarMap
@@ -497,8 +568,44 @@ updateData typeOutDir ctor fieldVarMap varTypes lvl o =
           updatedProps <- KM.traverseWithKey (updateProp typeOutDir ctor fieldVarMap varTypes lvl) props
           let d' = KM.insert (K.fromString "properties") (A.Object updatedProps) d
           pure (KM.insert (K.fromString "data") (A.Object d') o)
-        _ -> pure o
-    _ -> pure o
+        _ -> do
+          d' <- buildDataFromFieldMap typeOutDir ctor fieldVarMap varTypes lvl d
+          pure (KM.insert (K.fromString "data") (A.Object d') o)
+    _ -> do
+      d <- buildDataFromFieldMap typeOutDir ctor fieldVarMap varTypes lvl KM.empty
+      pure (KM.insert (K.fromString "data") (A.Object d) o)
+
+-- Build a data.schema from the key->var mapping (if available).
+buildDataFromFieldMap :: FilePath
+                      -> ConstructorName
+                      -> FieldVarMap
+                      -> VarTypes
+                      -> DetailLevel
+                      -> A.Object
+                      -> IO A.Object
+buildDataFromFieldMap typeOutDir ctor fieldVarMap varTypes lvl base = do
+  case Map.lookup ctor fieldVarMap >>= Map.lookup lvl of
+    Nothing -> pure base
+    Just m -> do
+      props <- KM.fromList <$> mapM (buildProp typeOutDir ctor varTypes) (Map.toList m)
+      let base' =
+            KM.insert (K.fromString "type") (A.String "object") $
+            KM.insert (K.fromString "additionalProperties") (A.Bool True) base
+      pure (KM.insert (K.fromString "properties") (A.Object props) base')
+
+buildProp :: FilePath
+          -> ConstructorName
+          -> VarTypes
+          -> (String, String)
+          -> IO (A.Key, A.Value)
+buildProp typeOutDir ctor varTypes (k, v)
+  | v == literalStringVar = pure (K.fromString k, A.object ["type" A..= ("string" :: String)])
+  | otherwise =
+      case Map.lookup ctor varTypes >>= Map.lookup v of
+        Nothing -> pure (K.fromString k, A.object ["type" A..= ("string" :: String)])
+        Just ty -> do
+          schema <- typeToSchema typeOutDir ty
+          pure (K.fromString k, schema)
 
 updateProp :: FilePath
            -> ConstructorName
@@ -516,6 +623,7 @@ updateProp typeOutDir ctor fieldVarMap varTypes lvl key old =
         Nothing -> pure old
         Just ty -> typeToSchema typeOutDir ty
 
+-- Namespace matching uses suffix match, so full path or tail matches work.
 splitDot :: String -> [String]
 splitDot s = case break (== '.') s of
   (a, []) -> [a]
@@ -600,4 +708,4 @@ ensureTypeStub out name = do
             , "type" A..= ("object" :: String)
             , "additionalProperties" A..= True
             ]
-      BL.writeFile out (A.encode v)
+      BL.writeFile out (AP.encodePretty v)

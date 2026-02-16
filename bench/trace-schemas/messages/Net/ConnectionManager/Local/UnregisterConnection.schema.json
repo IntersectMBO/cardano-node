@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"provenance":{},"remoteAddress":{}},"type":"object"},"ns":"Net.ConnectionManager.Local.UnregisterConnection"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "info": {
+                "$ref": "types/ConnectionManager.Trace.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.ConnectionManager.Local.UnregisterConnection"
+}

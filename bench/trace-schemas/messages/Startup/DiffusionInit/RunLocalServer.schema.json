@@ -1,1 +1,13 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"localAddress":{}},"type":"object"},"ns":"Startup.DiffusionInit.RunLocalServer"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "localAddress": {}
+        },
+        "type": "object"
+    },
+    "ns": "Startup.DiffusionInit.RunLocalServer"
+}

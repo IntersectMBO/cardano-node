@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"Net.InboundGovernor.Local.WaitIdleRemote"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "fresh": {
+                "$ref": "types/InboundGovernor.Trace.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.InboundGovernor.Local.WaitIdleRemote"
+}

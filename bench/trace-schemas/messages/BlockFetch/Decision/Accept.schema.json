@@ -1,1 +1,11 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{},"length":{}},"type":"object"},"ns":"BlockFetch.Decision.Accept"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {},
+            "length": {}
+        },
+        "type": "object"
+    },
+    "ns": "BlockFetch.Decision.Accept"
+}

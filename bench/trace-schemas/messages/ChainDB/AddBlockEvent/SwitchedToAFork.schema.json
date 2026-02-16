@@ -1,1 +1,18 @@
-{"ns":"ChainDB.AddBlockEvent.SwitchedToAFork","variants":[{"data":{"additionalProperties":true,"properties":{"events":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{}},"type":"object"},"detailLevel":"Minimal"},{"data":{"additionalProperties":true,"properties":{"events":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{}},"type":"object"},"detailLevel":"Normal"},{"data":{"additionalProperties":true,"properties":{"events":{},"headers":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{},"tipBlockHash":{},"tipBlockIssuerVKeyHash":{},"tipBlockParentHash":{}},"type":"object"},"detailLevel":"Detailed"},{"data":{"additionalProperties":true,"properties":{"events":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{}},"type":"object"},"detailLevel":"Maximum"}]}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "curChain": {
+                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "loeFrag": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.AddBlockEvent.SwitchedToAFork"
+}

@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"address":{"$ref":"types/ConnectionId.schema.json"},"kind":{"type":"string"}},"type":"object"},"ns":"Net.Server.Remote.AcceptConnection"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "address": {
+                "$ref": "types/ConnectionId.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Server.Remote.AcceptConnection"
+}

@@ -1,1 +1,24 @@
-{"data":{"additionalProperties":true,"properties":{"exception":{},"kind":{},"miniProtocolDir":{},"miniProtocolNum":{"$ref":"types/Mux.Trace.schema.json"},"msg":{}},"type":"object"},"ns":"Net.Mux.Local.ExceptionExit"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "exception": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "miniProtocolDir": {
+                "type": "string"
+            },
+            "miniProtocolNum": {
+                "$ref": "types/Mux.Trace.schema.json"
+            },
+            "msg": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Local.ExceptionExit"
+}

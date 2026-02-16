@@ -1,1 +1,4 @@
-{"data":{"additionalProperties":true,"properties":{},"type":"object"},"ns":"ChainDB.ReplayBlock.LedgerReplay"}
+{
+    "data": {},
+    "ns": "ChainDB.ReplayBlock.LedgerReplay"
+}

@@ -1,1 +1,15 @@
-{"ns":"ChainDB.AddBlockEvent.AddedToCurrentChain","variants":[{"data":{"additionalProperties":true,"properties":{"events":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{}},"type":"object"},"detailLevel":"Minimal"},{"data":{"additionalProperties":true,"properties":{"events":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{}},"type":"object"},"detailLevel":"Normal"},{"data":{"additionalProperties":true,"properties":{"events":{},"headers":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{},"tipBlockHash":{},"tipBlockIssuerVKeyHash":{},"tipBlockParentHash":{}},"type":"object"},"detailLevel":"Detailed"},{"data":{"additionalProperties":true,"properties":{"events":{},"kind":{"type":"string"},"newTipSelectView":{},"newtip":{},"oldTipSelectView":{}},"type":"object"},"detailLevel":"Maximum"}]}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "newtip": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "ChainDB.AddBlockEvent.AddedToCurrentChain"
+}

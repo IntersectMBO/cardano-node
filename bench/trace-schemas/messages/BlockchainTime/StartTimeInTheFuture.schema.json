@@ -1,1 +1,15 @@
-{"data":{"additionalProperties":true,"properties":{"kind":{"type":"string"},"systemStart":{},"toWait":{}},"type":"object"},"ns":"BlockchainTime.StartTimeInTheFuture"}
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "systemStart": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "BlockchainTime.StartTimeInTheFuture"
+}
