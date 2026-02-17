@@ -134,6 +134,7 @@ library
                         Testnet.Start.Types
                         Testnet.SubmitApi
                         Testnet.TestQueryCmds
+                        Testnet.TxGenRuntime
                         Testnet.Types
 
   other-modules:        Parsers.Cardano
