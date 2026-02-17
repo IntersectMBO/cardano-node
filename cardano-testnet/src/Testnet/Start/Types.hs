@@ -183,7 +183,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
-  , txGeneratorSupport :: TxGeneratorSupport -- ^ Options regarding support for the tx-generator on the testnet (config generation, execution, etc.)
+  , cardanoEnableTxGenerator :: TxGeneratorSupport -- ^ Options regarding support for the tx-generator on the testnet (config generation, execution, etc.)
   , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   } deriving (Eq, Show)
 
@@ -219,7 +219,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
-    , txGeneratorSupport = NoTxGeneratorSupport
+    , cardanoEnableTxGenerator = NoTxGeneratorSupport
     , cardanoOutputDir = def
     }
 

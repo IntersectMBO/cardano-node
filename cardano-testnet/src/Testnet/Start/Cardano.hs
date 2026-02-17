@@ -363,7 +363,7 @@ cardanoTestnet
       utxoSigningKeyFile = File $ (tmpAbsPath </>) $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
       nodeDescriptions = NEL.map (\(i, port) -> NodeDescription (NodeAddress (NodeHostIPv4Address (fromHostAddress testnetDefaultIpv4Address)) port) (Defaults.defaultNodeName i) ) portNumbers
 
-  case txGeneratorSupport testnetOptions of
+  case cardanoEnableTxGenerator testnetOptions of
     NoTxGeneratorSupport -> pure ()
     GenerateTemplateConfigForTxGenerator ->
       generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
