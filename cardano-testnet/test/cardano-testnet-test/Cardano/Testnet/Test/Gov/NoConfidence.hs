@@ -102,12 +102,12 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   let comKeyCred1 = L.KeyHashObj comKeyHash1
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
-      
+
   liftToIntegration $ createTestnetEnv fastTestnetOptions genesisOptions def conf
 
   H.rewriteJsonFile (tempAbsBasePath' </> "conway-genesis.json") $
     \conwayGenesis -> conwayGenesis { L.cgCommittee = committee }
-  
+
   TestnetRuntime
     { testnetMagic
     , testnetNodes

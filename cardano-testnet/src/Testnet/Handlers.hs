@@ -11,7 +11,7 @@ module Testnet.Handlers
 
 #ifdef UNIX
 import           Control.Monad
-import           System.Posix.Signals (Handler (..), installHandler, sigINT, raiseSignal)
+import           System.Posix.Signals (Handler (..), installHandler, raiseSignal, sigINT)
 import           System.Process (interruptProcessGroupOf)
 #endif
 

@@ -22,8 +22,8 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as Aeson
 import           Data.Default.Class
 import           Data.Function
 import qualified Data.IP as IP

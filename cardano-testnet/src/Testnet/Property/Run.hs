@@ -11,6 +11,8 @@ module Testnet.Property.Run
   , disabled
   ) where
 
+import           Cardano.Api.IO (unFile)
+
 import           Prelude
 
 import qualified Control.Concurrent as IO
@@ -23,15 +25,14 @@ import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
 import           System.Directory
 import qualified System.Exit as IO
-import           System.FilePath ((</>), normalise)
+import           System.FilePath (normalise, (</>))
 import qualified System.Info as SYS
 import qualified System.IO as IO
 import           Text.Printf (printf)
 
-import           Cardano.Api.IO (unFile)
-
+import           Testnet.Process.RunIO
 import           Testnet.Property.Util (integration, integrationWorkspace)
-import           Testnet.Start.Types (UserProvidedEnv (..), Conf, mkConf)
+import           Testnet.Start.Types (Conf, UserProvidedEnv (..), mkConf)
 import           Testnet.Types (TestnetNode (..), TestnetRuntime (..), spoNodes)
 
 import           Hedgehog (Property)
@@ -43,7 +44,6 @@ import           Test.Tasty.ExpectedFailure (wrapTest)
 import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
-import         Testnet.Process.RunIO 
 
 runTestnet :: UserProvidedEnv -> (Conf -> H.Integration TestnetRuntime) -> IO ()
 runTestnet env tn = do

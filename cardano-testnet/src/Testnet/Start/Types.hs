@@ -276,7 +276,7 @@ data Conf = Conf
   , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- |  Same as mkConfig except that it renders the path 
+-- |  Same as mkConfig except that it renders the path
 -- when failing in a property test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
@@ -286,7 +286,7 @@ mkConf tempAbsPath' = withFrozenCallStack $ do
 -- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
 -- and updating time stamps disabled.
 mkConfig :: FilePath -> Conf
-mkConfig tempAbsPath' = 
+mkConfig tempAbsPath' =
   Conf
     { genesisHashesPolicy = WithHashes
     , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
@@ -296,10 +296,10 @@ mkConfig tempAbsPath' =
 -- | Create a 'Conf' from an absolute path, with Genesis Hashes enabled
 -- and updating time stamps disabled.
 mkConfigAbs :: FilePath -> IO Conf
-mkConfigAbs userOutputDir = do 
+mkConfigAbs userOutputDir = do
   absUserOutputDir <-  makeAbsolute userOutputDir
   dirExists <- doesDirectoryExist absUserOutputDir
-  let conf = mkConfig absUserOutputDir 
+  let conf = mkConfig absUserOutputDir
   unless dirExists $
     createDirectory absUserOutputDir
   pure conf

@@ -6,12 +6,13 @@ module Cardano.Testnet.Test.RunTestnet
   ( hprop_run_testnet
   ) where
 
+import           Cardano.Testnet (createAndRunTestnet, mkConf)
+import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
+
 import           Prelude
 
 import           Data.Default.Class (def)
 
-import           Cardano.Testnet (mkConf, createAndRunTestnet)
-import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..))
 

@@ -12,7 +12,6 @@ import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
-import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.DumpConfig
@@ -30,6 +29,7 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.RunTestnet
+import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
 import qualified Cardano.Testnet.Test.UpdateTimeStamps

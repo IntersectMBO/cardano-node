@@ -18,9 +18,8 @@ import           GHC.Float (double2Int)
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
-import           Testnet.Start.Types (UpdateTimestamps (..),
-                   GenesisHashesPolicy (..), GenesisOptions (..),
-                   UserProvidedEnv (..))
+import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..),
+                   UpdateTimestamps (..), UserProvidedEnv (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
