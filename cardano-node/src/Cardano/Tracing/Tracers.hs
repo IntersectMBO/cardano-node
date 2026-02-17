@@ -548,7 +548,7 @@ notifyTxsMempoolTimeoutHard mbEKGDirect = case mbEKGDirect of
   Nothing -> nullTracer
   Just ekgDirect -> Tracer $ \ev -> do
     when (DiffusionTracers.impliesMempoolTimeoutHard ev) $ do
-      sendEKGDirectCounter ekgDirect DiffusionTracers.txsMempoolTimeoutHardCounterName
+      sendEKGDirectCounter ekgDirect $ "cardano.node.metrics." <> DiffusionTracers.txsMempoolTimeoutHardCounterName
 
 muxTracer
   :: Maybe EKGDirect
@@ -1278,7 +1278,7 @@ notifyTxsMempoolTimeoutSoft mbEKGDirect = case mbEKGDirect of
   Nothing -> nullTracer
   Just ekgDirect -> Tracer $ \ev -> do
     when (ConsensusTracers.impliesMempoolTimeoutSoft ev) $ do
-      sendEKGDirectCounter ekgDirect ConsensusTracers.txsMempoolTimeoutSoftCounterName
+      sendEKGDirectCounter ekgDirect $ "cardano.node.metrics." <> ConsensusTracers.txsMempoolTimeoutSoftCounterName
 
 notifyTxsProcessed :: ForgingStats -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
 notifyTxsProcessed fStats tr = Tracer $ \case
