@@ -21,7 +21,6 @@ import           Cardano.Tracer.Utils (sequenceConcurrently_)
 
 import           Control.Monad.Extra (whenJust)
 import           Data.ByteString.UTF8 (fromString)
-import           Network.Wai.Handler.Warp (Port)
 import           System.Time.Extra (sleep)
 
 import qualified Graphics.UI.Threepenny as UI
@@ -36,7 +35,7 @@ import qualified Graphics.UI.Threepenny as UI
 
 runRTView :: TracerEnv -> TracerEnvRTView -> IO ()
 runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
-  whenJust hasRTView \(Endpoint host port) -> do
+  whenJust hasRTView \endpoint -> do
     traceWith teTracer TracerStartedRTView
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
@@ -52,7 +51,7 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
     eraSettings   <- initErasSettings
 
     sequenceConcurrently_
-      [ UI.startGUI (config host port) $
+      [ UI.startGUI (config endpoint) $
           mkMainPage
             tracerEnv
             tracerEnvRTView
@@ -69,8 +68,8 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
   TracerConfig{network, logging, hasRTView} = teConfig tracerEnv
 
   -- RTView's web page is available via 'https://' url only.
-  config :: String -> Port -> UI.Config
-  config host port =
+  config :: Endpoint -> UI.Config
+  config (Endpoint host port _) =
     UI.defaultConfig
       { UI.jsAddr    = Just (fromString host)
       , UI.jsPort    = Just port

@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -20,7 +21,7 @@ import           Data.Aeson (ToJSON (..), encode, pairs, (.=))
 import qualified Data.ByteString as ByteString
 import           Data.Functor ((<&>))
 import qualified Data.Map as Map (Map, empty, fromList)
-import           Data.Maybe
+import           Data.Maybe (fromMaybe)
 import           Data.Text as T (Text, cons)
 import qualified Data.Text.Encoding as T (decodeUtf8)
 import qualified Data.Text.Lazy as TL
@@ -28,7 +29,8 @@ import           Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Encoding as TL
 import           Network.HTTP.Types
 import           Network.Wai
-import           Network.Wai.Handler.Warp (defaultSettings, runSettings)
+import           Network.Wai.Handler.Warp (Settings, defaultSettings, runSettings)
+import           Network.Wai.Handler.WarpTLS (runTLS, tlsSettingsChain, TLSSettings)
 import           System.Metrics as EKG (Store, sampleAll)
 import           System.Time.Extra (sleep)
 
@@ -80,6 +82,19 @@ runPrometheusServer
   -> IO RouteDictionary
   -> IO ()
 runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
+  let TracerEnv
+        { teConfig = TracerConfig
+          { metricsNoSuffix
+          , prometheusLabels
+          , tlsCertificate
+          }
+        , teMetricsHelp
+        , teTracer
+        } = tracerEnv
+
+      noSuffix    = or @Maybe metricsNoSuffix
+      promLabels  = fromMaybe Map.empty prometheusLabels
+
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.1
   -- If everything is okay, the function 'simpleHttpServe' never returns.
@@ -88,17 +103,29 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   traceWith teTracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
-  runSettings (setEndpoint endpoint defaultSettings) do
-    renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
-  where
-    TracerEnv
-      { teTracer
-      , teConfig = TracerConfig { metricsNoSuffix, prometheusLabels }
-      , teMetricsHelp
-      } = tracerEnv
+  let
+    settings :: Settings
+    settings = setEndpoint endpoint defaultSettings
 
-    noSuffix    = or @Maybe metricsNoSuffix
-    promLabels  = fromMaybe Map.empty prometheusLabels
+    tls_settings :: Certificate -> TLSSettings
+    tls_settings Certificate {..} =
+      tlsSettingsChain certificateFile (fromMaybe [] certificateChain) certificateKeyFile
+
+    application :: Application
+    application = renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
+
+    run :: IO ()
+    run | Just True <- epForceSSL endpoint
+        , Just cert <- tlsCertificate
+        = runTLS (tls_settings cert) settings application
+        -- Trace, if we expect SSL without getting certificates.
+        | Just True <- epForceSSL endpoint
+        = do traceWith teTracer TracerMissingCertificate
+               { ttMissingCertificateEndpoint = endpoint }
+             runSettings settings application
+        | otherwise
+        = runSettings settings application
+  run
 
 renderPrometheus
   :: IO RouteDictionary

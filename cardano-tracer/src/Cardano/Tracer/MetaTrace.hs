@@ -80,6 +80,8 @@ data TracerTrace
   | TracerShutdownComplete
   | TracerError
     { ttError                :: Text }
+  | TracerMissingCertificate
+    { ttMissingCertificateEndpoint :: !Endpoint }
   | TracerResource
     { ttResource             :: ResourceStats }
   | TracerForwardingInterrupted
@@ -175,6 +177,10 @@ instance LogFormatting TracerTrace where
     TracerShutdownComplete -> mconcat
       [ "kind" .= AE.String "TracerShutdownComplete"
       ]
+    TracerMissingCertificate{..} -> mconcat
+      [ "kind"     .= AE.String "TracerMissingCertificate"
+      , "endpoint" .= ttMissingCertificateEndpoint
+      ]
     TracerError{..} -> mconcat
       [ "kind"  .= AE.String "TracerError"
       , "error" .= ttError
@@ -207,6 +213,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerShutdownInitiated = Namespace [] ["ShutdownInitiated"]
     namespaceFor TracerShutdownHistBackup = Namespace [] ["ShutdownHistBackup"]
     namespaceFor TracerShutdownComplete = Namespace [] ["ShutdownComplete"]
+    namespaceFor TracerMissingCertificate {} = Namespace [] ["MissingCertificate"]
     namespaceFor TracerError {} = Namespace [] ["Error"]
     namespaceFor TracerResource {} = Namespace [] ["Resources"]
     namespaceFor TracerForwardingInterrupted {} = Namespace [] ["ForwardingInterrupted"]
@@ -228,6 +235,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["SockIncoming"]) _ = Just Info
     severityFor (Namespace _ ["SockConnecting"]) _ = Just Info
     severityFor (Namespace _ ["SockConnected"]) _ = Just Info
+    severityFor (Namespace _ ["MissingCertificate"]) _ = Just Warning
     severityFor (Namespace _ ["ShutdownInitiated"]) _ = Just Warning
     severityFor (Namespace _ ["ShutdownHistBackup"]) _ = Just Info
     severityFor (Namespace _ ["ShutdownComplete"]) _ = Just Warning
@@ -256,6 +264,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["SockIncoming"]
       , Namespace [] ["SockConnecting"]
       , Namespace [] ["SockConnected"]
+      , Namespace [] ["MissingCertificate"]
       , Namespace [] ["ShutdownInitiated"]
       , Namespace [] ["ShutdownHistBackup"]
       , Namespace [] ["ShutdownComplete"]

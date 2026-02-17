@@ -11,6 +11,7 @@
 
 module Cardano.Tracer.Configuration
   ( Address
+  , Certificate (..)
   , Net.HowToConnect (..)
   , Endpoint (..)
   , setEndpoint
@@ -55,10 +56,21 @@ type Address = HowToConnect
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
-  { epHost :: !String
-  , epPort :: !Port
+  { epHost     :: !String
+  , epPort     :: !Port
+  , epForceSSL :: !(Maybe Bool)
+  -- ^ `Nothing' (absent field) and `Just False' (`False' field) both
+  -- disable SSL.
   }
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data Certificate = Certificate
+  { certificateFile    :: !FilePath
+  , certificateKeyFile :: !FilePath
+  , certificateChain   :: !(Maybe [FilePath])
+  }
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 -- | Endpoint {host, port} acting on Settings: setting host and port.
@@ -145,13 +157,14 @@ instance FromJSON FileOrMap where
 
 -- | Tracer configuration.
 data TracerConfig = TracerConfig
-  { networkMagic   :: !Word32                       -- ^ Network magic from genesis the node is launched with.
-  , network        :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
-  , loRequestNum   :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
-  , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
-  , hasEKG         :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
-  , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
-  , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  { networkMagic     :: !Word32                       -- ^ Network magic from genesis the node is launched with.
+  , network          :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
+  , loRequestNum     :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
+  , ekgRequestFreq   :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
+  , hasEKG           :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
+  , hasPrometheus    :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
+  , hasRTView        :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  , tlsCertificate   :: !(Maybe Certificate)
     -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
     -- Third member of the triplet is the forwarder config.
   , hasForwarding  :: !(Maybe ( Network
@@ -173,7 +186,7 @@ data TracerConfig = TracerConfig
 -- | Read the tracer's configuration file.
 readTracerConfig :: FilePath -> IO TracerConfig
 readTracerConfig pathToConfig =
-  decodeFileEither pathToConfig >>= \case
+  decodeFileEither @TracerConfig pathToConfig >>= \case
     Left e -> die $ "Invalid tracer's configuration: " <> show e
     Right (config :: TracerConfig) ->
       case wellFormed config of
@@ -223,7 +236,7 @@ wellFormed TracerConfig
   nullAddress (Net.RemoteSocket host _port) = Text.null host
 
   nullEndpoint :: Endpoint -> Bool
-  nullEndpoint (Endpoint host _port) = null host
+  nullEndpoint (Endpoint host _port _) = null host
 
   invalidFileMode :: LoggingParams -> Bool
   invalidFileMode (LoggingParams root FileMode    _) = null root

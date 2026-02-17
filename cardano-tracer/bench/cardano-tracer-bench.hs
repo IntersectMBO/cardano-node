@@ -147,6 +147,7 @@ main = do
     , hasEKG         = Nothing
     , hasPrometheus  = Nothing
     , hasRTView      = Nothing
+    , tlsCertificate = Nothing
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Nothing

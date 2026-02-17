@@ -133,7 +133,6 @@ library
                         Cardano.Tracer.Handlers.Notifications.Utils
 
                         Cardano.Tracer.Handlers.ReForwarder
-                        Cardano.Tracer.Handlers.SSL.Certs
                         Cardano.Tracer.Handlers.State.TraceObjects
                         Cardano.Tracer.Handlers.System
                         Cardano.Tracer.Handlers.Utils
@@ -194,7 +193,6 @@ library
                       , slugify
                       , smtp-mail ^>= 0.5
                       , stm <2.5.2 || >=2.5.3
-                      , string-qq
                       , text
                       , time
                       , trace-dispatcher ^>= 2.11.0
@@ -202,6 +200,7 @@ library
                       , trace-resources ^>= 0.2.4
                       , wai ^>= 3.2
                       , warp ^>= 3.4
+                      , warp-tls
                       , yaml
 
   if os(windows)
