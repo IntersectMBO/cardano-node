@@ -20,8 +20,7 @@ where
 #endif
 
 import           Cardano.Benchmarking.Compiler (compileOptions)
-import           Cardano.Benchmarking.LogTypes (AsyncBenchmarkControl (..), BenchTracers (..),
-                   EnvConsts (..), TraceBenchTxSubmit (..))
+import qualified Cardano.Benchmarking.LogTypes as LogTypes (EnvConsts (..))
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Env (emptyEnv, newEnvConsts)
@@ -34,26 +33,30 @@ import           Data.Aeson (fromJSON)
 import           Data.ByteString.Lazy as BSL
 import           Data.Foldable (for_)
 import           Data.Maybe (catMaybes)
-import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Options.Applicative as Opt
 import           Ouroboros.Network.NodeToClient (IOManager, withIOManager)
 
 import           System.Exit
 
-#ifdef UNIX
-import           Cardano.Logging as Tracer (traceWith)
-import           Control.Concurrent as Conc (killThread, myThreadId)
+import           Control.Concurrent (myThreadId)
 import           Control.Concurrent as Weak (mkWeakThreadId)
-import           Control.Concurrent.Async as Async (cancelWith)
 import           Control.Concurrent.STM as STM (readTVar)
 import           Control.Monad.STM as STM (atomically)
+
+#ifdef UNIX
+import           Cardano.Benchmarking.LogTypes (AsyncBenchmarkControl (..), BenchTracers (..),
+                   TraceBenchTxSubmit (..))
+import           Cardano.Logging as Tracer (traceWith)
+import           Control.Concurrent.Async as Async (cancelWith)
+import           Control.Concurrent as Conc (killThread)
+import           GHC.Weak as Weak (deRefWeak)
 import           Data.Foldable as Fold (forM_)
 import           Data.List as List (unwords)
+import qualified Data.Text as Text
 import           Data.Time.Format as Time (defaultTimeLocale, formatTime)
 import           Data.Time.Clock.System as Time (getSystemTime, systemToUTCTime)
 import           Foreign.C (Errno(..))
-import           GHC.Weak as Weak (deRefWeak)
 
 import           System.Posix.Signals as Sig (Handler (CatchInfo),
                    SignalInfo (..), SignalSpecificInfo (..), installHandler,
@@ -93,7 +96,7 @@ runCommand' iocp = do
     JsonHL nixSvcOptsFile nodeConfigOverwrite cardanoTracerOverwrite -> do
       opts <- parseJSONFile fromJSON nixSvcOptsFile
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
-      let consts = envConsts { envNixSvcOpts = Just finalOpts }
+      let consts = envConsts { LogTypes.envNixSvcOpts = Just finalOpts }
 
       Prelude.putStrLn $
           "--> initial options:\n" ++ show opts ++
@@ -116,17 +119,17 @@ runCommand' iocp = do
   handleError = \case
     Right _  -> exitSuccess
     Left err -> die $ "tx-generator:Cardano.Command.runCommand handleError: " ++ show err
-  installSignalHandler :: IO EnvConsts
+  installSignalHandler :: IO LogTypes.EnvConsts
   installSignalHandler = do
     -- The main thread does not appear in the set of asyncs.
     wkMainTID <- Weak.mkWeakThreadId =<< myThreadId
-    envConsts@EnvConsts { .. } <- STM.atomically $ newEnvConsts iocp Nothing
+    envConsts@LogTypes.EnvConsts { .. } <- STM.atomically $ newEnvConsts iocp Nothing
     abc <- STM.atomically $ STM.readTVar envThreads
     _ <- pure (abc, wkMainTID)
 #ifdef UNIX
     let signalHandler = Sig.CatchInfo signalHandler'
         signalHandler' sigInfo = do
-          tid <- Conc.myThreadId
+          tid <- myThreadId
           utcTime <- Time.systemToUTCTime <$> Time.getSystemTime
           -- It's meant to match Cardano.Tracers.Handlers.Logs.Utils
           -- The hope was to avoid the package dependency.
