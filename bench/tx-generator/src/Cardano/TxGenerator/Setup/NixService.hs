@@ -36,7 +36,7 @@ import           Data.Aeson.Types as Aeson
 import           Data.Foldable (find)
 import           Data.Function (on)
 import           Data.List.NonEmpty (NonEmpty (..))
-import           Data.Maybe (catMaybes, fromMaybe)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Time.Clock as Clock (DiffTime, secondsToDiffTime)
 import           GHC.Generics (Generic)
 
@@ -150,13 +150,13 @@ instance ToJSON TxGenPlutusParams where
                  , plutusDatum
                  , plutusRedeemer
                  , plutusExecMemory
-                 , plutusExecSteps} = object $ catMaybes
-    [ Just ("type" .= plutusType)
-    , Just ("script" .= plutusScript)
-    , ("datum" .=) <$> plutusDatum
-    , ("redeemer" .=) <$> plutusRedeemer
-    , ("limitExecutionMem" .=) <$> plutusExecMemory
-    , ("limitExecutionSteps" .=) <$> plutusExecSteps
+                 , plutusExecSteps} = object
+    [ "type" .= plutusType
+    , "script" .= plutusScript
+    , "datum" .= plutusDatum
+    , "redeemer" .= plutusRedeemer
+    , "limitExecutionMem" .= plutusExecMemory
+    , "limitExecutionSteps" .= plutusExecSteps
     ]
   toJSON PlutusOff = Aeson.Null
 
