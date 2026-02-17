@@ -5,22 +5,18 @@
 
 module Cardano.Benchmarking.PlutusScripts.Ripemd160 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
-                   Script (..), toScriptInAnyLang)
-
+import           Cardano.Api (PlutusScript (..), PlutusScriptV3,
+                   PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
 import           Cardano.Benchmarking.ScriptAPI
-import qualified PlutusLedgerApi.V3 as PlutusV3
-
-import           Prelude as Haskell (String, (.), (<$>))
-
 import qualified Data.ByteString.Short as SBS
-
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
+import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
+import           Prelude as Haskell (String, (.), (<$>))
 
 
 scriptName :: Haskell.String
@@ -29,6 +25,7 @@ scriptName
 
 script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
+
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinUnit
