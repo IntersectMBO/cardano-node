@@ -1,9 +1,5 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Benchmarking.PlutusScripts.CustomCallTypes

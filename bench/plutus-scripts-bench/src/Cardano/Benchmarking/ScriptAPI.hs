@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module Cardano.Benchmarking.ScriptAPI
   ( PlutusBenchScript
   , psName
