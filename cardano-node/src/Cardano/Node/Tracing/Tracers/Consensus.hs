@@ -85,8 +85,8 @@ import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
-import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer, leiosEbTxs,
-                   traceLeiosKernelToObject, traceLeiosPeerToObject)
+import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (TraceLeiosPeerDbException),
+                   leiosEbTxs, traceLeiosKernelToObject, traceLeiosPeerToObject)
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
@@ -2303,7 +2303,10 @@ instance LogFormatting TraceLeiosKernel where
 
 instance MetaTrace TraceLeiosKernel where
   namespaceFor _ = Namespace [] []
+
+  severityFor _ (Just TraceLeiosDbException{}) = Just Error
   severityFor _ _ = Just Debug
+
   documentFor _ = Nothing
   allNamespaces = [ Namespace [] [] ]
 
@@ -2313,6 +2316,9 @@ instance LogFormatting TraceLeiosPeer where
 
 instance MetaTrace TraceLeiosPeer where
   namespaceFor _ = Namespace [] []
+
+  severityFor _ (Just TraceLeiosPeerDbException{}) = Just Error
   severityFor _ _ = Just Debug
+
   documentFor _ = Nothing
   allNamespaces = [ Namespace [] [] ]
