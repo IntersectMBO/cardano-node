@@ -14,6 +14,7 @@ module Testnet.Start.Types
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
+  , TxGeneratorSupport(..)
   , cardanoNumPools
   , cardanoNumRelays
 
@@ -56,6 +57,8 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
@@ -164,17 +167,23 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   , createEnvCreateEnvOptions :: CreateEnvOptions
   } deriving (Eq, Show)
 
+data TxGeneratorSupport
+  = NoTxGeneratorSupport
+  | GenerateTemplateConfigForTxGenerator
+  deriving (Eq, Show)
+
 -- | Options which, contrary to 'GenesisOptions' are not implemented
 -- by tuning the genesis files.
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | Options controlling how many nodes to create and of which type.
-    cardanoNodes :: [NodeOption]
+    cardanoNodes :: NonEmpty NodeOption
   , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
+  , cardanoEnableTxGenerator :: TxGeneratorSupport -- ^ Options regarding support for the tx-generator on the testnet (config generation, execution, etc.)
   , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   } deriving (Eq, Show)
 
@@ -184,11 +193,11 @@ newtype InputNodeConfigFile = InputNodeConfigFile FilePath
 
 cardanoNumPools :: CardanoTestnetOptions -> NumPools
 cardanoNumPools CardanoTestnetOptions{cardanoNodes} =
-  NumPools $ length $ filter isSpoNodeOptions cardanoNodes
+  NumPools $ length $ NEL.filter isSpoNodeOptions cardanoNodes
 
 cardanoNumRelays :: CardanoTestnetOptions -> NumRelays
 cardanoNumRelays CardanoTestnetOptions{cardanoNodes} =
-  NumRelays $ length $ filter isRelayNodeOptions cardanoNodes
+  NumRelays $ length $ NEL.filter isRelayNodeOptions cardanoNodes
 
 -- | Number of stake pool nodes
 newtype NumPools = NumPools Int
@@ -210,6 +219,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
+    , cardanoEnableTxGenerator = NoTxGeneratorSupport
     , cardanoOutputDir = def
     }
 
@@ -254,12 +264,11 @@ isRelayNodeOptions :: NodeOption -> Bool
 isRelayNodeOptions SpoNodeOptions{} = False
 isRelayNodeOptions RelayNodeOptions{} = True
 
-cardanoDefaultTestnetNodeOptions :: [NodeOption]
+cardanoDefaultTestnetNodeOptions :: NonEmpty NodeOption
 cardanoDefaultTestnetNodeOptions =
-  [ SpoNodeOptions []
-  , RelayNodeOptions []
-  , RelayNodeOptions []
-  ]
+  SpoNodeOptions [] :| [ RelayNodeOptions []
+                       , RelayNodeOptions []
+                       ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 

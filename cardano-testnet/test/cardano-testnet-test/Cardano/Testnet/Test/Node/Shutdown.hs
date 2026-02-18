@@ -24,6 +24,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Default.Class
 import           Data.Either (isRight)
 import qualified Data.List as L
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe
 import qualified Data.Time.Clock as DTC
 import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
@@ -206,8 +207,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
       slotLen = 0.01
   let fastTestnetOptions = def
         { cardanoNodes =
-            [ SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
-            ]
+            SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot] :| []
         }
       shelleyOptions = def
         { genesisEpochLength = 300

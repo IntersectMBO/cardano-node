@@ -3,6 +3,7 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
+  [--generate-tx-generator-config]
   [--output-dir DIRECTORY]
   [--testnet-magic INT]
   [--epoch-length SLOTS]
@@ -29,6 +30,9 @@ Available options:
   --enable-new-epoch-state-logging
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log
+  --generate-tx-generator-config
+                           Generate a template configuration file for
+                           tx-generator.
   --output-dir DIRECTORY   Directory where to store files, sockets, and so on.
                            It is created if it doesn't exist. If unset, a
                            temporary directory is used.

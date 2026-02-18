@@ -6,6 +6,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions (..)
@@ -83,12 +84,12 @@ instance FromJSON NodeDescription where
     pure $ NodeDescription {..}
 
 instance ToJSON NodeDescription where
-  toJSON NodeDescription {..} = object
+  toJSON NodeDescription {ndAddr, ndName} = object
        [ "name" .= ndName
        , "addr" .= unNodeHostIPv4Address
        , "port" .= fromEnum naPort ] where
-    _addr@NodeAddress {..} = ndAddr
-    _hostAddr@NodeHostIPv4Address {..} = naHostAddress
+    _addr@NodeAddress {naHostAddress, naPort} = ndAddr
+    _hostAddr@NodeHostIPv4Address {unNodeHostIPv4Address} = naHostAddress
 
 
 -- Long GC pauses on target nodes can trigger spurious MVar deadlock
@@ -119,6 +120,10 @@ jsonOptions = Aeson.defaultOptions { fieldLabelModifier = drop 5 }
 instance FromJSON NixServiceOptions where
   parseJSON = Aeson.genericParseJSON jsonOptions
 
+
+instance ToJSON NixServiceOptions where
+  toJSON = Aeson.genericToJSON jsonOptions
+
 instance AdjustFilePaths NixServiceOptions where
   adjustFilePaths f opts
     = opts {
@@ -139,6 +144,21 @@ instance FromJSON TxGenPlutusParams where
       <*> o .:? "limitExecutionMem"
       <*> o .:? "limitExecutionSteps"
 
+instance ToJSON TxGenPlutusParams where
+  toJSON PlutusOn{ plutusType
+                 , plutusScript
+                 , plutusDatum
+                 , plutusRedeemer
+                 , plutusExecMemory
+                 , plutusExecSteps} = object
+    [ "type" .= plutusType
+    , "script" .= plutusScript
+    , "datum" .= plutusDatum
+    , "redeemer" .= plutusRedeemer
+    , "limitExecutionMem" .= plutusExecMemory
+    , "limitExecutionSteps" .= plutusExecSteps
+    ]
+  toJSON PlutusOff = Aeson.Null
 
 ---- mapping of Nix service options to API types
 
