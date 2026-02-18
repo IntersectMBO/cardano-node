@@ -62,6 +62,7 @@ let
           cabal
           actionlint
           shellcheck
+          scriv
           stylish-haskell
         ];
 
