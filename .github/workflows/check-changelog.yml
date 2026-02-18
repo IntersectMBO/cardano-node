@@ -1,0 +1,41 @@
+name: Changelog check for cardano-testnet
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - unlabeled
+
+jobs:
+  check-scriv-cardano-testnet:
+    name: Check for scriv fragment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for changes in cardano-testnet
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            cardano:
+              - 'cardano-testnet/**'
+
+      - name: Check for changelog changes
+        if: steps.filter.outputs.cardano == 'true'
+        uses: brettcannon/check-for-changed-files@v1
+        with:
+          file-pattern: "cardano-testnet/changelog.d/*.md"
+          skip-label: "no-changelog-needed"
+          failure-message: "You modified `cardano-testnet` but are missing a changelog fragment! Please run `scriv create` or apply the `no-changelog-needed` label."
+
+      - name: Check scriv fragments are correct
+        if: steps.filter.outputs.cardano == 'true'
+        run: |
+          pip install scriv
+          cd cardano-testnet
+          scriv collect --version "CI-CHECK" --keep
+
