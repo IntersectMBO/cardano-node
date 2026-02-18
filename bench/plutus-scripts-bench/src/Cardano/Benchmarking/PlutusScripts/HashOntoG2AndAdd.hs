@@ -14,10 +14,9 @@ import           Cardano.Api (PlutusScript (..), PlutusScriptV3,
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 import           GHC.ByteOrder (ByteOrder (LittleEndian))
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
+import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V3 as PlutusV3
-import qualified PlutusTx
+import qualified PlutusTx (compile)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))

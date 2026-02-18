@@ -8,10 +8,9 @@ import           Cardano.Api (PlutusScript (..), PlutusScriptV3,
                    PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
+import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V3 as PlutusV3
-import           PlutusTx
+import qualified PlutusTx (compile)
 import           PlutusTx.Builtins (unsafeDataAsI)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)

@@ -11,10 +11,9 @@ import           Cardano.Api (PlutusScript (..), PlutusScriptV1,
                    PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
+import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V1 as PlutusV1
-import           PlutusTx
+import qualified PlutusTx (compile)
 import           PlutusTx.Builtins (unsafeDataAsI)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 import           Prelude hiding (pred, ($), (&&), (<), (==))

@@ -14,10 +14,9 @@ import           Cardano.Api (PlutusScript (..), PlutusScriptV2, PlutusScriptVer
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
+import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V2 as PlutusV2
-import qualified PlutusTx
+import qualified PlutusTx (compile)
 import           PlutusTx.Foldable (sum)
 import           PlutusTx.List (all, length)
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
