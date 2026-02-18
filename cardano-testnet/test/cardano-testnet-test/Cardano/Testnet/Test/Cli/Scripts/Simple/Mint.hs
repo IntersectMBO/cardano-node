@@ -13,6 +13,7 @@ module Cardano.Testnet.Test.Cli.Scripts.Simple.Mint
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
+import           Cardano.Api.UTxO (difference, size)
 
 import           Cardano.Testnet
 
@@ -197,10 +198,14 @@ hprop_simple_script_mint = integrationWorkspace "simple-script-mint" $ \tempAbsB
     , "--signing-key-file", utxoSKeyFile2
     , "--out-file", spendScriptUTxOTx
     ]
-
+  utxoPre <- findAllUtxos epochStateView sbe
   void $ execCli' execConfig
     [ "latest", "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
     ]
+  void $ waitForBlocks epochStateView 1 
+  utxoPost <- findAllUtxos epochStateView sbe
 
-  H.success
+  let diff = difference  utxoPost utxoPre
+
+  size diff H.=== 3

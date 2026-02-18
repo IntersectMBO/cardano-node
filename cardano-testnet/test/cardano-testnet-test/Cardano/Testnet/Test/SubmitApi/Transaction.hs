@@ -98,7 +98,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
     , "--out-file", work </> "utxo-1.json"
     ]
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
+  utxo1Json <- H.readJsonFileOk $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
@@ -156,7 +156,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
         , "--out-file", work </> "utxo-2.json"
         ]
 
-      utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
+      utxo2Json <- H.readJsonFileOk $ work </> "utxo-2.json"
       UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
       txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
 

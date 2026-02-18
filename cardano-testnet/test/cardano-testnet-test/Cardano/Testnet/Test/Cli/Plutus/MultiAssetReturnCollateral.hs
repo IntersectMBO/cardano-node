@@ -22,7 +22,7 @@ import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace, decodeEraUTxO)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -69,9 +69,9 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
     ]
+  utxo1 <- findUtxosWithAddress epochStateView sbe $ paymentKeyInfoAddr wallet0
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  H.noteShowM_ $ decodeEraUTxO sbe utxo1Json
+  H.noteShow_ utxo1 
     -- Create a simple always-succeeds Plutus V3 script
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
   H.writeFile plutusScript $ T.unpack plutusV3Script

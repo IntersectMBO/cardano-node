@@ -9,13 +9,17 @@ module Testnet.Property.Util
   , integrationRetryWorkspace
   , integrationWorkspace
   , isLinux
-
+  
+  , aesonObjectLookUp
   , decodeEraUTxO
   ) where
 
 import           Cardano.Api
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
+import           Data.String
+import qualified Data.Text as Text
 import           GHC.Stack
 import qualified System.Environment as IO
 import           System.Info (os)
@@ -60,3 +64,6 @@ isLinux = os == "linux"
 decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
 decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON
 
+aesonObjectLookUp :: MonadTest m => Aeson.Value -> Text -> m (Maybe Aeson.Value)
+aesonObjectLookUp (Aeson.Object o) k = return $ Aeson.lookup (fromString $ Text.unpack k) o
+aesonObjectLookUp v _ = H.failMessage callStack $ "Expected an Aeson Object but got: " <> show v

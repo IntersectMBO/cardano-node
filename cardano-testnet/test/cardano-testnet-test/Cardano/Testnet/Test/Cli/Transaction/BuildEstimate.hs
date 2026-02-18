@@ -15,9 +15,10 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad
+import qualified Data.Aeson as Aeson
 import           Data.Default.Class
-
 import qualified Data.Text as Text
+import           GHC.Stack
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
@@ -26,7 +27,7 @@ import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (
                    createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (aesonObjectLookUp,integrationWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -90,7 +91,7 @@ hprop_tx_build_estimate = integrationWorkspace "transaction-build-estimate" $ \t
     , "--cardano-mode"
     , "--out-file", work </> "pparams.json"
     ]
-
+  let txBodyEstimateFile = work </> "tx-body-estimate.body"
   void $ execCli' execConfig 
     [ eraName, "transaction", "build-estimate"
     , "--shelley-key-witnesses", "2"
@@ -106,5 +107,19 @@ hprop_tx_build_estimate = integrationWorkspace "transaction-build-estimate" $ \t
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 10_000_000
     , "--protocol-params-file", work </> "pparams.json"
-    , "--out-file", "test_addr_registration_certificate_order[build_estimate-submit_api]_ci2_hcrhrg_tx.body"
+    , "--out-file", txBodyEstimateFile
     ]
+  let debugOutputFile = work </> "debug-output.txt" 
+  void $ execCli' execConfig ["debug", "transaction", "view", "--tx-file", txBodyEstimateFile, "--out-file", debugOutputFile]
+
+  generated :: Aeson.Value <- H.leftFailM . H.readJsonFile $ debugOutputFile
+  mFee <- aesonObjectLookUp generated "fee"
+  case mFee of 
+    Just (Aeson.String feeText) ->  feeText === "380 Lovelace"
+    Just v -> H.failMessage  callStack $ "Expected a String but got: " <> show v
+    Nothing -> H.failMessage callStack $ "Expected a JSON object"
+  
+ 
+
+
+

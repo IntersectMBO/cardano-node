@@ -10,6 +10,7 @@ module Cardano.Testnet.Test.Cli.Scripts.Simple.CostCalculation
 import           Cardano.Api hiding (Value)
 import           Cardano.Api.Experimental (Some (Some))
 import           Cardano.Api.Ledger (EpochInterval (..))
+import           Cardano.Api.UTxO (difference, size)
 import           Cardano.Testnet
 
 import           Prelude
@@ -19,20 +20,17 @@ import           Control.Monad (void)
 
 import           Data.Default.Class (Default (def))
 import qualified Data.Text as Text
-import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Testnet.Components.Query (getEpochStateView, getTxIx,
-                   watchEpochStateUpdate)
+import           Testnet.Components.Query (getEpochStateView, getTxIx, waitForBlocks,
+                   watchEpochStateUpdate, findAllUtxos)
 import qualified Testnet.Defaults  as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
                    retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
-
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
@@ -62,16 +60,13 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
     , wallets = wallet0 : wallet1 : _
     } <-
     createAndRunTestnet options def conf
-
+  
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)
 
   refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-publish"
-  -- No longer using plutus script for reference script
-  _plutusV3Script <-
-    File <$> liftIOAnnotated (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
 
   let utxoVKeyFile2 = verificationKeyFp $ paymentKeyInfoPair wallet1
       
@@ -161,6 +156,9 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
        , "--script-file", simpleScriptFp
        ]
   let mintValue = mconcat ["5 ", simpleMintingPolicyId, ".", assetName]
+      txOut = mconcat [ Text.unpack (paymentKeyInfoAddr wallet1), "+", show (unCoin (transferAmount - enoughAmountForFees))
+                      , "+", mintValue
+                      ]
   void $
     execCli'
       execConfig
@@ -171,7 +169,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
       , "--mint", mintValue
       , "--simple-minting-script-tx-in-reference", prettyShow (TxIn txIdPublishRefScript txIxPublishRefScript)
       , "--policy-id", simpleMintingPolicyId
-      , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show (unCoin (transferAmount - enoughAmountForFees))
+      , "--tx-out", txOut
       , "--out-file", unFile unsignedUnlockTx
       ]
   viewTx <- execCli' execConfig
@@ -188,5 +186,14 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
       "signed-tx"
       unsignedUnlockTx
       [Some $ paymentKeyInfoPair wallet1]
+  
+  utxoPre <- findAllUtxos epochStateView sbe
+
 
   submitTx execConfig cEra signedUnlockTx
+  void $ waitForBlocks epochStateView 1 
+  utxoPost <- findAllUtxos epochStateView sbe
+
+  let diff = difference utxoPost utxoPre
+      
+  size diff H.=== 2

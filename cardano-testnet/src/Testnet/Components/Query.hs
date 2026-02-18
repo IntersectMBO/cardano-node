@@ -48,7 +48,6 @@ import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.UTxO as Utxo
-
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as SQ
