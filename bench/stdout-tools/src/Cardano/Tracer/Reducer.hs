@@ -50,6 +50,8 @@ class Reducer r where
   showAns   :: r -> Accum r -> String
   printAns  :: r -> Accum r -> IO ()
   printAns r acc = putStrLn $ showAns r acc
+  csvAns    :: String -> r -> Accum r ->  IO ()
+  csvAns _ r acc = putStrLn $ showAns r acc
 
 --------------------------------------------------------------------------------
 
@@ -94,7 +96,14 @@ instance Reducer Silences where
   showAns   _ = show
   printAns _ (_,sq) = mapM_
     (\(ndt, t1, _) ->
+      -- Prints "3.832090132s (2025-12-16 14:28:50.884581834 UTC)".
       putStrLn $ show ndt ++ " (" ++ show t1 ++ ")"
+    )
+    (toList sq)
+  csvAns name _ (_,sq) = mapM_
+    (\(ndt, t1, _) -> do
+       -- Prints "node-22;2025-12-16 14:28:50.884581834 UTC;3.832090132".
+       putStrLn $ name ++ ";" ++ (show t1) ++ ";" ++ (show (realToFrac ndt :: Double))
     )
     (toList sq)
 
@@ -149,16 +158,16 @@ instance Reducer (Changes t) where
     putStrLn "# X Y"
     mapM_
       (\(t,h) ->
-        --let showT = show t
-        --    size  = length showT
-        --    extra = if size < 33 -- "2024-04-06 05:55:39.600335766 UTC"
-        --            then replicate (33 - size) ' '
-        --            else ""
-        --in putStrLn $ showT ++ "; " ++ extra ++ show h
         let diffTime = diffUTCTime t t0
+        -- Prints: "62.345448528 7569670144".
         in putStrLn $ show (realToFrac diffTime :: Double) ++ " " ++ show h
       )
       (toList sq')
+  csvAns name _ (_,sq) = do
+    mapM_
+      -- Prints: "node-5;2025-12-16 14:28:50.884581834 UTC;5046796288".
+      (\(t,h) -> putStrLn $ name ++ ";" ++ (show t) ++ ";" ++ (show h))
+      (toList sq)
 
 instance Reducer CpuTicks where
   type instance Elem  CpuTicks = (UTCTime, Trace.Remainder Trace.DataResources)

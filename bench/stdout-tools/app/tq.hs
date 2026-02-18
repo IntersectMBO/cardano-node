@@ -58,6 +58,7 @@ data CliOpts = CliOpts
   -- "--file" arguments with an optional file label if ":" separator is found.
     files      :: [(String, FilePath)]
   , inParallel :: Bool
+  , csv        :: Bool -- Use the experimental CSV output.
   -- "--reducer" arguments.
   , builtins   :: [FilterReduce.FilterReduce]
   }
@@ -129,6 +130,10 @@ optsParser = CliOpts <$>
           (    Opt.long "parallel"
             <> Opt.help "Process files in parallel"
           )
+    <*> Opt.flag False True
+          (    Opt.long "csv"
+            <> Opt.help "Output CSV instead of Gnuplot"
+          )
     <*> some (
           (Opt.option $ Opt.eitherReader cliFunctionReader)
           (    Opt.long "builtin"
@@ -146,8 +151,8 @@ optsParser = CliOpts <$>
 --------------------------------------------------------------------------------
 
 run :: CliOpts -> IO ()
-run (CliOpts _ _ []) = putStrLn "Nothing to do, bye!"
-run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
+run (CliOpts _ _ _ []) = putStrLn "Nothing to do, bye!"
+run cliOpts@(CliOpts _ parallel _ (b@(FilterReduce.MkFilterReduce f r):_)) = do
   -- Will print to stderr the time elapsed.
   t0 <- getCurrentTime  
   -- Print filter used to stderr and as a top line comment.
@@ -163,7 +168,7 @@ run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
     mapM_
       (\(logName,fp) -> do
         ans <- FilterReduce.filterReduce f r fp
-        fileOutput logName r ans
+        fileOutput (csv cliOpts) logName r ans
       )
       (files cliOpts)
   else do
@@ -180,7 +185,7 @@ run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
       (files cliOpts)
     mapM_
       (\(logName,ans) -> do
-        fileOutput logName r ans
+        fileOutput (csv cliOpts) logName r ans
       )
       ansParallel
   t1 <- getCurrentTime
@@ -188,13 +193,15 @@ run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
   -- End
   return ()
 
-fileOutput :: Reducer.Reducer r => String -> r -> Reducer.Accum r -> IO ()
-fileOutput logName r acc = do
-  putStrLn $ "# " ++ logName  
+fileOutput :: Reducer.Reducer r => Bool -> String -> r -> Reducer.Accum r -> IO ()
+fileOutput False logName r acc = do
+  putStrLn $ "# " ++ logName
   Reducer.printAns r acc
   -- Two empty lines so gnuplot undertands it as a different data block.
   putStrLn ""
   putStrLn ""
+fileOutput True logName r acc = do
+  Reducer.csvAns logName r acc
 
 --------------------------------------------------------------------------------
 
