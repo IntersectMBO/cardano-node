@@ -75,3 +75,12 @@ if impl (ghc >= 9.12)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 7661b7a7ab494ba99fcc65b63b333ed280d6ab31
+  --sha256: sha256-Al+706/wWp70oRjxO7VjTJMTG54nwaRJNIYe42nDyyo=
+  subdir:
+    ouroboros-consensus
+
