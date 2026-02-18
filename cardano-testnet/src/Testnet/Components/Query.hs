@@ -47,7 +47,7 @@ import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.UTxO as Utxo
-import Testnet.Runtime
+
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as SQ
@@ -76,8 +76,9 @@ import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro (Lens', to, (^.))
 
-import           Testnet.Property.Assert
 import           Testnet.Process.RunIO (liftIOAnnotated)
+import           Testnet.Property.Assert
+import           Testnet.Runtime
 import           Testnet.Types
 
 import           Hedgehog

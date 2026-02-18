@@ -41,6 +41,7 @@ import           System.IO
 import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
 import           System.Process
+
 import           Testnet.Process.RunIO (liftIOAnnotated)
 
 import           Hedgehog (MonadTest)

@@ -7,8 +7,8 @@ module Cardano.Testnet.Test.P2PTopology
   ) where
 
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Testnet (CardanoTestnetOptions (..), cardanoTestnet,
-                   createTestnetEnv, mkConf)
+import           Cardano.Testnet (CardanoTestnetOptions (..), cardanoTestnet, createTestnetEnv,
+                   mkConf)
 import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
 
 import           Prelude
@@ -17,9 +17,9 @@ import           Data.Default.Class (def)
 import           System.FilePath ((</>))
 
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..), NodeId,
-                   UserProvidedEnv (..), TopologyType (..))
 import           Testnet.Start.Cardano (liftToIntegration)
+import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..), NodeId,
+                   TopologyType (..), UserProvidedEnv (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H

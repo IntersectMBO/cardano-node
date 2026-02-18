@@ -19,7 +19,7 @@ import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..),
-                   UserProvidedEnv (..), TestnetOnChainParams (..))
+                   TestnetOnChainParams (..), UserProvidedEnv (..))
 
 import           Hedgehog ((/==))
 import qualified Hedgehog as H
