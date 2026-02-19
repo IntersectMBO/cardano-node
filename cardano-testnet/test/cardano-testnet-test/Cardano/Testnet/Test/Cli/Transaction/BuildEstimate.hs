@@ -117,7 +117,7 @@ hprop_tx_build_estimate = integrationWorkspace "transaction-build-estimate" $ \t
   case mFee of 
     Just (Aeson.String feeText) ->  feeText === "380 Lovelace"
     Just v -> H.failMessage  callStack $ "Expected a String but got: " <> show v
-    Nothing -> H.failMessage callStack $ "Expected a JSON object"
+    Nothing -> H.failMessage callStack "Expected a JSON object"
   
  
 
