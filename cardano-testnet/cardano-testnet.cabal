@@ -284,7 +284,6 @@ test-suite cardano-testnet-test
                       , mtl
                       , process
                       , resourcet
-                      , rio
                       , regex-compat
                       , rio
                       , tasty ^>= 1.5
