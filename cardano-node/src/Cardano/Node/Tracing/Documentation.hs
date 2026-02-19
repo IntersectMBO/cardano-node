@@ -24,6 +24,9 @@ import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
@@ -45,11 +48,10 @@ import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
 import           Cardano.Node.Tracing.Tracers.P2P ()
+import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import           Cardano.Rpc.Server (TraceRpc)
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
@@ -699,6 +701,9 @@ docTracersFirstPhase condConfigFileName = do
     internalTrDoc <- documentTracer (internalTr ::
       Logging.Trace IO TraceDispatcherMessage)
 
+    rpcTr <- mkCardanoTracer trBase trForward mbTrEKG ["RPC"]
+    configureTracers configReflection trConfig [rpcTr]
+    rpcTrDoc <- documentTracer (rpcTr :: Logging.Trace IO TraceRpc)
 
     let bl =   nodeInfoDpDoc
             <> nodeStartupInfoDpDoc
@@ -767,6 +772,8 @@ docTracersFirstPhase condConfigFileName = do
             <> localServerTrDoc
             <> localInboundGovernorTrDoc
             <> dtAcceptPolicyTrDoc
+-- gRPC
+            <> rpcTrDoc
 -- Internal tracer
             <> internalTrDoc
 
