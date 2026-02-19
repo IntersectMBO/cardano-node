@@ -36,6 +36,7 @@ import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.P2P ()
+import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
@@ -152,6 +153,9 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = d
     !churnModeTr <- mkCardanoTracer trBase trForward mbTrEKG ["Net", "PeerSelection", "ChurnMode"]
     configureTracers configReflection trConfig [churnModeTr]
 
+    !rpcTr <- mkCardanoTracer trBase trForward mbTrEKG ["RPC"]
+    configureTracers configReflection trConfig [rpcTr]
+
     traceTracerInfo trBase trForward configReflection
 
     let warnings = checkNodeTraceConfiguration' trConfig
@@ -183,6 +187,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = d
       , nodeVersionTracer = Tracer (traceWith nodeVersionTr)
       , resourcesTracer = Tracer (traceWith resourcesTr)
       , ledgerMetricsTracer = Tracer (traceWith ledgerMetricsTr)
+      , rpcTracer = Tracer (traceWith rpcTr)
     }
 
 mkConsensusTracers :: forall blk.
