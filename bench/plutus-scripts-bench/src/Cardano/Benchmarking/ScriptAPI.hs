@@ -2,7 +2,6 @@ module Cardano.Benchmarking.ScriptAPI
   ( PlutusBenchScript
   , psName
   , psScript
-  , mkPlutusBenchScript
   , mkPlutusBenchScriptFromCompiled
   ) where
 
@@ -19,9 +18,6 @@ data PlutusBenchScript
     { psName   :: String
     , psScript :: ScriptInAnyLang
     }
-
-mkPlutusBenchScript :: String -> ScriptInAnyLang -> PlutusBenchScript
-mkPlutusBenchScript = PlutusBenchScript
 
 -- This is doing two or three sorts of normalisation at once:
 -- It strips leading / -separated components, drops the ".hs" suffix
@@ -51,7 +47,7 @@ mkPlutusBenchScriptFromCompiled ::
   -> SBS.ShortByteString             -- ^ Compiled PlutusCore script
   -> PlutusBenchScript
 mkPlutusBenchScriptFromCompiled version moduleName compiledScript =
-  mkPlutusBenchScript scriptName scriptInAnyLang
+  PlutusBenchScript scriptName scriptInAnyLang
   where
     scriptName = prepareScriptName moduleName
     scriptSerialized = PlutusScriptSerialised compiledScript
