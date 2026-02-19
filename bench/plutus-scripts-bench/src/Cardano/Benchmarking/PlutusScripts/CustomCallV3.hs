@@ -6,12 +6,11 @@
 
 module Cardano.Benchmarking.PlutusScripts.CustomCallV3 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV3,
-                   PlutusScriptVersion (..),Script (..), toScriptInAnyLang)
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
-import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
+import           Cardano.Benchmarking.ScriptAPI (PlutusBenchScript, mkPlutusBenchScript)
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
+import           PlutusLedgerApi.Common (serialiseCompiledCode)
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx (compile)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
@@ -19,15 +18,14 @@ import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail,
 import           PlutusTx.Foldable (sum)
 import           PlutusTx.List (all, length)
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
-import           Prelude as Haskell (String, (.), (<$>))
+import           Prelude as Haskell ((.), (<$>))
 
 
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
-
-scriptName :: Haskell.String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
+script = mkPlutusBenchScript
+           $(LitE . StringL . loc_module <$> qLocation)
+           PlutusScriptV3
+           (serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||]))
 
 
 instance Plutus.Eq CustomCallData where
@@ -76,8 +74,3 @@ mkValidator arg =
 unwrap :: BuiltinData -> CustomCallArg
 unwrap  = PlutusV3.unsafeFromBuiltinData
 
-customCallScriptShortBs :: SBS.ShortByteString
-customCallScriptShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV3
-scriptSerialized = PlutusScriptSerialised customCallScriptShortBs

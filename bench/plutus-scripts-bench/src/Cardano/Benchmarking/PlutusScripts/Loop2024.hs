@@ -7,24 +7,21 @@
 
 module Cardano.Benchmarking.PlutusScripts.Loop2024 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV1,
-                   PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
-import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV1))
+import           Cardano.Benchmarking.ScriptAPI (PlutusBenchScript, mkPlutusBenchScript)
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
-import qualified PlutusLedgerApi.V1 as PlutusV1
+import           PlutusLedgerApi.Common (serialiseCompiledCode)
 import qualified PlutusTx (compile)
 import           PlutusTx.Builtins (unsafeDataAsI)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 import           Prelude hiding (pred, ($), (&&), (<), (==))
 
 
-scriptName :: String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
-
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
+script = mkPlutusBenchScript
+           $(LitE . StringL . loc_module <$> qLocation)
+           PlutusScriptV1
+           (serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||]))
 
 
 {-# INLINABLE mkValidator #-}
@@ -37,8 +34,3 @@ mkValidator _datum redeemer _txContext
     n = unsafeDataAsI redeemer
     loop i = if i == 1000000 then () else loop $ pred i
 
-loopScriptShortBs :: SBS.ShortByteString
-loopScriptShortBs = PlutusV1.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV1
-scriptSerialized = PlutusScriptSerialised loopScriptShortBs
