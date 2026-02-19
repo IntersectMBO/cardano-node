@@ -58,7 +58,7 @@ import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSimpleSpe
                    mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
@@ -76,7 +76,7 @@ import           RIO (runRIO)
 -- If you want to recreate golden files, run the comment with
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
-hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
