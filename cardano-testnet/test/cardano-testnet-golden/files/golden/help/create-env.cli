@@ -1,10 +1,11 @@
 Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--max-lovelace-supply WORD64]
-  [--nodeLoggingFormat LOGGING_FORMAT]
+  [--node-logging-format LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
   [--generate-tx-generator-config | --run-tx-generator]
   [--output-dir DIRECTORY]
+  [--enable-grpc]
   [--testnet-magic INT]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
@@ -21,9 +22,8 @@ Available options:
                            Max lovelace supply that your testnet starts with.
                            Ignored if a node environment is passed.
                            (default: 100000020000000)
-  --nodeLoggingFormat LOGGING_FORMAT
-                           Node logging format (json|text)
-                           (default: NodeLoggingFormatAsJson)
+  --node-logging-format LOGGING_FORMAT
+                           Node logging format (json|text) (default: json)
   --num-dreps NUMBER       Number of delegate representatives (DReps) to
                            generate. Ignored if a node environment is passed.
                            (default: 3)
@@ -38,6 +38,9 @@ Available options:
   --output-dir DIRECTORY   Directory where to store files, sockets, and so on.
                            It is created if it doesn't exist. If unset, a
                            temporary directory is used.
+  --enable-grpc            [EXPERIMENTAL] Enable gRPC endpoint on all of testnet
+                           nodes. The listening socket file will be the same
+                           directory as node's N2C socket.
   --testnet-magic INT      Specify a testnet magic id. (default: 42)
   --epoch-length SLOTS     Epoch length, in number of slots. Ignored if a node
                            environment is passed. (default: 500)
