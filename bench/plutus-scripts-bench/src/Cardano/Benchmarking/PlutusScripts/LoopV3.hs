@@ -6,9 +6,7 @@ module Cardano.Benchmarking.PlutusScripts.LoopV3 (script) where
 
 import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
-import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx (compile)
 import           PlutusTx.Builtins (unsafeDataAsI)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
@@ -21,7 +19,7 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScriptFromCompiled
            PlutusScriptV3
            $(LitE . StringL . loc_module <$> qLocation)
-           loopScriptShortBs
+           $$(PlutusTx.compile [|| mkValidator ||])
 
 
 {-# INLINABLE mkValidator #-}
@@ -45,5 +43,3 @@ mkValidator arg =
 
     loop i = if i == 1000000 then BI.unitval else loop (pred i)
 
-loopScriptShortBs :: SBS.ShortByteString
-loopScriptShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])

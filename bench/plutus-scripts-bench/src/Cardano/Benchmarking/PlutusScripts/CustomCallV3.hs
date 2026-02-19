@@ -9,7 +9,6 @@ module Cardano.Benchmarking.PlutusScripts.CustomCallV3 (script) where
 import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx (compile)
@@ -25,7 +24,7 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScriptFromCompiled
            PlutusScriptV3
            $(LitE . StringL . loc_module <$> qLocation)
-           customCallScriptShortBs
+           $$(PlutusTx.compile [|| mkValidator ||])
 
 
 instance Plutus.Eq CustomCallData where
@@ -74,5 +73,3 @@ mkValidator arg =
 unwrap :: BuiltinData -> CustomCallArg
 unwrap  = PlutusV3.unsafeFromBuiltinData
 
-customCallScriptShortBs :: SBS.ShortByteString
-customCallScriptShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])

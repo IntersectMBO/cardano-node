@@ -12,7 +12,6 @@ module Cardano.Benchmarking.PlutusScripts.CustomCall (script) where
 import           Cardano.Api (PlutusScriptVersion (PlutusScriptV2))
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx (compile)
@@ -26,7 +25,7 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScriptFromCompiled
            PlutusScriptV2
            $(LitE . StringL . loc_module <$> qLocation)
-           customCallScriptShortBs
+           $$(PlutusTx.compile [|| mkValidator ||])
 
 
 instance Plutus.Eq CustomCallData where
@@ -64,5 +63,3 @@ unwrap :: BuiltinData -> CustomCallArg
 unwrap  = PlutusV2.unsafeFromBuiltinData
 -- Note: type-constraining unsafeFromBuiltinData decreases script's execution units.
 
-customCallScriptShortBs :: SBS.ShortByteString
-customCallScriptShortBs = PlutusV2.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])

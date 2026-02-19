@@ -11,7 +11,6 @@ module Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd (script) where
 
 import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
 import           GHC.ByteOrder (ByteOrder (LittleEndian))
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V3 as PlutusV3
@@ -26,7 +25,7 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScriptFromCompiled
            PlutusScriptV3
            $(LitE . StringL . loc_module <$> qLocation)
-           hashAndAddG2ShortBs
+           $$(PlutusTx.compile [|| mkValidator ||])
 
 
 {-# INLINABLE mkValidator #-}
@@ -59,5 +58,3 @@ mkValidator arg =
       | i == 1000000 = BI.unitval
       | otherwise    = let !_ = hashAndAddG2 l i in loop (pred i) l
 
-hashAndAddG2ShortBs :: SBS.ShortByteString
-hashAndAddG2ShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])

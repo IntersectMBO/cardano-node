@@ -9,7 +9,6 @@ module Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop (script) where
 
 import           Cardano.Api (PlutusScriptVersion (PlutusScriptV2))
 import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx (compile)
@@ -22,7 +21,7 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScriptFromCompiled
            PlutusScriptV2
            $(LitE . StringL . loc_module <$> qLocation)
-           v2SchnorrLoopScriptShortBs
+           $$(PlutusTx.compile [|| mkValidator ||])
 
 
 {-# INLINEABLE mkValidator #-}
@@ -39,7 +38,4 @@ mkValidator _datum red _txContext =
       | i == 1000000 = ()
       | BI.verifySchnorrSecp256k1Signature v m s = loop (pred i) v m s
       | otherwise = P.traceError "Trace error: Schnorr validation failed"
-
-v2SchnorrLoopScriptShortBs :: SBS.ShortByteString
-v2SchnorrLoopScriptShortBs = PlutusV2.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
 
