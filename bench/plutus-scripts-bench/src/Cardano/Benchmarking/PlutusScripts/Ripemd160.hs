@@ -5,8 +5,7 @@
 
 module Cardano.Benchmarking.PlutusScripts.Ripemd160 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV3,
-                   PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
@@ -15,15 +14,14 @@ import qualified PlutusTx (compile)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
-import           Prelude as Haskell (String, (.), (<$>))
+import           Prelude as Haskell ((.), (<$>))
 
-
-scriptName :: Haskell.String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
+script = mkPlutusBenchScriptFromCompiled
+           PlutusScriptV3
+           $(LitE . StringL . loc_module <$> qLocation)
+           ripEmd160ShortBs
 
 
 {-# INLINABLE mkValidator #-}
@@ -53,6 +51,3 @@ mkValidator arg =
 
 ripEmd160ShortBs :: SBS.ShortByteString
 ripEmd160ShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV3
-scriptSerialized = PlutusScriptSerialised ripEmd160ShortBs

@@ -4,8 +4,7 @@
 
 module Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1LoopV3 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV3,
-                   PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
@@ -15,15 +14,14 @@ import qualified PlutusTx.Builtins as Builtins
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
 import           PlutusTx.Prelude as P hiding (Semigroup (..), (.), (<$>))
-import           Prelude as Haskell (String, (.), (<$>))
+import           Prelude as Haskell ((.), (<$>))
 
-
-scriptName :: Haskell.String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
+script = mkPlutusBenchScriptFromCompiled
+           PlutusScriptV3
+           $(LitE . StringL . loc_module <$> qLocation)
+           schnorrLoopScriptShortBs
 
 
 {-# INLINABLE mkValidator #-}
@@ -56,7 +54,4 @@ mkValidator arg =
 
 schnorrLoopScriptShortBs :: SBS.ShortByteString
 schnorrLoopScriptShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV3
-scriptSerialized = PlutusScriptSerialised schnorrLoopScriptShortBs
 

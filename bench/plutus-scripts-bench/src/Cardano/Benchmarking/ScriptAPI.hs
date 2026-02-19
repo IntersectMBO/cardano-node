@@ -3,14 +3,16 @@ module Cardano.Benchmarking.ScriptAPI
   , psName
   , psScript
   , mkPlutusBenchScript
-  , prepareScriptName
+  , mkPlutusBenchScriptFromCompiled
   ) where
 
 import           Prelude as Haskell (String, ($))
 import           Data.Char (isUpper)
 import           Data.Maybe (fromMaybe)
 import           System.FilePath (splitExtension, stripExtension, takeFileName)
-import           Cardano.Api (ScriptInAnyLang)
+import           Cardano.Api (ScriptInAnyLang, IsPlutusScriptLanguage, PlutusScriptVersion,
+                   PlutusScript (..), Script (..), toScriptInAnyLang)
+import qualified Data.ByteString.Short as SBS
 
 data PlutusBenchScript
   = PlutusBenchScript
@@ -38,3 +40,19 @@ prepareScriptName script
     file  = takeFileName script -- ignore leading directories
     -- no trailing .hs so use filename as-is
     file' = fromMaybe file $ stripExtension "hs" file
+
+-- | Create a PlutusBenchScript from a compiled PlutusCore script.
+-- This eliminates boilerplate by handling script name extraction,
+-- serialization wrapping, and version-polymorphic script construction.
+mkPlutusBenchScriptFromCompiled ::
+     IsPlutusScriptLanguage lang
+  => PlutusScriptVersion lang        -- ^ Plutus script version (V1, V2, or V3)
+  -> String                          -- ^ Module name (from Template Haskell)
+  -> SBS.ShortByteString             -- ^ Compiled PlutusCore script
+  -> PlutusBenchScript
+mkPlutusBenchScriptFromCompiled version moduleName compiledScript =
+  mkPlutusBenchScript scriptName scriptInAnyLang
+  where
+    scriptName = prepareScriptName moduleName
+    scriptSerialized = PlutusScriptSerialised compiledScript
+    scriptInAnyLang = toScriptInAnyLang (PlutusScript version scriptSerialized)

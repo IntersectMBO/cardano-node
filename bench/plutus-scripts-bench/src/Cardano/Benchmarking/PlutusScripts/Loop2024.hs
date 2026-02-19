@@ -7,8 +7,7 @@
 
 module Cardano.Benchmarking.PlutusScripts.Loop2024 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV1,
-                   PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV1))
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
@@ -19,12 +18,11 @@ import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 import           Prelude hiding (pred, ($), (&&), (<), (==))
 
 
-scriptName :: String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
-
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
+script = mkPlutusBenchScriptFromCompiled
+           PlutusScriptV1
+           $(LitE . StringL . loc_module <$> qLocation)
+           loopScriptShortBs
 
 
 {-# INLINABLE mkValidator #-}
@@ -39,6 +37,3 @@ mkValidator _datum redeemer _txContext
 
 loopScriptShortBs :: SBS.ShortByteString
 loopScriptShortBs = PlutusV1.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV1
-scriptSerialized = PlutusScriptSerialised loopScriptShortBs
