@@ -22,7 +22,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Api (File (..), FileDirection (..))
+import           Cardano.Api (File (..), FileDirection (..), NetworkMagic, fromNetworkMagic)
 import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
@@ -53,6 +53,8 @@ import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..)
                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
+import           Cardano.Rpc.Server
+import           Cardano.Rpc.Server.Config
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing.API
@@ -122,6 +124,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 
 import           Control.Applicative (empty)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
+import           Control.Concurrent.Async
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
 import qualified Control.Exception as Exception
@@ -154,6 +157,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -166,7 +170,8 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
-import Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
+import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
+import           GHC.Stack
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -176,36 +181,44 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
-    installSigTermHandler
+  installSigTermHandler
 
-    Crypto.cryptoInit
+  Crypto.cryptoInit
 
-    configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
+  nc@NodeConfiguration
+    { ncProtocolConfig
+    , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
+    } <- buildNodeConfiguration cmdPc
 
-    nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
-            Left err -> error $ "Error in creating the NodeConfiguration: " <> err
-            Right nc' -> return nc'
+  let earlyTracer = stdoutTracer
+  traceWith earlyTracer $ "Node configuration: " <> show nc
 
-    putStrLn $ "Node configuration: " <> show nc
+  forM_ mShelleyVrfFile $
+    runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-    case ncProtocolFiles nc of
-      ProtocolFilepaths{shelleyVRFFile=Just vrfFp} ->
-        runThrowExceptT $
-          checkVRFFilePermissions stdoutTracer (File vrfFp)
-      _ -> pure ()
+  consensusProtocol <-
+    runThrowExceptT $
+      mkConsensusProtocol
+       ncProtocolConfig
+       -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
+       -- don't need these.
+       (Just ncProtocolFiles)
 
-    consensusProtocol <-
-      runThrowExceptT $
-        mkConsensusProtocol
-         (ncProtocolConfig nc)
-         -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
-         -- don't need these.
-         (Just $ ncProtocolFiles nc)
-
-    handleNodeWithTracers cmdPc nc consensusProtocol
+  handleNodeWithTracers cmdPc nc consensusProtocol
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
+
+-- | Read node configuration from a file specified in 'PartialNodeConfiguration'
+buildNodeConfiguration :: HasCallStack
+                       => PartialNodeConfiguration -- ^ defaults
+                       -> IO NodeConfiguration
+buildNodeConfiguration partialConf = do
+  configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile partialConf
+  either
+    (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
+    pure
+    $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
@@ -511,63 +524,65 @@ handleSimpleNode blockType runP tracers nc onKernel = do
 #endif
     nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
-    void $
-      let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
-          diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
-              Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
-              Cardano.Diffusion.genesisPeerTargets =
-                PeerSelectionTargets {
-                  targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
-                  targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
-                  targetNumberOfEstablishedPeers          = ncSyncTargetOfEstablishedPeers nc,
-                  targetNumberOfActivePeers               = ncSyncTargetOfActivePeers nc,
-                  targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers nc,
-                  targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers nc,
-                  targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
-                },
-              Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
-              Cardano.Diffusion.tracerChurnMode         = churnModeTracer tracers
-            }
-
-          diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
-          diffusionConfiguration =
-            mkDiffusionConfiguration
-              publicIPv4SocketOrAddr
-              publicIPv6SocketOrAddr
-              localSocketOrPath
-              publicPeerSelectionVar
-              nForkPolicy cForkPolicy
-              (readTVar localRootsVar)
-              (readTVar publicRootsVar)
-              (readTVar useLedgerVar)
-              (readTVar ledgerPeerSnapshotVar)
-              nc
-      in
-      Node.run
-        nodeArgs {
-            rnNodeKernelHook = \registry nodeKernel -> do
-              -- reinstall `SIGHUP` handler
-              installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers) blockType nc nodeKernel
-                                   localRootsVar publicRootsVar useLedgerVar useBootstrapVar
-                                   ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
-              rnNodeKernelHook nodeArgs registry nodeKernel
-        }
-        StdRunNodeArgs
-          { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-          , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-          , srnChainDbValidateOverride      = ncValidateDB nc
-          , srnDatabasePath                 = dbPath
-          , srnDiffusionConfiguration       = diffusionConfiguration
-          , srnDiffusionArguments           = diffusionNodeArguments
-          , srnDiffusionTracers             = diffusionTracers tracers
-          , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
-          , srnTraceChainDB                 = chainDBTracer tracers
-          , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-          , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
-          , srnSnapshotPolicyArgs           = snapshotPolicyArgs
-          , srnQueryBatchSize               = queryBatchSize
-          , srnLdbFlavorArgs                = selectorToArgs ldbBackend
+    let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
+        diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
+            Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
+            Cardano.Diffusion.genesisPeerTargets =
+              PeerSelectionTargets {
+                targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
+                targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
+                targetNumberOfEstablishedPeers          = ncSyncTargetOfEstablishedPeers nc,
+                targetNumberOfActivePeers               = ncSyncTargetOfActivePeers nc,
+                targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers nc,
+                targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers nc,
+                targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
+              },
+            Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
+            Cardano.Diffusion.tracerChurnMode         = churnModeTracer tracers
           }
+
+        diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
+        diffusionConfiguration =
+          mkDiffusionConfiguration
+            publicIPv4SocketOrAddr
+            publicIPv6SocketOrAddr
+            localSocketOrPath
+            publicPeerSelectionVar
+            nForkPolicy cForkPolicy
+            (readTVar localRootsVar)
+            (readTVar publicRootsVar)
+            (readTVar useLedgerVar)
+            (readTVar ledgerPeerSnapshotVar)
+            nc
+
+        ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
+        networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
+    withAsync (runRpcServer (rpcTracer tracers) (pure (ncRpcConfig nc, networkMagic)))  $ \_ ->
+        Node.run
+          nodeArgs {
+              rnNodeKernelHook = \registry nodeKernel -> do
+                -- reinstall `SIGHUP` handler
+                installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers) blockType nc nodeKernel
+                                     localRootsVar publicRootsVar useLedgerVar useBootstrapVar
+                                     ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+                rnNodeKernelHook nodeArgs registry nodeKernel
+          }
+          StdRunNodeArgs
+            { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+            , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+            , srnChainDbValidateOverride      = ncValidateDB nc
+            , srnDatabasePath                 = dbPath
+            , srnDiffusionConfiguration       = diffusionConfiguration
+            , srnDiffusionArguments           = diffusionNodeArguments
+            , srnDiffusionTracers             = diffusionTracers tracers
+            , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
+            , srnTraceChainDB                 = chainDBTracer tracers
+            , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+            , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
+            , srnSnapshotPolicyArgs           = snapshotPolicyArgs
+            , srnQueryBatchSize               = queryBatchSize
+            , srnLdbFlavorArgs                = selectorToArgs ldbBackend
+            }
  where
   customizeChainSyncTimeout :: ChainSyncIdleTimeout
   customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
