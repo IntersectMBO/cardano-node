@@ -9,26 +9,24 @@
 
 module Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV3,
-                   PlutusScriptVersion (..), Script (..), toScriptInAnyLang)
-import           Cardano.Benchmarking.ScriptAPI
-import qualified Data.ByteString.Short as SBS
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
+import           Cardano.Benchmarking.ScriptAPI (PlutusBenchScript, mkPlutusBenchScript)
 import           GHC.ByteOrder (ByteOrder (LittleEndian))
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
+import           PlutusLedgerApi.Common (serialiseCompiledCode)
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx (compile)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
-import           Prelude as Haskell (String, (.), (<$>))
+import           Prelude as Haskell ((.), (<$>))
 
-
-scriptName :: Haskell.String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
+script = mkPlutusBenchScript
+           $(LitE . StringL . loc_module <$> qLocation)
+           PlutusScriptV3
+           (serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||]))
 
 
 {-# INLINABLE mkValidator #-}
@@ -61,8 +59,3 @@ mkValidator arg =
       | i == 1000000 = BI.unitval
       | otherwise    = let !_ = hashAndAddG2 l i in loop (pred i) l
 
-hashAndAddG2ShortBs :: SBS.ShortByteString
-hashAndAddG2ShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV3
-scriptSerialized = PlutusScriptSerialised hashAndAddG2ShortBs
