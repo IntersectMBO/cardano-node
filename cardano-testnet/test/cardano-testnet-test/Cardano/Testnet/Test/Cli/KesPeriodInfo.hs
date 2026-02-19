@@ -90,7 +90,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , "--out-file", work </> "utxo-1.json"
     ]
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
+  utxo1Json <- H.readJsonFileOk $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
@@ -174,7 +174,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   H.cat $ work </> "utxo-2.json"
 
-  utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
+  utxo2Json <- H.readJsonFileOk $ work </> "utxo-2.json"
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
@@ -309,7 +309,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , "--out-file", work </> "current-tip.json"
     ]
 
-  tipJSON <- H.leftFailM . H.readJsonFile $ work </> "current-tip.json"
+  tipJSON <- H.readJsonFileOk $ work </> "current-tip.json"
   tip <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @QueryTipLocalStateOutput tipJSON
   currEpoch <-
     case mEpoch tip of
@@ -337,7 +337,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , "--out-file", work </> "current-tip-2.json"
     ]
 
-  tip2JSON <- H.leftFailM . H.readJsonFile $ work </> "current-tip-2.json"
+  tip2JSON <- H.readJsonFileOk $ work </> "current-tip-2.json"
   tip2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @QueryTipLocalStateOutput tip2JSON
 
   currEpoch2 <-

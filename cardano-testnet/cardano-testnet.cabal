@@ -211,8 +211,12 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.Cli.Plutus.Scripts
                         Cardano.Testnet.Test.Cli.Plutus.CostCalculation
+                        Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral
+                        Cardano.Testnet.Test.Cli.Scripts.Simple.CostCalculation
+                        Cardano.Testnet.Test.Cli.Scripts.Simple.Mint
                         Cardano.Testnet.Test.Cli.StakeSnapshot
                         Cardano.Testnet.Test.Cli.Transaction
+                        Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
                         Cardano.Testnet.Test.DumpConfig
                         Cardano.Testnet.Test.FoldEpochState

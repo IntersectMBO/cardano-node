@@ -131,6 +131,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   createStakeKeyRegistrationCertificate
     tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
+
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
 
@@ -154,13 +155,19 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , "--out-file", stakeCertTxSignedFp
     ]
 
+  stakeCertTx <- execCli' execConfig
+    ["debug", "transaction"
+    , "view", "--output-json", "--tx-body-file", stakeCertTxBodyFp
+    ]
+
+  H.note_ $ "Stake registration transaction: " <> stakeCertTx
   void $ execCli' execConfig
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertTxSignedFp
     ]
 
   -- make sure that stake registration cert gets into a block
-  _ <- waitForBlocks epochStateView 1
+  _ <- waitForBlocks epochStateView 15
 
   minGovActDeposit <- getMinGovActionDeposit epochStateView ceo
 
@@ -186,6 +193,20 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   txbodyFp <- H.note $ work </> "tx.body"
   txin1' <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+
+
+
+  void $ execCli' execConfig
+    [ eraName, "stake-address", "key-hash"
+    , "--stake-verification-key-file", verificationKeyFp stakeKeys
+    , "--out-file", gov </> "stake-hash.addr"
+    ]
+
+  stakeKeyHash <- H.readFile $ gov </> "stake-hash.addr" 
+
+  H.note_ $ "Stake key hash:"  <> stakeKeyHash
+
+  
 
   -- Create temporary HTTP server with files required by the call to `cardano-cli`
   -- In this case, the server emulates an IPFS gateway

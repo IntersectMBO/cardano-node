@@ -31,6 +31,7 @@ module Testnet.Components.Query
   , findAllUtxos
   , findUtxosWithAddress
   , findLargestUtxoWithAddress
+  , findLargestMultiAssetUtxoWithAddress
   , findLargestUtxoForPaymentKey
 
   , checkDRepsNumber
@@ -47,7 +48,6 @@ import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.UTxO as Utxo
-
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as SQ
@@ -349,6 +349,27 @@ findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
   pure
     . listToMaybe
     $ sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
+
+-- | Retrieve the largest utxo with a multi-asset 
+findLargestMultiAssetUtxoWithAddress
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadIO m
+  => MonadTest m
+  => EpochStateView
+  -> ShelleyBasedEra era
+  -> Text -- ^ Address
+  -> m (Maybe (TxIn, TxOut CtxUTxO era))
+findLargestMultiAssetUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
+  utxos <- toList <$> findUtxosWithAddress epochStateView sbe address
+  let sortedUTxOs = sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
+      utxosWithMas = filter (\(_,TxOut _ txOutValue _ _) -> isMultiAssetPresent txOutValue) sortedUTxOs 
+  pure $ listToMaybe utxosWithMas
+
+isMultiAssetPresent :: TxOutValue era -> Bool 
+isMultiAssetPresent v = 
+  Map.size (valueToPolicyAssets $ txOutValueToValue v) > 0
+
 
 -- | Retrieve a largest UTxO for a payment key info - a convenience wrapper for
 -- 'findLargestUtxoWithAddress'.
