@@ -1,10 +1,14 @@
 # GhciSchemaGen overview
 
+'nix develop -c bash -lc "GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/Main.hs"'
+
 ## What it does
+
 - Generates JSON schemas for trace messages in `bench/trace-schemas/messages` and type schemas in `bench/trace-schemas/types`.
 - Parses `namespaceFor` and `forMachine` clauses in source files, then asks `cabal repl` (GHCi) for types of variables used in those `forMachine` patterns.
 
 ## High-level flow
+
 1. **Find relevant Haskell files**
    - Scans `cardano-node/src`, `trace-dispatcher/src`, `trace-forward/src`, `trace-resources/src`.
    - Keeps only `.hs` files that contain `forMachine` or `namespaceFor`.
@@ -34,11 +38,13 @@
    - If `data.properties` is still empty, it optionally pulls `data` from `bench/trace-schemas/messages-hist`.
 
 ## Key heuristics
+
 - Namespace matching uses suffix match so `Namespace [] ["LedgerReplay"]` can match `ChainDB.ReplayBlock.LedgerReplay`.
 - If a field uses a literal string (`String "..."`), it is treated as `type: string`.
 - If `data.properties` does not exist, it synthesizes an object schema and fills properties from `forMachine`.
 
 ## Where to look in code
+
 - Entry point and flow: `main`
 - Namespace mapping: `parseNamespaceMap`, `findCtor`
 - forMachine parsing: `parseForMachineClauses`, `parseFieldVarMap`, `parseFieldLine`
