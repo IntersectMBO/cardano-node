@@ -355,7 +355,7 @@ cardanoTestnet
     throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
 
   -- Interrupt cardano nodes when the main process is interrupted
-  liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
+  liftIOAnnotated $ interruptNodesOnSigINT (map nodeProcessHandle testnetNodes')
 
   -- Make sure that all nodes are healthy by waiting for a chain extension
   mapConcurrently_ (waitForBlockThrow 45 (File nodeConfigFile)) testnetNodes'
@@ -401,12 +401,14 @@ cardanoTestnet
       void $ generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
     GenerateAndRunTxGenerator -> do
       configFile <- generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
-      runRIO () $ startTxGenRuntime (TmpAbsolutePath tmpAbsPath)
+      hProcess <- runRIO () $ startTxGenRuntime (TmpAbsolutePath tmpAbsPath)
         [ "json_highlevel"
         , configFile
         ]
+      liftIOAnnotated $ interruptNodesOnSigINT (hProcess : map nodeProcessHandle testnetNodes')
 
   pure runtime
+
   where
     extraCliArgs = \case
       SpoNodeOptions args -> args

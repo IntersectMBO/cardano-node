@@ -2,7 +2,7 @@
 module Testnet.TxGenRuntime (startTxGenRuntime) where
 
 import           System.FilePath ((</>))
-import           System.Process (CreateProcess (..), StdStream (..), createProcess, getPid)
+import           System.Process (CreateProcess (..), StdStream (..), createProcess, getPid, ProcessHandle)
 
 import           Testnet.Filepath (TmpAbsolutePath, makeLogDir)
 import           Testnet.Process.RunIO (liftIOAnnotated, procFlex)
@@ -17,7 +17,7 @@ startTxGenRuntime
   -- ^ The temporary absolute path.
   -> [String]
   -- ^ The list of arguments for the tx-generator command.
-  -> RIO env ()
+  -> RIO env ProcessHandle
 startTxGenRuntime tp args = do
   let logDir = makeLogDir tp
       txGenLogDir = logDir </> "tx-generator"
@@ -39,8 +39,8 @@ startTxGenRuntime tp args = do
     pid <- maybe (throwString "Failed to get PID") return =<< liftIOAnnotated (getPid hProcess)
     liftIOAnnotated $ writeFile txGenPidFile $ show pid
 
+    return hProcess
     ) `finally` do
       hClose hTxGenStdout
       hClose hTxGenStderr
 
-  return ()
