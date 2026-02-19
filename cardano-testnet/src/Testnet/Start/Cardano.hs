@@ -235,6 +235,7 @@ cardanoTestnet
   let CardanoTestnetOptions
         { cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
+        , cardanoEnableRpc
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
       nodeConfigFile = tmpAbsPath </> "configuration.yaml"
@@ -346,7 +347,7 @@ cardanoTestnet
         ]
         <> spoNodeCliArgs
         <> extraCliArgs nodeOptions
-
+        <> ["--grpc-enable" | RpcEnabled <- [cardanoEnableRpc]]
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
   let (failedNodes, testnetNodes') = partitionEithers (NEL.toList eTestnetNodes)
