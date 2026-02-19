@@ -133,7 +133,6 @@ library
                         Cardano.Tracer.Handlers.Notifications.Utils
 
                         Cardano.Tracer.Handlers.ReForwarder
-                        Cardano.Tracer.Handlers.SSL.Certs
                         Cardano.Tracer.Handlers.State.TraceObjects
                         Cardano.Tracer.Handlers.System
                         Cardano.Tracer.Handlers.Utils
@@ -187,14 +186,13 @@ library
                       , network
                       , network-mux >= 0.8
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.22.4
+                      , ouroboros-network ^>= 0.22.6
                       , ouroboros-network-api ^>= 0.16
                       , ouroboros-network-framework
                       , signal
                       , slugify
                       , smtp-mail ^>= 0.5
                       , stm <2.5.2 || >=2.5.3
-                      , string-qq
                       , text
                       , time
                       , trace-dispatcher ^>= 2.11.0
@@ -202,6 +200,7 @@ library
                       , trace-resources ^>= 0.2.4
                       , wai ^>= 3.2
                       , warp ^>= 3.4
+                      , warp-tls
                       , yaml
 
   if os(windows)
@@ -421,7 +420,7 @@ test-suite cardano-tracer-test-ext
                       , network
                       , network-mux
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.22.4
+                      , ouroboros-network ^>= 0.22.6
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , process

@@ -15,12 +15,12 @@ import           Cardano.Api
 import           Cardano.Testnet
 
 import           Prelude
-import           RIO
+
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.Resource.Internal
 import           Data.Default.Class
-import          Data.Time.Clock
-import           GHC.Conc (threadStatus, ThreadStatus (..))
+import           Data.Time.Clock
+import           GHC.Conc (ThreadStatus (..), threadStatus)
 import           GHC.Stack
 
 import           Testnet.Property.Util (integrationRetryWorkspace)
@@ -29,6 +29,8 @@ import           Testnet.Start.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
+
+import           RIO
 
 newtype AdditionalCatcher
   = IOE IOException
@@ -98,11 +100,11 @@ foldBlocksAccumulator _ _ allEvents _ _ =
 
 
 hprop_asyncRegister_sanity_check :: Property
-hprop_asyncRegister_sanity_check = 
-    withTests 1 . property $ lift $ do 
+hprop_asyncRegister_sanity_check =
+    withTests 1 . property $ lift $ do
 
      beforeForkedThread <- getCurrentTime
-     (internalState,tId) <- runResourceT $ do 
+     (internalState,tId) <- runResourceT $ do
         s <- getInternalState
         (_,asyncA) <- asyncRegister_ (threadDelay 10_000_000)
         let tId = asyncThreadId asyncA
@@ -110,20 +112,20 @@ hprop_asyncRegister_sanity_check =
      afterForkedThread <- getCurrentTime
      let diff' = diffUTCTime afterForkedThread beforeForkedThread
      -- The forked thread (asyncRegister_) may be some long running IO action.
-     -- When the ResourceT block has finished this action should be cancelled. 
-     -- Therefore we check to see that the thread is indeed cancelled when the 
+     -- When the ResourceT block has finished this action should be cancelled.
+     -- Therefore we check to see that the thread is indeed cancelled when the
      -- ResourceT block has finished.
      when (diff' >= 5) $
        throwString $ "Forked thread took too long: " <> show diff'
 
      stat <- threadStatus tId
 
-     case stat of 
-       ThreadFinished -> return () 
+     case stat of
+       ThreadFinished -> return ()
        _ -> throwString $ "Async thread not finished as expected, status: " <> show stat
-     
+
      rMap <- readIORef internalState
-     case rMap of 
-      ReleaseMapClosed -> return () 
-      _ -> throwString "Release map should be closed" 
+     case rMap of
+      ReleaseMapClosed -> return ()
+      _ -> throwString "Release map should be closed"
 

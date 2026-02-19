@@ -42,6 +42,7 @@ import qualified Network.Mux.Types as Mux
 import           Network.Socket (AddrInfo (..), PortNumber, StructLinger (..))
 import qualified Network.Socket as Socket
 import           Prettyprinter
+
 import           Testnet.Process.RunIO (liftIOAnnotated)
 
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO

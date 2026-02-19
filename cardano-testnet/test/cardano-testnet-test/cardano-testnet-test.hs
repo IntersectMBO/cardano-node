@@ -12,7 +12,6 @@ import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
-import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.DumpConfig
@@ -23,6 +22,7 @@ import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.GovActionTimeout as Gov
 import qualified Cardano.Testnet.Test.Gov.InfoAction as LedgerEvents
 import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
+import  qualified Cardano.Testnet.Test.Cli.Scripts.Simple.Mint
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
@@ -30,9 +30,13 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.RunTestnet
+import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
 import qualified Cardano.Testnet.Test.UpdateTimeStamps
+import qualified Cardano.Testnet.Test.Cli.Scripts.Simple.CostCalculation
+import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
+import qualified Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral 
 
 import           Prelude
 
@@ -79,9 +83,15 @@ tests = do
                , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                , ignoreOnWindows "Transaction Build Wrong Hash" WrongHash.hprop_transaction_build_wrong_hash
                ]
+            , T.testGroup "Simple Script"
+                [ ignoreOnWindows "Simple Script Mint" Cardano.Testnet.Test.Cli.Scripts.Simple.Mint.hprop_simple_script_mint
+                , ignoreOnWindows "Simple Reference Script Mint" Cardano.Testnet.Test.Cli.Scripts.Simple.CostCalculation.hprop_ref_simple_script_mint
+                
+                ]
             , T.testGroup "Plutus"
                 [ ignoreOnWindows "PlutusV3 purposes" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_plutus_purposes_v3
                 , ignoreOnWindows "PlutusV2 transaction with two script certs" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_tx_two_script_certs_v2
+                , ignoreOnWindows "Collateral With Multiassets" Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral.hprop_collateral_with_tokens
                 , T.testGroup "Cost Calc"
                   [ ignoreOnWindows "Ref Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_ref_plutus_cost_calculation
                   , ignoreOnWindows "Normal Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_included_plutus_cost_calculation
@@ -99,6 +109,7 @@ tests = do
           , ignoreOnWindows "Shutdown On SlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
           , ignoreOnWindows "stake snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
+          , ignoreOnWindows "Transaction Build Estimate" Cardano.Testnet.Test.Cli.Transaction.BuildEstimate.hprop_tx_build_estimate
           , ignoreOnWindows "register deregister stake address in transaction build"  Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress.hprop_tx_register_deregister_stake_address
           -- FIXME
           -- , ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.LeadershipSchedule.hprop_leadershipSchedule

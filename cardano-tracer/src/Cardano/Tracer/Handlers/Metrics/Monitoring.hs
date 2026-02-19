@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -16,10 +17,12 @@ import           Prelude hiding (head)
 
 import           Data.ByteString as ByteString (ByteString, isInfixOf)
 import           Data.ByteString.Builder (stringUtf8)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import           Network.HTTP.Types
 import           Network.Wai
-import           Network.Wai.Handler.Warp (defaultSettings, runSettings)
+import           Network.Wai.Handler.Warp (Settings, defaultSettings, runSettings)
+import           Network.Wai.Handler.WarpTLS (runTLS, tlsSettingsChain, TLSSettings)
 import qualified System.Metrics as EKG
 import           System.Remote.Monitoring.Wai
 import           System.Time.Extra (sleep)
@@ -39,7 +42,13 @@ runMonitoringServer
   -> Endpoint -- ^ (web page with list of connected nodes, EKG web page).
   -> IO RouteDictionary
   -> IO ()
-runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
+runMonitoringServer tracerEnv endpoint computeRoutes_autoUpdate = do
+  let TracerEnv 
+        { teConfig = TracerConfig
+          { tlsCertificate }
+        , teTracer
+        } = tracerEnv
+
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.2
   traceWith teTracer TracerStartedMonitoring
@@ -47,8 +56,30 @@ runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
     , ttMonitoringType     = "list"
     }
   dummyStore <- EKG.newStore
-  runSettings (setEndpoint endpoint defaultSettings) do
-    renderEkg dummyStore computeRoutes_autoUpdate
+
+  let
+    settings :: Settings
+    settings = setEndpoint endpoint defaultSettings
+
+    tls_settings :: Certificate -> TLSSettings
+    tls_settings Certificate {..} =
+      tlsSettingsChain certificateFile (fromMaybe [] certificateChain) certificateKeyFile
+
+    application :: Application
+    application = renderEkg dummyStore computeRoutes_autoUpdate
+
+    run :: IO ()
+    run | Just True <- epForceSSL endpoint
+        , Just cert <- tlsCertificate
+        = runTLS (tls_settings cert) settings application
+        | Just True <- epForceSSL endpoint
+        -- Trace, if we expect SSL without getting certificates.
+        = do traceWith teTracer TracerMissingCertificate
+               { ttMissingCertificateEndpoint = endpoint }
+             runSettings settings application
+        | otherwise
+        = runSettings settings application
+  run
 
 renderEkg :: EKG.Store -> IO RouteDictionary -> Application
 renderEkg dummyStore computeRoutes_autoUpdate request send = do

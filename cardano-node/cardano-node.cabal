@@ -146,7 +146,7 @@ library
                       , cardano-ledger-allegra
                       , cardano-ledger-api
                       , cardano-ledger-babbage
-                      , cardano-ledger-binary
+                      , cardano-ledger-binary >= 1.7.1
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-core
@@ -185,14 +185,14 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus ^>= 0.30
+                      , ouroboros-consensus >=0.30.0.1 && <0.31
                       , ouroboros-consensus-cardano ^>= 0.26
-                      , ouroboros-consensus-diffusion ^>= 0.25
+                      , ouroboros-consensus-diffusion ^>= 0.26
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.16
-                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.4
-                      , ouroboros-network-framework ^>= 0.19.2
-                      , ouroboros-network-protocols ^>= 0.15
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.6
+                      , ouroboros-network-framework ^>= 0.19.3
+                      , ouroboros-network-protocols ^>= 0.15.2
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues

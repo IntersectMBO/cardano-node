@@ -47,10 +47,8 @@ import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import qualified Network.HTTP.Simple as HTTP
-import           RIO ( MonadThrow, throwM)
 import qualified System.Directory as System
 import           System.FilePath.Posix (takeDirectory, (</>))
-
 
 import           Testnet.Blockfrost (blockfrostToGenesis)
 import qualified Testnet.Defaults as Defaults
@@ -60,6 +58,8 @@ import           Testnet.Start.Types
 
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.Time as DTC
+
+import           RIO (MonadThrow, throwM)
 
 -- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
 createConfigJson :: ()
@@ -102,7 +102,7 @@ getByronGenesisHash
   -> m (KeyMap Aeson.Value)
 getByronGenesisHash path = do
   e <- runExceptT $ readGenesisData path
-  case e of 
+  case e of
     Left err -> throwM $ GenesisReadError path err
     Right (_, genesisHash) -> do
       let genesisHash' = unGenesisHash genesisHash
@@ -141,7 +141,7 @@ getDefaultAlonzoGenesis :: ()
   => MonadThrow m
   => m AlonzoGenesis
 getDefaultAlonzoGenesis =
-  case Defaults.defaultAlonzoGenesis of 
+  case Defaults.defaultAlonzoGenesis of
     Right genesis -> return genesis
     Left err -> throwM err
 
@@ -164,9 +164,9 @@ createSPOGenesisAndFiles
   (TmpAbsolutePath tempAbsPath) =  do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
 
-  
+
   let genesisShelleyDir = takeDirectory inputGenesisShelleyFp
-  
+
   liftIOAnnotated $ System.createDirectoryIfMissing True genesisShelleyDir
 
   let -- At least there should be a delegator per DRep
@@ -185,7 +185,7 @@ createSPOGenesisAndFiles
   let conwayGenesis' = Defaults.defaultConwayGenesis
       dijkstraGenesis' = dijkstraGenesisDefaults
 
-  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)   
+  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)
      <- resolveOnChainParams onChainParams
      (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGenesis')
 
@@ -243,7 +243,7 @@ createSPOGenesisAndFiles
 data BlockfrostParamsError = BlockfrostParamsDecodeError FilePath String
   deriving Show
 
-instance Exception BlockfrostParamsError where 
+instance Exception BlockfrostParamsError where
   displayException (BlockfrostParamsDecodeError fp err) =
     "Failed to decode Blockfrost on-chain parameters from file "
       <> fp
@@ -261,12 +261,12 @@ resolveOnChainParams :: ()
  -> m (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
 resolveOnChainParams onChainParams geneses = case onChainParams of
 
-  DefaultParams -> do 
+  DefaultParams -> do
     pure geneses
 
   OnChainParamsFile file -> do
     eParams <- eitherDecode <$> liftIOAnnotated (LBS.readFile file)
-    case eParams of 
+    case eParams of
       Right params -> pure $ blockfrostToGenesis geneses params
       Left err -> throwM $ BlockfrostParamsDecodeError file err
 

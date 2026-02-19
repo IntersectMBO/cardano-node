@@ -23,9 +23,6 @@ flag withplutuslib
   manual:               True
 
 common project-config
-  if os(windows)
-    buildable: False
-
   default-language:     Haskell2010
 
 common with-library

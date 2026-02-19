@@ -30,6 +30,7 @@ import           Data.Default.Class
 import qualified Data.IP as IP
 import           Data.List ((\\))
 import qualified Data.List as L
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
@@ -70,8 +71,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       cTestnetOptions = def
         { cardanoNodeEra = asbe
         , cardanoNodes =
+            SpoNodeOptions [] :|
           [ SpoNodeOptions []
-          , SpoNodeOptions []
           , SpoNodeOptions []
           ]
         }
@@ -97,7 +98,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
     , "--out-file", work </> "utxo-1.json"
     ]
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
+  utxo1Json <- H.readJsonFileOk $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
@@ -178,7 +179,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
   H.cat $ work </> "utxo-2.json"
 
-  utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
+  utxo2Json <- H.readJsonFileOk $ work </> "utxo-2.json"
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 

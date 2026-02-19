@@ -1,7 +1,21 @@
 # ChangeLog
 
 ## NEXT
-* RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed since Node 10.6.2; fixes the RTView-enabled build.
+* RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed
+  since Node 10.6.2; fixes the RTView-enabled build.
+* Introduce secure communication via HTTPS for EKG and Prometheus metric servers, enabled
+  by a new boolean `epForceSSL` in the tracer configuration, per-endpoint.
+  The specified port will either speak HTTP or HTTPS depending on the flag.
+    "hasEKG":        {"epHost": "127.0.0.1", "epPort": 3100, "epForceSSL": true}
+    "hasPrometheus": {"epHost": "127.0.0.1", "epPort": 3200, "epForceSSL": true}
+  `warp-tls` run conditionally based on this value.
+* Certificates (TLS certs, keys, and (optional) chains field) specified by optional field
+  in the tracer configuration.
+     "tlsCertificate":
+       { "certificateFile": "/path/to/certificate.pem"
+       , "certificateKeyFile": "/path/to/key.pem"
+       , "certificateChain": ["/path/to/intermediate1.pem", "/path/to/intermediate2.pem"]
+       }
 
 ## 0.3.6 (November 2025)
 * Implement Prometheus HTTP service discovery (SD) under the URL `/targets`

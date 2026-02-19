@@ -24,6 +24,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Default.Class
 import           Data.Either (isRight)
 import qualified Data.List as L
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe
 import qualified Data.Time.Clock as DTC
 import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
@@ -38,6 +39,7 @@ import           System.Process (interruptProcessGroupOf)
 import qualified Testnet.Components.Configuration as Testnet
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, initiateProcess, procNode)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Byron
 import           Testnet.Start.Cardano
@@ -53,7 +55,6 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
-import Testnet.Process.RunIO (liftIOAnnotated)
 
 {- HLINT ignore "Redundant <&>" -}
 
@@ -107,7 +108,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- liftToIntegration Testnet.getDefaultAlonzoGenesis 
+  gen <- liftToIntegration Testnet.getDefaultAlonzoGenesis
   liftIOAnnotated $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
@@ -132,12 +133,12 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   -- TODO: once 'cardano-cli latest genesis create' supports dijkstra, make this a copy instead of writing a default
   H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode dijkstraGenesisDefaults
 
-  (shelleyGenesisHash,alonzoGenesisHash)  <- 
-    liftToIntegration $ do  
+  (shelleyGenesisHash,alonzoGenesisHash)  <-
+    liftToIntegration $ do
       shelleyGenesisHash <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
       alonzoGenesisHash  <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
       return (shelleyGenesisHash, alonzoGenesisHash)
-      
+
   let finalYamlConfig :: LBS.ByteString
       finalYamlConfig = encode . Object
                                  $ mconcat [ byronGenesisHash
@@ -206,8 +207,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
       slotLen = 0.01
   let fastTestnetOptions = def
         { cardanoNodes =
-            [ SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
-            ]
+            SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot] :| []
         }
       shelleyOptions = def
         { genesisEpochLength = 300

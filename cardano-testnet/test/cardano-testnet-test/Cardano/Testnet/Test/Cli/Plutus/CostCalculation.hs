@@ -8,17 +8,17 @@ module Cardano.Testnet.Test.Cli.Plutus.CostCalculation
   , hprop_included_plutus_cost_calculation
   , hprop_included_simple_script_cost_calculation
     -- | Execute tests in this module with:
-    -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc/"@
+    -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc/"@
   )
 where
 
 import           Cardano.Api hiding (Value)
 import           Cardano.Api.Experimental (Some (Some))
 import           Cardano.Api.Ledger (EpochInterval (..))
-
 import           Cardano.Testnet
 
 import           Prelude
+import           Testnet.Types
 
 import           Control.Monad (void)
 import           Data.Aeson (Value, encodeFile)
@@ -36,14 +36,13 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Query (findLargestUtxoForPaymentKey, getEpochStateView, getTxIx,
                    watchEpochStateUpdate)
+import qualified Testnet.Defaults  as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
                    retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
-import           Testnet.Types (PaymentKeyInfo (paymentKeyInfoAddr), paymentKeyInfoPair,
-                   verificationKey)
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
@@ -52,7 +51,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Golden as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
--- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Ref Script/"@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Ref Script/"'@
 hprop_ref_plutus_cost_calculation :: Property
 hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -144,7 +143,16 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
   refScriptUnlock <- H.createDirectoryIfMissing $ work </> "ref-script-unlock"
   let unsignedUnlockTx = File $ refScriptUnlock </> "unsigned-tx.tx"
   largestUTxO <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+  refScriptHash <- execCli' execConfig [ eraName, "transaction", "policyid", "--script-file", unFile plutusV3Script]
+  H.note_ $ "Reference script hash: " <> refScriptHash
 
+  void $ execCli' execConfig
+      [ eraName, "query", "utxo"
+      , "--whole-utxo"
+      , "--cardano-mode"
+      , "--out-file", work </> "utxo-1.json"
+      ]
+  H.cat $ work </> "utxo-1.json"
   void $
     execCli'
       execConfig
@@ -200,7 +208,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
 
   H.diffVsGoldenFile output "test/cardano-testnet-test/files/calculatePlutusScriptCost.json"
 
--- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Normal Script/"@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Normal Script/"'@
 hprop_included_plutus_cost_calculation :: Property
 hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-plutus-script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -230,8 +238,12 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)
 
   includedScriptLockWork <- H.createDirectoryIfMissing $ work </> "included-script-lock"
-  plutusV3Script <-
-    File <$> liftIOAnnotated (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+
+  plutusScriptFp <- H.note $ work </> "always-succeeds-script.plutusV3"
+  H.writeFile plutusScriptFp $ Text.unpack Defaults.plutusV3Script
+
+  --_plutusV3Script <-
+  --  File <$> liftIOAnnotated (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
 
   let includedScriptLockAmount = 10_000_000
       enoughAmountForFees = 2_000_000 -- Needs to be more than min ada
@@ -245,7 +257,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
       includedScriptLockWork
       "tx-body"
       wallet0
-      [(ScriptAddress plutusV3Script, includedScriptLockAmount, Nothing)]
+      [(ScriptAddress $ File plutusScriptFp, includedScriptLockAmount, Nothing)]
   signedTxIncludedScriptLock <-
     signTx
       execConfig
@@ -269,7 +281,8 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
   includedScriptUnlock <- H.createDirectoryIfMissing $ work </> "included-script-unlock"
   let unsignedIncludedScript = File $ includedScriptUnlock </> "unsigned-tx.tx"
   newLargestUTxO <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
-
+  scriptHash <- execCli' execConfig [ eraName, "transaction", "policyid", "--script-file", plutusScriptFp]
+  H.note_ $ "Script hash: " <> scriptHash
   void $
     execCli'
       execConfig
@@ -277,7 +290,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
       , "transaction", "build"
       , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
       , "--tx-in", prettyShow (TxIn txIdIncludedScriptLock txIxIncludedScriptLock)
-      , "--tx-in-script-file", unFile plutusV3Script
+      , "--tx-in-script-file", plutusScriptFp
       , "--tx-in-redeemer-value", "42"
       , "--tx-in-collateral", prettyShow newLargestUTxO
       , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show (unCoin (includedScriptLockAmount - enoughAmountForFees))
@@ -310,7 +323,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
     (unFile includedScriptCostOutput)
     "test/cardano-testnet-test/files/calculatePlutusScriptCost.json"
 
--- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Simple Script/"@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options  '-p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Simple Script/"'@
 hprop_included_simple_script_cost_calculation :: Property
 hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "included-simple-script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
