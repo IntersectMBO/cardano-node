@@ -16,6 +16,9 @@ module Cardano.Node.Tracing.Consistency
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
@@ -32,11 +35,10 @@ import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
 import           Cardano.Node.Tracing.Tracers.P2P ()
+import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import           Cardano.Rpc.Server (TraceRpc)
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -76,9 +78,9 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
-import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
@@ -380,6 +382,10 @@ getAllNamespaces =
                                (allNamespaces :: [Namespace
                                   NtN.AcceptConnectionsPolicyTrace])
 
+-- RPC
+        rpcNS = map (nsGetTuple . nsReplacePrefix ["RPC"])
+                    (allNamespaces :: [Namespace TraceRpc])
+
         allNamespaces' :: [([T.Text],[T.Text])] =
             stateNS
             <> resourcesNS
@@ -452,4 +458,6 @@ getAllNamespaces =
             <> localInboundGovernorNS
             <> dtDnsResolverNS
             <> dtAcceptPolicyNS
+-- RPC
+            <> rpcNS
     in allNamespaces'
