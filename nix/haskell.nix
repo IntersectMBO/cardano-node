@@ -286,6 +286,8 @@ let
                   export PATH=${macOS-security}/bin:$PATH
                           ''
                      else '''');
+              # We disable parallel testnet-test running to avoid filling the Hydra runners' RAM and reduce hanging
+              packages.cardano-testnet.components.tests.cardano-testnet-test.testFlags = [ "--num-threads=4" ];
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
