@@ -69,10 +69,9 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
-import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.Tracing ()
-import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
+import           Ouroboros.Network.TxSubmission.Inbound.V2 hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Control.Monad (guard)
@@ -661,7 +660,7 @@ instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   allNamespaces =
     [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
 
-instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk)
+instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk, ToJSON (HeaderHash blk))
       => LogFormatting (TraceDecisionEvent peer (Header blk)) where
   forHuman = Text.pack . show
 
@@ -1062,10 +1061,10 @@ instance LogFormatting SanityCheckIssue where
 --------------------------------------------------------------------------------
 
 instance LogFormatting (TraceTxSubmissionInbound txid tx) where
-  forMachine _dtal (TraceTxSubmissionCollected count) =
+  forMachine _dtal (TraceTxSubmissionCollected txids) =
     mconcat
       [ "kind" .= String "TraceTxSubmissionCollected"
-      , "count" .= toJSON count
+      , "count" .= toJSON (length txids)
       ]
   forMachine _dtal (TraceTxSubmissionProcessed processed) =
     mconcat
@@ -1087,9 +1086,13 @@ instance LogFormatting (TraceTxSubmissionInbound txid tx) where
       [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
+  forMachine _dtal (TraceTxInboundAddedToMempool _ _) = undefined -- TODO(10.7)
+  forMachine _dtal (TraceTxInboundRejectedFromMempool _ _) = undefined -- TODO(10.7)
+  forMachine _dtal (TraceTxInboundError _) = undefined -- TODO(10.7)
+  forMachine _dtal (TraceTxInboundDecision _) = undefined -- TODO(10.7)
 
-  asMetrics (TraceTxSubmissionCollected count)=
-    [CounterM "submissions.submitted" (Just count)]
+  asMetrics (TraceTxSubmissionCollected txids)=
+    [CounterM "submissions.submitted" (Just (length txids))]
   asMetrics (TraceTxSubmissionProcessed processed) =
     [ CounterM "submissions.accepted"
         (Just (ptxcAccepted processed))
@@ -1104,6 +1107,10 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
     namespaceFor TraceTxInboundTerminated {} = Namespace [] ["Terminated"]
     namespaceFor TraceTxInboundCanRequestMoreTxs {} = Namespace [] ["CanRequestMoreTxs"]
     namespaceFor TraceTxInboundCannotRequestMoreTxs {} = Namespace [] ["CannotRequestMoreTxs"]
+    namespaceFor TraceTxInboundAddedToMempool {} = undefined -- TODO(10.7)
+    namespaceFor TraceTxInboundRejectedFromMempool {} = undefined -- TODO(10.7)
+    namespaceFor TraceTxInboundError {} = undefined -- TODO(10.7)
+    namespaceFor TraceTxInboundDecision {} = undefined -- TODO(10.7)
 
     severityFor (Namespace _ ["Collected"]) _ = Just Debug
     severityFor (Namespace _ ["Processed"]) _ = Just Debug
