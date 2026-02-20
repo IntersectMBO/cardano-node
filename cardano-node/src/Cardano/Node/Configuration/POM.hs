@@ -28,7 +28,8 @@ where
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
-import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode(..), defaultConsensusMode)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -717,7 +718,7 @@ defaultPartialNodeConfiguration =
 
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultNumberOfBigLedgerPeers
-    , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
+    , pncConsensusMode = Last (Just defaultConsensusMode)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
     , pncPeerSharing   = mempty
       -- the default is defined in `makeNodeConfiguration`
@@ -821,7 +822,7 @@ makeNodeConfiguration pnc = do
                         , getLast (pncMempoolTimeoutHard pnc)
                         , getLast (pncMempoolTimeoutCapacity pnc)
                         )
-  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <- 
+  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <-
     case mempoolTimeouts of
       (Just s, Just h, Just c) -> pure (s, h, c)
       (Nothing, Nothing, Nothing) -> pure (1, 1.5, 5)
