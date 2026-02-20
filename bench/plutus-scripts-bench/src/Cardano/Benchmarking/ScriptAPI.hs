@@ -1,27 +1,24 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module Cardano.Benchmarking.ScriptAPI
   ( PlutusBenchScript
   , psName
   , psScript
-  , mkPlutusBenchScript
-  , prepareScriptName
+  , mkPlutusBenchScriptFromCompiled
   ) where
 
 import           Prelude as Haskell (String, ($))
 import           Data.Char (isUpper)
 import           Data.Maybe (fromMaybe)
 import           System.FilePath (splitExtension, stripExtension, takeFileName)
-import           Cardano.Api (ScriptInAnyLang)
+import           Cardano.Api (ScriptInAnyLang, IsPlutusScriptLanguage, PlutusScriptVersion,
+                   PlutusScript (..), Script (..), toScriptInAnyLang)
+import qualified PlutusLedgerApi.Common as Plutus (serialiseCompiledCode)
+import qualified PlutusTx (CompiledCode)
 
 data PlutusBenchScript
   = PlutusBenchScript
     { psName   :: String
     , psScript :: ScriptInAnyLang
     }
-
-mkPlutusBenchScript :: String -> ScriptInAnyLang -> PlutusBenchScript
-mkPlutusBenchScript = PlutusBenchScript
 
 -- This is doing two or three sorts of normalisation at once:
 -- It strips leading / -separated components, drops the ".hs" suffix
@@ -40,3 +37,21 @@ prepareScriptName script
     file  = takeFileName script -- ignore leading directories
     -- no trailing .hs so use filename as-is
     file' = fromMaybe file $ stripExtension "hs" file
+
+-- | Create a PlutusBenchScript from a compiled PlutusCore script.
+-- This eliminates boilerplate by handling script name extraction,
+-- serialization, and version-polymorphic script construction.
+-- The serialization is version-agnostic and works for V1, V2, and V3.
+mkPlutusBenchScriptFromCompiled ::
+     IsPlutusScriptLanguage lang
+  => PlutusScriptVersion lang        -- ^ Plutus script version (V1, V2, or V3)
+  -> String                          -- ^ Module name (from Template Haskell)
+  -> PlutusTx.CompiledCode a         -- ^ Compiled Plutus code
+  -> PlutusBenchScript
+mkPlutusBenchScriptFromCompiled version moduleName compiledCode =
+  PlutusBenchScript scriptName scriptInAnyLang
+  where
+    scriptName = prepareScriptName moduleName
+    serializedScript = Plutus.serialiseCompiledCode compiledCode
+    scriptSerialized = PlutusScriptSerialised serializedScript
+    scriptInAnyLang = toScriptInAnyLang (PlutusScript version scriptSerialized)
