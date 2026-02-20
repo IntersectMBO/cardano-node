@@ -87,6 +87,13 @@
       (import ./nix/custom-config.nix customConfig)
       input.customConfig;
 
+    abseilOverlay = final: prev:
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isWindows {
+        abseil-cpp = prev.abseil-cpp.overrideAttrs (finalAttrs: previousAttrs: {
+          buildInputs = previousAttrs.buildInputs ++ [prev.pkgs.windows.mingw_w64_pthreads];
+        });
+      };
+
     overlays = [
       # Crypto needs to come before haskell.nix.
       # FIXME: _THIS_IS_BAD_
@@ -107,6 +114,7 @@
           // import ./nix/svclib.nix {inherit (final) pkgs;};
       })
       (import ./nix/pkgs.nix)
+      abseilOverlay
       self.overlay
     ];
 
