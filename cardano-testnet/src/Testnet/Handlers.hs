@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -12,19 +11,18 @@ module Testnet.Handlers
 #ifdef UNIX
 import           Control.Monad
 import           System.Posix.Signals (Handler (..), installHandler, raiseSignal, sigINT)
-import           System.Process (interruptProcessGroupOf)
+import           System.Process (interruptProcessGroupOf, ProcessHandle)
 #endif
 
-import           Testnet.Types
-
-interruptNodesOnSigINT :: [TestnetNode] -> IO ()
 #ifdef UNIX
-interruptNodesOnSigINT testnetNodes =
+interruptNodesOnSigINT :: [ProcessHandle] -> IO ()
+interruptNodesOnSigINT processHandlers =
   -- Interrupt cardano nodes when the main process is interrupted
   void $ flip (installHandler sigINT) Nothing $ CatchOnce $ do
-    forM_ testnetNodes $ \TestnetNode{nodeProcessHandle} ->
+    forM_ processHandlers $ \nodeProcessHandle ->
       interruptProcessGroupOf nodeProcessHandle
     raiseSignal sigINT
 #else
+interruptNodesOnSigINT :: processHandle -> IO ()
 interruptNodesOnSigINT _testnetNodes = pure ()
 #endif

@@ -3,7 +3,7 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
-  [--generate-tx-generator-config]
+  [--generate-tx-generator-config | --run-tx-generator]
   [--output-dir DIRECTORY]
   [--testnet-magic INT]
   [--epoch-length SLOTS]
@@ -33,6 +33,8 @@ Available options:
   --generate-tx-generator-config
                            Generate a template configuration file for
                            tx-generator.
+  --run-tx-generator       Generate a configuration file for tx-generator and
+                           run it.
   --output-dir DIRECTORY   Directory where to store files, sockets, and so on.
                            It is created if it doesn't exist. If unset, a
                            temporary directory is used.

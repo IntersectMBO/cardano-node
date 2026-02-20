@@ -75,6 +75,7 @@ import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkE
 import           Testnet.Property.Assert (assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
 import           Testnet.Start.Types
+import           Testnet.TxGenRuntime (startTxGenRuntime)
 import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import qualified Hedgehog.Extras as H
@@ -354,19 +355,10 @@ cardanoTestnet
     throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
 
   -- Interrupt cardano nodes when the main process is interrupted
-  liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
+  liftIOAnnotated $ interruptNodesOnSigINT (map nodeProcessHandle testnetNodes')
 
   -- Make sure that all nodes are healthy by waiting for a chain extension
   mapConcurrently_ (waitForBlockThrow 45 (File nodeConfigFile)) testnetNodes'
-
-  let node1SocketPath = tmpAbsPath </> "socket" </> "node1" </> "sock"
-      utxoSigningKeyFile = File $ (tmpAbsPath </>) $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
-      nodeDescriptions = NEL.map (\(i, port) -> NodeDescription (NodeAddress (NodeHostIPv4Address (fromHostAddress testnetDefaultIpv4Address)) port) (Defaults.defaultNodeName i) ) portNumbers
-
-  case cardanoEnableTxGenerator testnetOptions of
-    NoTxGeneratorSupport -> pure ()
-    GenerateTemplateConfigForTxGenerator ->
-      generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
@@ -399,7 +391,24 @@ cardanoTestnet
   when enableNewEpochStateLogging $
     TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
 
+  let node1SocketPath = tmpAbsPath </> "socket" </> "node1" </> "sock"
+      utxoSigningKeyFile = File $ (tmpAbsPath </>) $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
+      nodeDescriptions = NEL.map (\(i, port) -> NodeDescription (NodeAddress (NodeHostIPv4Address (fromHostAddress testnetDefaultIpv4Address)) port) (Defaults.defaultNodeName i) ) portNumbers
+
+  case cardanoEnableTxGenerator testnetOptions of
+    NoTxGeneratorSupport -> pure ()
+    GenerateTemplateConfigForTxGenerator ->
+      void $ generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
+    GenerateAndRunTxGenerator -> do
+      configFile <- generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
+      hProcess <- runRIO () $ startTxGenRuntime (TmpAbsolutePath tmpAbsPath)
+        [ "json_highlevel"
+        , configFile
+        ]
+      liftIOAnnotated $ interruptNodesOnSigINT (hProcess : map nodeProcessHandle testnetNodes')
+
   pure runtime
+
   where
     extraCliArgs = \case
       SpoNodeOptions args -> args
@@ -410,9 +419,10 @@ cardanoTestnet
     mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
     mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
 
-    generateTxGenConfig :: MonadUnliftIO m => FilePath -> FilePath -> SigningKeyFile 'In -> String -> NonEmpty NodeDescription -> m ()
+    generateTxGenConfig :: MonadUnliftIO m => FilePath -> FilePath -> SigningKeyFile 'In -> String -> NonEmpty NodeDescription -> m FilePath
     generateTxGenConfig basePath nodeConfigFilePath utxoSigningKeyFile localNodeSocketPath nodeTopology = do
-      let nixServiceOptions = NixServiceOptions {
+      let file = basePath </> "tx-generator-config.json"
+          nixServiceOptions = NixServiceOptions {
             _nix_debugMode        = False
           , _nix_tx_count         = 100
           , _nix_tps              = 10
@@ -431,8 +441,8 @@ cardanoTestnet
           , _nix_localNodeSocketPath  = localNodeSocketPath
           , _nix_targetNodes          = nodeTopology
           }
-      liftIOAnnotated . LBS.writeFile (basePath </> "tx-generator-config.json") $ A.encodePretty nixServiceOptions
-      pure ()
+      liftIOAnnotated . LBS.writeFile file $ A.encodePretty nixServiceOptions
+      pure file
 
     -- wait for new blocks or throw an exception if there are none in the timeout period
     waitForBlockThrow :: MonadUnliftIO m
