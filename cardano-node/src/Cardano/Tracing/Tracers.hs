@@ -103,14 +103,13 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Cardano.Network.NodeToClient (LocalAddress)
 import           Cardano.Network.NodeToNode (RemoteAddress)
-import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (
                    PeerSelectionView (..))
 import qualified Ouroboros.Network.PeerSelection.Governor as Governor
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import           Ouroboros.Network.TxSubmission.Inbound
+import           Ouroboros.Network.TxSubmission.Inbound.V2
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Concurrent (MVar, modifyMVar_)
@@ -414,13 +413,6 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
          <> tracePeerSelectionTracerMetrics
               (tracePeerSelection trSel)
               ekgDirect
-     , Diffusion.dtTraceChurnCounters =
-         traceChurnCountersMetrics
-           ekgDirect
-     , Diffusion.dtDebugPeerSelectionInitiatorTracer =
-         tracerOnOff (traceDebugPeerSelectionInitiatorTracer trSel)
-                      verb "DebugPeerSelection" tr
-     , Diffusion.dtDebugPeerSelectionInitiatorResponderTracer =
        tracerOnOff (traceDebugPeerSelectionInitiatorResponderTracer trSel)
                     verb "DebugPeerSelection" tr
      , Diffusion.dtTracePeerSelectionCounters =

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -37,6 +38,7 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
+
 import           Cardano.Api (handleIOExceptionsLiftWith, liftEither, runExceptT, throwError)
 
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
@@ -49,7 +51,7 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   UseLedgerPeers (..), RelayAccessPoint (..))
+                   UseLedgerPeers (..), RelayAccessPoint (..), LedgerPeersKind(..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -347,16 +349,19 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
-readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text LedgerPeerSnapshot)
+-- TODO(10.7): what the resulting LedgerPeersKind should be?
+-- Probably we need to use the LedgerPeerSnapshotWithBlock type
+readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text (LedgerPeerSnapshot BigLedgerPeers))
 readPeerSnapshotFile (PeerSnapshotFile file) = do
-  content <- first renderException <$> try (BS.readFile file)
-  return $ first handler $ content >>= eitherDecodeStrict
+  _content <- first renderException <$> try (BS.readFile file)
+  -- return $ first handler $ content >>= eitherDecodeStrict
+  undefined -- TODO(10.7)
   where
     renderException :: IOException -> String
     renderException = displayException
 
-    handler :: String -> Text
-    handler msg =
+    _handler :: String -> Text
+    _handler msg =
       Text.pack
         $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> msg
 
