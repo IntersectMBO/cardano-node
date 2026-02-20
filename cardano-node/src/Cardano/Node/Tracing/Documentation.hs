@@ -82,11 +82,10 @@ import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.Driver.Stateful as Stateful (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import           Ouroboros.Network.NodeToNode (RemoteAddress)
-import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
+import           Cardano.Network.NodeToNode (RemoteAddress)
+import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters, TracePeerSelection (..))
+                   PeerSelectionCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -104,7 +103,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import           Control.Monad (forM_)
@@ -114,8 +113,6 @@ import           Data.Text (pack)
 import qualified Data.Text.IO as T
 import           Data.Time (getZonedTime)
 import           Data.Version (showVersion)
-import           GHC.Generics (Generic)
-import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
@@ -160,9 +157,6 @@ parseTraceDocumentationCmd =
        $ mconcat [ Opt.progDesc "Generate the trace documentation" ]
      ]
     )
-
-deriving instance Generic UnversionedProtocol
-deriving instance Generic UnversionedProtocolData
 
 instance ToJSON UnversionedProtocol
 instance ToJSON UnversionedProtocolData
@@ -537,19 +531,25 @@ docTracersFirstPhase condConfigFileName = do
             (TxSubmission2 (GenTxId blk) (GenTx blk)))))
 
 -- Diffusion
-    dtMuxTr   <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Remote"]
-    configureTracers configReflection trConfig [dtMuxTr]
-    dtMuxTrDoc <- documentTracer (dtMuxTr ::
-      Logging.Trace IO (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace))
+    -- dtMuxTr   <-  mkCardanoTracer
+    --             trBase trForward mbTrEKG
+    --             ["Net", "Mux", "Remote"]
+    _dtMuxTr <- undefined -- TODO(10.7)
+    -- TODO(10.7): uncomment the next line
+    -- configureTracers configReflection trConfig [dtMuxTr]
+    dtMuxTrDoc <- undefined  -- TODO(10.7)
+    -- dtMuxTrDoc <- documentTracer (dtMuxTr ::
+    --   Logging.Trace IO (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace))
 
-    dtLocalMuxTr   <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Local"]
-    configureTracers configReflection trConfig [dtLocalMuxTr]
-    dtLocalMuxTrDoc <- documentTracer (dtLocalMuxTr ::
-      Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace))
+    _dtLocalMuxTr <- undefined  -- TODO(10.7)
+    -- dtLocalMuxTr   <-  mkCardanoTracer
+    --             trBase trForward mbTrEKG
+    --             ["Net", "Mux", "Local"]
+    -- TODO(10.7): uncomment the next line
+    -- configureTracers configReflection trConfig [dtLocalMuxTr]
+    dtLocalMuxTrDoc <- undefined  -- TODO(10.7)
+    -- dtLocalMuxTrDoc <- documentTracer (dtLocalMuxTr ::
+    --   Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace))
 
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -580,12 +580,15 @@ docTracersFirstPhase condConfigFileName = do
     publicRootPeersTrDoc <- documentTracer (publicRootPeersTr ::
       Logging.Trace IO TracePublicRootPeers)
 
-    peerSelectionTr  <-  mkCardanoTracer
-      trBase trForward mbTrEKG
-      ["Net", "PeerSelection", "Selection"]
-    configureTracers configReflection trConfig [peerSelectionTr]
-    peerSelectionTrDoc <- documentTracer (peerSelectionTr ::
-      Logging.Trace IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr))
+    _peerSelectionTr  <-  undefined  -- TODO(10.7)
+    -- peerSelectionTr  <-  mkCardanoTracer
+    --   trBase trForward mbTrEKG
+    --   ["Net", "PeerSelection", "Selection"]
+    -- TODO(10.7): uncomment the next line
+    -- configureTracers configReflection trConfig [peerSelectionTr]
+    -- peerSelectionTrDoc <- documentTracer (peerSelectionTr ::
+    --   Logging.Trace IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr))
+    peerSelectionTrDoc <- undefined -- TODO(10.7)
 
     debugPeerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -608,11 +611,12 @@ docTracersFirstPhase condConfigFileName = do
     peerSelectionCountersTrDoc <- documentTracer (peerSelectionCountersTr ::
       Logging.Trace IO (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes Socket.SockAddr)))
 
-    churnCountersTr  <-  mkCardanoTracer
-      trBase trForward mbTrEKG
-      ["Net", "Churn"]
-    configureTracers configReflection trConfig [churnCountersTr]
-    churnCountersTrDoc <- documentTracer (churnCountersTr :: Logging.Trace IO ChurnCounters)
+    _churnCountersTr <- undefined  -- TODO(10.7)
+    -- churnCountersTr  <-  mkCardanoTracer
+    --   trBase trForward mbTrEKG
+    --   ["Net", "Churn"]
+    -- TODO(10.7): uncomment the next line
+    -- configureTracers configReflection trConfig [churnCountersTr]
 
     peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -756,7 +760,6 @@ docTracersFirstPhase condConfigFileName = do
             <> debugPeerSelectionTrDoc
             <> debugPeerSelectionResponderTrDoc
             <> peerSelectionCountersTrDoc
-            <> churnCountersTrDoc
             <> peerSelectionActionsTrDoc
             <> connectionManagerTrDoc
             <> connectionManagerTransitionsTrDoc

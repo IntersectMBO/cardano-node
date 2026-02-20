@@ -40,8 +40,8 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLed
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
-import           Ouroboros.Network.NodeToClient (LocalAddress (..))
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Cardano.Network.NodeToClient (LocalAddress (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
 
@@ -505,6 +505,7 @@ nodeToClientVersionToInt = \case
   NodeToClientV_20 -> 20
   NodeToClientV_21 -> 21
   NodeToClientV_22 -> 22
+  NodeToClientV_23 -> 23
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case

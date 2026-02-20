@@ -76,7 +76,7 @@ import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
@@ -101,16 +101,15 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor
-import           Ouroboros.Network.NodeToClient (LocalAddress)
-import           Ouroboros.Network.NodeToNode (RemoteAddress)
-import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
+import           Cardano.Network.NodeToClient (LocalAddress)
+import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Ouroboros.Network.PeerSelection.Governor (
                    PeerSelectionView (..))
 import qualified Ouroboros.Network.PeerSelection.Governor as Governor
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import           Ouroboros.Network.TxSubmission.Inbound
+import           Ouroboros.Network.TxSubmission.Inbound.V2
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Concurrent (MVar, modifyMVar_)
@@ -139,6 +138,7 @@ import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring.Wai as EKG
+import Ouroboros.Consensus.Peras.SelectView
 
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -413,13 +413,6 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
          <> tracePeerSelectionTracerMetrics
               (tracePeerSelection trSel)
               ekgDirect
-     , Diffusion.dtTraceChurnCounters =
-         traceChurnCountersMetrics
-           ekgDirect
-     , Diffusion.dtDebugPeerSelectionInitiatorTracer =
-         tracerOnOff (traceDebugPeerSelectionInitiatorTracer trSel)
-                      verb "DebugPeerSelection" tr
-     , Diffusion.dtDebugPeerSelectionInitiatorResponderTracer =
        tracerOnOff (traceDebugPeerSelectionInitiatorResponderTracer trSel)
                     verb "DebugPeerSelection" tr
      , Diffusion.dtTracePeerSelectionCounters =
@@ -576,7 +569,7 @@ teeTraceChainTip
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (WeightedSelectView (BlockProtocol blk))
      )
   => BlockConfig blk
   -> ForgingStats
@@ -600,7 +593,7 @@ teeTraceChainTipElide
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (WeightedSelectView (BlockProtocol blk))
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)

@@ -68,10 +68,9 @@ import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.Driver.Stateful as Stateful (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (RemoteAddress)
-import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters)
+import qualified Cardano.Network.NodeToClient as NtC
+import           Cardano.Network.NodeToNode (RemoteAddress)
+import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
@@ -92,7 +91,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import qualified Data.Text as T
@@ -262,33 +261,43 @@ getAllNamespaces =
 
 -- Diffusion
 
-        dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
-        dtMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Bearer"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
-        dtMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Channel"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
-        dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace)])
-        dtLocalMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Bearer"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
-        dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
-        dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
-                                ["Net", "Handshake", "Remote"])
-                            (allNamespaces :: [Namespace
-                              (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion)])
-        dtLocalHandshakeNS = map (nsGetTuple . nsReplacePrefix
-                                   ["Net", "Handshake", "Local"])
-                                 (allNamespaces :: [Namespace
-                                   (NtC.HandshakeTr LocalAddress
-                                      NtC.NodeToClientVersion)])
+        dtMuxNS = undefined -- TODO(10.7)
+        -- dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
+        dtMuxBearerNS = undefined -- TODO(10.7)
+        -- dtMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Bearer"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtMuxChannelNS = undefined -- TODO(10.7)
+        -- dtMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Channel"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
+        dtLocalMuxNS = undefined -- TODO(10.7)
+        -- dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace)])
+        dtLocalMuxBearerNS = undefined -- TODO(10.7)
+        -- dtLocalMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Bearer"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtLocalMuxChannelNS = undefined -- TODO(10.7)
+        -- dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
+        -- TODO(10.7): do we still need this?
+        dtHandshakeNS = undefined -- TODO(10.7)
+        -- dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
+        --                         ["Net", "Handshake", "Remote"])
+        --                     (allNamespaces :: [Namespace
+        --                       (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion)])
+        -- TODO(10.7): do we still need this?
+        dtLocalHandshakeNS = undefined -- TODO(10.7)
+        -- dtLocalHandshakeNS = map (nsGetTuple . nsReplacePrefix
+        --                            ["Net", "Handshake", "Local"])
+        --                          (allNamespaces :: [Namespace
+        --                            (NtC.HandshakeTr LocalAddress
+        --                               NtC.NodeToClientVersion)])
         dtDiffusionInitializationNS = map (nsGetTuple . nsReplacePrefix
                                             ["Startup", "DiffusionInit"])
                                           (allNamespaces :: [Namespace
@@ -307,10 +316,11 @@ getAllNamespaces =
         publicRootPeersNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "Peers", "PublicRoot"])
                                (allNamespaces :: [Namespace TracePublicRootPeers])
-        peerSelectionNS = map (nsGetTuple . nsReplacePrefix
-                                  ["Net", "PeerSelection", "Selection"])
-                               (allNamespaces :: [Namespace
-                                          (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
+        peerSelectionNS = undefined -- TODO(10.7)
+        -- peerSelectionNS = map (nsGetTuple . nsReplacePrefix
+        --                           ["Net", "PeerSelection", "Selection"])
+        --                        (allNamespaces :: [Namespace
+        --                                   (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
         debugPeerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Initiator"])
                                (allNamespaces :: [Namespace
@@ -323,9 +333,6 @@ getAllNamespaces =
                                         ["Net", "PeerSelection", "Counters"])
                                       (allNamespaces :: [Namespace
                                         (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes Socket.SockAddr))])
-        churnCountersNS = map (nsGetTuple . nsReplacePrefix
-                                  ["Net", "Churn"])
-                                (allNamespaces :: [Namespace ChurnCounters])
         peerSelectionActionsNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Actions"])
                                (allNamespaces :: [Namespace
@@ -440,7 +447,6 @@ getAllNamespaces =
             <> debugPeerSelectionNS
             <> debugPeerSelectionResponderNS
             <> peerSelectionCountersNS
-            <> churnCountersNS
             <> peerSelectionActionsNS
             <> connectionManagerNS
             <> connectionManagerTransitionsNS
