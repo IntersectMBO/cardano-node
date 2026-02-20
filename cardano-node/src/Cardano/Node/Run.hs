@@ -99,8 +99,9 @@ import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionActions as 
 import qualified Cardano.Network.LedgerPeerConsensusInterface as Cardano
 import qualified Cardano.Network.PeerSelection.PeerSelectionActions as Cardano
 import qualified Cardano.Network.PeerSelection.Churn as Cardano.Churn
-import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 
+import           Ouroboros.Network.Block (HeaderHash)
 import           Ouroboros.Network.BlockFetch (FetchMode)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.Types as Diffusion
@@ -112,7 +113,7 @@ import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..), Conn
 import           Ouroboros.Network.PeerSelection.Governor.Types (PeerSelectionState,
                    PublicPeerSelectionState, makePublicPeerSelectionStateVar, BootstrapPeersCriticalTimeoutError)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   UseLedgerPeers (..), AfterSlot (..))
+                   UseLedgerPeers (..), AfterSlot (..), LedgerPeersKind(..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers (TracePublicRootPeers)
@@ -487,8 +488,8 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , rnPeerSharing    = ncPeerSharing nc
           , rnGetUseBootstrapPeers = readTVar useBootstrapVar
           , rnFeatureFlags = mempty
-          , rnTxSubmissionLogicVersion = undefined -- TODO(10.7)
-          , rnTxSubmissionInitDelay = undefined -- TODO(10.7)
+          , rnTxSubmissionLogicVersion = undefined -- TODO(10.7) -- ask Network
+          , rnTxSubmissionInitDelay = undefined -- TODO(10.7) -- ask Network
           }
 #ifdef UNIX
     -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -517,7 +518,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
       let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
           diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
               Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
-              Cardano.Diffusion.genesisPeerTargets =
+              Cardano.Diffusion.genesisPeerSelectionTargets =
                 PeerSelectionTargets {
                   targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
                   targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
@@ -651,7 +652,7 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO UseLedgerPeers
                      -> StrictTVar IO UseBootstrapPeers
                      -> StrictTVar IO (Maybe PeerSnapshotFile)
-                     -> StrictTVar IO (Maybe LedgerPeerSnapshot)
+                     -> StrictTVar IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
                      -> IO ()
 #ifndef UNIX
 installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ = return ()
@@ -764,8 +765,8 @@ updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
                          -> NodeConfiguration
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> STM IO UseLedgerPeers
-                         -> (Maybe LedgerPeerSnapshot -> STM IO ())
-                         -> IO (Maybe LedgerPeerSnapshot)
+                         -> (Maybe (LedgerPeerSnapshot BigLedgerPeers) -> STM IO ())
+                         -> IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
 updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) readLedgerPeerPath readUseLedgerVar writeVar = do
   (mPeerSnapshotFile, useLedgerPeers)
     <- atomically $ (,) <$> readLedgerPeerPath <*> readUseLedgerVar
@@ -780,7 +781,7 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) rea
         snapshotFile <- hoistMaybe mPeerSnapshotFile
         eSnapshot
           <- liftIO $ readPeerSnapshotFile snapshotFile
-        lps@(LedgerPeerSnapshot (wOrigin, _)) <-
+        lps@(LedgerPeerSnapshotV2 (wOrigin, _)) <-
           case ncConsensusMode of
             GenesisMode ->
               MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateError)
@@ -876,7 +877,7 @@ mkDiffusionConfiguration
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerPeers
-  -> STM IO (Maybe LedgerPeerSnapshot)
+  -> STM IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
   -> NodeConfiguration
   -> Cardano.Diffusion.CardanoConfiguration IO
 mkDiffusionConfiguration
@@ -953,7 +954,8 @@ producerAddresses RealNodeTopology { ntLocalRootPeersGroups
                          , LocalRootConfig {
                              diffusionMode = rootDiffusionMode lrp,
                              peerAdvertise,
-                             extraFlags = trustable lrp
+                             extraLocalRootFlags = trustable lrp,
+                             localProvenance = undefined -- TODO(10.7) -- ask Network
                            }
                          )
                        )
