@@ -261,24 +261,30 @@ getAllNamespaces =
 
 -- Diffusion
 
-        dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
-        dtMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Bearer"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
-        dtMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Channel"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
-        dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace)])
-        dtLocalMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Bearer"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
-        dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
-                             (allNamespaces :: [Namespace
-                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
+        dtMuxNS = undefined -- TODO(10.7)
+        -- dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
+        dtMuxBearerNS = undefined -- TODO(10.7)
+        -- dtMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Bearer"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtMuxChannelNS = undefined -- TODO(10.7)
+        -- dtMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Channel"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
+        dtLocalMuxNS = undefined -- TODO(10.7)
+        -- dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace)])
+        dtLocalMuxBearerNS = undefined -- TODO(10.7)
+        -- dtLocalMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Bearer"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
+        dtLocalMuxChannelNS = undefined -- TODO(10.7)
+        -- dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
+        --                      (allNamespaces :: [Namespace
+        --                          (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
         -- TODO(10.7): do we still need this?
         dtHandshakeNS = undefined -- TODO(10.7)
         -- dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
